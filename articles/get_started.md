@@ -1,0 +1,103 @@
+# Get Started with aisdk
+
+**aisdk** is a unified framework for building AI-powered applications in
+R. It abstracts the differences between providers (OpenAI, Anthropic)
+and provides a powerful set of tools for building agents, flows, and
+structured outputs.
+
+## Installation
+
+You can install the development version from GitHub:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("YuLab-SMU/aisdk")
+```
+
+## Basic Usage
+
+### 1. Configuration
+
+First, load the library and set your API keys as environment variables.
+
+``` r
+library(aisdk)
+
+# RECOMMENDED: Set in your .Renviron file
+Sys.setenv(OPENAI_API_KEY = "sk-...")
+Sys.setenv(ANTHROPIC_API_KEY = "sk-ant-...")
+```
+
+### 2. Creating a Model
+
+You can create a model provider using specific factory functions or the
+unified registry syntax.
+
+``` r
+# Option A: Factory Function
+openai <- create_openai()
+model <- openai$language_model("gpt-4o")
+
+# Option B: Registry Syntax (if provider is registered)
+registry <- get_default_registry()
+registry$register("openai", create_openai())
+# model <- "openai:gpt-4o"
+```
+
+### 3. Generating Text
+
+Use
+[`generate_text()`](https://YuLab-SMU.github.io/aisdk/reference/generate_text.md)
+for simple request-response interactions.
+
+``` r
+response <- generate_text(
+  model = model,
+  prompt = "Explain the difference between lapply and sapply in R."
+)
+
+cat(response$text)
+```
+
+You can also use a system prompt to set the behavior:
+
+``` r
+response <- generate_text(
+  model = model,
+  system = "You are a concise data science instructor.",
+  prompt = "What is a tibble?"
+)
+```
+
+### 4. Streaming Responses
+
+For real-time output, use
+[`stream_text()`](https://YuLab-SMU.github.io/aisdk/reference/stream_text.md).
+
+``` r
+stream_text(
+  model = model,
+  prompt = "Write a haiku about CRAN.",
+  callback = function(chunk, done) {
+    if (!done) cat(chunk)
+  }
+)
+```
+
+### 5. Switching Providers
+
+Switching to Anthropic is as simple as changing the model creation step.
+The rest of your code remains the same.
+
+``` r
+# Create Anthropic provider
+anthropic <- create_anthropic()
+model <- anthropic$language_model("claude-3-5-sonnet-20241022")
+
+# Generate text (SAME API!)
+response <- generate_text(
+  model = model,
+  prompt = "Explain R6 classes briefly."
+)
+cat(response$text)
+```

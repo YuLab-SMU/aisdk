@@ -1,0 +1,86 @@
+# Shiny Integration
+
+**aisdk** provides seamless integration with Shiny, allowing you to
+build AI-powered applications where the AI can control the UI and
+interact with reactive input/output.
+
+## The AI Chat UI
+
+Use
+[`aiChatUI()`](https://YuLab-SMU.github.io/aisdk/reference/aiChatUI.md)
+and
+[`aiChatServer()`](https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.md)
+to add a chat interface.
+
+``` r
+library(shiny)
+library(aisdk)
+
+ui <- fluidPage(
+  aiChatUI("chat")
+)
+
+server <- function(input, output, session) {
+  aiChatServer("chat", model = "openai:gpt-4o")
+}
+
+shinyApp(ui, server)
+```
+
+## AI-Controlled Apps (The Copilot Pattern)
+
+You can give the AI tools to modify `reactiveValues`, effectively
+letting it control your app.
+
+### 1. Define Reactive Values
+
+``` r
+rv <- reactiveValues(
+  plot_color = "blue",
+  title = "My Plot"
+)
+```
+
+### 2. Create Reactive Tools
+
+Use
+[`reactive_tool()`](https://YuLab-SMU.github.io/aisdk/reference/reactive_tool.md)
+to define tools that can read/write these values.
+
+``` r
+change_color <- reactive_tool(
+  name = "change_color",
+  description = "Change the plot color",
+  parameters = z_object(color = z_string()),
+  execute = function(rv, session, color) {
+    rv$plot_color <- color
+    paste("Changed color to", color)
+  }
+)
+```
+
+### 3. Initialize Server with Tools
+
+``` r
+server <- function(input, output, session) {
+  # ... rv definition ...
+  
+  # Wrap tools with current session context
+  tools <- wrap_reactive_tools(list(change_color), rv, session)
+  
+  # Provide context so AI "sees" the current state
+  get_context <- reactive({
+    list(current_color = rv$plot_color)
+  })
+
+  aiChatServer(
+    "chat",
+    model = "openai:gpt-4o",
+    tools = tools,
+    context = get_context
+  )
+}
+```
+
+Now the user can say “Change the plot to red”, and the AI will execute
+the tool, updating the Shiny app instantly.

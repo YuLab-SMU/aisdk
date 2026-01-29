@@ -1,0 +1,60 @@
+# Chat Sessions
+
+`ChatSession` objects manage the state of a conversation, handling
+history, model switching, and serialization automatically.
+
+## Creating a Session
+
+``` r
+library(aisdk)
+
+chat <- create_chat_session(
+  model = "openai:gpt-4o",
+  system_prompt = "You are a helpful R expert."
+)
+```
+
+## Chat Loop
+
+Call `$send()` to continue the conversation.
+
+``` r
+# 1st turn
+chat$send("What is R?")
+
+# 2nd turn - Model remembers context
+chat$send("Who created it?")
+```
+
+## Model Switching
+
+You can switch the underlying model mid-conversation. The history is
+preserved.
+
+``` r
+# Switch to a cheaper model for simple queries
+chat$switch_model("openai:gpt-4o-mini")
+```
+
+## Persistence
+
+Sessions can be saved and loaded, preserving the full conversation
+history.
+
+``` r
+# Save to R native format
+chat$save("my_session.rds")
+
+# Load later
+new_chat <- load_chat_session("my_session.rds")
+```
+
+## Console Chat
+
+For interactive use in the R console, use
+[`console_chat()`](https://YuLab-SMU.github.io/aisdk/reference/console_chat.md).
+
+``` r
+# Starts an interactive REPL
+console_chat("openai:gpt-4o")
+```

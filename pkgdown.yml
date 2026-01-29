@@ -1,0 +1,17 @@
+pandoc: 3.1.11
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  agents: agents.html
+  enterprise: enterprise.html
+  get_started: get_started.html
+  integrations: integrations.html
+  mcp: mcp.html
+  sessions: sessions.html
+  skills: skills.html
+  structured_outputs: structured_outputs.html
+  tools: tools.html
+last_built: 2026-01-29T15:54Z
+urls:
+  reference: https://YuLab-SMU.github.io/aisdk/reference
+  article: https://YuLab-SMU.github.io/aisdk/articles

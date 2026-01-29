@@ -1,0 +1,81 @@
+# Building Agents
+
+Agents are AI entities with a role, a goal, and (optionally) tools. In
+**aisdk**, agents are built on top of the R6 object-oriented system.
+
+## Creating Simple Agents
+
+You can create an agent using
+[`create_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_agent.md).
+
+``` r
+library(aisdk)
+
+# Create a Math Agent
+math_agent <- create_agent(
+  name = "MathAgent",
+  description = "Performs arithmetic calculations and mathematical reasoning",
+  system_prompt = "You are a math assistant. return only numerical results."
+)
+
+print(math_agent)
+```
+
+## Running an Agent
+
+To run an agent, use the `$run()` method. You need to provide a model
+(or string ID).
+
+``` r
+model <- create_openai()$language_model("gpt-4o")
+
+result <- math_agent$run(
+  task = "What is the square root of 144?",
+  model = model
+)
+
+print(result$text)
+```
+
+## Shared Session State
+
+Agents can share memories and environments through a `ChatSession`. This
+is powerful for multi-agent workflows.
+
+``` r
+# Create a shared session
+session <- create_chat_session(
+  model = model,
+  system_prompt = "You are a helpful assistant."
+)
+
+# Store some shared data
+session$set_memory("project_name", "Apollo")
+env <- session$get_envir()
+env$data <- data.frame(x = 1:10, y = rnorm(10))
+
+# Run agent with session context
+# The agent can now access 'data' if it has tools to do so, 
+# or conceptually if we inject it into the prompt.
+result <- math_agent$run(
+  task = "Analyze the project data",
+  session = session,
+  model = model
+)
+```
+
+## Specialized Agents
+
+**aisdk** comes with pre-built specialized agents:
+
+- [`create_coder_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.md):
+  Optimized for reading and writing code.
+- [`create_planner_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_planner_agent.md):
+  Optimized for breaking down tasks.
+- [`create_visualizer_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_visualizer_agent.md):
+  Optimized for creating plots (ggplot2).
+
+``` r
+coder <- create_coder_agent()
+visualizer <- create_visualizer_agent()
+```

@@ -1,0 +1,51 @@
+# Native SLM (Small Language Model) Engine
+
+Generic interface for loading and running local language models without
+external API dependencies. Supports multiple backends including ONNX
+Runtime and LibTorch for quantized model execution.
+
+Factory function to create a new SLM Engine for local model inference.
+
+## Usage
+
+``` r
+slm_engine(model_path, backend = "gguf", config = list())
+```
+
+## Arguments
+
+- model_path:
+
+  Path to the model weights file.
+
+- backend:
+
+  Inference backend: "gguf" (default), "onnx", or "torch".
+
+- config:
+
+  Optional configuration list.
+
+## Value
+
+An SlmEngine object.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Load a GGUF model
+engine <- slm_engine("models/llama-3-8b-q4.gguf")
+engine$load()
+
+# Generate text
+result <- engine$generate("What is the capital of France?")
+cat(result$text)
+
+# Stream generation
+engine$stream("Tell me a story", callback = cat)
+
+# Cleanup
+engine$unload()
+} # }
+```
