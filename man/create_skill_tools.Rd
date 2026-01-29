@@ -15,4 +15,3 @@ A list of Tool objects.
 \description{
 Create the built-in tools for interacting with skills.
 }
-\keyword{internal}

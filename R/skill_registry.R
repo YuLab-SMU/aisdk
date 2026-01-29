@@ -46,13 +46,48 @@ SkillRegistry <- R6::R6Class(
       path <- normalizePath(path, mustWork = TRUE)
       
       # Find all SKILL.md files
-      skill_files <- list.files(
-        path,
-        pattern = "^SKILL\\.md$",
-        recursive = recursive,
-        full.names = TRUE,
-        ignore.case = FALSE
-      )
+      # Find all SKILL.md files
+      if (recursive) {
+        skill_files <- list.files(
+          path,
+          pattern = "^SKILL\\.md$",
+          recursive = TRUE,
+          full.names = TRUE,
+          ignore.case = FALSE
+        )
+      } else {
+        # If not recursive, we still want to support the standard structure:
+        # skills/
+        #   skill_a/SKILL.md
+        #   skill_b/SKILL.md
+        
+        # 1. Check root
+        root_files <- list.files(
+          path,
+          pattern = "^SKILL\\.md$",
+          recursive = FALSE,
+          full.names = TRUE,
+          ignore.case = FALSE
+        )
+        
+        # 2. Check immediate subdirectories
+        subdirs <- list.dirs(path, recursive = FALSE, full.names = TRUE)
+        subdir_files <- character()
+        
+        if (length(subdirs) > 0) {
+          subdir_files <- unlist(lapply(subdirs, function(d) {
+             list.files(
+               d,
+               pattern = "^SKILL\\.md$",
+               recursive = FALSE,
+               full.names = TRUE,
+               ignore.case = FALSE
+             )
+          }))
+        }
+        
+        skill_files <- c(root_files, subdir_files)
+      }
       
       for (skill_file in skill_files) {
         skill_dir <- dirname(skill_file)

@@ -155,7 +155,7 @@ Skill <- R6::R6Class(
 #' Create the built-in tools for interacting with skills.
 #' @param registry A SkillRegistry object.
 #' @return A list of Tool objects.
-#' @keywords internal
+#' @export
 create_skill_tools <- function(registry) {
   list(
     # Tool 1: Load skill instructions
