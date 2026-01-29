@@ -168,7 +168,7 @@ Agent <- R6::R6Class(
         )
       }
 
-      result
+      invisible(result)
     },
 
     #' @description Convert this agent to a Tool.

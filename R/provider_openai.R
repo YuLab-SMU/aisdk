@@ -184,6 +184,7 @@ OpenAILanguageModel <- R6::R6Class(
       # State for tracking response
       is_reasoning <- FALSE
       full_text <- ""
+      full_reasoning <- ""
       tool_calls_acc <- list()
       finish_reason <- NULL
       full_usage <- NULL
@@ -218,6 +219,7 @@ OpenAILanguageModel <- R6::R6Class(
               callback("<think>\n", done = FALSE)
               is_reasoning <<- TRUE
             }
+            full_reasoning <<- paste0(full_reasoning, delta$reasoning_content)
             callback(delta$reasoning_content, done = FALSE)
           }
           
@@ -291,7 +293,8 @@ OpenAILanguageModel <- R6::R6Class(
         usage = full_usage,
         finish_reason = finish_reason,
         raw_response = last_response,
-        tool_calls = final_tool_calls
+        tool_calls = final_tool_calls,
+        reasoning = full_reasoning
       )
     },
 
