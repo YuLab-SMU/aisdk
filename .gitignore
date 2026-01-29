@@ -1,0 +1,35 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.Ruserdata
+
+# User-specific files
+.Rproj.user/
+
+# Hidden files
+.VSCode/
+.idea/
+.DS_Store
+
+# Build artifacts
+src/*.o
+src/*.so
+src/*.dll
+src/*.dylib
+src-i386/
+src-x64/
+*.rds
+
+# R Check
+.Rcheck/
+
+# Vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# Package files
+inst/doc
+*.log

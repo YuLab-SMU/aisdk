@@ -1,0 +1,12 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.Renviron\.example$
+^\.env\.example$
+^\.devin$
+^Rbuild\.R$
+^\.gemini$
+^\.devin$
+^\.Rhistory$
+^\.RData$
+^\.Renviron$
+^\.env$

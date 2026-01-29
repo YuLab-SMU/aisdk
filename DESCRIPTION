@@ -1,0 +1,30 @@
+Package: aisdk
+Title: AI SDK for R - Unified Interface for AI Model Providers
+Version: 1.0.0
+Authors@R: 
+    person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
+Description: A production-grade AI SDK for R featuring a layered architecture
+    (Specification, Utilities, Providers, Core), middleware support, robust
+    error handling with exponential backoff, support for multiple AI model
+    providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP
+    ecosystem, autonomous data science pipelines with self-healing code execution,
+    and a global skill store for sharing AI capabilities.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
+        digest, parallel, stats, tools, utils
+Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,
+        evaluate, shiny, bslib, commonmark, ggplot2, dplyr, readr,
+        readxl, DBI, RSQLite, torch, onnx, rstudioapi
+Config/testthat/edition: 3
+URL: https://github.com/YuLab-SMU/aisdk,
+        https://YuLab-SMU.github.io/aisdk/
+BugReports: https://github.com/YuLab-SMU/aisdk/issues
+NeedsCompilation: no
+Packaged: 2026-01-29 08:55:09 UTC; xiayh17
+Author: Yonghe Xia [aut, cre]
+Maintainer: Yonghe Xia <xiayh17@gmail.com>
+Depends: R (>= 4.1.0)

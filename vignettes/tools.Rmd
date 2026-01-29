@@ -1,0 +1,89 @@
+---
+title: "Using Tools"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using Tools}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+Tools allow AI models to perform actions, like calculating numbers, fetching data, or interacting with the filesystem. **aisdk** makes it easy to turn R functions into tools.
+
+## Defining Tools
+
+You define a tool using the `tool()` function. You also need to define a schema for the tool's expected arguments using helper functions (`z_object`, `z_string`, `z_number`, etc.).
+
+### Example: Weather Tool
+
+```{r}
+library(aisdk)
+
+# 1. Define the input schema
+weather_schema <- z_object(
+  location = z_string(description = "The city name, e.g., 'Tokyo'"),
+  unit = z_enum(c("celsius", "fahrenheit"), description = "Temperature unit")
+)
+
+# 2. Create the tool
+get_weather <- tool(
+  name = "get_weather",
+  description = "Get the current weather for a city",
+  parameters = weather_schema,
+  execute = function(args) {
+    # In a real app, call an API here
+    # For demo, returning mock string
+    location <- args$location
+    unit <- args$unit %||% "celsius"
+    
+    paste0("Weather in ", location, ": 22°C (", unit, ")")
+  }
+)
+```
+
+## Using Tools with Models
+
+To use tools, pass them as a list to `generate_text()`.
+
+```{r}
+model <- create_openai()$language_model("gpt-4o")
+
+result <- generate_text(
+  model = model,
+  prompt = "What's the weather like in Paris?",
+  tools = list(get_weather)
+)
+
+# If the model decided to call the tool, the result text will contain the final answer
+# after the tool was executed and the result fed back to the model.
+cat(result$text)
+```
+
+## Manual Execution
+
+You can also run tools manually to test them:
+
+```{r}
+result <- get_weather$run(list(location = "London", unit = "celsius"))
+print(result)
+```
+
+## Supported Schema Types
+
+| Helper | Type | Description |
+|--------|------|-------------|
+| `z_string()` | String | Text inputs |
+| `z_number()` | Number | Integers or floats |
+| `z_boolean()` | Boolean | TRUE/FALSE flags |
+| `z_enum()` | String | Restricted set of choices |
+| `z_array()` | Array | List of items |
+| `z_object()` | Object | Nested structure |
+| `z_dataframe()` | Array | List of objects (R data.frame) |
+

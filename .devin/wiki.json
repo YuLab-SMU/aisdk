@@ -1,0 +1,301 @@
+{
+    "repo_notes": [
+        {
+            "content": ""
+        }
+    ],
+    "pages": [
+        {
+            "title": "Overview",
+            "purpose": "Introduce the aisdk package, explaining its purpose as a production-grade AI SDK for R, its layered architecture, and key capabilities for building AI-powered applications with agents, tools, and multi-provider support",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Getting Started",
+            "purpose": "Guide users through installation, initial setup, and their first interactions with aisdk",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Installation",
+            "purpose": "Explain how to install aisdk, system requirements, dependencies, and initial configuration including API keys",
+            "parent": "Getting Started",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Quick Start",
+            "purpose": "Provide minimal working examples showing text generation, basic agent usage, and simple tool calling to get users productive immediately",
+            "parent": "Getting Started",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Core Concepts",
+            "purpose": "Introduce fundamental concepts: Agents, ChatSessions, Tools, Providers, and the ReAct loop pattern used throughout aisdk",
+            "parent": "Getting Started",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Architecture",
+            "purpose": "Explain the four-layer architecture (Specification, Utilities, Provider, Core) and how components interact",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Layered Design",
+            "purpose": "Detail the four architectural layers, their responsibilities, and how the separation of concerns enables extensibility",
+            "parent": "Architecture",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Provider Abstraction",
+            "purpose": "Explain the LanguageModelV1 and EmbeddingModelV1 interfaces, how they enable pluggable AI providers, and the benefits of abstraction",
+            "parent": "Architecture",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Agent System Design",
+            "purpose": "Describe the agent-based architecture, ChatSession state management, and how agents coordinate through shared context",
+            "parent": "Architecture",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Core API",
+            "purpose": "Document the high-level API functions that users interact with for text generation, streaming, embeddings, and structured output",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Text Generation",
+            "purpose": "Document generate_text(), its parameters, tool execution loop (max_steps), hooks integration, and result handling",
+            "parent": "Core API",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Streaming",
+            "purpose": "Explain stream_text(), callback pattern, real-time token streaming, and handling of streaming tool calls",
+            "parent": "Core API",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Embeddings",
+            "purpose": "Document the embed() function, supported models, and working with vector embeddings",
+            "parent": "Core API",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Structured Output",
+            "purpose": "Explain generate_object(), schema definition with z_object DSL, and generating type-safe R objects from AI models",
+            "parent": "Core API",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Provider System",
+            "purpose": "Explain how aisdk integrates with multiple AI model providers through a unified interface",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Provider Interfaces",
+            "purpose": "Document the LanguageModelV1 and EmbeddingModelV1 abstract interfaces, do_generate, do_stream, format_tool_result, and GenerateResult",
+            "parent": "Provider System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "OpenAI Provider",
+            "purpose": "Document OpenAIProvider, OpenAILanguageModel, configuration options, supported models, and provider-specific features",
+            "parent": "Provider System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Anthropic Provider",
+            "purpose": "Document AnthropicProvider, AnthropicLanguageModel, message formatting differences, prompt caching, and Claude-specific features",
+            "parent": "Provider System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Provider Registry",
+            "purpose": "Explain ProviderRegistry, model resolution from string IDs (e.g., 'openai:gpt-4o'), and registering custom providers",
+            "parent": "Provider System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Agent System",
+            "purpose": "Document the Agent and ChatSession classes that enable autonomous AI entities and multi-agent coordination",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Agent Class",
+            "purpose": "Document the Agent R6 class, its properties (name, description, system_prompt, tools), the run() method, and as_tool() for delegation",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "ChatSession",
+            "purpose": "Document ChatSession state management: message history, memory (key-value store), shared R environment, send/send_stream methods, and persistence",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Multi-Agent Workflows",
+            "purpose": "Explain how multiple agents share a ChatSession, cross-agent data sharing via environment and memory, and coordination patterns",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Flow Orchestration",
+            "purpose": "Document the Flow class, AgentRegistry for service discovery, hierarchical task delegation, and max_depth limiting",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Tools & Skills",
+            "purpose": "Explain how to extend agent capabilities with tools and organize them into reusable skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Creating Tools",
+            "purpose": "Document the tool() constructor, defining tool names/descriptions/parameters/execute functions, and tool execution contexts",
+            "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Tool Schemas",
+            "purpose": "Explain the z_schema DSL (z_object, z_string, z_number, z_array, etc.), JSON Schema generation, and parameter validation",
+            "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Skills System",
+            "purpose": "Document the Skill R6 class, SKILL.md format, progressive disclosure (3 levels), script execution with callr isolation, and SkillRegistry",
+            "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Tool Execution",
+            "purpose": "Explain execute_tool_calls, ReAct loop mechanics, tool result formatting, and execution environments",
+            "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Integrations",
+            "purpose": "Document how aisdk integrates with Shiny, console interfaces, and RMarkdown/Quarto",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        }
+    ]
+}
