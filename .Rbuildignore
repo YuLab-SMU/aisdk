@@ -6,7 +6,10 @@
 ^Rbuild\.R$
 ^\.gemini$
 ^\.devin$
+^\.github$
 ^\.Rhistory$
 ^\.RData$
 ^\.Renviron$
 ^\.env$
+^dev_logs$
+^_pkgdown.yml$

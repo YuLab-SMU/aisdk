@@ -8,6 +8,7 @@
 
 # User-specific files
 .Rproj.user/
+*.Rproj
 
 # Hidden files
 .VSCode/
@@ -37,3 +38,4 @@ inst/doc
 # Environment files
 .env
 .Renviron
+dev_logs/
