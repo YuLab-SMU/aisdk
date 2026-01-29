@@ -1,3 +1,4 @@
+
 # Tests for SkillRegistry class
 library(testthat)
 library(aisdk)
@@ -143,4 +144,50 @@ test_that("SkillRegistry$print outputs summary", {
   output <- capture.output(print(registry))
   expect_true(any(grepl("<SkillRegistry>", output)))
   expect_true(any(grepl("registered", output)))
+})
+
+# === Tests for SkillRegistry subdirectory scanning ===
+
+test_that("SkillRegistry finds skills in subdirectories (recursive=FALSE)", {
+    # Create temp structure:
+    # tmp/
+    #     skill_a/SKILL.md
+    #     SKILL.md (in root)
+    #     nested/deep/SKILL.md (should NOT be found if recursive=FALSE)
+    
+    temp_dir <- file.path(tempdir(), paste0("test_skills_", as.integer(Sys.time())))
+    dir.create(temp_dir)
+    on.exit(unlink(temp_dir, recursive = TRUE))
+    
+    # Skill in root
+    writeLines("---
+name: root_skill
+description: Root skill
+---
+# Root Skill", file.path(temp_dir, "SKILL.md"))
+    
+    # Skill in immediate subdir
+    dir.create(file.path(temp_dir, "subdir_skill"))
+    writeLines("---
+name: subdir_skill
+description: Subdir skill
+---
+# Subdir Skill", file.path(temp_dir, "subdir_skill", "SKILL.md"))
+    
+    # Skill in nested subdir
+    dir.create(file.path(temp_dir, "nested", "deep"), recursive = TRUE)
+    writeLines("---
+name: deep_skill
+description: Deep skill
+---
+# Deep Skill", file.path(temp_dir, "nested", "deep", "SKILL.md"))
+    
+    # Scan with recursive = FALSE
+    registry <- SkillRegistry$new()
+    registry$scan_skills(temp_dir, recursive = FALSE)
+    
+    # Should find root and subdir, but NOT deep
+    expect_true(registry$has_skill("root_skill"))
+    expect_true(registry$has_skill("subdir_skill"))
+    expect_false(registry$has_skill("deep_skill"))
 })

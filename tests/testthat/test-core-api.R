@@ -8,25 +8,27 @@ openai_model_id <- paste0("openai:", openai_model)
 # === Tests for generate_text ===
 
 test_that("generate_text accepts a model object", {
-  provider <- suppressWarnings(create_openai())
+  # Force invalid key to ensure network error (401)
+  provider <- suppressWarnings(create_openai(api_key = "invalid"))
   model <- provider$language_model(openai_model)
   
-  # We can't make real API calls in unit tests, but we can verify parameter handling
-  # This will fail due to no API key or network error
+  # This will fail due to API key error (which is what we want to verify - that it attempts to call)
   expect_error(
     generate_text(model = model, prompt = "Hello")
   )
 })
 
 test_that("generate_text accepts a string model identifier", {
-  # Register a mock provider
+  # Register a mock provider with invalid key
   registry <- get_default_registry()
-  provider <- suppressWarnings(create_openai())
-  registry$register("openai", provider)
+  provider <- suppressWarnings(create_openai(api_key = "invalid"))
+  registry$register("test-openai-fail", provider)
   
-  # This will fail due to no API key or network error
+  model_id <- paste0("test-openai-fail:", openai_model)
+  
+  # This will fail due to API key error
   expect_error(
-    generate_text(model = openai_model_id, prompt = "Hello")
+    generate_text(model = model_id, prompt = "Hello")
   )
 })
 
