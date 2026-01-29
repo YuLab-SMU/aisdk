@@ -30,6 +30,8 @@
   : MCP SSE Client
 - [`Middleware`](https://YuLab-SMU.github.io/aisdk/reference/Middleware.md)
   : Middleware (Base Class)
+- [`NvidiaProvider`](https://YuLab-SMU.github.io/aisdk/reference/NvidiaProvider.md)
+  : NVIDIA Provider Class
 - [`ObjectStrategy`](https://YuLab-SMU.github.io/aisdk/reference/ObjectStrategy.md)
   : Object Strategy
 - [`OpenAIProvider`](https://YuLab-SMU.github.io/aisdk/reference/OpenAIProvider.md)
@@ -63,6 +65,10 @@
 - [`aisdk`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   [`aisdk-package`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   : aisdk: AI SDK for R
+- [`apiConfigServer()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.md)
+  : API Configuration Server
+- [`apiConfigUI()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigUI.md)
+  : API Configuration UI
 - [`auto_fix()`](https://YuLab-SMU.github.io/aisdk/reference/auto_fix.md)
   : Autonomous Data Science Pipelines
 - [`benchmark_agent()`](https://YuLab-SMU.github.io/aisdk/reference/benchmark_agent.md)
@@ -77,6 +83,8 @@
   : Clear AI Engine Session
 - [`compat`](https://YuLab-SMU.github.io/aisdk/reference/compat.md) :
   Compatibility Layer: Feature Flags and Migration Support
+- [`configure_api()`](https://YuLab-SMU.github.io/aisdk/reference/configure_api.md)
+  : Launch API Configuration App
 - [`console`](https://YuLab-SMU.github.io/aisdk/reference/console.md) :
   Console Chat: Interactive REPL
 - [`console_chat()`](https://YuLab-SMU.github.io/aisdk/reference/console_chat.md)
@@ -117,6 +125,8 @@
   : Create an MCP Server
 - [`create_mcp_sse_client()`](https://YuLab-SMU.github.io/aisdk/reference/create_mcp_sse_client.md)
   : Create MCP SSE Client
+- [`create_nvidia()`](https://YuLab-SMU.github.io/aisdk/reference/create_nvidia.md)
+  : Create NVIDIA Provider
 - [`create_openai()`](https://YuLab-SMU.github.io/aisdk/reference/create_openai.md)
   : Create OpenAI Provider
 - [`create_orchestration()`](https://YuLab-SMU.github.io/aisdk/reference/create_orchestration.md)
@@ -135,6 +145,8 @@
   : Create Skill Scaffold
 - [`create_skill_registry()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_registry.md)
   : Create a Skill Registry
+- [`create_skill_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_tools.md)
+  : Create Skill Tools
 - [`create_standard_registry()`](https://YuLab-SMU.github.io/aisdk/reference/create_standard_registry.md)
   : Create Standard Agent Registry
 - [`create_telemetry()`](https://YuLab-SMU.github.io/aisdk/reference/create_telemetry.md)
@@ -147,6 +159,8 @@
   : Create Schema for ggtree Function
 - [`download_model()`](https://YuLab-SMU.github.io/aisdk/reference/download_model.md)
   : Download Model from Hugging Face
+- [`enable_api_tests()`](https://YuLab-SMU.github.io/aisdk/reference/enable_api_tests.md)
+  : Check if API tests should be enabled
 - [`execute_tool_calls()`](https://YuLab-SMU.github.io/aisdk/reference/execute_tool_calls.md)
   : Execute Tool Calls
 - [`expect_llm_pass()`](https://YuLab-SMU.github.io/aisdk/reference/expect_llm_pass.md)
@@ -157,6 +171,8 @@
   : Expect Tool Selection
 - [`extract_geom_params()`](https://YuLab-SMU.github.io/aisdk/reference/extract_geom_params.md)
   : Extract Geom Parameters from ggproto Object
+- [`fetch_api_models()`](https://YuLab-SMU.github.io/aisdk/reference/fetch_api_models.md)
+  : Fetch available models from API provider
 - [`Flow`](https://YuLab-SMU.github.io/aisdk/reference/flow.md) : Flow
   Class
 - [`flow_stack`](https://YuLab-SMU.github.io/aisdk/reference/flow_stack.md)
@@ -165,10 +181,24 @@
   : Generate Text
 - [`get_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.md)
   : Get AI Engine Session
+- [`get_anthropic_base_url()`](https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_base_url.md)
+  : Get Anthropic base URL from environment
+- [`get_anthropic_model()`](https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_model.md)
+  : Get Anthropic model name from environment
+- [`get_anthropic_model_id()`](https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_model_id.md)
+  : Get Anthropic model ID from environment
 - [`get_default_registry()`](https://YuLab-SMU.github.io/aisdk/reference/get_default_registry.md)
   : Get Default Registry
 - [`get_memory()`](https://YuLab-SMU.github.io/aisdk/reference/get_memory.md)
   : Get or Create Global Memory
+- [`get_openai_base_url()`](https://YuLab-SMU.github.io/aisdk/reference/get_openai_base_url.md)
+  : Get OpenAI Base URL from environment
+- [`get_openai_embedding_model()`](https://YuLab-SMU.github.io/aisdk/reference/get_openai_embedding_model.md)
+  : Get OpenAI Embedding Model from environment
+- [`get_openai_model()`](https://YuLab-SMU.github.io/aisdk/reference/get_openai_model.md)
+  : Get OpenAI Model from environment
+- [`get_openai_model_id()`](https://YuLab-SMU.github.io/aisdk/reference/get_openai_model_id.md)
+  : Get OpenAI Model ID from environment
 - [`get_r_context()`](https://YuLab-SMU.github.io/aisdk/reference/get_r_context.md)
   : Get R Context
 - [`get_skill_store()`](https://YuLab-SMU.github.io/aisdk/reference/get_skill_store.md)
@@ -177,6 +207,8 @@
   : Export ggplot as Frontend-Ready JSON
 - [`ggplot_to_z_object()`](https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_z_object.md)
   : Convert ggplot Object to Schema-Compliant Structure
+- [`has_api_key()`](https://YuLab-SMU.github.io/aisdk/reference/has_api_key.md)
+  : Check if specific provider key is available
 - [`hooks`](https://YuLab-SMU.github.io/aisdk/reference/hooks.md) :
   Hooks System
 - [`hypothesis_fix_verify()`](https://YuLab-SMU.github.io/aisdk/reference/hypothesis_fix_verify.md)
@@ -213,6 +245,8 @@
   : Reactive Tool
 - [`register_ai_engine()`](https://YuLab-SMU.github.io/aisdk/reference/register_ai_engine.md)
   : Register AI Engine
+- [`reload_env()`](https://YuLab-SMU.github.io/aisdk/reference/reload_env.md)
+  : Reload project-level environment variables
 - [`render_text()`](https://YuLab-SMU.github.io/aisdk/reference/render_text.md)
   : Render Markdown Text
 - [`safe_eval()`](https://YuLab-SMU.github.io/aisdk/reference/safe_eval.md)
@@ -269,6 +303,8 @@
   : Create a Tool
 - [`uninstall_skill()`](https://YuLab-SMU.github.io/aisdk/reference/uninstall_skill.md)
   : Uninstall a Skill
+- [`update_renviron()`](https://YuLab-SMU.github.io/aisdk/reference/update_renviron.md)
+  : Update .Renviron with new values
 - [`utils_http`](https://YuLab-SMU.github.io/aisdk/reference/utils_http.md)
   : Utilities: HTTP and Retry Logic
 - [`fix_json()`](https://YuLab-SMU.github.io/aisdk/reference/utils_json.md)

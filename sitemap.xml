@@ -32,6 +32,8 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/McpServer.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/McpSseClient.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/Middleware.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/NvidiaLanguageModel.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/NvidiaProvider.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ObjectStrategy.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/OpenAIEmbeddingModel.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html</loc></url>
@@ -54,6 +56,9 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aiChatUI.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/annotate_model_capabilities.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/apiConfigUI.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/auto_detect_vars.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/auto_fix.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/benchmark_agent.html</loc></url>
@@ -65,6 +70,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/check_sdk_compatibility.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/clear_ai_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/compat.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/configure_api.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console_chat.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/construct_prompt.html</loc></url>
@@ -88,6 +94,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_mcp_client.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_mcp_server.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_mcp_sse_client.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_nvidia.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_openai.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_orchestration.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_permission_hook.html</loc></url>
@@ -108,6 +115,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/deprecation_warning.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/dot-sdk_features.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/download_model.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/enable_api_tests.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/eng_ai.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/execute_code_safely.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/execute_tool_calls.html</loc></url>
@@ -120,6 +128,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/extract_r_code.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/extract_theme_for_frontend.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/extract_theme_values.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/fetch_api_models.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/find_closest_match.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/find_tool.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/flow.html</loc></url>
@@ -131,15 +140,23 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_text.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_verification_hypothesis.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_base_url.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_model.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_model_id.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_default_registry.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_default_system_prompt.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_memory.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_openai_base_url.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_openai_embedding_model.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_openai_model.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_openai_model_id.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_or_create_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_r_context.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_skill_store.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_frontend_json.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_frontend_object.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_z_object.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/has_api_key.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/hooks.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/hypothesis_fix_verify.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/index.html</loc></url>
@@ -172,10 +189,12 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/private_calculate_tool_accuracy.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/project_memory.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_anthropic.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_nvidia.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_openai.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/r_data_tasks.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/reactive_tool.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/register_ai_engine.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/reload_env.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/remove_r_code_blocks.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/render_text.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/repair_json_string.html</loc></url>
@@ -218,7 +237,9 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/tool_result_message.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/uninstall_skill.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/update_renviron.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/utils_cli.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/utils_env.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/utils_http.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/utils_json.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/utils_mcp.html</loc></url>
