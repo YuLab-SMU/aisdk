@@ -33,3 +33,7 @@ vignettes/*.pdf
 # Package files
 inst/doc
 *.log
+
+# Environment files
+.env
+.Renviron
