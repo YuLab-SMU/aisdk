@@ -167,6 +167,21 @@ create_skill_tools <- function(registry) {
       ),
       execute = function(args) {
         skill_name <- args$skill_name
+        
+        # Helper for fuzzy matching
+        find_closest_skill <- function(target, available) {
+          dists <- utils::adist(target, available, ignore.case = TRUE)
+          min_dist <- min(dists)
+          # Threshold: 3 edits or 30% of length, whichever is larger, but cap at 4
+          threshold <- min(4, max(3, nchar(target) * 0.3))
+          
+          if (min_dist <= threshold) {
+            closest <- available[which.min(dists)]
+            return(closest)
+          }
+          return(NULL)
+        }
+        
         if (is.null(skill_name) || !nzchar(skill_name)) {
           skills <- registry$list_skills()
           if (nrow(skills) == 1) {
@@ -177,6 +192,14 @@ create_skill_tools <- function(registry) {
         }
         skill <- registry$get_skill(skill_name)
         if (is.null(skill)) {
+          # Try fuzzy matching
+          available_skills <- registry$list_skills()$name
+          if (length(available_skills) > 0) {
+            suggestion <- find_closest_skill(skill_name, available_skills)
+            if (!is.null(suggestion)) {
+              return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
+            }
+          }
           return(paste0("Skill not found: ", skill_name))
         }
         body <- skill$load()
@@ -233,6 +256,18 @@ create_skill_tools <- function(registry) {
         }
         skill <- registry$get_skill(skill_name)
         if (is.null(skill)) {
+          # Try fuzzy matching (reusing logic if possible, but duplicating for tool isolation)
+          available_skills <- registry$list_skills()$name
+          if (length(available_skills) > 0) {
+             # Simple fuzzy match inline
+             dists <- utils::adist(skill_name, available_skills, ignore.case = TRUE)
+             min_dist <- min(dists)
+             threshold <- min(4, max(3, nchar(skill_name) * 0.3))
+             if (min_dist <= threshold) {
+               suggestion <- available_skills[which.min(dists)]
+               return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
+             }
+          }
           return(paste0("Skill not found: ", skill_name))
         }
         script_name <- args$script_name
@@ -292,6 +327,17 @@ create_skill_tools <- function(registry) {
         }
         skill <- registry$get_skill(skill_name)
         if (is.null(skill)) {
+           # Try fuzzy matching
+          available_skills <- registry$list_skills()$name
+          if (length(available_skills) > 0) {
+             dists <- utils::adist(skill_name, available_skills, ignore.case = TRUE)
+             min_dist <- min(dists)
+             threshold <- min(4, max(3, nchar(skill_name) * 0.3))
+             if (min_dist <= threshold) {
+               suggestion <- available_skills[which.min(dists)]
+               return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
+             }
+          }
           return(paste0("Skill not found: ", skill_name))
         }
         scripts <- skill$list_scripts()
