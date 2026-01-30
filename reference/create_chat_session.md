@@ -10,7 +10,8 @@ create_chat_session(
   system_prompt = NULL,
   tools = NULL,
   hooks = NULL,
-  max_steps = 10
+  max_steps = 10,
+  agent = NULL
 )
 ```
 
@@ -36,6 +37,10 @@ create_chat_session(
 
   Maximum tool execution steps. Default 10.
 
+- agent:
+
+  Optional Agent object to initialize from.
+
 ## Value
 
 A ChatSession object.
@@ -49,6 +54,10 @@ chat <- create_chat_session(
   model = "openai:gpt-4o",
   system_prompt = "You are a helpful R programming assistant."
 )
+
+# Create from an existing agent
+agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
 
 # Send messages
 response <- chat$send("How do I read a CSV file?")

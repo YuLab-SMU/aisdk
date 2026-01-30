@@ -15,6 +15,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/index.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/AUTO_FIX_SYSTEM_PROMPT.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/AgentRegistry.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/AgentTeam.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/AnthropicLanguageModel.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/AnthropicProvider.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ChatManager.html</loc></url>
@@ -56,6 +57,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aiChatUI.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/analyze_r_package.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/annotate_model_capabilities.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/apiConfigUI.html</loc></url>
@@ -103,10 +105,13 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_shared_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_skill.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_skill_architect_agent.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_skill_forge_tools.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_skill_registry.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_skill_tools.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_standard_registry.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_stream_renderer.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_team.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_telemetry.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_visualizer_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_volcengine.html</loc></url>
@@ -231,7 +236,9 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/stream_responses_api.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/stream_text.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/summarize_object.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/team.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/telemetry.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/test_new_skill.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/to_snake_case.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/tool.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html</loc></url>

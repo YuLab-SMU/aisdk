@@ -81,7 +81,7 @@ Create a language model.
 
 #### Usage
 
-    OpenAIProvider$language_model(model_id = "gpt-4o")
+    OpenAIProvider$language_model(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o"))
 
 #### Arguments
 

@@ -40,6 +40,8 @@ environment).
 
 - [`Agent$as_tool()`](#method-Agent-as_tool)
 
+- [`Agent$create_session()`](#method-Agent-create_session)
+
 - [`Agent$print()`](#method-Agent-print)
 
 - [`Agent$clone()`](#method-Agent-clone)
@@ -52,7 +54,7 @@ Initialize a new Agent.
 
 #### Usage
 
-    Agent$new(name, description, system_prompt = NULL, tools = NULL)
+    Agent$new(name, description, system_prompt = NULL, tools = NULL, skills = NULL)
 
 #### Arguments
 
@@ -72,6 +74,12 @@ Initialize a new Agent.
 - `tools`:
 
   Optional list of Tool objects the agent can use.
+
+- `skills`:
+
+  Optional character vector of skill paths or "auto" to discover skills.
+  When provided, this automatically loads skills, creates tools, and
+  updates the system prompt.
 
 #### Returns
 
@@ -196,6 +204,30 @@ description for semantic routing.
 #### Returns
 
 A Tool object that wraps this agent.
+
+------------------------------------------------------------------------
+
+### Method [`create_session()`](https://YuLab-SMU.github.io/aisdk/reference/create_session.md)
+
+Create a stateful ChatSession from this agent.
+
+#### Usage
+
+    Agent$create_session(model = NULL, ...)
+
+#### Arguments
+
+- `model`:
+
+  Optional model override.
+
+- `...`:
+
+  Additional arguments passed to ChatSession\$new.
+
+#### Returns
+
+A ChatSession object initialized with this agent's config.
 
 ------------------------------------------------------------------------
 

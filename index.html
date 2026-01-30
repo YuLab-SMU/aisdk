@@ -156,11 +156,25 @@
 <span><span class="fu"><a href="reference/render_text.html">render_text</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="stateful-conversations">Stateful Conversations<a class="anchor" aria-label="anchor" href="#stateful-conversations"></a>
+</h3>
+<p>Agents are stateless by default. To have a multi-turn conversation where the agent remembers previous interactions, create a <em>Chat Session</em> from the agent:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a session from the agent</span></span>
+<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">create_session</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># First interaction</span></span>
+<span><span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"What is 1234 + 5678?"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Follow-up (context is preserved)</span></span>
+<span><span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"Divide that by 2"</span><span class="op">)</span> </span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="skills-system">Skills System<a class="anchor" aria-label="anchor" href="#skills-system"></a>
 </h3>
 <p>The Skills system allows you to package specialized knowledge and tools that can be dynamically loaded by agents. This saves context window space and keeps your agents focused.</p>
 <p><strong>Use the Demo Skill</strong>:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Initialize the registry and tools</span></span>
 <span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/create_skill_registry.html">create_skill_registry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"skills"</span>, package <span class="op">=</span> <span class="st">"aisdk"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">skill_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/create_skill_tools.html">create_skill_tools</a></span><span class="op">(</span><span class="va">registry</span><span class="op">)</span></span>

@@ -68,7 +68,8 @@ Initialize a new ChatSession.
       max_steps = 10,
       registry = NULL,
       memory = NULL,
-      envir = NULL
+      envir = NULL,
+      agent = NULL
     )
 
 #### Arguments
@@ -108,6 +109,11 @@ Initialize a new ChatSession.
 - `envir`:
 
   Optional shared R environment. For multi-agent data sharing.
+
+- `agent`:
+
+  Optional Agent object. If provided, the session inherits the agent's
+  tools and system prompt.
 
 ------------------------------------------------------------------------
 

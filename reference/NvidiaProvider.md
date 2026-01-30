@@ -55,7 +55,7 @@ Create a language model.
 
 #### Usage
 
-    NvidiaProvider$language_model(model_id)
+    NvidiaProvider$language_model(model_id = NULL)
 
 #### Arguments
 

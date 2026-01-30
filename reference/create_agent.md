@@ -5,7 +5,13 @@ Factory function to create a new Agent object.
 ## Usage
 
 ``` r
-create_agent(name, description, system_prompt = NULL, tools = NULL)
+create_agent(
+  name,
+  description,
+  system_prompt = NULL,
+  tools = NULL,
+  skills = NULL
+)
 ```
 
 ## Arguments
@@ -26,6 +32,10 @@ create_agent(name, description, system_prompt = NULL, tools = NULL)
 
   Optional list of Tool objects the agent can use.
 
+- skills:
+
+  Optional character vector of skill paths or "auto".
+
 ## Value
 
 An Agent object.
@@ -43,5 +53,12 @@ math_agent <- create_agent(
 
 # Run the agent
 result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
+
+# Create an agent with skills
+stock_agent <- create_agent(
+  name = "StockAnalyst",
+  description = "Stock analysis agent",
+  skills = "auto"
+)
 } # }
 ```

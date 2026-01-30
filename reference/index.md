@@ -4,6 +4,8 @@
 
 - [`AgentRegistry`](https://YuLab-SMU.github.io/aisdk/reference/AgentRegistry.md)
   : AgentRegistry Class
+- [`AgentTeam`](https://YuLab-SMU.github.io/aisdk/reference/AgentTeam.md)
+  : AgentTeam Class
 - [`AnthropicProvider`](https://YuLab-SMU.github.io/aisdk/reference/AnthropicProvider.md)
   : Anthropic Provider Class
 - [`ChatSession`](https://YuLab-SMU.github.io/aisdk/reference/ChatSession.md)
@@ -65,6 +67,8 @@
 - [`aisdk`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   [`aisdk-package`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   : aisdk: AI SDK for R
+- [`analyze_r_package()`](https://YuLab-SMU.github.io/aisdk/reference/analyze_r_package.md)
+  : Analyze R Package for Skill Creation
 - [`apiConfigServer()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.md)
   : API Configuration Server
 - [`apiConfigUI()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigUI.md)
@@ -143,12 +147,18 @@
   : Create a Shared Session
 - [`create_skill()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill.md)
   : Create Skill Scaffold
+- [`create_skill_architect_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_architect_agent.md)
+  : Create a SkillArchitect Agent
+- [`create_skill_forge_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_forge_tools.md)
+  : Create Skill Forge Tools
 - [`create_skill_registry()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_registry.md)
   : Create a Skill Registry
 - [`create_skill_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_skill_tools.md)
   : Create Skill Tools
 - [`create_standard_registry()`](https://YuLab-SMU.github.io/aisdk/reference/create_standard_registry.md)
   : Create Standard Agent Registry
+- [`create_team()`](https://YuLab-SMU.github.io/aisdk/reference/create_team.md)
+  : Create an Agent Team
 - [`create_telemetry()`](https://YuLab-SMU.github.io/aisdk/reference/create_telemetry.md)
   : Create Telemetry
 - [`create_visualizer_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_visualizer_agent.md)
@@ -295,8 +305,12 @@
   : Output Strategy System
 - [`stream_text()`](https://YuLab-SMU.github.io/aisdk/reference/stream_text.md)
   : Stream Text
+- [`team`](https://YuLab-SMU.github.io/aisdk/reference/team.md) : Agent
+  Team: Automated Multi-Agent Orchestration
 - [`Telemetry`](https://YuLab-SMU.github.io/aisdk/reference/telemetry.md)
   : Telemetry Class
+- [`test_new_skill()`](https://YuLab-SMU.github.io/aisdk/reference/test_new_skill.md)
+  : Test a Newly Created Skill
 - [`Tool`](https://YuLab-SMU.github.io/aisdk/reference/tool.md) : Tool
   Class
 - [`tool()`](https://YuLab-SMU.github.io/aisdk/reference/tool_factory.md)

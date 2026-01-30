@@ -93,7 +93,8 @@ conversation history, supports tool execution, and provides persistence.</p>
 <span>  max_steps <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  registry <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  memory <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  envir <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  envir <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  agent <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -133,6 +134,11 @@ conversation history, supports tool execution, and provides persistence.</p>
 
 <dt><code>envir</code></dt>
 <dd><p>Optional shared R environment. For multi-agent data sharing.</p></dd>
+
+
+<dt><code>agent</code></dt>
+<dd><p>Optional Agent object. If provided, the session inherits the agent's
+tools and system prompt.</p></dd>
 
 
 </dl><p></p></div>
