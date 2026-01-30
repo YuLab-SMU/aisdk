@@ -33,6 +33,9 @@ Agent <- R6::R6Class(
     #' @field tools List of Tool objects this agent can use.
     tools = NULL,
 
+    #' @field model Default model ID for this agent.
+    model = NULL,
+
     #' @description Initialize a new Agent.
     #' @param name Unique name for this agent (e.g., "DataCleaner", "Visualizer").
     #' @param description A clear description of what this agent does.
@@ -41,12 +44,14 @@ Agent <- R6::R6Class(
     #' @param tools Optional list of Tool objects the agent can use.
     #' @param skills Optional character vector of skill paths or "auto" to discover skills.
     #'   When provided, this automatically loads skills, creates tools, and updates the system prompt.
+    #' @param model Optional default model ID for this agent.
     #' @return An Agent object.
     initialize = function(name,
                           description,
                           system_prompt = NULL,
                           tools = NULL,
-                          skills = NULL) {
+                          skills = NULL,
+                          model = NULL) {
       if (missing(name) || !is.character(name) || nchar(name) == 0) {
         rlang::abort("Agent 'name' is required and must be a non-empty string.")
       }
@@ -56,6 +61,7 @@ Agent <- R6::R6Class(
 
       self$name <- name
       self$description <- description
+      self$model <- model
       
       # Handle skills
       skill_prompt <- NULL
@@ -137,7 +143,11 @@ Agent <- R6::R6Class(
           model <- session$get_model_id()
         }
         if (is.null(model)) {
-          rlang::abort("No model specified. Provide 'model' argument or use a session with a model.")
+          # Try to get model from agent's default
+          model <- self$model
+        }
+        if (is.null(model)) {
+          rlang::abort("No model specified. Provide 'model' argument, use a session with a model, or set agent default model.")
         }
       }
 
@@ -194,7 +204,11 @@ Agent <- R6::R6Class(
           model <- session$get_model_id()
         }
         if (is.null(model)) {
-          rlang::abort("No model specified. Provide 'model' argument or use a session with a model.")
+          # Try to get model from agent's default
+          model <- self$model
+        }
+        if (is.null(model)) {
+          rlang::abort("No model specified. Provide 'model' argument, use a session with a model, or set agent default model.")
         }
       }
 
@@ -343,7 +357,8 @@ Agent <- R6::R6Class(
 #' @param description A clear description of what this agent does.
 #' @param system_prompt Optional system prompt defining the agent's persona.
 #' @param tools Optional list of Tool objects the agent can use.
-#' @param skills Optional character vector of skill paths or "auto".
+ #' @param skills Optional character vector of skill paths or "auto".
+#' @param model Optional default model ID for this agent.
 #' @return An Agent object.
 #' @export
 #' @examples
@@ -365,13 +380,14 @@ Agent <- R6::R6Class(
 #'   skills = "auto"
 #' )
 #' }
-create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL) {
+create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL, model = NULL) {
   Agent$new(
     name = name,
     description = description,
     system_prompt = system_prompt,
     tools = tools,
-    skills = skills
+    skills = skills,
+    model = model
   )
 }
 

@@ -22,6 +22,8 @@ This is the "API" that the LLM Manager uses for semantic routing.}
 \item{\code{system_prompt}}{The agent's persona/instructions.}
 
 \item{\code{tools}}{List of Tool objects this agent can use.}
+
+\item{\code{model}}{Default model ID for this agent.}
 }
 \if{html}{\out{</div>}}
 }
@@ -43,7 +45,14 @@ This is the "API" that the LLM Manager uses for semantic routing.}
 \subsection{Method \code{new()}}{
 Initialize a new Agent.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Agent$new(name, description, system_prompt = NULL, tools = NULL, skills = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Agent$new(
+  name,
+  description,
+  system_prompt = NULL,
+  tools = NULL,
+  skills = NULL,
+  model = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -60,6 +69,8 @@ This is used by the Manager LLM to decide which agent to delegate to.}
 
 \item{\code{skills}}{Optional character vector of skill paths or "auto" to discover skills.
 When provided, this automatically loads skills, creates tools, and updates the system prompt.}
+
+\item{\code{model}}{Optional default model ID for this agent.}
 }
 \if{html}{\out{</div>}}
 }
