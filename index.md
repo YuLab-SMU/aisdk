@@ -7,12 +7,23 @@ integration with the R ecosystem (Shiny, RMarkdown, Quarto).
 
 ## Features
 
+- **🚀 Genesis V2 (NEW!)**: Plan-Execute-Refine architecture with
+  automatic quality assurance
+  - **Genesis V1**: One-line execution with auto-discovery:
+    `genesis("Analyze iris dataset")`
+  - **Genesis V2**: Iterative refinement with quality checks:
+    `genesis_v2("Complex task", auto_refine = TRUE)`
+  - Automatic agent discovery and team assembly
+  - AI-powered team composition via Architect agent
+  - Quality evaluation and automatic improvement
+  - Smart caching for performance
 - **Unified API**: Switch between OpenAI and Anthropic models with a
   single line of code.
 - **Agentic Framework**: Built-in support for **Agents**, **Tasks**, and
   **Flows**.
   - `CoderAgent`: Writes and edits code.
   - `PlannerAgent`: Breaks down complex problems.
+  - **Multi-Agent Teams**: Coordinate multiple specialized agents
 - **Tool System**: Turn any R function into an AI-callable tool with
   automatic schema generation.
 - **Structured Outputs**: Generate type-safe JSON, data frames, and
@@ -33,6 +44,68 @@ devtools::install_github("YuLab-SMU/aisdk")
 ```
 
 ## Quick Start
+
+### 🚀 Genesis: Zero-Configuration Execution
+
+#### Genesis V1: Simple & Fast
+
+The easiest way to use aisdk - just describe what you want:
+
+``` r
+library(aisdk)
+
+# Set your API key
+Sys.setenv(ANTHROPIC_API_KEY = "your-api-key")
+
+# One line - that's it!
+result <- genesis("Analyze the iris dataset and create a scatter plot")
+
+# With verbose output to see what's happening
+result <- genesis(
+  "Analyze the mtcars dataset and summarize key statistics",
+  verbose = TRUE
+)
+```
+
+**What Genesis V1 does automatically:** 1. Discovers available agents
+from your skill library 2. Analyzes your task to understand requirements
+3. Selects the optimal combination of agents 4. Assembles a team and
+executes the task
+
+#### Genesis V2: Plan-Execute-Refine (NEW!)
+
+For complex tasks requiring quality assurance and iterative improvement:
+
+``` r
+# Automatic quality checks and refinement
+result <- genesis_v2(
+  "Analyze iris dataset and create a comprehensive report with visualizations",
+  max_iterations = 3,
+  quality_threshold = 80,
+  auto_refine = TRUE,
+  verbose = TRUE
+)
+
+# Check results
+print_genesis_v2_result(result)
+
+# Analyze execution history
+analyze_genesis_history(result)
+```
+
+**What Genesis V2 adds:** 1. **Plan**: Architect defines success
+criteria 2. **Execute**: Team runs the task 3. **Refine**: Evaluator
+checks quality, Refiner suggests improvements 4. **Iterate**:
+Automatically retry or replan until quality threshold is met
+
+**Learn more**: - [Genesis User
+Guide](https://YuLab-SMU.github.io/aisdk/docs/GENESIS_USER_GUIDE.md) -
+[Genesis V2 PER
+Design](https://YuLab-SMU.github.io/aisdk/docs/GENESIS_V2_PER_DESIGN.md) -
+[V1 vs V2
+Comparison](https://YuLab-SMU.github.io/aisdk/docs/GENESIS_V1_VS_V2.md)
+
+------------------------------------------------------------------------
 
 ### Basic Text Generation
 

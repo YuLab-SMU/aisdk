@@ -2,16 +2,28 @@
 
 ## All functions
 
+- [`ARCHITECT_PROMPT_TEMPLATE`](https://YuLab-SMU.github.io/aisdk/reference/ARCHITECT_PROMPT_TEMPLATE.md)
+  : Architect Agent for Team Composition
+- [`ARCHITECT_V2_PROMPT_TEMPLATE`](https://YuLab-SMU.github.io/aisdk/reference/ARCHITECT_V2_PROMPT_TEMPLATE.md)
+  : Architect V2: Enhanced Meta-Agent with Success Criteria
+- [`AgentLibrary`](https://YuLab-SMU.github.io/aisdk/reference/AgentLibrary.md)
+  : Agent Discovery Library
 - [`AgentRegistry`](https://YuLab-SMU.github.io/aisdk/reference/AgentRegistry.md)
   : AgentRegistry Class
 - [`AgentTeam`](https://YuLab-SMU.github.io/aisdk/reference/AgentTeam.md)
   : AgentTeam Class
 - [`AnthropicProvider`](https://YuLab-SMU.github.io/aisdk/reference/AnthropicProvider.md)
   : Anthropic Provider Class
+- [`ArchitectV2`](https://YuLab-SMU.github.io/aisdk/reference/ArchitectV2.md)
+  : Architect V2 R6 Class
 - [`ChatSession`](https://YuLab-SMU.github.io/aisdk/reference/ChatSession.md)
   : ChatSession Class
+- [`EVALUATOR_PROMPT`](https://YuLab-SMU.github.io/aisdk/reference/EVALUATOR_PROMPT.md)
+  : Evaluator Agent: Result Quality Assessment
 - [`EmbeddingModelV1`](https://YuLab-SMU.github.io/aisdk/reference/EmbeddingModelV1.md)
   : Embedding Model V1 (Abstract Base Class)
+- [`Evaluator`](https://YuLab-SMU.github.io/aisdk/reference/Evaluator.md)
+  : Evaluator R6 Class
 - [`FlowStack`](https://YuLab-SMU.github.io/aisdk/reference/FlowStack.md)
   : FlowStack Class
 - [`GenerateResult`](https://YuLab-SMU.github.io/aisdk/reference/GenerateResult.md)
@@ -44,6 +56,10 @@
   : Project Memory Class
 - [`ProviderRegistry`](https://YuLab-SMU.github.io/aisdk/reference/ProviderRegistry.md)
   : Provider Registry
+- [`REFINER_PROMPT`](https://YuLab-SMU.github.io/aisdk/reference/REFINER_PROMPT.md)
+  : Refiner Agent: Failure Analysis and Improvement Strategy
+- [`Refiner`](https://YuLab-SMU.github.io/aisdk/reference/Refiner.md) :
+  Refiner R6 Class
 - [`SharedSession`](https://YuLab-SMU.github.io/aisdk/reference/SharedSession.md)
   : SharedSession Class
 - [`SkillRegistry`](https://YuLab-SMU.github.io/aisdk/reference/SkillRegistry.md)
@@ -67,6 +83,8 @@
 - [`aisdk`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   [`aisdk-package`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   : aisdk: AI SDK for R
+- [`analyze_genesis_history()`](https://YuLab-SMU.github.io/aisdk/reference/analyze_genesis_history.md)
+  : Extract insights from Genesis V2 execution history
 - [`analyze_r_package()`](https://YuLab-SMU.github.io/aisdk/reference/analyze_r_package.md)
   : Analyze R Package for Skill Creation
 - [`apiConfigServer()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.md)
@@ -77,6 +95,8 @@
   : Autonomous Data Science Pipelines
 - [`benchmark_agent()`](https://YuLab-SMU.github.io/aisdk/reference/benchmark_agent.md)
   : Benchmark Agent
+- [`benchmark_genesis_v2()`](https://YuLab-SMU.github.io/aisdk/reference/benchmark_genesis_v2.md)
+  : Create a Genesis V2 benchmark suite
 - [`cache`](https://YuLab-SMU.github.io/aisdk/reference/cache.md) :
   Caching System
 - [`cache_tool()`](https://YuLab-SMU.github.io/aisdk/reference/cache_tool.md)
@@ -85,6 +105,8 @@
   : Check SDK Version Compatibility
 - [`clear_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/clear_ai_session.md)
   : Clear AI Engine Session
+- [`clear_genesis_cache()`](https://YuLab-SMU.github.io/aisdk/reference/clear_genesis_cache.md)
+  : Clear team composition cache
 - [`compat`](https://YuLab-SMU.github.io/aisdk/reference/compat.md) :
   Compatibility Layer: Feature Flags and Migration Support
 - [`configure_api()`](https://YuLab-SMU.github.io/aisdk/reference/configure_api.md)
@@ -105,6 +127,10 @@
   : Create an Agent Registry
 - [`create_anthropic()`](https://YuLab-SMU.github.io/aisdk/reference/create_anthropic.md)
   : Create Anthropic Provider
+- [`create_architect_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_architect_agent.md)
+  : Create Architect agent for team composition
+- [`create_architect_v2()`](https://YuLab-SMU.github.io/aisdk/reference/create_architect_v2.md)
+  : Create Architect V2 agent
 - [`create_chat_session()`](https://YuLab-SMU.github.io/aisdk/reference/create_chat_session.md)
   : Create a Chat Session
 - [`create_coder_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.md)
@@ -115,6 +141,8 @@
   : Create Embeddings
 - [`create_env_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_env_agent.md)
   : Create an EnvAgent
+- [`create_evaluator_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_evaluator_agent.md)
+  : Create Evaluator agent
 - [`create_file_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_file_agent.md)
   : Create a FileAgent
 - [`create_flow()`](https://YuLab-SMU.github.io/aisdk/reference/create_flow.md)
@@ -139,6 +167,8 @@
   : Create Permission Hook
 - [`create_planner_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_planner_agent.md)
   : Create a PlannerAgent
+- [`create_refiner_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_refiner_agent.md)
+  : Create Refiner agent
 - [`create_schema_from_func()`](https://YuLab-SMU.github.io/aisdk/reference/create_schema_from_func.md)
   : Create Schema from Function
 - [`create_session()`](https://YuLab-SMU.github.io/aisdk/reference/create_session.md)
@@ -167,6 +197,8 @@
   : Create Volcengine/Ark Provider
 - [`create_z_ggtree()`](https://YuLab-SMU.github.io/aisdk/reference/create_z_ggtree.md)
   : Create Schema for ggtree Function
+- [`.genesis_cache`](https://YuLab-SMU.github.io/aisdk/reference/dot-genesis_cache.md)
+  : Genesis: Zero-Configuration Agent Execution
 - [`download_model()`](https://YuLab-SMU.github.io/aisdk/reference/download_model.md)
   : Download Model from Hugging Face
 - [`enable_api_tests()`](https://YuLab-SMU.github.io/aisdk/reference/enable_api_tests.md)
@@ -179,6 +211,8 @@
   : Expect No Hallucination
 - [`expect_tool_selection()`](https://YuLab-SMU.github.io/aisdk/reference/expect_tool_selection.md)
   : Expect Tool Selection
+- [`export_genesis_result()`](https://YuLab-SMU.github.io/aisdk/reference/export_genesis_result.md)
+  : Export Genesis V2 result to JSON
 - [`extract_geom_params()`](https://YuLab-SMU.github.io/aisdk/reference/extract_geom_params.md)
   : Extract Geom Parameters from ggproto Object
 - [`fetch_api_models()`](https://YuLab-SMU.github.io/aisdk/reference/fetch_api_models.md)
@@ -189,6 +223,14 @@
   : FlowStack: Enhanced Multi-Agent Orchestration
 - [`generate_text()`](https://YuLab-SMU.github.io/aisdk/reference/generate_text.md)
   : Generate Text
+- [`genesis()`](https://YuLab-SMU.github.io/aisdk/reference/genesis.md)
+  : Execute a task with automatic agent discovery and team assembly
+- [`genesis_cache_info()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_cache_info.md)
+  : Get cache statistics
+- [`genesis_v2()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2.md)
+  : Genesis V2: Plan-Execute-Refine Architecture
+- [`genesis_v2_stats()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2_stats.md)
+  : Get Genesis V2 statistics
 - [`get_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.md)
   : Get AI Engine Session
 - [`get_anthropic_base_url()`](https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_base_url.md)
@@ -211,6 +253,8 @@
   : Get OpenAI Model ID from environment
 - [`get_r_context()`](https://YuLab-SMU.github.io/aisdk/reference/get_r_context.md)
   : Get R Context
+- [`get_skill_library()`](https://YuLab-SMU.github.io/aisdk/reference/get_skill_library.md)
+  : Get current skill library path
 - [`get_skill_store()`](https://YuLab-SMU.github.io/aisdk/reference/get_skill_store.md)
   : Get Skill Store
 - [`ggplot_to_frontend_json()`](https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_frontend_json.md)
@@ -223,6 +267,8 @@
   Hooks System
 - [`hypothesis_fix_verify()`](https://YuLab-SMU.github.io/aisdk/reference/hypothesis_fix_verify.md)
   : Hypothesis-Fix-Verify Loop
+- [`import_genesis_result()`](https://YuLab-SMU.github.io/aisdk/reference/import_genesis_result.md)
+  : Import Genesis V2 result from JSON
 - [`install_skill()`](https://YuLab-SMU.github.io/aisdk/reference/install_skill.md)
   : Install a Skill
 - [`knitr_engine`](https://YuLab-SMU.github.io/aisdk/reference/knitr_engine.md)
@@ -239,12 +285,24 @@
   : Create MCP Router
 - [`migrate_pattern()`](https://YuLab-SMU.github.io/aisdk/reference/migrate_pattern.md)
   : Migrate Legacy Code
+- [`parse_architect_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_response.md)
+  : Parse Architect's JSON response
+- [`parse_architect_v2_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_v2_response.md)
+  : Parse Architect V2's JSON response
+- [`parse_evaluator_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_evaluator_response.md)
+  : Parse Evaluator's JSON response
+- [`parse_refiner_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_refiner_response.md)
+  : Parse Refiner's JSON response
+- [`plot_genesis_progression()`](https://YuLab-SMU.github.io/aisdk/reference/plot_genesis_progression.md)
+  : Visualize Genesis V2 score progression
 - [`print(`*`<GenerateObjectResult>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.GenerateObjectResult.md)
   : Print GenerateObjectResult
 - [`print(`*`<benchmark_result>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.benchmark_result.md)
   : Print Benchmark Result
 - [`print(`*`<z_schema>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.z_schema.md)
   : Print Method for z_schema
+- [`print_genesis_v2_result()`](https://YuLab-SMU.github.io/aisdk/reference/print_genesis_v2_result.md)
+  : Print Genesis V2 result summary
 - [`print_migration_guide()`](https://YuLab-SMU.github.io/aisdk/reference/print_migration_guide.md)
   : Print Migration Guide
 - [`project_memory()`](https://YuLab-SMU.github.io/aisdk/reference/project_memory.md)
@@ -285,6 +343,8 @@
   : Search Skills
 - [`session`](https://YuLab-SMU.github.io/aisdk/reference/session.md) :
   Session Management: Stateful Chat Sessions
+- [`set_skill_library()`](https://YuLab-SMU.github.io/aisdk/reference/set_skill_library.md)
+  : Set default skill library path
 - [`shared_session`](https://YuLab-SMU.github.io/aisdk/reference/shared_session.md)
   : SharedSession: Enhanced Multi-Agent Session Management
 - [`Skill`](https://YuLab-SMU.github.io/aisdk/reference/skill.md) :

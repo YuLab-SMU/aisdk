@@ -28,6 +28,10 @@ environment).
 
   List of Tool objects this agent can use.
 
+- `model`:
+
+  Default model ID for this agent.
+
 ## Methods
 
 ### Public methods
@@ -54,7 +58,14 @@ Initialize a new Agent.
 
 #### Usage
 
-    Agent$new(name, description, system_prompt = NULL, tools = NULL, skills = NULL)
+    Agent$new(
+      name,
+      description,
+      system_prompt = NULL,
+      tools = NULL,
+      skills = NULL,
+      model = NULL
+    )
 
 #### Arguments
 
@@ -80,6 +91,10 @@ Initialize a new Agent.
   Optional character vector of skill paths or "auto" to discover skills.
   When provided, this automatically loads skills, creates tools, and
   updates the system prompt.
+
+- `model`:
+
+  Optional default model ID for this agent.
 
 #### Returns
 

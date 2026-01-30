@@ -10,7 +10,8 @@ create_agent(
   description,
   system_prompt = NULL,
   tools = NULL,
-  skills = NULL
+  skills = NULL,
+  model = NULL
 )
 ```
 
@@ -35,6 +36,10 @@ create_agent(
 - skills:
 
   Optional character vector of skill paths or "auto".
+
+- model:
+
+  Optional default model ID for this agent.
 
 ## Value
 
