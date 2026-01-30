@@ -13,4 +13,6 @@
 ^\.env$
 ^dev_logs$
 ^_pkgdown.yml$
-^verify_skill_forge\.R$
+^docs$
+^demo$
+^.claude$
