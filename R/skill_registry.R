@@ -130,6 +130,7 @@ SkillRegistry <- R6::R6Class(
       data.frame(
         name = sapply(private$.skills, function(s) s$name),
         description = sapply(private$.skills, function(s) s$description %||% ""),
+        path = sapply(private$.skills, function(s) s$path),
         row.names = NULL,
         stringsAsFactors = FALSE
       )
