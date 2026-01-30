@@ -87,6 +87,21 @@ result <- agent$stream("What is 1234 + 5678?", model = model)
 render_text(result)
 ```
 
+### Stateful Conversations
+
+Agents are stateless by default. To have a multi-turn conversation where the agent remembers previous interactions, create a *Chat Session* from the agent:
+
+``` r
+# Create a session from the agent
+session <- agent$create_session(model = model)
+
+# First interaction
+session$send("What is 1234 + 5678?")
+
+# Follow-up (context is preserved)
+session$send("Divide that by 2") 
+```
+
 ### Skills System
 
 The Skills system allows you to package specialized knowledge and tools that can be dynamically loaded by agents. This saves context window space and keeps your agents focused.
