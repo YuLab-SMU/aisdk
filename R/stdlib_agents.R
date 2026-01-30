@@ -913,3 +913,83 @@ create_env_agent <- function(name = "EnvAgent",
 if (!exists("%||%")) {
   `%||%` <- function(x, y) if (is.null(x)) y else x
 }
+# =============================================================================
+# SkillArchitect: Advanced Skill Creator Specialist
+# =============================================================================
+
+#' @title Create a SkillArchitect Agent
+#' @description
+#' Creates an advanced agent specialized in creating, testing, and refining new skills.
+#' It follows a rigorous "Ingest -> Design -> Implement -> Verify" workflow.
+#'
+#' @param name Agent name. Default "SkillArchitect".
+#' @param registry Optional SkillRegistry object (defaults to creating one from inst/skills).
+#' @param model The model object to use for verification (spawning a tester agent).
+#' @return An Agent object configured for skill architecture.
+#' @export
+create_skill_architect_agent <- function(name = "SkillArchitect", registry = NULL, model = NULL) {
+  # Initialize registry if not provided
+  if (is.null(registry)) {
+    registry <- create_skill_registry(system.file("skills", package = "aisdk"))
+  }
+
+  # Ensure the create_skill skill is available
+  if (is.null(registry$get_skill("create_skill"))) {
+    # If not found in package (e.g. during development), try local path
+    local_skills <- file.path("inst", "skills")
+    if (dir.exists(local_skills)) {
+      registry <- create_skill_registry(local_skills)
+    }
+  }
+  
+  if (is.null(registry$get_skill("create_skill"))) {
+     rlang::abort("The 'create_skill' skill is required but not found in the registry.")
+  }
+
+  # Get standard skill creation tools
+  skill_tools <- create_skill_tools(registry)
+  
+  # Get Skill Forge tools (Analysis & Verification)
+  # Requires model for the verification loop
+  forge_tools <- list()
+  if (!is.null(model)) {
+    forge_tools <- create_skill_forge_tools(registry, model)
+  } else {
+    rlang::warn("No 'model' provided to SkillArchitect. Verification tools will be disabled.")
+  }
+
+  all_tools <- c(skill_tools, forge_tools)
+
+  system_prompt <- paste0(
+    "You are the Skill Architect, a senior AI engineer responsible for extending this system's capabilities.\n",
+    "Your mission is to build robust, reusable 'Skills' that enable other agents to perform complex tasks.\n\n",
+    
+    "## Core Principles\n",
+    "1. **Conciseness**: Don't maximize token usage. Be efficient.\n",
+    "2. **Progressive Disclosure**: Detailed docs go into 'references/', core workflow in 'SKILL.md'.\n",
+    "3. **Verification**: Never assume it works. Always VERIFY with a test run.\n\n",
+
+    "## The Workflow\n",
+    "1. **Ingest**: Learn the domain. Use `analyze_r_package` if wrapping a package.\n",
+    "2. **Design**: Plan the skill structure. What inputs? What outputs? Draft the `SKILL.md` in your mind.\n",
+    "3. **Implement**: Use the 'create_skill' tools:\n",
+    "   - `create_structure.R`\n",
+    "   - `write_skill_md.R`\n",
+    "   - `write_script.R`\n",
+    "4. **Verify**: Use `verify_skill` to spawn a tester. If it fails, iterate and fix.\n\n",
+
+    "## Skill Structure\n",
+    "- `SKILL.md`: YAML metadata + High-level instructions (Imperative mood).\n",
+    "- `scripts/`: Self-contained R functions. Use `args` list for inputs.\n",
+    "- `references/`: (Optional) Large documentation or tables.\n\n",
+
+    "You have access to powerful tools. Use them wisely to build the next generation of capabilities."
+  )
+  
+  Agent$new(
+    name = name,
+    description = "Senior Skill Architect. Designs, implements, and verifies new system capabilities.",
+    system_prompt = system_prompt,
+    tools = all_tools
+  )
+}
