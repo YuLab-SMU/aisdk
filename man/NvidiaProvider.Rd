@@ -53,7 +53,7 @@ Initialize the NVIDIA provider.
 \subsection{Method \code{language_model()}}{
 Create a language model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{NvidiaProvider$language_model(model_id)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{NvidiaProvider$language_model(model_id = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

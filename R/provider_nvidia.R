@@ -129,7 +129,11 @@ NvidiaProvider <- R6::R6Class(
     #' @description Create a language model.
     #' @param model_id The model ID (e.g., "z-ai/glm4.7").
     #' @return A NvidiaLanguageModel object.
-    language_model = function(model_id) {
+    language_model = function(model_id = NULL) {
+      model_id <- model_id %||% Sys.getenv("NVIDIA_MODEL")
+      if (model_id == "") {
+        rlang::abort("Model ID not provided and NVIDIA_MODEL environment variable not set.")
+      }
       NvidiaLanguageModel$new(model_id, private$config)
     }
   )

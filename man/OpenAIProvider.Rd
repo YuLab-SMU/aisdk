@@ -67,7 +67,7 @@ Initialize the OpenAI provider.
 \subsection{Method \code{language_model()}}{
 Create a language model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$language_model(model_id = "gpt-4o")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$language_model(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o"))}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
