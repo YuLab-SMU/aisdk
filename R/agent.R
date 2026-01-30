@@ -39,11 +39,14 @@ Agent <- R6::R6Class(
     #'   This is used by the Manager LLM to decide which agent to delegate to.
     #' @param system_prompt Optional system prompt defining the agent's persona.
     #' @param tools Optional list of Tool objects the agent can use.
+    #' @param skills Optional character vector of skill paths or "auto" to discover skills.
+    #'   When provided, this automatically loads skills, creates tools, and updates the system prompt.
     #' @return An Agent object.
     initialize = function(name,
                           description,
                           system_prompt = NULL,
-                          tools = NULL) {
+                          tools = NULL,
+                          skills = NULL) {
       if (missing(name) || !is.character(name) || nchar(name) == 0) {
         rlang::abort("Agent 'name' is required and must be a non-empty string.")
       }
@@ -53,8 +56,60 @@ Agent <- R6::R6Class(
 
       self$name <- name
       self$description <- description
+      
+      # Handle skills
+      skill_prompt <- NULL
+      skill_tools <- list()
+      
+      if (!is.null(skills)) {
+        # Resolve skill paths
+        if (identical(skills, "auto")) {
+           # Check standard locations
+           candidates <- c(
+             file.path(Sys.getenv("HOME"), "aisdk", "skills"),
+             file.path(getwd(), "aisdk", "skills"),
+             file.path(getwd(), "skills"),
+             file.path(getwd(), "inst", "skills")
+           )
+           skills <- candidates[dir.exists(candidates)]
+           if (length(skills) == 0) {
+             warning("skills='auto' specified but no skill directories found in standard locations.")
+           }
+        }
+        
+        # Load skills from paths
+        if (length(skills) > 0) {
+           # Create a merged registry for all paths
+           registry <- SkillRegistry$new()
+           for (path in skills) {
+             tryCatch({
+               registry$scan_skills(path, recursive = TRUE)
+             }, error = function(e) {
+               warning(paste("Failed to scan skills at", path, ":", conditionMessage(e)))
+             })
+           }
+           
+           if (registry$count() > 0) {
+             # Generate prompt section
+             skill_prompt <- registry$generate_prompt_section()
+             
+             # Create tools
+             skill_tools <- create_skill_tools(registry)
+           }
+        }
+      }
+
+      # Combine system prompt
+      if (!is.null(skill_prompt) && nzchar(skill_prompt)) {
+        system_prompt <- if (is.null(system_prompt)) {
+          skill_prompt 
+        } else {
+          paste(system_prompt, "\n\n", skill_prompt, sep = "")
+        }
+      }
+      
       self$system_prompt <- system_prompt
-      self$tools <- tools %||% list()
+      self$tools <- c(tools %||% list(), skill_tools)
     },
 
     #' @description Run the agent with a given task.
@@ -197,6 +252,18 @@ Agent <- R6::R6Class(
       )
     },
 
+    #' @description Create a stateful ChatSession from this agent.
+    #' @param model Optional model override.
+    #' @param ... Additional arguments passed to ChatSession$new.
+    #' @return A ChatSession object initialized with this agent's config.
+    create_session = function(model = NULL, ...) {
+      ChatSession$new(
+        model = model,
+        agent = self,
+        ...
+      )
+    },
+
     #' @description Print method for Agent.
     print = function() {
       cat("<Agent>\n")
@@ -276,6 +343,7 @@ Agent <- R6::R6Class(
 #' @param description A clear description of what this agent does.
 #' @param system_prompt Optional system prompt defining the agent's persona.
 #' @param tools Optional list of Tool objects the agent can use.
+#' @param skills Optional character vector of skill paths or "auto".
 #' @return An Agent object.
 #' @export
 #' @examples
@@ -289,13 +357,21 @@ Agent <- R6::R6Class(
 #'
 #' # Run the agent
 #' result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
+#' 
+#' # Create an agent with skills
+#' stock_agent <- create_agent(
+#'   name = "StockAnalyst",
+#'   description = "Stock analysis agent",
+#'   skills = "auto"
+#' )
 #' }
-create_agent <- function(name, description, system_prompt = NULL, tools = NULL) {
+create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL) {
   Agent$new(
     name = name,
     description = description,
     system_prompt = system_prompt,
-    tools = tools
+    tools = tools,
+    skills = skills
   )
 }
 

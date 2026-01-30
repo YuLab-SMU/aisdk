@@ -32,6 +32,7 @@ This is the "API" that the LLM Manager uses for semantic routing.}
 \item \href{#method-Agent-run}{\code{Agent$run()}}
 \item \href{#method-Agent-stream}{\code{Agent$stream()}}
 \item \href{#method-Agent-as_tool}{\code{Agent$as_tool()}}
+\item \href{#method-Agent-create_session}{\code{Agent$create_session()}}
 \item \href{#method-Agent-print}{\code{Agent$print()}}
 \item \href{#method-Agent-clone}{\code{Agent$clone()}}
 }
@@ -42,7 +43,7 @@ This is the "API" that the LLM Manager uses for semantic routing.}
 \subsection{Method \code{new()}}{
 Initialize a new Agent.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Agent$new(name, description, system_prompt = NULL, tools = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Agent$new(name, description, system_prompt = NULL, tools = NULL, skills = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -56,6 +57,9 @@ This is used by the Manager LLM to decide which agent to delegate to.}
 \item{\code{system_prompt}}{Optional system prompt defining the agent's persona.}
 
 \item{\code{tools}}{Optional list of Tool objects the agent can use.}
+
+\item{\code{skills}}{Optional character vector of skill paths or "auto" to discover skills.
+When provided, this automatically loads skills, creates tools, and updates the system prompt.}
 }
 \if{html}{\out{</div>}}
 }
@@ -158,6 +162,28 @@ for semantic routing.
 
 \subsection{Returns}{
 A Tool object that wraps this agent.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Agent-create_session"></a>}}
+\if{latex}{\out{\hypertarget{method-Agent-create_session}{}}}
+\subsection{Method \code{create_session()}}{
+Create a stateful ChatSession from this agent.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Agent$create_session(model = NULL, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model}}{Optional model override.}
+
+\item{\code{...}}{Additional arguments passed to ChatSession$new.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A ChatSession object initialized with this agent's config.
 }
 }
 \if{html}{\out{<hr>}}

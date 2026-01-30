@@ -4,7 +4,13 @@
 \alias{create_agent}
 \title{Create an Agent}
 \usage{
-create_agent(name, description, system_prompt = NULL, tools = NULL)
+create_agent(
+  name,
+  description,
+  system_prompt = NULL,
+  tools = NULL,
+  skills = NULL
+)
 }
 \arguments{
 \item{name}{Unique name for this agent.}
@@ -14,6 +20,8 @@ create_agent(name, description, system_prompt = NULL, tools = NULL)
 \item{system_prompt}{Optional system prompt defining the agent's persona.}
 
 \item{tools}{Optional list of Tool objects the agent can use.}
+
+\item{skills}{Optional character vector of skill paths or "auto".}
 }
 \value{
 An Agent object.
@@ -32,5 +40,12 @@ math_agent <- create_agent(
 
 # Run the agent
 result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
+
+# Create an agent with skills
+stock_agent <- create_agent(
+  name = "StockAnalyst",
+  description = "Stock analysis agent",
+  skills = "auto"
+)
 }
 }

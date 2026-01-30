@@ -25,6 +25,8 @@ ChatSession <- R6::R6Class(
     #' @param registry Optional ProviderRegistry for model resolution.
     #' @param memory Optional initial shared memory (list). For multi-agent state sharing.
     #' @param envir Optional shared R environment. For multi-agent data sharing.
+    #' @param agent Optional Agent object. If provided, the session inherits the agent's
+    #'   tools and system prompt.
     initialize = function(model = NULL,
                           system_prompt = NULL,
                           tools = NULL,
@@ -33,11 +35,34 @@ ChatSession <- R6::R6Class(
                           max_steps = 10,
                           registry = NULL,
                           memory = NULL,
-                          envir = NULL) {
+                          envir = NULL,
+                          agent = NULL) {
       private$.model_id <- if (is.character(model)) model else NULL
       private$.model <- if (!is.null(model) && !is.character(model)) model else NULL
-      private$.system_prompt <- system_prompt
-      private$.tools <- tools %||% list()
+      
+      # Handle agent if provided
+      agent_system <- NULL
+      agent_tools <- list()
+      
+      if (!is.null(agent)) {
+        if (!inherits(agent, "Agent")) {
+          rlang::abort("Argument 'agent' must be an Agent object.")
+        }
+        agent_system <- agent$system_prompt
+        agent_tools <- agent$tools
+      }
+
+      # Merge system prompts (agent's prompt + session specific prompt)
+      if (!is.null(agent_system) && !is.null(system_prompt)) {
+        private$.system_prompt <- paste(agent_system, "\n\n", system_prompt, sep = "")
+      } else {
+        private$.system_prompt <- system_prompt %||% agent_system
+      }
+
+      # Merge tools (session tools + agent tools)
+      # Tools provided directly to session take precedence if names collide?
+      # For now, we just concatenate them.
+      private$.tools <- c(tools %||% list(), agent_tools)
       private$.hooks <- hooks
       private$.history <- history %||% list()
       private$.max_steps <- max_steps
@@ -421,6 +446,7 @@ ChatSession <- R6::R6Class(
 #' @param tools Optional list of Tool objects.
 #' @param hooks Optional HookHandler object.
 #' @param max_steps Maximum tool execution steps. Default 10.
+#' @param agent Optional Agent object to initialize from.
 #' @return A ChatSession object.
 #' @export
 #' @examples
@@ -430,6 +456,10 @@ ChatSession <- R6::R6Class(
 #'   model = "openai:gpt-4o",
 #'   system_prompt = "You are a helpful R programming assistant."
 #' )
+#'
+#' # Create from an existing agent
+#' agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+#' chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
 #'
 #' # Send messages
 #' response <- chat$send("How do I read a CSV file?")
@@ -448,13 +478,15 @@ create_chat_session <- function(model = NULL,
                                  system_prompt = NULL,
                                  tools = NULL,
                                  hooks = NULL,
-                                 max_steps = 10) {
+                                 max_steps = 10,
+                                 agent = NULL) {
   ChatSession$new(
     model = model,
     system_prompt = system_prompt,
     tools = tools,
     hooks = hooks,
-    max_steps = max_steps
+    max_steps = max_steps,
+    agent = agent
   )
 }
 
