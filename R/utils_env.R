@@ -150,8 +150,8 @@ reload_env <- function(path = ".Renviron") {
   # Read the environment file
   readRenviron(path)
   
-  message(paste0("✓ Environment reloaded from: ", path))
-  message("✓ New values are now available in Sys.getenv()")
+  message(paste0("[OK] Environment reloaded from: ", path))
+  message("[OK] New values are now available in Sys.getenv()")
   
   invisible(TRUE)
 }

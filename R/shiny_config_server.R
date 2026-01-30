@@ -148,7 +148,7 @@ apiConfigServer <- function(id) {
     
     # Handle selection
     shiny::observeEvent(input$model_selection_table_rows_selected, {
-      req(active_selection_ctx$prefix)
+      shiny::req(active_selection_ctx$prefix)
       idx <- input$model_selection_table_rows_selected
       
       if (!is.null(idx) && length(idx) > 0) {
