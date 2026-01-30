@@ -18,7 +18,7 @@ Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
         digest, parallel, stats, tools, utils
 Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,
         evaluate, shiny, shinyjs, bslib, commonmark, ggplot2, dplyr, readr,
-        readxl, DBI, RSQLite, torch, onnx, rstudioapi, DT
+        readxl, DBI, RSQLite, torch, onnx, rstudioapi, DT, withr
 Config/testthat/edition: 3
 URL: https://github.com/YuLab-SMU/aisdk,
         https://YuLab-SMU.github.io/aisdk/

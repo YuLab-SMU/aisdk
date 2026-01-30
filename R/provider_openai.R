@@ -1084,7 +1084,7 @@ OpenAIProvider <- R6::R6Class(
     #' @description Create a language model.
     #' @param model_id The model ID (e.g., "gpt-4o", "gpt-4o-mini").
     #' @return An OpenAILanguageModel object.
-    language_model = function(model_id = "gpt-4o") {
+    language_model = function(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o")) {
       OpenAILanguageModel$new(model_id, private$config)
     },
 

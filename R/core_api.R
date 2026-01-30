@@ -106,86 +106,92 @@ generate_text <- function(model,
   result <- NULL
 
   # ReAct loop
-  while (step < max_steps) {
-    step <- step + 1
+  tryCatch({
+    while (step < max_steps) {
+      step <- step + 1
 
-    # Build params with current messages
-    params <- c(list(messages = messages), base_params)
+      # Build params with current messages
+      params <- c(list(messages = messages), base_params)
 
-    # Call the model
-    result <- model$do_generate(params)
+      # Call the model
+      result <- model$do_generate(params)
 
-    # Check if there are tool calls to process
-    if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
-      # Store tool calls
-      all_tool_calls <- c(all_tool_calls, result$tool_calls)
+      # Check if there are tool calls to process
+      if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
+        # Store tool calls
+        all_tool_calls <- c(all_tool_calls, result$tool_calls)
 
-      # If we've reached max_steps, return without executing
-      # If we've reached max_steps, return without executing
-      if (step >= max_steps) {
-        warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+        # If we've reached max_steps, return without executing
+        # If we've reached max_steps, return without executing
+        if (step >= max_steps) {
+          warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+          break
+        }
+
+        # Execute tools (with hooks and optional session environment)
+        tool_envir <- if (!is.null(session)) session$get_envir() else NULL
+        
+        # Log tool calls
+        if (interactive()) {
+          for (tc in result$tool_calls) {
+            print_tool_execution(tc$name, tc$arguments)
+          }
+        }
+
+        tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+
+        # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
+        if (interactive()) {
+          for (tr in tool_results) {
+            print_tool_result(tr$name, tr$result)
+          }
+        }
+
+        # Append assistant message with tool_calls to history
+        # Note: We need to include the tool_calls in the assistant message for context
+        assistant_message <- list(role = "assistant", content = result$text %||% "")
+        
+        history_format <- model$get_history_format()
+        
+        # For OpenAI, we need to include tool_calls in the assistant message
+        if (history_format == "openai") {
+          assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
+            list(
+              id = tc$id,
+              type = "function",
+              `function` = list(
+                name = tc$name,
+                arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
+              )
+            )
+          })
+        } else if (history_format == "anthropic") {
+          # For Anthropic, tool_use blocks are part of the content
+          assistant_message$content <- result$raw_response$content
+        }
+        
+        messages <- c(messages, list(assistant_message))
+
+        # Append tool results to history using provider-specific formatting
+        for (tr in tool_results) {
+          tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
+          messages <- c(messages, list(tool_result_msg))
+        }
+
+        # Continue loop
+      } else {
+        # No tool calls, we're done
         break
       }
-
-      # Execute tools (with hooks and optional session environment)
-      tool_envir <- if (!is.null(session)) session$get_envir() else NULL
-      
-      # Log tool calls
-      if (interactive()) {
-        for (tc in result$tool_calls) {
-          print_tool_execution(tc$name, tc$arguments)
-        }
-      }
-
-      tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-
-      # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
-      if (interactive()) {
-        for (tr in tool_results) {
-          print_tool_result(tr$name, tr$result)
-        }
-      }
-
-      # Append assistant message with tool_calls to history
-      # Note: We need to include the tool_calls in the assistant message for context
-      assistant_message <- list(role = "assistant", content = result$text %||% "")
-      
-      history_format <- model$get_history_format()
-      
-      # For OpenAI, we need to include tool_calls in the assistant message
-      if (history_format == "openai") {
-        assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
-          list(
-            id = tc$id,
-            type = "function",
-            `function` = list(
-              name = tc$name,
-              arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
-            )
-          )
-        })
-      } else if (history_format == "anthropic") {
-        # For Anthropic, tool_use blocks are part of the content
-        assistant_message$content <- result$raw_response$content
-      }
-      
-      messages <- c(messages, list(assistant_message))
-
-      # Append tool results to history using provider-specific formatting
-      for (tr in tool_results) {
-        tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-        messages <- c(messages, list(tool_result_msg))
-      }
-
-      # Continue loop
-    } else {
-      # No tool calls, we're done
-      break
     }
-  }
+  }, error = handle_network_error)
 
   # Add step information to result for debugging
   if (max_steps > 1) {
+    if (is.null(result)) {
+       # If result is NULL here (e.g. error in first loop), initialize it loosely so we return something
+       result <- list()
+    }
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
   }
@@ -286,99 +292,104 @@ stream_text <- function(model,
   renderer <- create_stream_renderer()
   
   # ReAct loop for streaming
-  while (step < max_steps) {
-    step <- step + 1
+  tryCatch({
+    while (step < max_steps) {
+      step <- step + 1
 
-    # Build params with current messages
-    params <- c(list(messages = messages), base_params)
+      # Build params with current messages
+      params <- c(list(messages = messages), base_params)
 
-    # Call the model via do_stream
-    if (interactive()) renderer$start_thinking()
-    
-    result <- model$do_stream(params, function(chunk, done) {
-      if (interactive()) {
-        if (!is.null(callback)) {
-          renderer$stop_thinking()
-        } else {
-          renderer$process_chunk(chunk, done)
+      # Call the model via do_stream
+      if (interactive()) renderer$start_thinking()
+      
+      result <- model$do_stream(params, function(chunk, done) {
+        if (interactive()) {
+          if (!is.null(callback)) {
+            renderer$stop_thinking()
+          } else {
+            renderer$process_chunk(chunk, done)
+          }
         }
-      }
-      if (!is.null(callback)) callback(chunk, done)
-    })
+        if (!is.null(callback)) callback(chunk, done)
+      })
 
-    # Check if there are tool calls to process
-    if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
-      # Store tool calls
-      all_tool_calls <- c(all_tool_calls, result$tool_calls)
+      # Check if there are tool calls to process
+      if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
+        # Store tool calls
+        all_tool_calls <- c(all_tool_calls, result$tool_calls)
 
-      # If we've reached max_steps, return without executing
-      if (step >= max_steps) {
-        warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+        # If we've reached max_steps, return without executing
+        if (step >= max_steps) {
+          warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+          break
+        }
+
+        # Execute tools (with hooks and optional session environment)
+        tool_envir <- if (!is.null(session)) session$get_envir() else NULL
+        
+        # Log tool calls
+        if (interactive()) {
+          for (tc in result$tool_calls) {
+            renderer$render_tool_start(tc$name, tc$arguments)
+          }
+        }
+
+        tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+
+        # Log tool results
+        if (interactive()) {
+          for (tr in tool_results) {
+            renderer$render_tool_result(tr$name, tr$result)
+          }
+        }
+
+        # Append assistant message with tool_calls to history
+        assistant_message <- list(role = "assistant", content = result$text %||% "")
+        
+        history_format <- model$get_history_format()
+        
+        # Provider-specific tool call formatting (copied from generate_text)
+        if (history_format == "openai") {
+          assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
+            list(
+              id = tc$id,
+              type = "function",
+              `function` = list(
+                name = tc$name,
+                arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
+              )
+            )
+          })
+        } else if (history_format == "anthropic") {
+          assistant_message$content <- result$raw_response$content
+        }
+        
+        messages <- c(messages, list(assistant_message))
+
+        # Append tool results to history
+        for (tr in tool_results) {
+          tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
+          messages <- c(messages, list(tool_result_msg))
+        }
+
+        # Reset renderer state for next step
+        if (interactive()) {
+          renderer$reset_for_new_step()
+        }
+
+        # Continue loop - next iteration will stream the response to the tool output
+      } else {
+        # No tool calls, we're done
         break
       }
-
-      # Execute tools (with hooks and optional session environment)
-      tool_envir <- if (!is.null(session)) session$get_envir() else NULL
-      
-      # Log tool calls
-      if (interactive()) {
-        for (tc in result$tool_calls) {
-          renderer$render_tool_start(tc$name, tc$arguments)
-        }
-      }
-
-      tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-
-      # Log tool results
-      if (interactive()) {
-        for (tr in tool_results) {
-          renderer$render_tool_result(tr$name, tr$result)
-        }
-      }
-
-      # Append assistant message with tool_calls to history
-      assistant_message <- list(role = "assistant", content = result$text %||% "")
-      
-      history_format <- model$get_history_format()
-      
-      # Provider-specific tool call formatting (copied from generate_text)
-      if (history_format == "openai") {
-        assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
-          list(
-            id = tc$id,
-            type = "function",
-            `function` = list(
-              name = tc$name,
-              arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
-            )
-          )
-        })
-      } else if (history_format == "anthropic") {
-        assistant_message$content <- result$raw_response$content
-      }
-      
-      messages <- c(messages, list(assistant_message))
-
-      # Append tool results to history
-      for (tr in tool_results) {
-        tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-        messages <- c(messages, list(tool_result_msg))
-      }
-
-      # Reset renderer state for next step
-      if (interactive()) {
-        renderer$reset_for_new_step()
-      }
-
-      # Continue loop - next iteration will stream the response to the tool output
-    } else {
-      # No tool calls, we're done
-      break
     }
-  }
+  }, error = handle_network_error)
 
   # Add step info
   if (max_steps > 1) {
+    if (is.null(result)) {
+       result <- list() # fallback
+    }
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
   }
@@ -412,6 +423,40 @@ create_embeddings <- function(model, value, registry = NULL) {
 }
 
 # --- Internal Helper Functions ---
+
+#' @keywords internal
+handle_network_error <- function(e) {
+  # Check for common network error patterns
+  msg <- conditionMessage(e)
+  is_network_error <- any(sapply(c(
+    "cannot open the connection",
+    "Failed to perform HTTP request",
+    "timeout",
+    "operation timed out",
+    "Connection reset",
+    "host unreachable"
+  ), function(p) grepl(p, msg, ignore.case = TRUE)))
+  
+  if (is_network_error) {
+    if (requireNamespace("cli", quietly = TRUE)) {
+      cli::cli_alert_danger("Network Connection Interrupted")
+      cli::cli_alert_info("Don't worry! This process is designed to be resilient.")
+      cli::cli_ul()
+      cli::cli_li("If you were running a task, it is safe to re-run.")
+      cli::cli_li("Option 1: Simply run the last command again.")
+      cli::cli_li("Option 2: Ask the agent to 'Continue where you left off'.")
+      cli::cli_end()
+    } else {
+      message("\n!!! Network Connection Interrupted !!!")
+      message("Don't worry! It is safe to re-run this task.")
+      message("Option 1: Simply run the last command again.")
+      message("Option 2: Ask the agent to 'Continue where you left off'.\n")
+    }
+  }
+  
+  # Re-throw to allow programmatic handling if needed
+  rlang::cnd_signal(e)
+}
 
 #' @keywords internal
 resolve_model <- function(model, registry = NULL, type = c("language", "embedding")) {
