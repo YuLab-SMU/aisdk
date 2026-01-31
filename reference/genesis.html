@@ -53,10 +53,12 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">genesis</span><span class="op">(</span></span>
 <span>  <span class="va">task</span>,</span>
 <span>  skill_paths <span class="op">=</span> <span class="st">"auto"</span>,</span>
-<span>  model <span class="op">=</span> <span class="st">"claude-3-5-sonnet-20241022"</span>,</span>
+<span>  model <span class="op">=</span> <span class="st">"anthropic:claude-3-5-sonnet-20241022"</span>,</span>
 <span>  cache <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  architect_model <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  architect_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  max_steps <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plan"</span>, <span class="st">"direct"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -86,6 +88,14 @@
 
 <dt id="arg-architect-model">architect_model<a class="anchor" aria-label="anchor" href="#arg-architect-model"></a></dt>
 <dd><p>Model to use for Architect agent (default: same as model)</p></dd>
+
+
+<dt id="arg-max-steps">max_steps<a class="anchor" aria-label="anchor" href="#arg-max-steps"></a></dt>
+<dd><p>Maximum tool execution steps (default: 10)</p></dd>
+
+
+<dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
+<dd><p>Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)</p></dd>
 
 </dl></div>
     <div class="section level2">

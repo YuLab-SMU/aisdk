@@ -1,8 +1,8 @@
-# Genesis: Zero-Configuration Agent Execution
+# Genesis: Zero-Configuration Direct Execution
 
 Genesis provides a one-line interface for executing tasks with automatic
-agent discovery and team assembly. It scans available skills, uses an
-Architect agent to select the optimal team, and executes the task.
+skill discovery and direct execution. It loads skills on demand and runs
+a single manager agent that uses tools as needed.
 
 ## Usage
 

@@ -68,6 +68,8 @@ sending full history.
 
 - [`GenerateResult$new()`](#method-GenerateResult-new)
 
+- [`GenerateResult$print()`](#method-GenerateResult-print)
+
 - [`GenerateResult$clone()`](#method-GenerateResult-clone)
 
 ------------------------------------------------------------------------
@@ -132,6 +134,16 @@ Initialize a GenerateResult object.
 - `response_id`:
 
   Server-side response ID for Responses API.
+
+------------------------------------------------------------------------
+
+### Method [`print()`](https://rdrr.io/r/base/print.html)
+
+Print method for GenerateResult.
+
+#### Usage
+
+    GenerateResult$print()
 
 ------------------------------------------------------------------------
 

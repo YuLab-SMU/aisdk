@@ -16,6 +16,14 @@ R6 class representing a team of agents.
 
   The manager agent (created automatically).
 
+- `default_model`:
+
+  Default model ID for the team (optional).
+
+- `session`:
+
+  Optional shared ChatSession for the team.
+
 ## Methods
 
 ### Public methods
@@ -38,13 +46,21 @@ Initialize a new AgentTeam.
 
 #### Usage
 
-    AgentTeam$new(name = "AgentTeam")
+    AgentTeam$new(name = "AgentTeam", model = NULL, session = NULL)
 
 #### Arguments
 
 - `name`:
 
   Name of the team.
+
+- `model`:
+
+  Optional default model for the team.
+
+- `session`:
+
+  Optional shared ChatSession (or SharedSession).
 
 #### Returns
 
@@ -63,7 +79,8 @@ Register an agent to the team.
       description,
       skills = NULL,
       tools = NULL,
-      system_prompt = NULL
+      system_prompt = NULL,
+      model = NULL
     )
 
 #### Arguments
@@ -88,6 +105,10 @@ Register an agent to the team.
 
   Optional system prompt override.
 
+- `model`:
+
+  Optional default model for this agent (overrides team default).
+
 #### Returns
 
 Self (for chaining).
@@ -100,7 +121,7 @@ Run the team on a task.
 
 #### Usage
 
-    AgentTeam$run(task, model = NULL)
+    AgentTeam$run(task, model = NULL, session = NULL)
 
 #### Arguments
 
@@ -111,6 +132,10 @@ Run the team on a task.
 - `model`:
 
   Model ID to use for the Manager.
+
+- `session`:
+
+  Optional shared ChatSession (or SharedSession).
 
 #### Returns
 

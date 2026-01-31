@@ -6,7 +6,7 @@ define tools for LLM function calling.
 ## Usage
 
 ``` r
-tool(name, description, parameters, execute)
+tool(name, description, parameters = NULL, execute = NULL)
 ```
 
 ## Arguments
@@ -22,13 +22,15 @@ tool(name, description, parameters, execute)
 
 - parameters:
 
-  A z_object schema defining expected parameters. Use z_object() with
-  z_string(), z_number(), etc. to define the schema.
+  A z_schema object (z_object/z_any/etc), a named list, a character
+  vector, or NULL. When NULL, the schema is inferred from the execute
+  function signature (if possible) and defaults to flexible types.
 
 - execute:
 
-  An R function that implements the tool logic. The function receives a
-  single list argument containing the parameters.
+  An R function that implements the tool logic. It can accept a single
+  list argument (args), or standard named parameters. List-style
+  functions receive a single list argument containing parameters.
 
 ## Value
 

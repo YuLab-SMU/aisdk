@@ -5,7 +5,7 @@ Helper to create an AgentTeam.
 ## Usage
 
 ``` r
-create_team(name = "AgentTeam")
+create_team(name = "AgentTeam", model = NULL, session = NULL)
 ```
 
 ## Arguments
@@ -13,6 +13,14 @@ create_team(name = "AgentTeam")
 - name:
 
   Team name.
+
+- model:
+
+  Optional default model for the team.
+
+- session:
+
+  Optional shared ChatSession for the team.
 
 ## Value
 

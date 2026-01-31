@@ -76,6 +76,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/benchmark_genesis_v2.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_context.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_fix_prompt.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_refinement_context.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/cache.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/cache_tool.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/capture_traceback.html</loc></url>
@@ -88,6 +89,8 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console_chat.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/construct_prompt.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/content_image.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/content_text.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/context.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/core_api.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/core_object.html</loc></url>
@@ -96,6 +99,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_anthropic.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_architect_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_architect_v2.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_artifact_dir.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_chat_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_data_agent.html</loc></url>
@@ -167,10 +171,12 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_fix.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_hypothesis.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_stable_id.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_success_criteria.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_text.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/generate_verification_hypothesis.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/genesis.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/genesis_cache_info.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/genesis_do.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/genesis_v2.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/genesis_v2_stats.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.html</loc></url>
@@ -216,10 +222,12 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/mcp_tools_call_request.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/mcp_tools_list_request.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/migrate_pattern.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/multimodal.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_architect_response.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_architect_v2_response.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_evaluator_response.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_refiner_response.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_success_criteria.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/parse_tool_arguments.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/plot_genesis_progression.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/post_to_api.html</loc></url>
@@ -293,6 +301,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/wrap_language_model.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/wrap_reactive_tools.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/z_aes_mapping.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/z_any.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/z_array.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/z_boolean.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/z_coord.html</loc></url>

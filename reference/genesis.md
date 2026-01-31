@@ -8,10 +8,12 @@ Execute a task with automatic agent discovery and team assembly
 genesis(
   task,
   skill_paths = "auto",
-  model = "claude-3-5-sonnet-20241022",
+  model = "anthropic:claude-3-5-sonnet-20241022",
   cache = TRUE,
   verbose = FALSE,
-  architect_model = NULL
+  architect_model = NULL,
+  max_steps = 10,
+  mode = c("plan", "direct")
 )
 ```
 
@@ -42,6 +44,15 @@ genesis(
 - architect_model:
 
   Model to use for Architect agent (default: same as model)
+
+- max_steps:
+
+  Maximum tool execution steps (default: 10)
+
+- mode:
+
+  Execution mode: "plan" (structured plan-script-execute) or "direct"
+  (single agent)
 
 ## Value
 

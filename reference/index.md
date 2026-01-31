@@ -115,6 +115,10 @@
   Console Chat: Interactive REPL
 - [`console_chat()`](https://YuLab-SMU.github.io/aisdk/reference/console_chat.md)
   : Start Console Chat
+- [`content_image()`](https://YuLab-SMU.github.io/aisdk/reference/content_image.md)
+  : Create Image Content
+- [`content_text()`](https://YuLab-SMU.github.io/aisdk/reference/content_text.md)
+  : Create Text Content
 - [`context`](https://YuLab-SMU.github.io/aisdk/reference/context.md) :
   Context Management
 - [`core_api`](https://YuLab-SMU.github.io/aisdk/reference/core_api.md)
@@ -198,7 +202,7 @@
 - [`create_z_ggtree()`](https://YuLab-SMU.github.io/aisdk/reference/create_z_ggtree.md)
   : Create Schema for ggtree Function
 - [`.genesis_cache`](https://YuLab-SMU.github.io/aisdk/reference/dot-genesis_cache.md)
-  : Genesis: Zero-Configuration Agent Execution
+  : Genesis: Zero-Configuration Direct Execution
 - [`download_model()`](https://YuLab-SMU.github.io/aisdk/reference/download_model.md)
   : Download Model from Hugging Face
 - [`enable_api_tests()`](https://YuLab-SMU.github.io/aisdk/reference/enable_api_tests.md)
@@ -228,7 +232,7 @@
 - [`genesis_cache_info()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_cache_info.md)
   : Get cache statistics
 - [`genesis_v2()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2.md)
-  : Genesis V2: Plan-Execute-Refine Architecture
+  : Genesis V2: Direct Execute-Refine Architecture
 - [`genesis_v2_stats()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2_stats.md)
   : Get Genesis V2 statistics
 - [`get_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.md)
@@ -285,6 +289,8 @@
   : Create MCP Router
 - [`migrate_pattern()`](https://YuLab-SMU.github.io/aisdk/reference/migrate_pattern.md)
   : Migrate Legacy Code
+- [`multimodal`](https://YuLab-SMU.github.io/aisdk/reference/multimodal.md)
+  : Multimodal Helpers
 - [`parse_architect_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_response.md)
   : Parse Architect's JSON response
 - [`parse_architect_v2_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_v2_response.md)
@@ -393,6 +399,8 @@
   : Wrap Reactive Tools
 - [`z_aes_mapping()`](https://YuLab-SMU.github.io/aisdk/reference/z_aes_mapping.md)
   : Aesthetic Mapping Schema
+- [`z_any()`](https://YuLab-SMU.github.io/aisdk/reference/z_any.md) :
+  Create Any Schema
 - [`z_array()`](https://YuLab-SMU.github.io/aisdk/reference/z_array.md)
   : Create Array Schema
 - [`z_boolean()`](https://YuLab-SMU.github.io/aisdk/reference/z_boolean.md)

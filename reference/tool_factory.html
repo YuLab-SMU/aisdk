@@ -53,7 +53,7 @@ to define tools for LLM function calling.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tool</span><span class="op">(</span><span class="va">name</span>, <span class="va">description</span>, <span class="va">parameters</span>, <span class="va">execute</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tool</span><span class="op">(</span><span class="va">name</span>, <span class="va">description</span>, parameters <span class="op">=</span> <span class="cn">NULL</span>, execute <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -70,13 +70,15 @@ to help the LLM understand when to use this tool.</p></dd>
 
 
 <dt id="arg-parameters">parameters<a class="anchor" aria-label="anchor" href="#arg-parameters"></a></dt>
-<dd><p>A z_object schema defining expected parameters.
-Use z_object() with z_string(), z_number(), etc. to define the schema.</p></dd>
+<dd><p>A z_schema object (z_object/z_any/etc), a named list,
+a character vector, or NULL. When NULL, the schema is inferred from the
+execute function signature (if possible) and defaults to flexible types.</p></dd>
 
 
 <dt id="arg-execute">execute<a class="anchor" aria-label="anchor" href="#arg-execute"></a></dt>
-<dd><p>An R function that implements the tool logic.
-The function receives a single list argument containing the parameters.</p></dd>
+<dd><p>An R function that implements the tool logic. It can accept
+a single list argument (args), or standard named parameters.
+List-style functions receive a single list argument containing parameters.</p></dd>
 
 </dl></div>
     <div class="section level2">
