@@ -1,7 +1,7 @@
 
 # Manual Verification for Image Support
 
-devtools::load_all(".")
+library(aisdk)
 library(base64enc)
 
 # --- Test 1: URL Image ---

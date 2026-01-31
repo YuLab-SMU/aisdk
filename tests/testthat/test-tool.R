@@ -437,7 +437,7 @@ test_that("invalid tool handler returns structured error", {
 
 test_that("execute_tool_calls repairs tool name automatically", {
   t <- tool("get_weather", "Get weather", z_object(city = z_string()),
-            function(a) paste("Weather in", a$city))
+            function(args) paste("Weather in", args$city))
   tools <- list(t)
 
   # LLM calls "GetWeather" but tool is "get_weather"
@@ -454,7 +454,7 @@ test_that("execute_tool_calls repairs tool name automatically", {
 
 test_that("execute_tool_calls handles invalid tool gracefully", {
   t <- tool("get_weather", "Get weather", z_object(city = z_string()),
-            function(a) paste("Weather in", a$city))
+            function(args) paste("Weather in", args$city))
   tools <- list(t)
 
   # LLM calls completely wrong tool
@@ -472,7 +472,7 @@ test_that("execute_tool_calls handles invalid tool gracefully", {
 
 test_that("execute_tool_calls can disable repair", {
   t <- tool("get_weather", "Get weather", z_object(city = z_string()),
-            function(a) paste("Weather in", a$city))
+            function(args) paste("Weather in", args$city))
   tools <- list(t)
 
   # LLM calls "GetWeather" but tool is "get_weather"
