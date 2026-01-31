@@ -1,13 +1,33 @@
-#' Genesis: Zero-Configuration Agent Execution
+#' Genesis: Zero-Configuration Direct Execution
 #'
 #' Genesis provides a one-line interface for executing tasks with automatic
-#' agent discovery and team assembly. It scans available skills, uses an
-#' Architect agent to select the optimal team, and executes the task.
+#' skill discovery and direct execution. It loads skills on demand and runs a
+#' single manager agent that uses tools as needed.
 #'
 #' @export
 
 # Global cache for team compositions
 .genesis_cache <- new.env(parent = emptyenv())
+
+# Direct execution system prompt
+GENESIS_DIRECT_PROMPT <- paste(
+  "You are Genesis, a direct execution agent.",
+  "Work iteratively until the task is complete.",
+  "Use available tools and skill scripts when helpful (load_skill, execute_skill_script, list_skill_scripts).",
+  "If a tool fails or returns an error, do NOT stop—try an alternative approach.",
+  "You can write and run R code using execute_r_code as a fallback.",
+  "Prefer executing code or scripts to validate results rather than guessing.",
+  "After tool execution, ALWAYS synthesize a clear, structured report (Summary, Statistics, Visualizations, Insights).",
+  "Do not claim file outputs (PDF/images/scripts) unless explicitly requested.",
+  "Avoid using or installing extra packages unless required; prefer base R and ggplot2.",
+  "Persist key outputs to disk using save_text_artifact, save_plot_artifact, and save_data_artifact.",
+  "Prefer saving a report.Rmd via save_rmd_artifact; render via render_rmd_artifact if available.",
+  "When using Rmd, update only the affected chunk via update_rmd_chunk; do NOT rewrite the whole file.",
+  "If a chunk errors, use run_rmd_chunk to isolate and debug; then patch that chunk only.",
+  "Use list_artifacts to show what was saved and reference saved paths in your response.",
+  "Be concise and return the final answer once done.",
+  sep = "\n"
+)
 
 #' Execute a task with automatic agent discovery and team assembly
 #'
@@ -17,6 +37,8 @@
 #' @param cache Logical, whether to cache team composition for similar tasks (default: TRUE)
 #' @param verbose Logical, whether to print orchestration details (default: FALSE)
 #' @param architect_model Model to use for Architect agent (default: same as model)
+#' @param max_steps Maximum tool execution steps (default: 10)
+#' @param mode Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)
 #' @return The result from the team execution
 #' @export
 #' @examples
@@ -38,93 +60,55 @@
 #' }
 genesis <- function(task,
                     skill_paths = "auto",
-                    model = "claude-3-5-sonnet-20241022",
+                    model = "anthropic:claude-3-5-sonnet-20241022",
                     cache = TRUE,
                     verbose = FALSE,
-                    architect_model = NULL) {
-
-  if (is.null(architect_model)) {
-    architect_model <- model
-  }
-
-  # Step 1: Discover available agents from skills
-  if (verbose) {
-    cat("=== Genesis: Automatic Team Assembly ===\n\n")
-    cat("Step 1: Discovering agents from skills...\n")
-  }
-
-  library <- AgentLibrary$new()
-  library$scan_from_skills(skill_paths, recursive = TRUE)
-
-  capabilities <- library$get_capabilities_summary()
-
-  if (nrow(capabilities) == 0) {
-    stop(paste0(
-      "No agents discovered. Please ensure:\n",
-      "1. Skills exist in the specified paths\n",
-      "2. SKILL.md files contain 'agent' section in YAML frontmatter\n",
-      "3. yaml package is installed"
-    ))
+                    architect_model = NULL,
+                    max_steps = 10,
+                    mode = c("plan", "direct")) {
+  
+  mode <- match.arg(mode)
+  
+  if (mode == "plan") {
+    return(genesis_do(task, model = model, verbose = verbose))
   }
 
   if (verbose) {
-    cat(sprintf("  Discovered %d agent(s):\n", nrow(capabilities)))
-    for (i in seq_len(nrow(capabilities))) {
-      cat(sprintf("    - %s: %s\n", capabilities$role[i], capabilities$description[i]))
-    }
-    cat("\n")
+    cat("=== Genesis: Direct Execution ===\n\n")
+    cat("Running in direct mode (no pre-assembly)\n\n")
   }
 
-  # Step 2: Check cache for similar tasks
-  cache_key <- NULL
-  if (cache) {
-    cache_key <- digest::digest(list(task = task, roles = library$list_roles()))
-
-    if (exists(cache_key, envir = .genesis_cache)) {
-      cached_plan <- get(cache_key, envir = .genesis_cache)
-
-      if (verbose) {
-        cat("Step 2: Using cached team composition\n")
-        cat(sprintf("  Selected agents: %s\n\n", paste(cached_plan$selected_agents, collapse = ", ")))
-      }
-
-      # Skip to execution with cached plan
-      return(execute_with_plan(task, library, cached_plan, model, verbose))
-    }
-  }
-
-  # Step 3: Invoke Architect to select agents
-  if (verbose) {
-    cat("Step 2: Consulting Architect for team composition...\n")
-  }
-
-  architect <- create_architect_agent(library, architect_model)
-  architect_session <- ChatSession$new(model = architect_model, agent = architect)
-
-  architect_prompt <- sprintf(
-    "Analyze this task and select the optimal agents:\n\nTask: %s",
-    task
+  # Create a direct execution agent with skill tools, code execution fallback, and artifacts
+  coder_tools <- create_coder_agent()$tools
+  artifact_dir <- create_artifact_dir()
+  artifact_tools <- create_artifact_tools(artifact_dir)
+  agent <- Agent$new(
+    name = "Genesis",
+    description = "Direct execution agent",
+    system_prompt = GENESIS_DIRECT_PROMPT,
+    skills = skill_paths,
+    tools = c(coder_tools, artifact_tools),
+    model = model
   )
 
-  architect_response <- architect_session$chat(architect_prompt)
+  # Shared session for tool execution and cross-step context
+  session <- create_shared_session(model = model)
+  assign(".artifact_dir", artifact_dir, envir = session$get_envir())
 
-  plan <- parse_architect_response(architect_response)
+  # Execute the task directly
+  result <- agent$run(
+    task = task,
+    session = session,
+    model = model,
+    max_steps = max_steps
+  )
 
   if (verbose) {
-    cat("  Architect's analysis:\n")
-    cat(sprintf("    Task requires: %s\n", plan$task_analysis))
-    cat(sprintf("    Selected agents: %s\n", paste(plan$selected_agents, collapse = ", ")))
-    cat(sprintf("    Reasoning: %s\n", plan$reasoning))
-    cat("\n")
+    cat("\n=== Execution Complete ===\n")
+    cat("Artifacts directory: ", artifact_dir, "\n", sep = "")
   }
 
-  # Cache the plan
-  if (cache && !is.null(cache_key)) {
-    assign(cache_key, plan, envir = .genesis_cache)
-  }
-
-  # Step 4: Execute with the plan
-  execute_with_plan(task, library, plan, model, verbose)
+  result
 }
 
 #' Execute task with a given plan
@@ -139,7 +123,7 @@ execute_with_plan <- function(task, library, plan, model, verbose) {
 
     # Just use a simple chat session
     session <- ChatSession$new(model = model)
-    result <- session$chat(task)
+    result <- session$send(task)
     return(result)
   }
 
@@ -163,7 +147,7 @@ execute_with_plan <- function(task, library, plan, model, verbose) {
     cat("Step 4: Assembling team and executing...\n\n")
   }
 
-  team <- AgentTeam$new(name = "GenesisTeam")
+  team <- AgentTeam$new(name = "GenesisTeam", model = model)
 
   for (agent_name in names(agents)) {
     agent <- agents[[agent_name]]
@@ -172,7 +156,8 @@ execute_with_plan <- function(task, library, plan, model, verbose) {
       description = agent$description,
       skills = NULL,  # Skills already loaded in agent
       tools = agent$tools,
-      system_prompt = agent$system_prompt
+      system_prompt = agent$system_prompt,
+      model = model
     )
   }
 

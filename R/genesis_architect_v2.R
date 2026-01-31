@@ -140,10 +140,10 @@ ArchitectV2 <- R6::R6Class("ArchitectV2",
 
       # Create session and get response
       session <- ChatSession$new(model = self$agent$model, agent = self$agent)
-      response <- session$chat(prompt)
+      response <- session$send(prompt)
 
       # Parse response
-      parse_architect_v2_response(response)
+      parse_architect_v2_response(response$text)
     }
   )
 )

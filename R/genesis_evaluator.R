@@ -99,10 +99,10 @@ Evaluator <- R6::R6Class("Evaluator",
 
       # Create session and get response
       session <- ChatSession$new(model = self$agent$model, agent = self$agent)
-      response <- session$chat(prompt)
+      response <- session$send(prompt)
 
       # Parse response
-      parse_evaluator_response(response)
+      parse_evaluator_response(response$text)
     }
   )
 )

@@ -1,43 +1,33 @@
-#' Genesis V2: Plan-Execute-Refine Architecture
+#' Genesis V2: Direct Execute-Refine Architecture
 #'
-#' Genesis V2 implements a complete Plan-Execute-Refine cycle with automatic
-#' quality assessment and iterative improvement. It extends Genesis V1 with
-#' the ability to evaluate results and automatically refine failed executions.
+#' Genesis V2 implements a direct Execute-Refine loop with automatic
+#' quality assessment and iterative improvement. It runs a single
+#' direct agent with skills and refines based on evaluator feedback.
 #'
-#' Execute a task with Plan-Execute-Refine cycle
+#' Execute a task with Direct Execute-Refine cycle
 #'
 #' @param task Character string describing the task to accomplish
 #' @param skill_paths Character vector of paths to scan for skills, or "auto" for default locations
 #' @param model Model to use for agents (default: claude-3-5-sonnet-20241022)
-#' @param max_iterations Maximum number of PER iterations (default: 3)
+#' @param max_iterations Maximum number of iterations (default: 3)
 #' @param auto_refine Logical, whether to enable automatic refinement (default: TRUE)
 #' @param quality_threshold Minimum quality score to accept (0-100, default: 70)
-#' @param cache Logical, whether to cache team composition (default: TRUE)
+#' @param cache Logical, whether to cache team composition for similar tasks (unused in direct mode)
 #' @param verbose Logical, whether to print orchestration details (default: FALSE)
-#' @param architect_model Model to use for Architect agent (default: same as model)
+#' @param architect_model Model to use for criteria generation (default: same as model)
 #' @param evaluator_model Model to use for Evaluator agent (default: same as model)
-#' @param refiner_model Model to use for Refiner agent (default: same as model)
+#' @param refiner_model Model to use for Refiner agent (unused in direct mode)
+#' @param max_steps Maximum tool execution steps (default: 10)
 #' @return List with result, iterations, evaluation, and history
 #' @export
 #' @examples
 #' \dontrun{
-#' # Basic usage with auto-refine
 #' result <- genesis_v2(
-#'   "Analyze the iris dataset and create a comprehensive report with visualizations"
-#' )
-#'
-#' # With custom settings
-#' result <- genesis_v2(
-#'   "Analyze iris and create plots",
-#'   max_iterations = 5,
-#'   quality_threshold = 85,
+#'   "Analyze the iris dataset and create a comprehensive report with visualizations",
+#'   max_iterations = 3,
+#'   quality_threshold = 80,
+#'   auto_refine = TRUE,
 #'   verbose = TRUE
-#' )
-#'
-#' # Disable auto-refine (behaves like V1)
-#' result <- genesis_v2(
-#'   "Simple task",
-#'   auto_refine = FALSE
 #' )
 #' }
 genesis_v2 <- function(task,
@@ -50,14 +40,13 @@ genesis_v2 <- function(task,
                        verbose = FALSE,
                        architect_model = NULL,
                        evaluator_model = NULL,
-                       refiner_model = NULL) {
+                       refiner_model = NULL,
+                       max_steps = 10) {
 
-  # Set default models
   if (is.null(architect_model)) architect_model <- model
   if (is.null(evaluator_model)) evaluator_model <- model
   if (is.null(refiner_model)) refiner_model <- model
 
-  # Validate parameters
   if (max_iterations < 1) {
     stop("max_iterations must be at least 1")
   }
@@ -65,212 +54,113 @@ genesis_v2 <- function(task,
     stop("quality_threshold must be between 0 and 100")
   }
 
-  # Initialize state
+  if (verbose) {
+    cat("[PLAN] Phase: Generating success criteria...\n")
+  }
+  success_criteria <- generate_success_criteria(task, architect_model)
+
+  plan <- list(
+    task_analysis = "Direct execution (no multi-agent planning)",
+    selected_agents = character(0),
+    reasoning = "Direct mode: single agent with skill tools",
+    delegation_strategy = "Direct execution with tool calls",
+    success_criteria = success_criteria
+  )
+
+  coder_tools <- create_coder_agent()$tools
+  artifact_dir <- create_artifact_dir()
+  artifact_tools <- create_artifact_tools(artifact_dir)
+  agent <- Agent$new(
+    name = "Genesis",
+    description = "Direct execution agent",
+    system_prompt = GENESIS_DIRECT_PROMPT,
+    skills = skill_paths,
+    tools = c(coder_tools, artifact_tools),
+    model = model
+  )
+  session <- create_shared_session(model = model)
+  assign(".artifact_dir", artifact_dir, envir = session$get_envir())
+
   iteration <- 1
-  plan <- NULL
   execution_history <- list()
-  library <- NULL
 
-  # Main PER loop
   while (iteration <= max_iterations) {
-
     if (verbose) {
       cat(sprintf("\n%s Iteration %d/%d %s\n\n",
                   strrep("=", 20), iteration, max_iterations, strrep("=", 20)))
+      cat("[EXECUTE] Phase: Running direct agent...\n")
     }
 
-    # ============================================================
-    # PHASE 1: PLAN
-    # ============================================================
-    if (is.null(plan) || iteration > 1) {
-      if (verbose) {
-        cat("[PLAN] Phase: Analyzing task and selecting agents...\n")
-      }
+    result <- agent$run(
+      task = task,
+      session = session,
+      model = model,
+      max_steps = max_steps
+    )
 
-      # Discover agents (only once)
-      if (is.null(library)) {
-        library <- AgentLibrary$new()
-        library$scan_from_skills(skill_paths, recursive = TRUE)
-
-        capabilities <- library$get_capabilities_summary()
-
-        if (nrow(capabilities) == 0) {
-          stop(paste0(
-            "No agents discovered. Please ensure:\n",
-            "1. Skills exist in the specified paths\n",
-            "2. SKILL.md files contain 'agent' section in YAML frontmatter\n",
-            "3. yaml package is installed"
-          ))
-        }
-
-        if (verbose) {
-          cat(sprintf("  Discovered %d agent(s):\n", nrow(capabilities)))
-          for (i in seq_len(nrow(capabilities))) {
-            cat(sprintf("    - %s: %s\n", capabilities$role[i], capabilities$description[i]))
-          }
-          cat("\n")
-        }
-      }
-
-      # Check cache (only on first iteration)
-      if (cache && iteration == 1) {
-        cache_key <- digest::digest(list(task = task, roles = library$list_roles()))
-
-        if (exists(cache_key, envir = .genesis_cache)) {
-          cached_plan <- get(cache_key, envir = .genesis_cache)
-
-          if (verbose) {
-            cat("  Using cached team composition\n")
-            cat(sprintf("  Selected agents: %s\n\n", paste(cached_plan$selected_agents, collapse = ", ")))
-          }
-
-          plan <- cached_plan
-        }
-      }
-
-      # Consult Architect V2 (with execution history for learning)
-      if (is.null(plan)) {
-        architect <- create_architect_v2(library, architect_model)
-        plan <- architect$plan(task, execution_history)
-
-        if (verbose) {
-          cat(sprintf("  Selected agents: %s\n", paste(plan$selected_agents, collapse = ", ")))
-          cat(sprintf("  Reasoning: %s\n", plan$reasoning))
-          if (length(plan$success_criteria$must_have) > 0) {
-            cat(sprintf("  Success criteria: %s\n",
-                       paste(plan$success_criteria$must_have, collapse = ", ")))
-          }
-        }
-
-        # Cache the plan (only on first iteration)
-        if (cache && iteration == 1) {
-          assign(cache_key, plan, envir = .genesis_cache)
-        }
-      }
-    }
-
-    # ============================================================
-    # PHASE 2: EXECUTE
-    # ============================================================
-    if (verbose) {
-      cat("\n[EXECUTE] Phase: Running agents...\n")
-    }
-
-    result <- execute_with_plan(task, library, plan, model, verbose)
-
-    # Record execution
     execution_history[[iteration]] <- list(
       plan = plan,
       result = result,
       timestamp = Sys.time(),
-      evaluation = NULL  # Will be filled in Refine phase
+      evaluation = NULL
     )
 
-    # ============================================================
-    # PHASE 3: REFINE
-    # ============================================================
-    if (auto_refine) {
-      if (verbose) {
-        cat("\n[REFINE] Phase: Evaluating result quality...\n")
-      }
-
-      # Evaluate result
-      evaluator <- create_evaluator_agent(evaluator_model)
-      evaluation <- evaluator$evaluate(task, plan$success_criteria, result)
-
-      # Store evaluation in history
-      execution_history[[iteration]]$evaluation <- evaluation
-
-      if (verbose) {
-        cat(sprintf("  Quality score: %d/100\n", evaluation$score))
-        cat(sprintf("  Passed: %s\n", evaluation$passed))
-        if (length(evaluation$errors) > 0) {
-          cat(sprintf("  Errors: %s\n", paste(evaluation$errors, collapse = ", ")))
-        }
-      }
-
-      # Check if result meets quality standards
-      if (evaluation$passed && evaluation$score >= quality_threshold) {
-        if (verbose) {
-          cat(sprintf("\n[SUCCESS] Result meets quality standards (score: %d >= %d)\n",
-                     evaluation$score, quality_threshold))
-        }
-
-        return(list(
-          result = result,
-          iterations = iteration,
-          evaluation = evaluation,
-          history = execution_history,
-          converged = TRUE
-        ))
-      }
-
-      # If not converged and iterations remain
-      if (iteration < max_iterations) {
-        if (verbose) {
-          cat(sprintf("\n[WARNING] Quality below threshold (%d < %d)\n",
-                     evaluation$score, quality_threshold))
-          cat("  Consulting Refiner for improvements...\n")
-        }
-
-        # Consult Refiner
-        refiner <- create_refiner_agent(library, refiner_model)
-        refinement <- refiner$refine(task, plan, result, evaluation)
-
-        if (verbose) {
-          cat(sprintf("  Root cause: %s\n", refinement$root_cause))
-          cat(sprintf("  Action: %s\n", refinement$action))
-          cat(sprintf("  Reasoning: %s\n", refinement$reasoning))
-          if (length(refinement$improvements) > 0) {
-            cat(sprintf("  Improvements: %s\n", paste(refinement$improvements, collapse = ", ")))
-          }
-        }
-
-        # Take action based on Refiner's recommendation
-        if (refinement$action == "replan") {
-          plan <- NULL  # Trigger replanning in next iteration
-          if (verbose) {
-            cat("  -> Will replan with different agents\n")
-          }
-        } else if (refinement$action == "abort") {
-          if (verbose) {
-            cat("\n[ABORT] Refiner suggests aborting. Returning best result.\n")
-          }
-          break
-        } else if (refinement$action == "retry") {
-          # Keep current plan, will retry in next iteration
-          if (verbose) {
-            cat("  -> Will retry with same agents\n")
-          }
-        }
-
-      } else {
-        if (verbose) {
-          cat(sprintf("\n[WARNING] Max iterations reached (%d). Returning best result.\n",
-                     max_iterations))
-        }
-        break
-      }
-
-    } else {
-      # Auto-refine disabled, return immediately
+    if (!auto_refine) {
       if (verbose) {
         cat("\n[DONE] Execution complete (auto-refine disabled)\n")
       }
-
       return(list(
         result = result,
-        iterations = 1,
+        iterations = iteration,
         evaluation = NULL,
         history = execution_history,
-        converged = FALSE
+        converged = TRUE
       ))
     }
 
+    if (verbose) {
+      cat("\n[REFINE] Phase: Evaluating result quality...\n")
+    }
+
+    evaluator <- create_evaluator_agent(evaluator_model)
+    evaluation <- evaluator$evaluate(task, success_criteria, result)
+    execution_history[[iteration]]$evaluation <- evaluation
+
+    if (verbose) {
+      cat(sprintf("  Quality score: %d/100\n", evaluation$score))
+      cat(sprintf("  Passed: %s\n", evaluation$passed))
+      if (length(evaluation$errors) > 0) {
+        cat(sprintf("  Errors: %s\n", paste(evaluation$errors, collapse = ", ")))
+      }
+    }
+
+    if (evaluation$passed && evaluation$score >= quality_threshold) {
+      if (verbose) {
+        cat(sprintf("\n[SUCCESS] Result meets quality standards (score: %d >= %d)\n",
+                    evaluation$score, quality_threshold))
+      }
+      return(list(
+        result = result,
+        iterations = iteration,
+        evaluation = evaluation,
+        history = execution_history,
+        converged = TRUE
+      ))
+    }
+
+    if (iteration >= max_iterations) {
+      if (verbose) {
+        cat(sprintf("\n[WARNING] Max iterations reached (%d). Returning best result.\n",
+                    max_iterations))
+      }
+      break
+    }
+
+    refinement <- build_refinement_context(evaluation)
+    task <- paste(task, "\n\n[REVISION REQUIRED]\n", refinement)
     iteration <- iteration + 1
   }
 
-  # Return best result from all iterations
   best_result <- find_best_result(execution_history)
 
   list(
@@ -282,6 +172,114 @@ genesis_v2 <- function(task,
   )
 }
 
+#' Generate success criteria for a task
+#' @keywords internal
+generate_success_criteria <- function(task, model) {
+  prompt <- paste(
+    "Generate success criteria for the task below.",
+    "Return JSON with keys: must_have, quality_checks, expected_outputs.",
+    "Keep items specific and verifiable.",
+    "Do NOT require file outputs (PDF, images, scripts) unless explicitly requested in the task.",
+    "Assume in-memory analysis and textual report output are acceptable.",
+    "Avoid requiring extra packages unless the task explicitly asks for them.",
+    "",
+    paste0("Task: ", task),
+    sep = "\n"
+  )
+
+  agent <- Agent$new(
+    name = "Criteria",
+    description = "Generates success criteria",
+    system_prompt = "You generate concise, testable success criteria as JSON.",
+    model = model
+  )
+  session <- ChatSession$new(model = model, agent = agent)
+  response <- session$send(prompt)
+
+  parse_success_criteria(response$text)
+}
+
+#' Parse success criteria JSON
+#' @keywords internal
+parse_success_criteria <- function(response) {
+  tryCatch({
+    json_pattern <- "\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}"
+    json_matches <- gregexpr(json_pattern, response, perl = TRUE)
+    json_text <- regmatches(response, json_matches)[[1]]
+
+    if (length(json_text) == 0) {
+      stop("No JSON found in criteria response")
+    }
+
+    criteria <- NULL
+    for (json_str in json_text) {
+      try_criteria <- tryCatch({
+        jsonlite::fromJSON(json_str, simplifyVector = FALSE)
+      }, error = function(e) NULL)
+      if (!is.null(try_criteria)) {
+        criteria <- try_criteria
+        break
+      }
+    }
+
+    if (is.null(criteria)) {
+      stop("Could not parse JSON from criteria response")
+    }
+
+    required_fields <- c("must_have", "quality_checks", "expected_outputs")
+    missing <- setdiff(required_fields, names(criteria))
+    if (length(missing) > 0) {
+      for (field in missing) criteria[[field]] <- list()
+    }
+
+    criteria$must_have <- unlist(criteria$must_have)
+    criteria$quality_checks <- unlist(criteria$quality_checks)
+    criteria$expected_outputs <- unlist(criteria$expected_outputs)
+
+    criteria
+  }, error = function(e) {
+    list(
+      must_have = c("Complete the task as described"),
+      quality_checks = c("Clear, structured output"),
+      expected_outputs = c("Final answer")
+    )
+  })
+}
+
+#' Build refinement context from evaluation
+#' @keywords internal
+build_refinement_context <- function(evaluation) {
+  lines <- c()
+
+  if (!is.null(evaluation$completeness)) {
+    missing <- evaluation$completeness$must_have_missing %||% list()
+    if (length(missing) > 0) {
+      lines <- c(lines, "Missing requirements:")
+      lines <- c(lines, paste0("- ", missing))
+    }
+  }
+
+  if (!is.null(evaluation$quality)) {
+    weaknesses <- evaluation$quality$weaknesses %||% list()
+    if (length(weaknesses) > 0) {
+      lines <- c(lines, "Quality issues:")
+      lines <- c(lines, paste0("- ", weaknesses))
+    }
+  }
+
+  if (length(evaluation$errors) > 0) {
+    lines <- c(lines, "Errors:")
+    lines <- c(lines, paste0("- ", evaluation$errors))
+  }
+
+  if (!is.null(evaluation$feedback) && nzchar(evaluation$feedback)) {
+    lines <- c(lines, "Evaluator feedback:")
+    lines <- c(lines, evaluation$feedback)
+  }
+
+  paste(lines, collapse = "\n")
+}
+
 #' Find best result from execution history
 #' @keywords internal
 find_best_result <- function(execution_history) {
@@ -289,14 +287,15 @@ find_best_result <- function(execution_history) {
     stop("No execution history available")
   }
 
-  # Find iteration with highest score
   best_idx <- 1
   best_score <- -1
 
   for (i in seq_along(execution_history)) {
     attempt <- execution_history[[i]]
-    score <- attempt$evaluation$score %||% 0
-
+    score <- 0
+    if (!is.null(attempt$evaluation)) {
+      score <- attempt$evaluation$score %||% 0
+    }
     if (score > best_score) {
       best_score <- score
       best_idx <- i
@@ -344,7 +343,7 @@ print_genesis_v2_result <- function(result) {
   for (i in seq_along(result$history)) {
     attempt <- result$history[[i]]
     cat(sprintf("Iteration %d:\n", i))
-    cat(sprintf("  Agents: %s\n", paste(attempt$plan$selected_agents, collapse = ", ")))
+    cat("  Mode: direct\n")
     if (!is.null(attempt$evaluation)) {
       cat(sprintf("  Score: %d/100\n", attempt$evaluation$score))
     }
