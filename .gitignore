@@ -39,3 +39,7 @@ inst/doc
 .env
 .Renviron
 dev_logs/
+docs/
+.claude/
+artifacts/
+

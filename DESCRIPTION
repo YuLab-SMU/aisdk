@@ -15,7 +15,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 VignetteBuilder: knitr
 Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
-        digest, parallel, stats, tools, utils
+        digest, parallel, stats, tools, utils, base64enc
 Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,
         evaluate, shiny, shinyjs, bslib, commonmark, ggplot2, dplyr, readr,
         readxl, DBI, RSQLite, torch, onnx, rstudioapi, DT, withr
