@@ -476,6 +476,139 @@ Tool <- R6::R6Class(
   )
 )
 
+# ============================================================================
+# Tool Factory Helpers (Smart Parameters + Execute Normalization)
+# ============================================================================
+
+looks_like_raw_schema <- function(x) {
+  if (!is.list(x) || is.null(names(x))) return(FALSE)
+  schema_keys <- c("type", "properties", "required", "additionalProperties", "items", "enum",
+                   "oneOf", "anyOf", "allOf")
+  has_schema_key <- any(names(x) %in% schema_keys)
+  has_non_schema <- any(!names(x) %in% schema_keys)
+  has_z_schema_values <- any(vapply(x, inherits, logical(1), "z_schema"))
+  has_schema_key && !has_non_schema && !has_z_schema_values
+}
+
+infer_tool_schema_from_execute <- function(execute) {
+  if (!is.function(execute)) return(NULL)
+  fmls <- formals(execute)
+  fml_names <- names(fmls) %||% character(0)
+
+  # If this is list-style execute(args), schema must be supplied manually.
+  if (length(fml_names) >= 1 && fml_names[1] == "args") {
+    return(NULL)
+  }
+
+  if (length(fml_names) == 0) {
+    return(z_empty_object())
+  }
+
+  schema <- create_schema_from_func(
+    execute,
+    exclude_args = ".envir",
+    type_mode = "any"
+  )
+
+  if ("..." %in% fml_names) {
+    schema$additionalProperties <- TRUE
+  }
+
+  schema
+}
+
+coerce_tool_parameters <- function(parameters, execute = NULL) {
+  if (inherits(parameters, "z_schema")) return(parameters)
+
+  if (is.null(parameters)) {
+    inferred <- infer_tool_schema_from_execute(execute)
+    if (!is.null(inferred)) return(inferred)
+    return(z_any_object(description = "Free-form arguments"))
+  }
+
+  if (is.character(parameters)) {
+    if (length(parameters) == 0) return(z_empty_object())
+    if (!is.null(names(parameters)) && any(nzchar(names(parameters)))) {
+      prop_names <- names(parameters)
+      prop_desc <- as.list(parameters)
+    } else {
+      prop_names <- parameters
+      prop_desc <- as.list(paste("Parameter", parameters))
+    }
+    props <- lapply(prop_desc, function(desc) z_any(description = desc))
+    names(props) <- prop_names
+    return(do.call(z_object, c(props, list(.required = prop_names))))
+  }
+
+  if (is.list(parameters)) {
+    if (looks_like_raw_schema(parameters)) {
+      rlang::abort("Tool parameters must be a z_schema object (use z_object())")
+    }
+    if (length(parameters) == 0) return(z_empty_object())
+    if (is.null(names(parameters)) || any(names(parameters) == "")) {
+      rlang::abort("Tool parameters as list must be a named list")
+    }
+
+    props <- list()
+    for (name in names(parameters)) {
+      val <- parameters[[name]]
+      if (inherits(val, "z_schema")) {
+        props[[name]] <- val
+      } else if (is.character(val) && length(val) == 1) {
+        props[[name]] <- z_any(description = val)
+      } else if (is.null(val)) {
+        props[[name]] <- z_any(description = paste("Parameter", name), nullable = TRUE, default = NULL)
+      } else if (is.numeric(val) || is.logical(val)) {
+        props[[name]] <- z_any(description = paste("Parameter", name), default = val)
+      } else if (is.character(val) && length(val) > 1) {
+        props[[name]] <- z_any(description = paste("Parameter", name), default = val[[1]])
+      } else {
+        props[[name]] <- z_any(description = paste("Parameter", name))
+      }
+    }
+
+    return(do.call(z_object, c(props, list(.required = names(props)))))
+  }
+
+  rlang::abort("Tool parameters must be a z_schema object, named list, character vector, or NULL")
+}
+
+normalize_tool_execute <- function(execute) {
+  if (!is.function(execute)) return(execute)
+  fmls <- formals(execute)
+  fml_names <- names(fmls) %||% character(0)
+
+  # Preserve existing list-style tools: execute(args, ...)
+  if (length(fml_names) >= 1 && fml_names[1] == "args") {
+    return(execute)
+  }
+
+  function(args) {
+    if (!is.list(args)) args <- list()
+
+    # Drop .envir unless explicitly requested
+    if (!(".envir" %in% fml_names) && ".envir" %in% names(args)) {
+      args$.envir <- NULL
+      args <- args[names(args) != ".envir"]
+    }
+
+    if (length(fml_names) == 0) {
+      return(execute())
+    }
+
+    if ("..." %in% fml_names) {
+      return(do.call(execute, args))
+    }
+
+    if (is.null(names(args)) || length(args) == 0) {
+      return(do.call(execute, list()))
+    }
+
+    filtered <- args[names(args) %in% fml_names]
+    do.call(execute, filtered)
+  }
+}
+
 #' @title Create a Tool
 #' @description
 #' Factory function to create a Tool object. This is the recommended way
@@ -483,10 +616,12 @@ Tool <- R6::R6Class(
 #' @param name Unique tool name (used by LLM to call the tool).
 #' @param description Description of the tool's purpose. Be descriptive
 #'   to help the LLM understand when to use this tool.
-#' @param parameters A z_object schema defining expected parameters.
-#'   Use z_object() with z_string(), z_number(), etc. to define the schema.
-#' @param execute An R function that implements the tool logic.
-#'   The function receives a single list argument containing the parameters.
+#' @param parameters A z_schema object (z_object/z_any/etc), a named list,
+#'   a character vector, or NULL. When NULL, the schema is inferred from the
+#'   execute function signature (if possible) and defaults to flexible types.
+#' @param execute An R function that implements the tool logic. It can accept
+#'   a single list argument (args), or standard named parameters.
+#'   List-style functions receive a single list argument containing parameters.
 #' @return A Tool object.
 #' @rdname tool_factory
 #' @export
@@ -513,7 +648,13 @@ Tool <- R6::R6Class(
 #'   tools = list(get_weather)
 #' )
 #' }
-tool <- function(name, description, parameters, execute) {
+tool <- function(name, description, parameters = NULL, execute = NULL) {
+  if (is.function(parameters) && is.null(execute)) {
+    execute <- parameters
+    parameters <- NULL
+  }
+  parameters <- coerce_tool_parameters(parameters, execute = execute)
+  execute <- normalize_tool_execute(execute)
   Tool$new(
     name = name,
     description = description,
@@ -653,6 +794,21 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
         result <- safe_to_json(result, auto_unbox = TRUE)
       }
 
+      # Auto-recovery for skill script errors (soft failures)
+      if (tc$name == "execute_skill_script" && is_skill_script_error(result)) {
+        recovered <- try_recover_skill_tool_call(tc, tools, envir)
+        if (!is.null(recovered)) {
+          result <- recovered$result
+        } else {
+          return(list(
+            id = tc$id,
+            name = tc$name,
+            result = result,
+            is_error = TRUE
+          ))
+        }
+      }
+
       # Trigger tool end hook only on success
       if (!is.null(hooks)) {
         hooks$trigger_tool_end(tool_obj, result)
@@ -686,4 +842,181 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
   })
 
   results
+}
+
+# ============================================================================
+# Tool Auto-Recovery Helpers
+# ============================================================================
+
+is_skill_script_error <- function(result) {
+  if (!is.character(result)) return(FALSE)
+  grepl("^Script execution error:", result) ||
+    grepl("^Error executing tool", result) ||
+    grepl("^Error:", result) ||
+    grepl("Object not found:", result)
+}
+
+try_recover_skill_tool_call <- function(tool_call, tools, envir = NULL) {
+  tool_obj <- find_tool(tools, "execute_skill_script")
+  if (is.null(tool_obj)) return(NULL)
+
+  parsed <- parse_tool_arguments(tool_call$arguments, tool_name = "execute_skill_script")
+  variants <- build_skill_arg_variants(parsed)
+
+  for (variant in variants) {
+    res <- run_tool_safely(tool_obj, variant, envir = envir)
+    if (!is_skill_script_error(res$result)) {
+      return(list(
+        id = tool_call$id,
+        name = tool_call$name,
+        result = res$result,
+        is_error = FALSE
+      ))
+    }
+  }
+
+  # Fallback: attempt direct R execution if available
+  exec_tool <- find_tool(tools, "execute_r_code")
+  if (!is.null(exec_tool)) {
+    fallback <- build_skill_fallback_code(parsed)
+    if (!is.null(fallback)) {
+      res <- run_tool_safely(exec_tool, fallback, envir = envir)
+      if (!is_skill_script_error(res$result)) {
+        return(list(
+          id = tool_call$id,
+          name = tool_call$name,
+          result = paste0("[RECOVERY: execute_r_code]\n", res$result),
+          is_error = FALSE
+        ))
+      }
+    }
+  }
+
+  NULL
+}
+
+run_tool_safely <- function(tool_obj, args, envir = NULL) {
+  tryCatch({
+    result <- tool_obj$run(args, envir = envir)
+    if (!is.character(result)) {
+      result <- safe_to_json(result, auto_unbox = TRUE)
+    }
+    list(result = result, is_error = FALSE)
+  }, error = function(e) {
+    list(result = paste0("Error executing tool '", tool_obj$name, "': ", conditionMessage(e)),
+         is_error = TRUE)
+  })
+}
+
+build_skill_arg_variants <- function(parsed_args) {
+  variants <- list()
+
+  skill_name <- parsed_args$skill_name
+  script_name <- parsed_args$script_name
+  script_args <- parsed_args$args
+  if (!is.list(script_args)) script_args <- list()
+
+  # Variant 1: normalize dataset/data and df_name
+  v1 <- parsed_args
+  v1$args <- script_args
+  if (is.null(v1$args$data) && !is.null(v1$args$dataset)) {
+    v1$args$data <- v1$args$dataset
+  }
+  if (is.null(v1$args$dataset) && !is.null(v1$args$data)) {
+    v1$args$dataset <- v1$args$data
+  }
+  if (identical(script_name, "summary.R")) {
+    if (is.null(v1$args$df_name) && !is.null(v1$args$dataset)) {
+      v1$args$df_name <- v1$args$dataset
+    }
+    if (!is.null(v1$args$df_name) && grepl("%>%|\\(|\\)", v1$args$df_name)) {
+      v1$args$df_name <- strsplit(v1$args$df_name, "\\s|%>%")[[1]][1]
+    }
+  }
+  variants <- c(variants, list(v1))
+
+  # Variant 2: downgrade plot_scatter -> plot_histogram if x is available
+  if (identical(script_name, "plot_scatter.R")) {
+    v2 <- parsed_args
+    v2$script_name <- "plot_histogram.R"
+    v2$args <- v1$args
+    if (is.null(v2$args$x) && !is.null(v2$args$y)) {
+      v2$args$x <- v2$args$y
+    }
+    variants <- c(variants, list(v2))
+  }
+
+  # Variant 3: summary -> analyze
+  if (identical(script_name, "summary.R")) {
+    v3 <- parsed_args
+    v3$script_name <- "analyze.R"
+    v3$args <- v1$args
+    if (is.null(v3$args$dataset) && !is.null(v3$args$df_name)) {
+      v3$args$dataset <- v3$args$df_name
+    }
+    variants <- c(variants, list(v3))
+  }
+
+  variants
+}
+
+build_skill_fallback_code <- function(parsed_args) {
+  script_name <- parsed_args$script_name
+  script_args <- parsed_args$args
+  if (!is.list(script_args)) script_args <- list()
+
+  sanitize_name <- function(x, fallback = NULL) {
+    if (is.null(x) || !nzchar(x)) return(fallback)
+    if (!grepl("^[A-Za-z0-9_.]+$", x)) return(fallback)
+    x
+  }
+
+  dataset <- script_args$data %||% script_args$dataset %||% script_args$df_name
+  dataset <- sanitize_name(dataset, "iris")
+
+  if (identical(script_name, "plot_scatter.R")) {
+    x <- sanitize_name(script_args$x, "")
+    y <- sanitize_name(script_args$y, "")
+    color <- sanitize_name(script_args$color, "")
+    code <- paste(
+      "library(ggplot2)",
+      sprintf("if (!exists('%s', inherits = TRUE)) { data(%s) }", dataset, dataset),
+      sprintf("df <- get('%s', inherits = TRUE)", dataset),
+      "num_cols <- names(df)[sapply(df, is.numeric)]",
+      sprintf("x_col <- if (nzchar('%s')) '%s' else if (length(num_cols) >= 1) num_cols[1] else names(df)[1]", x, x),
+      sprintf("y_col <- if (nzchar('%s')) '%s' else if (length(num_cols) >= 2) num_cols[2] else names(df)[1]", y, y),
+      sprintf("col_col <- if (nzchar('%s')) '%s' else if ('Species' %%in%% names(df)) 'Species' else NULL", color, color),
+      "p <- ggplot(df, aes_string(x = x_col, y = y_col, color = col_col)) + geom_point() + theme_minimal()",
+      "p",
+      sep = "\n"
+    )
+    return(list(code = code, description = "Fallback scatter plot"))
+  }
+
+  if (identical(script_name, "plot_histogram.R")) {
+    x <- sanitize_name(script_args$x, "")
+    code <- paste(
+      "library(ggplot2)",
+      sprintf("if (!exists('%s', inherits = TRUE)) { data(%s) }", dataset, dataset),
+      sprintf("df <- get('%s', inherits = TRUE)", dataset),
+      "num_cols <- names(df)[sapply(df, is.numeric)]",
+      sprintf("x_col <- if (nzchar('%s')) '%s' else if (length(num_cols) >= 1) num_cols[1] else names(df)[1]", x, x),
+      "p <- ggplot(df, aes_string(x = x_col)) + geom_histogram(bins = 30, fill = 'steelblue', alpha = 0.7) + theme_minimal()",
+      "p",
+      sep = "\n"
+    )
+    return(list(code = code, description = "Fallback histogram"))
+  }
+
+  if (identical(script_name, "summary.R") || identical(script_name, "analyze.R")) {
+    code <- paste(
+      sprintf("if (!exists('%s', inherits = TRUE)) { data(%s) }", dataset, dataset),
+      sprintf("df <- get('%s', inherits = TRUE)", dataset),
+      "summary(df)",
+      sep = "\n"
+    )
+    return(list(code = code, description = "Fallback summary"))
+  }
+
+  NULL
 }

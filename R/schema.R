@@ -97,6 +97,24 @@ z_boolean <- function(description = NULL, nullable = FALSE, default = NULL) {
   schema
 }
 
+#' @title Create Any Schema
+#' @description Create a JSON Schema that accepts any JSON value.
+#' @param description Optional description of the field.
+#' @param nullable If TRUE, allows null values.
+#' @param default Optional default value.
+#' @return A list representing JSON Schema for any value.
+#' @export
+#' @examples
+#' z_any(description = "Flexible input")
+z_any <- function(description = NULL, nullable = TRUE, default = NULL) {
+  schema <- list(type = c("string", "number", "integer", "boolean", "object", "array", "null"))
+  if (!is.null(description)) schema$description <- description
+  if (!is.null(default)) schema$default <- default
+  if (!nullable) schema$type <- setdiff(schema$type, "null")
+  class(schema) <- c("z_schema", "z_any", "list")
+  schema
+}
+
 # ============================================================================
 # Complex Type Builders
 # ============================================================================
@@ -291,7 +309,23 @@ schema_to_json <- function(schema, pretty = FALSE) {
 #' @return A JSON string.
 #' @export
 safe_to_json <- function(x, auto_unbox = TRUE, ...) {
-  jsonlite::toJSON(x, auto_unbox = auto_unbox, ..., null = "null")
+  if (inherits(x, "ggplot") || inherits(x, "gg")) {
+    x <- ggplot_to_z_object(x, include_data = TRUE, include_render_hints = TRUE)
+  }
+
+  tryCatch(
+    jsonlite::toJSON(x, auto_unbox = auto_unbox, ..., null = "null"),
+    error = function(e) {
+      fallback <- list(
+        error = "non_serializable_result",
+        class = paste(class(x), collapse = ","),
+        message = conditionMessage(e),
+        preview = paste(utils::capture.output(utils::str(x, max.level = 2, vec.len = 5)),
+                        collapse = "\n")
+      )
+      jsonlite::toJSON(fallback, auto_unbox = TRUE, null = "null")
+    }
+  )
 }
 
 

@@ -58,6 +58,16 @@ test_that("create_schema_from_func accepts param overrides", {
   expect_equal(schema$properties$b$default, "text")
 })
 
+test_that("create_schema_from_func supports type_mode = 'any'", {
+  test_func <- function(a = 1, b = "text", c = TRUE, d = NULL, e) {}
+
+  schema <- create_schema_from_func(test_func, type_mode = "any")
+
+  expect_s3_class(schema$properties$a, "z_any")
+  expect_s3_class(schema$properties$b, "z_any")
+  expect_true("e" %in% schema$required)
+})
+
 test_that("create_z_ggtree extracts params from layer", {
   mock_geom_tiplab <- function(size=3, color="black", ...) {}
   

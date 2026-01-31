@@ -66,6 +66,18 @@ GenerateResult <- R6::R6Class(
       self$all_tool_calls <- all_tool_calls
       self$reasoning <- reasoning
       self$response_id <- response_id
+    },
+
+    #' @description Print method for GenerateResult.
+    print = function() {
+      if (!is.null(self$text) && nzchar(self$text)) {
+        cat(self$text, "\n")
+      } else if (!is.null(self$tool_calls) && length(self$tool_calls) > 0) {
+        cat(sprintf("<GenerateResult: %d tool calls>\n", length(self$tool_calls)))
+      } else {
+        cat("<GenerateResult>\n")
+      }
+      invisible(self)
     }
   )
 )

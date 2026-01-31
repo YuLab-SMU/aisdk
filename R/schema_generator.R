@@ -102,6 +102,8 @@ get_param_docs <- function(func_name, package = NULL) {
 #'   extracted from an existing plot layer).
 #' @param func_name Optional string of the function name to look up documentation.
 #'   If not provided, attempts to infer from 'func' symbol.
+#' @param type_mode How to assign parameter types. "infer" (default) uses
+#'   default values to infer types. "any" uses z_any() for all parameters.
 #' @return A z_object schema.
 #' @export
 #' @examples
@@ -113,7 +115,9 @@ get_param_docs <- function(func_name, package = NULL) {
 #' # Override defaults
 #' schema_override <- create_schema_from_func(my_func, params = list(a = 99))
 #' }
-create_schema_from_func <- function(func, include_args = NULL, exclude_args = NULL, params = NULL, func_name = NULL) {
+create_schema_from_func <- function(func, include_args = NULL, exclude_args = NULL,
+                                    params = NULL, func_name = NULL,
+                                    type_mode = c("infer", "any")) {
   if (!is.function(func)) {
     if (inherits(func, "gg") || inherits(func, "ggplot")) {
       rlang::abort(c(
@@ -123,6 +127,8 @@ create_schema_from_func <- function(func, include_args = NULL, exclude_args = NU
     }
     rlang::abort("Input must be a function")
   }
+
+  type_mode <- match.arg(type_mode)
 
   args <- as.list(formals(func))
   arg_names <- names(args)
@@ -193,8 +199,12 @@ create_schema_from_func <- function(func, include_args = NULL, exclude_args = NU
     
     if (is_missing && !has_param_override) {
       # No default value and no override -> Required
-      # For now, default to string if we can't infer type
-      schema_props[[name]] <- z_string(description = desc)
+      if (type_mode == "any") {
+        schema_props[[name]] <- z_any(description = desc)
+      } else {
+        # For now, default to string if we can't infer type
+        schema_props[[name]] <- z_string(description = desc)
+      }
       required_args <- c(required_args, name)
     } else {
       # Determine the default value to use
@@ -205,8 +215,14 @@ create_schema_from_func <- function(func, include_args = NULL, exclude_args = NU
          default_val <- args[[name]]
          val <- tryCatch(eval(default_val), error = function(e) NULL)
       }
-      
-      if (is.null(val)) {
+
+      if (type_mode == "any") {
+        schema_props[[name]] <- z_any(
+          description = desc,
+          default = if (!is.null(val) && length(val) == 1) val else NULL,
+          nullable = is.null(val)
+        )
+      } else if (is.null(val)) {
         # Default is NULL, use nullable string
         schema_props[[name]] <- z_string(description = desc, nullable = TRUE, default = NULL)
       } else if (is.numeric(val)) {

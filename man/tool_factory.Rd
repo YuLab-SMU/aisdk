@@ -4,7 +4,7 @@
 \alias{tool}
 \title{Create a Tool}
 \usage{
-tool(name, description, parameters, execute)
+tool(name, description, parameters = NULL, execute = NULL)
 }
 \arguments{
 \item{name}{Unique tool name (used by LLM to call the tool).}
@@ -12,11 +12,13 @@ tool(name, description, parameters, execute)
 \item{description}{Description of the tool's purpose. Be descriptive
 to help the LLM understand when to use this tool.}
 
-\item{parameters}{A z_object schema defining expected parameters.
-Use z_object() with z_string(), z_number(), etc. to define the schema.}
+\item{parameters}{A z_schema object (z_object/z_any/etc), a named list,
+a character vector, or NULL. When NULL, the schema is inferred from the
+execute function signature (if possible) and defaults to flexible types.}
 
-\item{execute}{An R function that implements the tool logic.
-The function receives a single list argument containing the parameters.}
+\item{execute}{An R function that implements the tool logic. It can accept
+a single list argument (args), or standard named parameters.
+List-style functions receive a single list argument containing parameters.}
 }
 \value{
 A Tool object.

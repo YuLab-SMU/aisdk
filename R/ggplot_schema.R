@@ -1566,6 +1566,11 @@ sanitize_for_json <- function(x, plot_dims = list(width = 8, height = 6)) {
     # Convert units to numeric (px or inches etc.)
     return(as.numeric(x))
   }
+
+  if (inherits(x, "rel")) {
+    # Convert relative sizes to numeric
+    return(as.numeric(x))
+  }
   
   if (is.list(x)) {
     return(lapply(x, sanitize_for_json, plot_dims = plot_dims))

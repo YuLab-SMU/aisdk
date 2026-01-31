@@ -106,6 +106,39 @@ test_that("Tool can be created with valid parameters", {
   expect_equal(t$description, "A test tool")
 })
 
+test_that("Tool can infer parameters from execute signature", {
+  t <- tool(
+    name = "add_numbers",
+    description = "Adds two numbers",
+    execute = function(a, b) a + b
+  )
+
+  expect_s3_class(t$parameters, "z_object")
+  expect_true(all(c("a", "b") %in% names(t$parameters$properties)))
+  expect_s3_class(t$parameters$properties$a, "z_any")
+  expect_equal(t$run(list(a = 1, b = 2)), 3)
+})
+
+test_that("Tool accepts simple parameter descriptors", {
+  t1 <- tool(
+    name = "echo",
+    description = "Echo input",
+    parameters = c(message = "Message to echo"),
+    execute = function(args) args$message
+  )
+
+  expect_s3_class(t1$parameters$properties$message, "z_any")
+
+  t2 <- tool(
+    name = "sum_list",
+    description = "Sum numbers",
+    parameters = list(values = "Numbers to sum"),
+    execute = function(args) sum(args$values)
+  )
+
+  expect_s3_class(t2$parameters$properties$values, "z_any")
+})
+
 test_that("Tool validates name", {
   expect_error(
     tool("", "desc", z_object(x = z_string()), function(a) a),

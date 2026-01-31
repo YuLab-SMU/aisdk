@@ -9,7 +9,8 @@ create_schema_from_func(
   include_args = NULL,
   exclude_args = NULL,
   params = NULL,
-  func_name = NULL
+  func_name = NULL,
+  type_mode = c("infer", "any")
 )
 }
 \arguments{
@@ -26,6 +27,9 @@ extracted from an existing plot layer).}
 
 \item{func_name}{Optional string of the function name to look up documentation.
 If not provided, attempts to infer from 'func' symbol.}
+
+\item{type_mode}{How to assign parameter types. "infer" (default) uses
+default values to infer types. "any" uses z_any() for all parameters.}
 }
 \value{
 A z_object schema.
