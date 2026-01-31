@@ -127,17 +127,11 @@ render_text(response)
 Create an agent with tools to solve tasks:
 
 ``` r
-# Define a calculator tool
+# Define a calculator tool (schema inferred from the function signature)
 calc_tool <- tool(
   name = "add_numbers",
   description = "Adds two numbers together",
-  parameters = z_object(
-    a = z_number("First number"),
-    b = z_number("Second number")
-  ),
-  execute = function(args) {
-    args$a + args$b
-  }
+  execute = function(a, b) a + b
 )
 
 # Create an agent
