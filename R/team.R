@@ -248,6 +248,8 @@ AgentTeam <- R6::R6Class(
 #' @description
 #' Helper to create an AgentTeam.
 #' @param name Team name.
+#' @param model Optional default model for the team.
+#' @param session Optional shared ChatSession for the team.
 #' @return An AgentTeam object.
 #' @export
 create_team <- function(name = "AgentTeam", model = NULL, session = NULL) {

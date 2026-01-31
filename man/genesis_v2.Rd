@@ -2,7 +2,7 @@
 % Please edit documentation in R/genesis_v2.R
 \name{genesis_v2}
 \alias{genesis_v2}
-\title{Genesis V2: Plan-Execute-Refine Architecture}
+\title{Genesis V2: Direct Execute-Refine Architecture}
 \usage{
 genesis_v2(
   task,
@@ -15,7 +15,8 @@ genesis_v2(
   verbose = FALSE,
   architect_model = NULL,
   evaluator_model = NULL,
-  refiner_model = NULL
+  refiner_model = NULL,
+  max_steps = 10
 )
 }
 \arguments{
@@ -25,52 +26,43 @@ genesis_v2(
 
 \item{model}{Model to use for agents (default: claude-3-5-sonnet-20241022)}
 
-\item{max_iterations}{Maximum number of PER iterations (default: 3)}
+\item{max_iterations}{Maximum number of iterations (default: 3)}
 
 \item{auto_refine}{Logical, whether to enable automatic refinement (default: TRUE)}
 
 \item{quality_threshold}{Minimum quality score to accept (0-100, default: 70)}
 
-\item{cache}{Logical, whether to cache team composition (default: TRUE)}
+\item{cache}{Logical, whether to cache team composition for similar tasks (unused in direct mode)}
 
 \item{verbose}{Logical, whether to print orchestration details (default: FALSE)}
 
-\item{architect_model}{Model to use for Architect agent (default: same as model)}
+\item{architect_model}{Model to use for criteria generation (default: same as model)}
 
 \item{evaluator_model}{Model to use for Evaluator agent (default: same as model)}
 
-\item{refiner_model}{Model to use for Refiner agent (default: same as model)}
+\item{refiner_model}{Model to use for Refiner agent (unused in direct mode)}
+
+\item{max_steps}{Maximum tool execution steps (default: 10)}
 }
 \value{
 List with result, iterations, evaluation, and history
 }
 \description{
-Genesis V2 implements a complete Plan-Execute-Refine cycle with automatic
-quality assessment and iterative improvement. It extends Genesis V1 with
-the ability to evaluate results and automatically refine failed executions.
+Genesis V2 implements a direct Execute-Refine loop with automatic
+quality assessment and iterative improvement. It runs a single
+direct agent with skills and refines based on evaluator feedback.
 }
 \details{
-Execute a task with Plan-Execute-Refine cycle
+Execute a task with Direct Execute-Refine cycle
 }
 \examples{
 \dontrun{
-# Basic usage with auto-refine
 result <- genesis_v2(
-  "Analyze the iris dataset and create a comprehensive report with visualizations"
-)
-
-# With custom settings
-result <- genesis_v2(
-  "Analyze iris and create plots",
-  max_iterations = 5,
-  quality_threshold = 85,
+  "Analyze the iris dataset and create a comprehensive report with visualizations",
+  max_iterations = 3,
+  quality_threshold = 80,
+  auto_refine = TRUE,
   verbose = TRUE
-)
-
-# Disable auto-refine (behaves like V1)
-result <- genesis_v2(
-  "Simple task",
-  auto_refine = FALSE
 )
 }
 }

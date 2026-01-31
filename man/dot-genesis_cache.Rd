@@ -3,7 +3,7 @@
 \docType{data}
 \name{.genesis_cache}
 \alias{.genesis_cache}
-\title{Genesis: Zero-Configuration Agent Execution}
+\title{Genesis: Zero-Configuration Direct Execution}
 \format{
 An object of class \code{environment} of length 0.
 }
@@ -12,7 +12,7 @@ An object of class \code{environment} of length 0.
 }
 \description{
 Genesis provides a one-line interface for executing tasks with automatic
-agent discovery and team assembly. It scans available skills, uses an
-Architect agent to select the optimal team, and executes the task.
+skill discovery and direct execution. It loads skills on demand and runs a
+single manager agent that uses tools as needed.
 }
 \keyword{datasets}

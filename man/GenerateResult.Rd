@@ -46,6 +46,7 @@ which can be used for multi-turn conversations without sending full history.
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-GenerateResult-new}{\code{GenerateResult$new()}}
+\item \href{#method-GenerateResult-print}{\code{GenerateResult$print()}}
 \item \href{#method-GenerateResult-clone}{\code{GenerateResult$clone()}}
 }
 }
@@ -94,6 +95,16 @@ Initialize a GenerateResult object.
 }
 \if{html}{\out{</div>}}
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GenerateResult-print"></a>}}
+\if{latex}{\out{\hypertarget{method-GenerateResult-print}{}}}
+\subsection{Method \code{print()}}{
+Print method for GenerateResult.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GenerateResult$print()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-GenerateResult-clone"></a>}}

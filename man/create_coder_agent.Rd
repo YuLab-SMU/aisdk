@@ -8,7 +8,7 @@ create_coder_agent(
   name = "CoderAgent",
   safe_mode = TRUE,
   timeout_ms = 30000,
-  max_output_lines = 50
+  max_output_lines = 200
 )
 }
 \arguments{

@@ -14,6 +14,10 @@ R6 class representing a team of agents.
 \item{\code{members}}{List of registered agents (workers).}
 
 \item{\code{manager}}{The manager agent (created automatically).}
+
+\item{\code{default_model}}{Default model ID for the team (optional).}
+
+\item{\code{session}}{Optional shared ChatSession for the team.}
 }
 \if{html}{\out{</div>}}
 }
@@ -33,13 +37,17 @@ R6 class representing a team of agents.
 \subsection{Method \code{new()}}{
 Initialize a new AgentTeam.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{AgentTeam$new(name = "AgentTeam")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{AgentTeam$new(name = "AgentTeam", model = NULL, session = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{name}}{Name of the team.}
+
+\item{\code{model}}{Optional default model for the team.}
+
+\item{\code{session}}{Optional shared ChatSession (or SharedSession).}
 }
 \if{html}{\out{</div>}}
 }
@@ -58,7 +66,8 @@ Register an agent to the team.
   description,
   skills = NULL,
   tools = NULL,
-  system_prompt = NULL
+  system_prompt = NULL,
+  model = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -74,6 +83,8 @@ Register an agent to the team.
 \item{\code{tools}}{List of explicit Tool objects.}
 
 \item{\code{system_prompt}}{Optional system prompt override.}
+
+\item{\code{model}}{Optional default model for this agent (overrides team default).}
 }
 \if{html}{\out{</div>}}
 }
@@ -87,7 +98,7 @@ Self (for chaining).
 \subsection{Method \code{run()}}{
 Run the team on a task.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{AgentTeam$run(task, model = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{AgentTeam$run(task, model = NULL, session = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -96,6 +107,8 @@ Run the team on a task.
 \item{\code{task}}{The task instruction.}
 
 \item{\code{model}}{Model ID to use for the Manager.}
+
+\item{\code{session}}{Optional shared ChatSession (or SharedSession).}
 }
 \if{html}{\out{</div>}}
 }

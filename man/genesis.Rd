@@ -7,10 +7,12 @@
 genesis(
   task,
   skill_paths = "auto",
-  model = "claude-3-5-sonnet-20241022",
+  model = "anthropic:claude-3-5-sonnet-20241022",
   cache = TRUE,
   verbose = FALSE,
-  architect_model = NULL
+  architect_model = NULL,
+  max_steps = 10,
+  mode = c("plan", "direct")
 )
 }
 \arguments{
@@ -25,6 +27,10 @@ genesis(
 \item{verbose}{Logical, whether to print orchestration details (default: FALSE)}
 
 \item{architect_model}{Model to use for Architect agent (default: same as model)}
+
+\item{max_steps}{Maximum tool execution steps (default: 10)}
+
+\item{mode}{Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)}
 }
 \value{
 The result from the team execution

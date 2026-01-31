@@ -4,10 +4,14 @@
 \alias{create_team}
 \title{Create an Agent Team}
 \usage{
-create_team(name = "AgentTeam")
+create_team(name = "AgentTeam", model = NULL, session = NULL)
 }
 \arguments{
 \item{name}{Team name.}
+
+\item{model}{Optional default model for the team.}
+
+\item{session}{Optional shared ChatSession for the team.}
 }
 \value{
 An AgentTeam object.
