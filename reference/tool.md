@@ -17,6 +17,11 @@ connects an LLM's tool call request to an R function.
 
   A z_object schema defining the tool's parameters.
 
+- `layer`:
+
+  Tool layer: "llm" (loaded into context) or "computer" (executed via
+  bash/filesystem).
+
 ## Methods
 
 ### Public methods
@@ -39,7 +44,7 @@ Initialize a Tool.
 
 #### Usage
 
-    Tool$new(name, description, parameters, execute)
+    Tool$new(name, description, parameters, execute, layer = "llm")
 
 #### Arguments
 
@@ -58,6 +63,10 @@ Initialize a Tool.
 - `execute`:
 
   An R function that implements the tool logic.
+
+- `layer`:
+
+  Tool layer: "llm" or "computer" (default: "llm").
 
 ------------------------------------------------------------------------
 

@@ -109,6 +109,8 @@
   : Clear team composition cache
 - [`compat`](https://YuLab-SMU.github.io/aisdk/reference/compat.md) :
   Compatibility Layer: Feature Flags and Migration Support
+- [`Computer`](https://YuLab-SMU.github.io/aisdk/reference/computer.md)
+  : Computer Class
 - [`configure_api()`](https://YuLab-SMU.github.io/aisdk/reference/configure_api.md)
   : Launch API Configuration App
 - [`console`](https://YuLab-SMU.github.io/aisdk/reference/console.md) :
@@ -139,6 +141,8 @@
   : Create a Chat Session
 - [`create_coder_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.md)
   : Create a CoderAgent
+- [`create_computer_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_computer_tools.md)
+  : Create Computer Tools
 - [`create_data_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_data_agent.md)
   : Create a DataAgent
 - [`create_embeddings()`](https://YuLab-SMU.github.io/aisdk/reference/create_embeddings.md)
@@ -273,6 +277,8 @@
   : Hypothesis-Fix-Verify Loop
 - [`import_genesis_result()`](https://YuLab-SMU.github.io/aisdk/reference/import_genesis_result.md)
   : Import Genesis V2 result from JSON
+- [`init_skill()`](https://YuLab-SMU.github.io/aisdk/reference/init_skill.md)
+  : Initialize a New Skill
 - [`install_skill()`](https://YuLab-SMU.github.io/aisdk/reference/install_skill.md)
   : Install a Skill
 - [`knitr_engine`](https://YuLab-SMU.github.io/aisdk/reference/knitr_engine.md)
@@ -291,6 +297,8 @@
   : Migrate Legacy Code
 - [`multimodal`](https://YuLab-SMU.github.io/aisdk/reference/multimodal.md)
   : Multimodal Helpers
+- [`package_skill()`](https://YuLab-SMU.github.io/aisdk/reference/package_skill.md)
+  : Package a Skill
 - [`parse_architect_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_response.md)
   : Parse Architect's JSON response
 - [`parse_architect_v2_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_v2_response.md)

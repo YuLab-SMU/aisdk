@@ -31,6 +31,7 @@ Level 3: R scripts (executable code) - executed by agent
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/agents.html">Building Agents</a></li>
+    <li><a class="dropdown-item" href="../articles/computer_abstraction.html">Computer Abstraction Layer</a></li>
     <li><a class="dropdown-item" href="../articles/enterprise.html">Enterprise Operations</a></li>
     <li><a class="dropdown-item" href="../articles/get_started.html">Get Started with aisdk</a></li>
     <li><a class="dropdown-item" href="../articles/integrations.html">Shiny Integration</a></li>
@@ -90,6 +91,9 @@ A Skill consists of:</p><ul><li><p>Level 1: YAML frontmatter (name, description)
 <li><p><a href="#method-Skill-load"><code>Skill$load()</code></a></p></li>
 <li><p><a href="#method-Skill-execute_script"><code>Skill$execute_script()</code></a></p></li>
 <li><p><a href="#method-Skill-list_scripts"><code>Skill$list_scripts()</code></a></p></li>
+<li><p><a href="#method-Skill-list_resources"><code>Skill$list_resources()</code></a></p></li>
+<li><p><a href="#method-Skill-read_resource"><code>Skill$read_resource()</code></a></p></li>
+<li><p><a href="#method-Skill-get_asset_path"><code>Skill$get_asset_path()</code></a></p></li>
 <li><p><a href="#method-Skill-print"><code>Skill$print()</code></a></p></li>
 <li><p><a href="#method-Skill-clone"><code>Skill$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-Skill-new"></a><div class="section">
@@ -161,10 +165,62 @@ Uses callr for safe, isolated execution.</p><div class="section">
 <p>Character vector of script file names.</p>
 </div>
 
+</div><p></p><hr><a id="method-Skill-list_resources"></a><div class="section">
+<h3 id="method-list-resources-">Method <code>list_resources()</code><a class="anchor" aria-label="anchor" href="#method-list-resources-"></a></h3>
+<p>List available reference files in the skill's references directory.</p><div class="section">
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Skill</span><span class="op">$</span><span class="fu">list_resources</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
+<p>Character vector of reference file names.</p>
+</div>
+
+</div><p></p><hr><a id="method-Skill-read_resource"></a><div class="section">
+<h3 id="method-read-resource-">Method <code>read_resource()</code><a class="anchor" aria-label="anchor" href="#method-read-resource-"></a></h3>
+<p>Read content of a reference file from the references directory.</p><div class="section">
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Skill</span><span class="op">$</span><span class="fu">read_resource</span><span class="op">(</span><span class="va">resource_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>resource_name</code></dt>
+<dd><p>Name of the reference file.</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<p>Character string containing the resource content.</p>
+</div>
+
+</div><p></p><hr><a id="method-Skill-get_asset_path"></a><div class="section">
+<h3 id="method-get-asset-path-">Method <code>get_asset_path()</code><a class="anchor" aria-label="anchor" href="#method-get-asset-path-"></a></h3>
+<p>Get the absolute path to an asset in the assets directory.</p><div class="section">
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Skill</span><span class="op">$</span><span class="fu">get_asset_path</span><span class="op">(</span><span class="va">asset_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>asset_name</code></dt>
+<dd><p>Name of the asset file or directory.</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
+<p>Absolute path string.</p>
+</div>
+
 </div><p></p><hr><a id="method-Skill-print"></a><div class="section">
 <h3 id="method-print-">Method <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code><a class="anchor" aria-label="anchor" href="#method-print-"></a></h3>
 <p>Print a summary of the skill.</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Skill</span><span class="op">$</span><span class="fu">print</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -172,12 +228,12 @@ Uses callr for safe, isolated execution.</p><div class="section">
 </div><p></p><hr><a id="method-Skill-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">Skill</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 

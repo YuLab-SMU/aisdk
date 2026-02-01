@@ -4,6 +4,8 @@
 
 - [Building
   Agents](https://YuLab-SMU.github.io/aisdk/articles/agents.md):
+- [Computer Abstraction
+  Layer](https://YuLab-SMU.github.io/aisdk/articles/computer_abstraction.md):
 - [Enterprise
   Operations](https://YuLab-SMU.github.io/aisdk/articles/enterprise.md):
 - [Get Started with

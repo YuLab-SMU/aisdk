@@ -3,6 +3,7 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   agents: agents.html
+  computer_abstraction: computer_abstraction.html
   enterprise: enterprise.html
   get_started: get_started.html
   integrations: integrations.html
@@ -11,7 +12,7 @@ articles:
   skills: skills.html
   structured_outputs: structured_outputs.html
   tools: tools.html
-last_built: 2026-01-31T14:53Z
+last_built: 2026-02-01T13:55Z
 urls:
   reference: https://YuLab-SMU.github.io/aisdk/reference
   article: https://YuLab-SMU.github.io/aisdk/articles

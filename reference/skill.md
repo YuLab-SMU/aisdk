@@ -35,6 +35,12 @@ Skill consists of:
 
 - [`Skill$list_scripts()`](#method-Skill-list_scripts)
 
+- [`Skill$list_resources()`](#method-Skill-list_resources)
+
+- [`Skill$read_resource()`](#method-Skill-read_resource)
+
+- [`Skill$get_asset_path()`](#method-Skill-get_asset_path)
+
 - [`Skill$print()`](#method-Skill-print)
 
 - [`Skill$clone()`](#method-Skill-clone)
@@ -111,6 +117,60 @@ List available scripts in the skill's scripts directory.
 #### Returns
 
 Character vector of script file names.
+
+------------------------------------------------------------------------
+
+### Method `list_resources()`
+
+List available reference files in the skill's references directory.
+
+#### Usage
+
+    Skill$list_resources()
+
+#### Returns
+
+Character vector of reference file names.
+
+------------------------------------------------------------------------
+
+### Method `read_resource()`
+
+Read content of a reference file from the references directory.
+
+#### Usage
+
+    Skill$read_resource(resource_name)
+
+#### Arguments
+
+- `resource_name`:
+
+  Name of the reference file.
+
+#### Returns
+
+Character string containing the resource content.
+
+------------------------------------------------------------------------
+
+### Method `get_asset_path()`
+
+Get the absolute path to an asset in the assets directory.
+
+#### Usage
+
+    Skill$get_asset_path(asset_name)
+
+#### Arguments
+
+- `asset_name`:
+
+  Name of the asset file or directory.
+
+#### Returns
+
+Absolute path string.
 
 ------------------------------------------------------------------------
 

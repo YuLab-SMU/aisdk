@@ -6,7 +6,7 @@ define tools for LLM function calling.
 ## Usage
 
 ``` r
-tool(name, description, parameters = NULL, execute = NULL)
+tool(name, description, parameters = NULL, execute = NULL, layer = "llm")
 ```
 
 ## Arguments
@@ -31,6 +31,12 @@ tool(name, description, parameters = NULL, execute = NULL)
   An R function that implements the tool logic. It can accept a single
   list argument (args), or standard named parameters. List-style
   functions receive a single list argument containing parameters.
+
+- layer:
+
+  Tool layer: "llm" (loaded into context) or "computer" (executed via
+  bash/filesystem). Default is "llm". Computer layer tools are not
+  loaded into context but executed via bash.
 
 ## Value
 

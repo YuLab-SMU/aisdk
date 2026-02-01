@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/agents.html">Building Agents</a></li>
+    <li><a class="dropdown-item" href="../articles/computer_abstraction.html">Computer Abstraction Layer</a></li>
     <li><a class="dropdown-item" href="../articles/enterprise.html">Enterprise Operations</a></li>
     <li><a class="dropdown-item" href="../articles/get_started.html">Get Started with aisdk</a></li>
     <li><a class="dropdown-item" href="../articles/integrations.html">Shiny Integration</a></li>
@@ -58,7 +59,8 @@
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  architect_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_steps <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plan"</span>, <span class="st">"direct"</span><span class="op">)</span></span>
+<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"plan"</span>, <span class="st">"direct"</span><span class="op">)</span>,</span>
+<span>  use_computer_tools <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +99,12 @@
 <dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
 <dd><p>Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)</p></dd>
 
+
+<dt id="arg-use-computer-tools">use_computer_tools<a class="anchor" aria-label="anchor" href="#arg-use-computer-tools"></a></dt>
+<dd><p>Logical, whether to use computer abstraction layer (default: FALSE).
+When TRUE, uses atomic tools (bash, read_file, write_file, execute_r_code) instead of
+loading all skill tools into context. This reduces context window usage by 30-50%.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -108,6 +116,12 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Simple one-line execution</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">genesis</span><span class="op">(</span><span class="st">"Analyze the iris dataset and create a scatter plot"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># With computer tools (reduced context usage)</span></span></span>
+<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">genesis</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"Analyze the iris dataset"</span>,</span></span>
+<span class="r-in"><span>  use_computer_tools <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With custom skill paths</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">genesis</span><span class="op">(</span></span></span>
