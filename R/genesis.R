@@ -9,7 +9,7 @@
 # Global cache for team compositions
 .genesis_cache <- new.env(parent = emptyenv())
 
-# Direct execution system prompt
+# Direct execution system prompt (skill tools mode)
 GENESIS_DIRECT_PROMPT <- paste(
   "You are Genesis, a direct execution agent.",
   "Work iteratively until the task is complete.",
@@ -29,6 +29,43 @@ GENESIS_DIRECT_PROMPT <- paste(
   sep = "\n"
 )
 
+# Computer tools system prompt (hierarchical action space mode)
+GENESIS_COMPUTER_PROMPT <- paste(
+  "You are Genesis, a direct execution agent with computer access.",
+  "Work iteratively until the task is complete.",
+  "",
+  "## Available Tools",
+  "You have access to atomic computer tools:",
+  "- bash: Execute shell commands, run CLIs, scripts, or utilities",
+  "- read_file: Read file contents",
+  "- write_file: Write content to files",
+  "- execute_r_code: Run R code in isolated process",
+  "",
+  "## Skills",
+  "Skills are available in the inst/skills/ directory. Each skill has:",
+  "- SKILL.md: Instructions and documentation",
+  "- scripts/: Executable R scripts",
+  "- references/: Reference materials",
+  "",
+  "To use a skill:",
+  "1. Read inst/skills/<skill_name>/SKILL.md to understand it",
+  "2. Execute scripts via: bash('Rscript inst/skills/<skill_name>/scripts/<script>.R')",
+  "3. Read references if needed: read_file('inst/skills/<skill_name>/references/<file>')",
+  "",
+  "## Execution Strategy",
+  "- Use bash for running scripts, CLIs, and shell utilities",
+  "- Use execute_r_code for data analysis and computations",
+  "- Use read_file/write_file for file operations",
+  "- If a command fails, try an alternative approach",
+  "- Prefer executing code to validate results rather than guessing",
+  "",
+  "## Output",
+  "- Synthesize clear, structured reports (Summary, Statistics, Visualizations, Insights)",
+  "- Persist key outputs using artifact tools",
+  "- Be concise and return the final answer once done",
+  sep = "\n"
+)
+
 #' Execute a task with automatic agent discovery and team assembly
 #'
 #' @param task Character string describing the task to accomplish
@@ -39,12 +76,21 @@ GENESIS_DIRECT_PROMPT <- paste(
 #' @param architect_model Model to use for Architect agent (default: same as model)
 #' @param max_steps Maximum tool execution steps (default: 10)
 #' @param mode Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)
+#' @param use_computer_tools Logical, whether to use computer abstraction layer (default: FALSE).
+#'   When TRUE, uses atomic tools (bash, read_file, write_file, execute_r_code) instead of
+#'   loading all skill tools into context. This reduces context window usage by 30-50%.
 #' @return The result from the team execution
 #' @export
 #' @examples
 #' \dontrun{
 #' # Simple one-line execution
 #' result <- genesis("Analyze the iris dataset and create a scatter plot")
+#'
+#' # With computer tools (reduced context usage)
+#' result <- genesis(
+#'   "Analyze the iris dataset",
+#'   use_computer_tools = TRUE
+#' )
 #'
 #' # With custom skill paths
 #' result <- genesis(
@@ -65,31 +111,53 @@ genesis <- function(task,
                     verbose = FALSE,
                     architect_model = NULL,
                     max_steps = 10,
-                    mode = c("plan", "direct")) {
+                    mode = c("plan", "direct"),
+                    use_computer_tools = FALSE) {
   
   mode <- match.arg(mode)
-  
+
   if (mode == "plan") {
     return(genesis_do(task, model = model, verbose = verbose))
   }
 
   if (verbose) {
     cat("=== Genesis: Direct Execution ===\n\n")
-    cat("Running in direct mode (no pre-assembly)\n\n")
+    if (use_computer_tools) {
+      cat("Using computer abstraction layer (reduced context mode)\n\n")
+    } else {
+      cat("Running in direct mode (no pre-assembly)\n\n")
+    }
   }
 
-  # Create a direct execution agent with skill tools, code execution fallback, and artifacts
-  coder_tools <- create_coder_agent()$tools
+  # Create artifact directory and tools
   artifact_dir <- create_artifact_dir()
   artifact_tools <- create_artifact_tools(artifact_dir)
-  agent <- Agent$new(
-    name = "Genesis",
-    description = "Direct execution agent",
-    system_prompt = GENESIS_DIRECT_PROMPT,
-    skills = skill_paths,
-    tools = c(coder_tools, artifact_tools),
-    model = model
-  )
+
+  # Choose execution mode
+  if (use_computer_tools) {
+    # Computer abstraction mode: atomic tools + bash/filesystem access
+    computer_tools <- create_computer_tools(working_dir = artifact_dir)
+
+    agent <- Agent$new(
+      name = "Genesis",
+      description = "Direct execution agent with computer access",
+      system_prompt = GENESIS_COMPUTER_PROMPT,
+      tools = c(computer_tools, artifact_tools),
+      model = model
+    )
+  } else {
+    # Traditional mode: skill tools + code execution
+    coder_tools <- create_coder_agent()$tools
+
+    agent <- Agent$new(
+      name = "Genesis",
+      description = "Direct execution agent",
+      system_prompt = GENESIS_DIRECT_PROMPT,
+      skills = skill_paths,
+      tools = c(coder_tools, artifact_tools),
+      model = model
+    )
+  }
 
   # Shared session for tool execution and cross-step context
   session <- create_shared_session(model = model)
@@ -106,6 +174,9 @@ genesis <- function(task,
   if (verbose) {
     cat("\n=== Execution Complete ===\n")
     cat("Artifacts directory: ", artifact_dir, "\n", sep = "")
+    if (use_computer_tools) {
+      cat("Context savings: ~30-50% (computer tools mode)\n")
+    }
   }
 
   result

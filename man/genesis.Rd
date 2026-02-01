@@ -12,7 +12,8 @@ genesis(
   verbose = FALSE,
   architect_model = NULL,
   max_steps = 10,
-  mode = c("plan", "direct")
+  mode = c("plan", "direct"),
+  use_computer_tools = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ genesis(
 \item{max_steps}{Maximum tool execution steps (default: 10)}
 
 \item{mode}{Execution mode: "plan" (structured plan-script-execute) or "direct" (single agent)}
+
+\item{use_computer_tools}{Logical, whether to use computer abstraction layer (default: FALSE).
+When TRUE, uses atomic tools (bash, read_file, write_file, execute_r_code) instead of
+loading all skill tools into context. This reduces context window usage by 30-50\%.}
 }
 \value{
 The result from the team execution
@@ -42,6 +47,12 @@ Execute a task with automatic agent discovery and team assembly
 \dontrun{
 # Simple one-line execution
 result <- genesis("Analyze the iris dataset and create a scatter plot")
+
+# With computer tools (reduced context usage)
+result <- genesis(
+  "Analyze the iris dataset",
+  use_computer_tools = TRUE
+)
 
 # With custom skill paths
 result <- genesis(

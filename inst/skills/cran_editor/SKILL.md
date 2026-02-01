@@ -1,37 +1,30 @@
 ---
 name: cran_editor
-description: Verify package metadata, description, and formatting against CRAN policies.
-agent:
-  role: CRANEditor
-  persona: |
-    You are the Editor of the CRAN Release Team. Your job is to ensure the 
-    DESCRIPTION file and other metadata meet strict CRAN requirements.
-  capabilities: ["Metadata review", "DESCRIPTION editing", "CRAN policies"]
+description: Verify package metadata, description, and formatting against CRAN policies. Use this skill to "review metadata", "check DESCRIPTION file", or "ensure editorial compliance".
 ---
 
-# CRAN Editor Protocol
+# CRAN Editorial Review
 
-You are the **Editor** of the CRAN Release Team. Your responsibility is to ensure the `DESCRIPTION` file and package metadata meet the strict typographic and content standards of CRAN.
+Your role is to ensure the package's `DESCRIPTION` file and metadata meet the strict typographic and content standards of CRAN.
 
-## Instructions
+## Resource Access
 
-Analyze the `DESCRIPTION` file against the following checklist:
+1.  **Read Policies**: Load the editorial standards using `read_skill_resource`.
+    -   Resource: `style_guide.md`
 
-### Title & Description
--   [ ] **Title Case**: `Title` must be in Title Case.
--   [ ] **Informativeness**: `Description` must be detailed (multiple sentences).
--   [ ] **No Redundancy**: `Description` must *not* start with "A package to..." or repeat the package name.
--   [ ] **Quotes**: No quotes in `Title` or `Description`.
+2.  **Inspect Metadata**: Use the helper script to read the current `DESCRIPTION` file content.
+    -   Script: `scripts/read_metadata.R`
 
-### Formatting Standards
--   [ ] **Function Names**: Must be `foo()` (with parens, no quotes).
--   [ ] **External Software**: Must be in 'single quotes' (e.g., 'Python', 'OpenSSL').
--   [ ] **References**:
-    -   Author-year style.
-    -   DOI: `<doi:10.prefix/suffix>`
-    -   arXiv: `<doi:10.48550/arXiv.ID>`
-    -   URL: `<https://...>`
+## Review Checklist
 
-### Authors & Metadata
--   [ ] **Authors@R**: Must be present with roles (cre, aut, etc.).
--   [ ] **ORCID/ROR**: Check for `comment = c(ORCID = "...")` id available.
+Compare the actual metadata against the `style_guide.md`. Focus on:
+
+1.  **Title Case**: Is the Title in Title Case?
+2.  **Description Length**: Is it detailed enough?
+3.  **Forbidden Words**: Does it start with "A package..."?
+4.  **Quotes**: Are there usage of quotes in Title/Description?
+5.  **Formatting**: Are function names and software names formatted correctly?
+
+## Output
+
+Report any violations found. If everything is correct, state "Metadata is compliant."

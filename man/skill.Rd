@@ -30,6 +30,9 @@ A Skill consists of:
 \item \href{#method-Skill-load}{\code{Skill$load()}}
 \item \href{#method-Skill-execute_script}{\code{Skill$execute_script()}}
 \item \href{#method-Skill-list_scripts}{\code{Skill$list_scripts()}}
+\item \href{#method-Skill-list_resources}{\code{Skill$list_resources()}}
+\item \href{#method-Skill-read_resource}{\code{Skill$read_resource()}}
+\item \href{#method-Skill-get_asset_path}{\code{Skill$get_asset_path()}}
 \item \href{#method-Skill-print}{\code{Skill$print()}}
 \item \href{#method-Skill-clone}{\code{Skill$clone()}}
 }
@@ -101,6 +104,59 @@ List available scripts in the skill's scripts directory.
 
 \subsection{Returns}{
 Character vector of script file names.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-list_resources"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-list_resources}{}}}
+\subsection{Method \code{list_resources()}}{
+List available reference files in the skill's references directory.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$list_resources()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Character vector of reference file names.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-read_resource"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-read_resource}{}}}
+\subsection{Method \code{read_resource()}}{
+Read content of a reference file from the references directory.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$read_resource(resource_name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{resource_name}}{Name of the reference file.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Character string containing the resource content.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-get_asset_path"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-get_asset_path}{}}}
+\subsection{Method \code{get_asset_path()}}{
+Get the absolute path to an asset in the assets directory.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$get_asset_path(asset_name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{asset_name}}{Name of the asset file or directory.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Absolute path string.
 }
 }
 \if{html}{\out{<hr>}}

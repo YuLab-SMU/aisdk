@@ -17,6 +17,9 @@ test_that("fuzzy matching works", {
           name = name,
           load = function() "Instructions",
           list_scripts = function() character(0),
+          list_resources = function() character(0),
+          read_resource = function(name) "Content",
+          get_asset_path = function(name) file.path(tempdir(), name),
           path = tempdir()
         )
       } else {

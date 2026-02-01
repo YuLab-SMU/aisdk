@@ -110,6 +110,47 @@ Skill <- R6::R6Class(
     },
     
     #' @description
+    #' List available reference files in the skill's references directory.
+    #' @return Character vector of reference file names.
+    list_resources = function() {
+      refs_dir <- file.path(self$path, "references")
+      if (!dir.exists(refs_dir)) {
+        return(character(0))
+      }
+      list.files(refs_dir, full.names = FALSE)
+    },
+    
+    #' @description
+    #' Read content of a reference file from the references directory.
+    #' @param resource_name Name of the reference file.
+    #' @return Character string containing the resource content.
+    read_resource = function(resource_name) {
+      refs_dir <- file.path(self$path, "references")
+      resource_path <- file.path(refs_dir, resource_name)
+      
+      if (!file.exists(resource_path)) {
+        rlang::abort(paste0("Resource not found: ", resource_path))
+      }
+      
+      paste(readLines(resource_path, warn = FALSE), collapse = "\n")
+    },
+    
+    #' @description
+    #' Get the absolute path to an asset in the assets directory.
+    #' @param asset_name Name of the asset file or directory.
+    #' @return Absolute path string.
+    get_asset_path = function(asset_name) {
+      assets_dir <- file.path(self$path, "assets")
+      asset_path <- file.path(assets_dir, asset_name)
+      
+      if (!file.exists(asset_path)) {
+        rlang::abort(paste0("Asset not found: ", asset_path))
+      }
+      
+      normalizePath(asset_path, mustWork = TRUE)
+    },
+    
+    #' @description
     #' Print a summary of the skill.
     print = function() {
       cat("<Skill>\n")
@@ -204,32 +245,87 @@ create_skill_tools <- function(registry) {
         }
         body <- skill$load()
         scripts <- skill$list_scripts()
-        if (length(scripts) == 0) {
-          return(body)
-        }
-        interface_lines <- character(0)
-        for (script in scripts) {
-          script_path <- file.path(skill$path, "scripts", script)
-          args_found <- character(0)
-          if (file.exists(script_path)) {
-            lines <- readLines(script_path, warn = FALSE)
-            matches <- unlist(regmatches(lines, gregexpr("args\\$[A-Za-z0-9_.]+", lines, perl = TRUE)))
-            if (length(matches) > 0) {
-              args_found <- unique(sub("^args\\$", "", matches))
+        resources <- skill$list_resources()
+        
+        script_info <- ""
+        if (length(scripts) > 0) {
+          interface_lines <- character(0)
+          for (script in scripts) {
+            script_path <- file.path(skill$path, "scripts", script)
+            args_found <- character(0)
+            if (file.exists(script_path)) {
+              lines <- readLines(script_path, warn = FALSE)
+              matches <- unlist(regmatches(lines, gregexpr("args\\$[A-Za-z0-9_.]+", lines, perl = TRUE)))
+              if (length(matches) > 0) {
+                args_found <- unique(sub("^args\\$", "", matches))
+              }
+            }
+            if (length(args_found) > 0) {
+              interface_lines <- c(interface_lines, paste0("- ", script, ": args{", paste(args_found, collapse = ", "), "}"))
+            } else {
+              interface_lines <- c(interface_lines, paste0("- ", script, ": args{}"))
             }
           }
-          if (length(args_found) > 0) {
-            interface_lines <- c(interface_lines, paste0("- ", script, ": args{", paste(args_found, collapse = ", "), "}"))
-          } else {
-            interface_lines <- c(interface_lines, paste0("- ", script, ": args{}"))
-          }
+          script_info <- paste0(
+            "\n\n## Script Interface\n",
+            paste(interface_lines, collapse = "\n"),
+            "\n\nUse `execute_skill_script` with args, e.g. args = list(name = \"Alice\")."
+          )
         }
-        paste0(
-          body,
-          "\n\n## Script Interface\n",
-          paste(interface_lines, collapse = "\n"),
-          "\n\nUse execute_skill_script with args, e.g. args = list(name = \"Alice\")."
-        )
+        
+        resource_info <- ""
+        if (length(resources) > 0) {
+          resource_info <- paste0(
+            "\n\n## Available Resources\n",
+            "- ", paste(resources, collapse = "\n- "),
+            "\n\nUse `read_skill_resource` to read these files for more details."
+          )
+        }
+        
+        paste0(body, script_info, resource_info)
+      }
+    ),
+    
+    # Tool 1.1: List skill resources
+    tool(
+      name = "list_skill_resources",
+      description = "List available reference files (Level 3) in a skill.",
+      parameters = z_object(
+        skill_name = z_string(description = "Name of the skill")
+      ),
+      execute = function(args) {
+        skill_name <- args$skill_name
+        skill <- registry$get_skill(skill_name)
+        if (is.null(skill)) return(paste0("Skill not found: ", skill_name))
+        
+        resources <- skill$list_resources()
+        if (length(resources) == 0) {
+          "No reference resources available in this skill."
+        } else {
+          paste0("Available resources: ", paste(resources, collapse = ", "))
+        }
+      }
+    ),
+    
+    # Tool 1.2: Read skill resource
+    tool(
+      name = "read_skill_resource",
+      description = "Read the content of a reference file from a skill.",
+      parameters = z_object(
+        skill_name = z_string(description = "Name of the skill"),
+        resource_name = z_string(description = "Name of the resource file to read")
+      ),
+      execute = function(args) {
+        skill_name <- args$skill_name
+        resource_name <- args$resource_name
+        skill <- registry$get_skill(skill_name)
+        if (is.null(skill)) return(paste0("Skill not found: ", skill_name))
+        
+        tryCatch({
+          skill$read_resource(resource_name)
+        }, error = function(e) {
+          conditionMessage(e)
+        })
       }
     ),
     

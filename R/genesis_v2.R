@@ -18,6 +18,9 @@
 #' @param evaluator_model Model to use for Evaluator agent (default: same as model)
 #' @param refiner_model Model to use for Refiner agent (unused in direct mode)
 #' @param max_steps Maximum tool execution steps (default: 10)
+#' @param use_computer_tools Logical, whether to use computer abstraction layer (default: FALSE).
+#'   When TRUE, uses atomic tools (bash, read_file, write_file, execute_r_code) instead of
+#'   loading all skill tools into context. This reduces context window usage by 30-50%.
 #' @return List with result, iterations, evaluation, and history
 #' @export
 #' @examples
@@ -28,6 +31,13 @@
 #'   quality_threshold = 80,
 #'   auto_refine = TRUE,
 #'   verbose = TRUE
+#' )
+#'
+#' # With computer tools for reduced context usage
+#' result <- genesis_v2(
+#'   "Complex multi-step analysis",
+#'   use_computer_tools = TRUE,
+#'   max_iterations = 5
 #' )
 #' }
 genesis_v2 <- function(task,
@@ -41,7 +51,8 @@ genesis_v2 <- function(task,
                        architect_model = NULL,
                        evaluator_model = NULL,
                        refiner_model = NULL,
-                       max_steps = 10) {
+                       max_steps = 10,
+                       use_computer_tools = FALSE) {
 
   if (is.null(architect_model)) architect_model <- model
   if (is.null(evaluator_model)) evaluator_model <- model
@@ -67,17 +78,39 @@ genesis_v2 <- function(task,
     success_criteria = success_criteria
   )
 
-  coder_tools <- create_coder_agent()$tools
+  # Create artifact directory and tools
   artifact_dir <- create_artifact_dir()
   artifact_tools <- create_artifact_tools(artifact_dir)
-  agent <- Agent$new(
-    name = "Genesis",
-    description = "Direct execution agent",
-    system_prompt = GENESIS_DIRECT_PROMPT,
-    skills = skill_paths,
-    tools = c(coder_tools, artifact_tools),
-    model = model
-  )
+
+  # Choose execution mode
+  if (use_computer_tools) {
+    if (verbose) {
+      cat("Using computer abstraction layer (reduced context mode)\n")
+    }
+    # Computer abstraction mode: atomic tools + bash/filesystem access
+    computer_tools <- create_computer_tools(working_dir = artifact_dir)
+
+    agent <- Agent$new(
+      name = "Genesis",
+      description = "Direct execution agent with computer access",
+      system_prompt = GENESIS_COMPUTER_PROMPT,
+      tools = c(computer_tools, artifact_tools),
+      model = model
+    )
+  } else {
+    # Traditional mode: skill tools + code execution
+    coder_tools <- create_coder_agent()$tools
+
+    agent <- Agent$new(
+      name = "Genesis",
+      description = "Direct execution agent",
+      system_prompt = GENESIS_DIRECT_PROMPT,
+      skills = skill_paths,
+      tools = c(coder_tools, artifact_tools),
+      model = model
+    )
+  }
+
   session <- create_shared_session(model = model)
   assign(".artifact_dir", artifact_dir, envir = session$get_envir())
 

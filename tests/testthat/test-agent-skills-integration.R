@@ -64,5 +64,5 @@ test_that("Agent initializes with explicit skill path", {
   )
   
   expect_true(grepl("custom_skill", agent$system_prompt))
-  expect_equal(length(agent$tools), 3) # 3 skill tools
+  expect_equal(length(agent$tools), 5) # 5 skill tools
 })

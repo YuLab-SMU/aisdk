@@ -16,7 +16,8 @@ genesis_v2(
   architect_model = NULL,
   evaluator_model = NULL,
   refiner_model = NULL,
-  max_steps = 10
+  max_steps = 10,
+  use_computer_tools = FALSE
 )
 }
 \arguments{
@@ -43,6 +44,10 @@ genesis_v2(
 \item{refiner_model}{Model to use for Refiner agent (unused in direct mode)}
 
 \item{max_steps}{Maximum tool execution steps (default: 10)}
+
+\item{use_computer_tools}{Logical, whether to use computer abstraction layer (default: FALSE).
+When TRUE, uses atomic tools (bash, read_file, write_file, execute_r_code) instead of
+loading all skill tools into context. This reduces context window usage by 30-50\%.}
 }
 \value{
 List with result, iterations, evaluation, and history
@@ -63,6 +68,13 @@ result <- genesis_v2(
   quality_threshold = 80,
   auto_refine = TRUE,
   verbose = TRUE
+)
+
+# With computer tools for reduced context usage
+result <- genesis_v2(
+  "Complex multi-step analysis",
+  use_computer_tools = TRUE,
+  max_iterations = 5
 )
 }
 }

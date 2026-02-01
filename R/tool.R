@@ -383,19 +383,23 @@ Tool <- R6::R6Class(
   public = list(
     #' @field name The unique name of the tool.
     name = NULL,
-    
+
     #' @field description A description of what the tool does.
     description = NULL,
-    
+
     #' @field parameters A z_object schema defining the tool's parameters.
     parameters = NULL,
-    
+
+    #' @field layer Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).
+    layer = "llm",
+
     #' @description Initialize a Tool.
     #' @param name Unique tool name (used by LLM to call the tool).
     #' @param description Description of the tool's purpose.
     #' @param parameters A z_object schema defining expected parameters.
     #' @param execute An R function that implements the tool logic.
-    initialize = function(name, description, parameters, execute) {
+    #' @param layer Tool layer: "llm" or "computer" (default: "llm").
+    initialize = function(name, description, parameters, execute, layer = "llm") {
       if (!is.character(name) || length(name) != 1 || nchar(name) == 0) {
         rlang::abort("Tool name must be a non-empty string")
       }
@@ -408,10 +412,14 @@ Tool <- R6::R6Class(
       if (!is.function(execute)) {
         rlang::abort("Tool execute must be a function")
       }
-      
+      if (!layer %in% c("llm", "computer")) {
+        rlang::abort("Tool layer must be 'llm' or 'computer'")
+      }
+
       self$name <- name
       self$description <- description
       self$parameters <- parameters
+      self$layer <- layer
       private$.execute <- execute
     },
     
@@ -622,6 +630,8 @@ normalize_tool_execute <- function(execute) {
 #' @param execute An R function that implements the tool logic. It can accept
 #'   a single list argument (args), or standard named parameters.
 #'   List-style functions receive a single list argument containing parameters.
+#' @param layer Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).
+#'   Default is "llm". Computer layer tools are not loaded into context but executed via bash.
 #' @return A Tool object.
 #' @rdname tool_factory
 #' @export
@@ -640,7 +650,7 @@ normalize_tool_execute <- function(execute) {
 #'     paste("Weather in", args$location, "is 22 degrees", args$unit)
 #'   }
 #' )
-#' 
+#'
 #' # Use with generate_text
 #' result <- generate_text(
 #'   model = "openai:gpt-4o",
@@ -648,7 +658,7 @@ normalize_tool_execute <- function(execute) {
 #'   tools = list(get_weather)
 #' )
 #' }
-tool <- function(name, description, parameters = NULL, execute = NULL) {
+tool <- function(name, description, parameters = NULL, execute = NULL, layer = "llm") {
   if (is.function(parameters) && is.null(execute)) {
     execute <- parameters
     parameters <- NULL
@@ -659,7 +669,8 @@ tool <- function(name, description, parameters = NULL, execute = NULL) {
     name = name,
     description = description,
     parameters = parameters,
-    execute = execute
+    execute = execute,
+    layer = layer
   )
 }
 
