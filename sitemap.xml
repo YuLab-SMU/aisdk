@@ -26,6 +26,8 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ArchitectV2.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ChatManager.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/ChatSession.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/DeepSeekLanguageModel.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/DeepSeekProvider.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/EVALUATOR_PROMPT.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/EmbeddingModelV1.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/Evaluator.html</loc></url>
@@ -76,6 +78,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/auto_fix.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/benchmark_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/benchmark_genesis_v2.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_console_system_prompt.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_context.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_fix_prompt.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/build_refinement_context.html</loc></url>
@@ -90,6 +93,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/computer.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/configure_api.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/console_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/console_chat.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/construct_prompt.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/content_image.html</loc></url>
@@ -106,7 +110,11 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_chat_session.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_computer_tools.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_console_agent.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_console_tools.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_data_agent.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_deepseek.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_deepseek_anthropic.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_delegate_tool.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_embeddings.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/create_env_agent.html</loc></url>
@@ -245,6 +253,7 @@
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/private_calculate_tool_accuracy.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/project_memory.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_anthropic.html</loc></url>
+<url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_deepseek.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_nvidia.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/provider_openai.html</loc></url>
 <url><loc>https://YuLab-SMU.github.io/aisdk/reference/r_data_tasks.html</loc></url>

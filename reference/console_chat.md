@@ -3,6 +3,10 @@
 Launch an interactive chat session in the R console. Supports streaming
 output, slash commands, and colorful display using the cli package.
 
+By default, the console operates in agent mode with tools for bash
+execution, file operations, R code execution, and more. Set
+`agent = NULL` for simple chat without tools.
+
 ## Usage
 
 ``` r
@@ -11,7 +15,10 @@ console_chat(
   system_prompt = NULL,
   tools = NULL,
   hooks = NULL,
-  stream = TRUE
+  stream = TRUE,
+  agent = "auto",
+  working_dir = getwd(),
+  sandbox_mode = "permissive"
 )
 ```
 
@@ -24,11 +31,11 @@ console_chat(
 
 - system_prompt:
 
-  Optional system prompt (only used if creating a new session).
+  Optional system prompt (merged with agent prompt if agent is used).
 
 - tools:
 
-  Optional list of Tool objects (only used if creating a new session).
+  Optional list of additional Tool objects.
 
 - hooks:
 
@@ -38,6 +45,26 @@ console_chat(
 
   Whether to use streaming output. Default TRUE.
 
+- agent:
+
+  Agent configuration. Options:
+
+  - `"auto"` (default): Use the built-in console agent with terminal
+    tools
+
+  - `NULL`: Simple chat mode without tools
+
+  - An Agent object: Use the provided custom agent
+
+- working_dir:
+
+  Working directory for the console agent (default: current directory).
+
+- sandbox_mode:
+
+  Sandbox mode for the console agent: "strict", "permissive" (default),
+  or "none".
+
 ## Value
 
 The ChatSession object (invisibly) when chat ends.
@@ -46,12 +73,19 @@ The ChatSession object (invisibly) when chat ends.
 
 ``` r
 if (FALSE) { # \dontrun{
-# Start with a model ID
+# Start with default agent (intelligent terminal mode)
 console_chat("openai:gpt-4o")
+
+# Simple chat mode without tools
+console_chat("openai:gpt-4o", agent = NULL)
 
 # Start with an existing session
 chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
 console_chat(chat)
+
+# Start with a custom agent
+agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+console_chat("openai:gpt-4o", agent = agent)
 
 # Available commands in the chat:
 # /quit or /exit - End the chat
@@ -62,5 +96,6 @@ console_chat(chat)
 # /stats         - Show token usage statistics
 # /clear         - Clear conversation history
 # /help          - Show available commands
+# /agent [on|off] - Toggle agent mode
 } # }
 ```

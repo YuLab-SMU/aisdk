@@ -18,6 +18,8 @@
   : Architect V2 R6 Class
 - [`ChatSession`](https://YuLab-SMU.github.io/aisdk/reference/ChatSession.md)
   : ChatSession Class
+- [`DeepSeekProvider`](https://YuLab-SMU.github.io/aisdk/reference/DeepSeekProvider.md)
+  : DeepSeek Provider Class
 - [`EVALUATOR_PROMPT`](https://YuLab-SMU.github.io/aisdk/reference/EVALUATOR_PROMPT.md)
   : Evaluator Agent: Result Quality Assessment
 - [`EmbeddingModelV1`](https://YuLab-SMU.github.io/aisdk/reference/EmbeddingModelV1.md)
@@ -115,6 +117,8 @@
   : Launch API Configuration App
 - [`console`](https://YuLab-SMU.github.io/aisdk/reference/console.md) :
   Console Chat: Interactive REPL
+- [`console_agent`](https://YuLab-SMU.github.io/aisdk/reference/console_agent.md)
+  : Console Agent: Intelligent Terminal Assistant
 - [`console_chat()`](https://YuLab-SMU.github.io/aisdk/reference/console_chat.md)
   : Start Console Chat
 - [`content_image()`](https://YuLab-SMU.github.io/aisdk/reference/content_image.md)
@@ -143,8 +147,16 @@
   : Create a CoderAgent
 - [`create_computer_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_computer_tools.md)
   : Create Computer Tools
+- [`create_console_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_console_agent.md)
+  : Create Console Agent
+- [`create_console_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_console_tools.md)
+  : Create Console Tools
 - [`create_data_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_data_agent.md)
   : Create a DataAgent
+- [`create_deepseek()`](https://YuLab-SMU.github.io/aisdk/reference/create_deepseek.md)
+  : Create DeepSeek Provider
+- [`create_deepseek_anthropic()`](https://YuLab-SMU.github.io/aisdk/reference/create_deepseek_anthropic.md)
+  : Create DeepSeek Provider (Anthropic API Format)
 - [`create_embeddings()`](https://YuLab-SMU.github.io/aisdk/reference/create_embeddings.md)
   : Create Embeddings
 - [`create_env_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_env_agent.md)
