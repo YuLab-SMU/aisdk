@@ -274,13 +274,13 @@ build_console_system_prompt <- function(working_dir, sandbox_mode, language) {
     lang_hint <- if (language == "auto") {
         "Respond in the same language as the user's message."
     } else if (language == "zh") {
-        "Respond in Chinese (中文)."
+        "Respond in Chinese (\u4e2d\u6587)."
     } else {
         "Respond in English."
     }
 
     paste0(
-        "You are R AI SDK Terminal Assistant (终端助手), an intelligent terminal interface.
+        "You are R AI SDK Terminal Assistant (\u7ec8\u7aef\u52a9\u624b), an intelligent terminal interface.
 
 ## Capabilities
 
