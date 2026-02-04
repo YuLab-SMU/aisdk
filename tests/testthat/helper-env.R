@@ -12,7 +12,7 @@
 skip_if_no_api_key <- function(provider = "API") {
   # Standardize provider name
   provider_key <- tolower(provider)
-  
+
   # has_api_key is now in R/utils_env.R
   if (!aisdk::has_api_key(provider_key)) {
     testthat::skip(paste0(provider, " tests skipped: Set ", toupper(provider), "_API_KEY in project .Renviron or set ENABLE_API_TESTS=TRUE"))
@@ -43,7 +43,8 @@ print_api_test_config <- function() {
   cat("OpenAI Model:", aisdk::get_openai_model(), "\n")
   cat("Anthropic Key Available:", aisdk::has_api_key("anthropic"), "\n")
   cat("Anthropic Model:", aisdk::get_anthropic_model(), "\n")
-  
+  cat("DeepSeek Key Available:", aisdk::has_api_key("deepseek"), "\n")
+
   if (!aisdk::enable_api_tests()) {
     cat("\nTo enable API tests:\n")
     cat("Option 1 (Recommended - Persistent):")
