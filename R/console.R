@@ -2,6 +2,8 @@
 #' @description
 #' Interactive terminal chat interface for ChatSession.
 #' Provides a REPL (Read-Eval-Print Loop) for conversing with LLMs.
+#' By default, enables an intelligent terminal agent that can execute commands,
+#' manage files, and run R code through natural language.
 #' @name console
 NULL
 
@@ -10,21 +12,38 @@ NULL
 #' Launch an interactive chat session in the R console. Supports streaming
 #' output, slash commands, and colorful display using the cli package.
 #'
+#' By default, the console operates in agent mode with tools for bash execution,
+#' file operations, R code execution, and more. Set `agent = NULL` for simple
+#' chat without tools.
+#'
 #' @param session A ChatSession object, a LanguageModelV1 object, or a model string ID to create a new session.
-#' @param system_prompt Optional system prompt (only used if creating a new session).
-#' @param tools Optional list of Tool objects (only used if creating a new session).
+#' @param system_prompt Optional system prompt (merged with agent prompt if agent is used).
+#' @param tools Optional list of additional Tool objects.
 #' @param hooks Optional HookHandler object.
 #' @param stream Whether to use streaming output. Default TRUE.
+#' @param agent Agent configuration. Options:
+#'   - `"auto"` (default): Use the built-in console agent with terminal tools
+#'   - `NULL`: Simple chat mode without tools
+#'   - An Agent object: Use the provided custom agent
+#' @param working_dir Working directory for the console agent (default: current directory).
+#' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
 #' \dontrun{
-#' # Start with a model ID
+#' # Start with default agent (intelligent terminal mode)
 #' console_chat("openai:gpt-4o")
+#'
+#' # Simple chat mode without tools
+#' console_chat("openai:gpt-4o", agent = NULL)
 #'
 #' # Start with an existing session
 #' chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
 #' console_chat(chat)
+#'
+#' # Start with a custom agent
+#' agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+#' console_chat("openai:gpt-4o", agent = agent)
 #'
 #' # Available commands in the chat:
 #' # /quit or /exit - End the chat
@@ -35,15 +54,33 @@ NULL
 #' # /stats         - Show token usage statistics
 #' # /clear         - Clear conversation history
 #' # /help          - Show available commands
+#' # /agent [on|off] - Toggle agent mode
 #' }
 console_chat <- function(session = NULL,
                          system_prompt = NULL,
                          tools = NULL,
                          hooks = NULL,
-                         stream = TRUE) {
+                         stream = TRUE,
+                         agent = "auto",
+                         working_dir = getwd(),
+                         sandbox_mode = "permissive") {
   # Ensure cli package is available
- if (!requireNamespace("cli", quietly = TRUE)) {
+  if (!requireNamespace("cli", quietly = TRUE)) {
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
+  }
+
+  # Resolve agent
+  agent_mode <- FALSE
+  if (is.character(agent) && agent == "auto") {
+    agent <- create_console_agent(
+      working_dir = working_dir,
+      sandbox_mode = sandbox_mode,
+      additional_tools = tools
+    )
+    agent_mode <- TRUE
+    tools <- NULL # Tools are now in the agent
+  } else if (inherits(agent, "Agent")) {
+    agent_mode <- TRUE
   }
 
   # Create or use existing session
@@ -55,14 +92,16 @@ console_chat <- function(session = NULL,
       model = session,
       system_prompt = system_prompt,
       tools = tools,
-      hooks = hooks
+      hooks = hooks,
+      agent = agent
     )
   } else if (inherits(session, "LanguageModelV1")) {
     session <- create_chat_session(
       model = session,
       system_prompt = system_prompt,
       tools = tools,
-      hooks = hooks
+      hooks = hooks,
+      agent = agent
     )
   } else if (!inherits(session, "ChatSession")) {
     rlang::abort("session must be a ChatSession object, LanguageModelV1 object, or model string ID")
@@ -71,6 +110,12 @@ console_chat <- function(session = NULL,
   # Welcome message
   cli::cli_h1("R AI SDK Console Chat")
   cli::cli_text("Model: {.val {session$get_model_id() %||% '(not set)'}}")
+  if (agent_mode) {
+    n_tools <- length(session$.__enclos_env__$private$.tools)
+    cli::cli_text("Agent mode: {.val enabled} ({n_tools} tools)")
+  } else {
+    cli::cli_text("Agent mode: {.val disabled} (simple chat)")
+  }
   cli::cli_text("Type {.code /help} for commands, {.code /quit} to exit.")
   cli::cli_rule()
 
@@ -121,44 +166,33 @@ console_chat <- function(session = NULL,
     cli::cli_text("")
     cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
 
-    # Show thinking indicator
-    cat(cli::col_grey("(Thinking...)"))
-    flush.console()
-
-    first_chunk <- TRUE
-
-    tryCatch({
-      if (stream) {
-        # Streaming output
-        session$send_stream(input, callback = function(text, done) {
-          if (first_chunk && !done && !is.null(text) && nzchar(text)) {
-            # Clear thinking text (assuming length of "(Thinking...)" is ~13 chars)
-            cat("\r             \r") 
-            first_chunk <<- FALSE
+    tryCatch(
+      {
+        if (stream) {
+          # Streaming output - let stream_text handle rendering with its built-in renderer
+          # By not providing a callback, stream_text will use create_stream_renderer()
+          # which provides proper markdown formatting AND streaming output
+          session$send_stream(input, callback = NULL)
+        } else {
+          # Non-streaming output
+          md_renderer <- create_markdown_stream_renderer()
+          result <- session$send(input)
+          if (!is.null(result$text)) {
+            # Render as markdown
+            md_renderer$process_chunk(result$text, FALSE)
+            md_renderer$process_chunk(NULL, TRUE)
           }
-          
-          if (!done) {
-            cat(text)
-            utils::flush.console()
-          } else {
-            cat("\n")
-          }
-        })
-      } else {
-        # Non-streaming output
-        result <- session$send(input)
-        if (!is.null(result$text)) {
-          cat(result$text, "\n")
-        }
 
-        # Show tool calls if any
-        if (!is.null(result$tool_calls) && length(result$tool_calls) > 0) {
-          cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
+          # Show tool calls if any
+          if (!is.null(result$tool_calls) && length(result$tool_calls) > 0) {
+            cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
+          }
         }
+      },
+      error = function(e) {
+        cli::cli_alert_danger("Error: {conditionMessage(e)}")
       }
-    }, error = function(e) {
-      cli::cli_alert_danger("Error: {conditionMessage(e)}")
-    })
+    )
 
     cli::cli_text("")
   }
@@ -191,7 +225,6 @@ handle_command <- function(input, session, stream) {
       cli::cli_alert_success("Goodbye!")
       result$exit <- TRUE
     },
-
     "/help" = ,
     "/?" = {
       cli::cli_h2("Available Commands")
@@ -207,17 +240,18 @@ handle_command <- function(input, session, stream) {
         "{.code /help} - Show this help message"
       ))
     },
-
     "/save" = {
       path <- if (length(args) > 0) args[1] else "chat_session.rds"
-      tryCatch({
-        session$save(path)
-        cli::cli_alert_success("Session saved to {.file {path}}")
-      }, error = function(e) {
-        cli::cli_alert_danger("Failed to save: {conditionMessage(e)}")
-      })
+      tryCatch(
+        {
+          session$save(path)
+          cli::cli_alert_success("Session saved to {.file {path}}")
+        },
+        error = function(e) {
+          cli::cli_alert_danger("Failed to save: {conditionMessage(e)}")
+        }
+      )
     },
-
     "/load" = {
       if (length(args) == 0) {
         cli::cli_alert_danger("Usage: {.code /load <path>}")
@@ -226,36 +260,40 @@ handle_command <- function(input, session, stream) {
         if (!file.exists(path)) {
           cli::cli_alert_danger("File not found: {.file {path}}")
         } else {
-          tryCatch({
-            # Preserve tools and hooks from current session
-            tools <- session$.__enclos_env__$private$.tools
-            hooks <- session$.__enclos_env__$private$.hooks
+          tryCatch(
+            {
+              # Preserve tools and hooks from current session
+              tools <- session$.__enclos_env__$private$.tools
+              hooks <- session$.__enclos_env__$private$.hooks
 
-            result$session <- load_chat_session(path, tools = tools, hooks = hooks)
-            cli::cli_alert_success("Session loaded from {.file {path}}")
-            cli::cli_text("Model: {.val {result$session$get_model_id()}}")
-            cli::cli_text("History: {.val {length(result$session$get_history())}} messages")
-          }, error = function(e) {
-            cli::cli_alert_danger("Failed to load: {conditionMessage(e)}")
-          })
+              result$session <- load_chat_session(path, tools = tools, hooks = hooks)
+              cli::cli_alert_success("Session loaded from {.file {path}}")
+              cli::cli_text("Model: {.val {result$session$get_model_id()}}")
+              cli::cli_text("History: {.val {length(result$session$get_history())}} messages")
+            },
+            error = function(e) {
+              cli::cli_alert_danger("Failed to load: {conditionMessage(e)}")
+            }
+          )
         }
       }
     },
-
     "/model" = {
       if (length(args) == 0) {
         cli::cli_text("Current model: {.val {session$get_model_id() %||% '(not set)'}}")
       } else {
         model_id <- args[1]
-        tryCatch({
-          session$switch_model(model_id)
-          cli::cli_alert_success("Switched to model: {.val {model_id}}")
-        }, error = function(e) {
-          cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
-        })
+        tryCatch(
+          {
+            session$switch_model(model_id)
+            cli::cli_alert_success("Switched to model: {.val {model_id}}")
+          },
+          error = function(e) {
+            cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
+          }
+        )
       }
     },
-
     "/history" = {
       history <- session$get_history()
       if (length(history) == 0) {
@@ -280,7 +318,6 @@ handle_command <- function(input, session, stream) {
         }
       }
     },
-
     "/stats" = {
       stats <- session$stats()
       cli::cli_h2("Session Statistics")
@@ -292,12 +329,10 @@ handle_command <- function(input, session, stream) {
         "Total tokens: {.val {stats$total_tokens}}"
       ))
     },
-
     "/clear" = {
       session$clear_history()
       cli::cli_alert_success("Conversation history cleared.")
     },
-
     "/stream" = {
       if (length(args) == 0) {
         cli::cli_text("Streaming: {.val {if (stream) 'on' else 'off'}}")

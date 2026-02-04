@@ -12,8 +12,6 @@ NULL
 #' @export
 ChatSession <- R6::R6Class(
   "ChatSession",
-
-
   public = list(
     #' @description Initialize a new ChatSession.
     #' @param model A LanguageModelV1 object or model string ID (e.g., "openai:gpt-4o").
@@ -39,11 +37,11 @@ ChatSession <- R6::R6Class(
                           agent = NULL) {
       private$.model_id <- if (is.character(model)) model else NULL
       private$.model <- if (!is.null(model) && !is.character(model)) model else NULL
-      
+
       # Handle agent if provided
       agent_system <- NULL
       agent_tools <- list()
-      
+
       if (!is.null(agent)) {
         if (!inherits(agent, "Agent")) {
           rlang::abort("Argument 'agent' must be an Agent object.")
@@ -127,56 +125,37 @@ ChatSession <- R6::R6Class(
       # Append user message
       self$append_message("user", prompt)
 
-      step <- 0
-      while (step < private$.max_steps) {
-        step <- step + 1
-        
-        # Build messages from current history
-        messages <- private$.history
+      # Build messages from current history
+      messages <- private$.history
 
-        # Stream
-        result <- stream_text(
-          model = model,
-          prompt = messages,
-          callback = callback,
-          system = private$.system_prompt,
-          registry = private$.registry,
-          tools = private$.tools,
-          ...
-        )
+      # Let stream_text handle the entire tool execution loop
+      # Pass max_steps to enable automatic tool execution
+      result <- stream_text(
+        model = model,
+        prompt = messages,
+        callback = callback,
+        system = private$.system_prompt,
+        registry = private$.registry,
+        tools = private$.tools,
+        max_steps = private$.max_steps,
+        session = self, # Pass session for shared environment
+        hooks = private$.hooks,
+        ...
+      )
 
-        # Append assistant response to history
-        if (!is.null(result$text) && nzchar(result$text)) {
-          self$append_message("assistant", result$text)
+      # Sync messages added during tool execution to session history
+      # This includes all intermediate assistant (with tool_calls) and tool result messages
+      if (!is.null(result$messages_added) && length(result$messages_added) > 0) {
+        for (msg in result$messages_added) {
+          private$.history <- c(private$.history, list(msg))
         }
-
-        # Check if there are tool calls to process
-        if (!is.null(result$tool_calls) && length(result$tool_calls) > 0) {
-          # Update stats for tool calls
-          private$update_stats(result)
-
-          # Execute tools
-          tool_results <- execute_tool_calls(
-            result$tool_calls, 
-            private$.tools, 
-            private$.hooks, 
-            envir = private$.envir
-          )
-
-          # Append tool results to history using provider-specific formatting
-          for (tr in tool_results) {
-            tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-            private$.history <- c(private$.history, list(tool_result_msg))
-          }
-
-          # If it was a tool call, we loop again to get the final answer
-          # The loop continues...
-        } else {
-          # No tool calls, we're done
-          private$update_stats(result)
-          break
-        }
+      } else if (!is.null(result$text) && nzchar(result$text)) {
+        # No tool calls were made, just append the final response
+        self$append_message("assistant", result$text)
       }
+
+      # Update stats
+      private$update_stats(result)
 
       invisible(NULL)
     },
@@ -388,7 +367,6 @@ ChatSession <- R6::R6Class(
       ls(private$.envir)
     }
   ),
-
   private = list(
     .model = NULL,
     .model_id = NULL,
@@ -402,7 +380,6 @@ ChatSession <- R6::R6Class(
     # Multi-agent support
     .memory = NULL,
     .envir = NULL,
-
     get_model = function() {
       if (!is.null(private$.model)) {
         return(private$.model)
@@ -414,7 +391,6 @@ ChatSession <- R6::R6Class(
       }
       rlang::abort("No model configured for ChatSession")
     },
-
     update_stats = function(result) {
       private$.stats$messages_sent <- private$.stats$messages_sent + 1
 
@@ -475,11 +451,11 @@ ChatSession <- R6::R6Class(
 #' chat$save("my_session.rds")
 #' }
 create_chat_session <- function(model = NULL,
-                                 system_prompt = NULL,
-                                 tools = NULL,
-                                 hooks = NULL,
-                                 max_steps = 10,
-                                 agent = NULL) {
+                                system_prompt = NULL,
+                                tools = NULL,
+                                hooks = NULL,
+                                max_steps = 10,
+                                agent = NULL) {
   ChatSession$new(
     model = model,
     system_prompt = system_prompt,
@@ -527,7 +503,7 @@ load_chat_session <- function(path, tools = NULL, hooks = NULL, registry = NULL)
 
   # Restore state
 
-session$restore_from_list(data)
+  session$restore_from_list(data)
 
   # Warn if tools were used but not provided
   if (length(data$tool_names) > 0 && (is.null(tools) || length(tools) == 0)) {
