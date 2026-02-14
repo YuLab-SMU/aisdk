@@ -7,8 +7,8 @@ Description: A production-grade AI SDK for R featuring a layered architecture
     (Specification, Utilities, Providers, Core), middleware support, robust
     error handling with exponential backoff, support for multiple AI model
     providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP
-    ecosystem, autonomous data science pipelines with self-healing code execution,
-    and a global skill store for sharing AI capabilities.
+    ecosystem, multi-agent orchestration, progressive knowledge loading through
+    skills, and a global skill store for sharing AI capabilities.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
