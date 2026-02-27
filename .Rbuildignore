@@ -18,3 +18,4 @@
 ^.claude$
 ^artifacts$
 ^CLAUDE.md$
+^\.lintr$
