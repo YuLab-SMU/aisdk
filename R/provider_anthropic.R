@@ -20,12 +20,12 @@ AnthropicLanguageModel <- R6::R6Class(
         `x-api-key` = private$config$api_key,
         `anthropic-version` = private$config$api_version
       )
-      
+
       # Add beta header for prompt caching if enabled
       if (!is.null(private$config$enable_caching) && private$config$enable_caching) {
         h$`anthropic-beta` <- "prompt-caching-2024-07-31"
       }
-      
+
       if (!is.null(private$config$headers)) {
         h <- c(h, private$config$headers)
       }
@@ -50,47 +50,47 @@ AnthropicLanguageModel <- R6::R6Class(
         } else {
           # user and assistant roles
           content <- msg$content
-          
+
           # Construct message object
           msg_obj <- list(
             role = msg$role,
             content = content
           )
-          
+
           # Pass through cache_control if present (for Prompt Caching)
           if (!is.null(msg$cache_control)) {
-             # For caching, content might need to be a list of blocks if not already
-             if (is.character(content)) {
-               msg_obj$content <- list(
-                 list(
-                   type = "text",
-                   text = content,
-                   cache_control = msg$cache_control
-                 )
-               )
-             } else if (is.list(content)) {
-               # Assume user already structured it or we need to attach to last block
-               # For simplicity, we assume if cache_control is on the message, 
-               # it's intended for the content block. 
-               # Users should ideally structure content blocks themselves for advanced caching.
-               # But if they passed cache_control on the message level:
-                msg_obj$content <- lapply(content, function(block) {
-                  block$cache_control <- msg$cache_control
-                  block
-                })
-             }
+            # For caching, content might need to be a list of blocks if not already
+            if (is.character(content)) {
+              msg_obj$content <- list(
+                list(
+                  type = "text",
+                  text = content,
+                  cache_control = msg$cache_control
+                )
+              )
+            } else if (is.list(content)) {
+              # Assume user already structured it or we need to attach to last block
+              # For simplicity, we assume if cache_control is on the message,
+              # it's intended for the content block.
+              # Users should ideally structure content blocks themselves for advanced caching.
+              # But if they passed cache_control on the message level:
+              msg_obj$content <- lapply(content, function(block) {
+                block$cache_control <- msg$cache_control
+                block
+              })
+            }
           }
-          
+
           formatted <- c(formatted, list(msg_obj))
         }
       }
-      
+
       # Format system prompt with cache_control if needed
       if (!is.null(system_prompt)) {
         if (!is.null(system_cache_control)) {
           system_prompt <- list(
             list(
-              type = "text", 
+              type = "text",
               text = system_prompt,
               cache_control = system_cache_control
             )
@@ -108,11 +108,15 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @description Initialize the Anthropic language model.
     #' @param model_id The model ID (e.g., "claude-sonnet-4-20250514").
     #' @param config Configuration list with api_key, base_url, headers, etc.
-    initialize = function(model_id, config) {
-      super$initialize(provider = config$provider_name %||% "anthropic", model_id = model_id)
+    initialize = function(model_id, config, capabilities = list()) {
+      super$initialize(
+        provider = config$provider_name %||% "anthropic",
+        model_id = model_id,
+        capabilities = capabilities
+      )
       private$config <- config
     },
-    
+
     #' @description Get the configuration list.
     #' @return A list with provider configuration.
     get_config = function() {
@@ -131,7 +135,7 @@ AnthropicLanguageModel <- R6::R6Class(
 
       body <- list(
         model = self$model_id,
-        max_tokens = params$max_tokens %||% 4096  # Anthropic requires max_tokens
+        max_tokens = params$max_tokens %||% 4096 # Anthropic requires max_tokens
       )
 
       # Add system prompt if present
@@ -158,7 +162,7 @@ AnthropicLanguageModel <- R6::R6Class(
           if (inherits(t, "Tool")) {
             t$to_api_format("anthropic")
           } else {
-            t  # Assume already in correct format
+            t # Assume already in correct format
           }
         })
       }
@@ -168,7 +172,6 @@ AnthropicLanguageModel <- R6::R6Class(
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
-
       }
 
       # Remove NULL entries
@@ -180,7 +183,7 @@ AnthropicLanguageModel <- R6::R6Class(
       # Response has: id, type, role, content (array), model, stop_reason, usage
       text <- ""
       tool_calls <- NULL
-      
+
       if (length(response$content) > 0) {
         for (block in response$content) {
           if (block$type == "text") {
@@ -245,7 +248,7 @@ AnthropicLanguageModel <- R6::R6Class(
           if (inherits(t, "Tool")) {
             t$to_api_format("anthropic")
           } else {
-            t  # Assume already in correct format
+            t # Assume already in correct format
           }
         })
       }
@@ -283,8 +286,12 @@ AnthropicLanguageModel <- R6::R6Class(
 
 # Helper function to check if arguments are "empty" (NULL or empty list)
 is_empty_args <- function(args) {
-  if (is.null(args)) return(TRUE)
-  if (is.list(args) && length(args) == 0) return(TRUE)
+  if (is.null(args)) {
+    return(TRUE)
+  }
+  if (is.list(args) && length(args) == 0) {
+    return(TRUE)
+  }
   return(FALSE)
 }
 
@@ -309,10 +316,10 @@ stream_anthropic <- function(url, headers, body, callback) {
 
   # Establish connection
   resp <- httr2::req_perform_connection(req)
-  
+
   # Ensure connection is closed when function exits
   on.exit(close(resp), add = TRUE)
-  
+
   # Check status code immediately
   status <- httr2::resp_status(resp)
   if (status >= 400) {
@@ -321,7 +328,7 @@ stream_anthropic <- function(url, headers, body, callback) {
       httr2::resp_body_string(resp),
       error = function(e) "Unknown error (could not read body)"
     )
-    
+
     rlang::abort(c(
       paste0("API request failed with status ", status),
       "i" = paste0("URL: ", url),
@@ -329,38 +336,12 @@ stream_anthropic <- function(url, headers, body, callback) {
     ), class = "aisdk_api_error")
   }
 
-  # State variables
-  buffer <- ""
-  full_text <- ""
-  full_usage <- NULL
-  stop_reason <- NULL
-  tool_calls_acc <- list()
-  tool_args_acc <- list()
-  content_blocks_acc <- list()
-  last_event <- NULL
-  
-  # Proxy/OpenAI compatibility state
-  openai_seen <- FALSE
-  oa_full_text <- ""
-  oa_tool_calls_acc <- list()
-  oa_finish_reason <- NULL
-  oa_full_usage <- NULL
-  oa_last_response <- NULL
-  oa_is_reasoning <- FALSE
-  
-  # Anthropic Extended Thinking support
-  is_thinking <- FALSE
-  thinking_text_acc <- ""
+  # Create aggregator for unified state management
+  agg <- SSEAggregator$new(callback)
 
-  ensure_index <- function(lst, idx, default) {
-    if (length(lst) < idx) {
-      for (i in seq(from = length(lst) + 1, to = idx)) {
-        lst[[i]] <- default
-      }
-    }
-    lst
-  }
-  
+  # Track whether we're seeing OpenAI-proxy format
+  openai_seen <- FALSE
+
   debug_opt <- getOption("aisdk.debug", FALSE)
   debug_enabled <- isTRUE(debug_opt) || (is.character(debug_opt) && tolower(debug_opt) %in% c("1", "true", "yes", "on"))
   debug_env <- Sys.getenv("AISDK_DEBUG", "")
@@ -370,28 +351,29 @@ stream_anthropic <- function(url, headers, body, callback) {
 
   # Process stream
   while (!httr2::resp_stream_is_complete(resp)) {
-    # resp_stream_sse returns a list(type=..., data=..., id=..., retry=...) or NULL
     event <- httr2::resp_stream_sse(resp)
-    
+
     if (is.null(event)) next
-    
+
     event_type <- event$type
     data_str <- event$data
-    
+
     # Parse JSON data
     event_data <- NULL
     if (!is.null(data_str) && nzchar(data_str)) {
       if (data_str == "[DONE]") {
-         # Usually OpenAI style end
-         break
+        break
       }
-      tryCatch({
-        event_data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
-      }, error = function(e) {
-        # Skip malformed JSON
-      })
+      tryCatch(
+        {
+          event_data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
+        },
+        error = function(e) {
+          # Skip malformed JSON
+        }
+      )
     }
-    
+
     if (isTRUE(debug_enabled)) {
       debug_evt <- list(
         event_type = event_type,
@@ -406,236 +388,22 @@ stream_anthropic <- function(url, headers, body, callback) {
       if (!is.null(event_data$choices)) {
         # --- OpenAI-compatible format (Proxy) ---
         openai_seen <- TRUE
-        oa_last_response <- event_data
-        delta <- event_data$choices[[1]]$delta
-        choice <- event_data$choices[[1]]
-        
-        if (!is.null(choice$finish_reason)) {
-          oa_finish_reason <- choice$finish_reason
-        }
-        
-        # Handle reasoning content
-        if (!is.null(delta$reasoning_content) && nchar(delta$reasoning_content) > 0) {
-          if (!oa_is_reasoning) {
-            callback("<think>\n", FALSE)
-            oa_is_reasoning <- TRUE
-          }
-          callback(delta$reasoning_content, FALSE)
-        }
-        
-        if (!is.null(delta$content) && nchar(delta$content) > 0) {
-          # Transition from reasoning to content
-          if (oa_is_reasoning) {
-            callback("\n</think>\n\n", FALSE)
-            oa_is_reasoning <- FALSE
-          }
-          oa_full_text <- paste0(oa_full_text, delta$content)
-          callback(delta$content, FALSE)
-        }
-        
-        if (!is.null(delta$tool_calls)) {
-          for (tc in delta$tool_calls) {
-            idx <- if (!is.null(tc$index)) tc$index + 1 else length(oa_tool_calls_acc) + 1
-            oa_tool_calls_acc <- ensure_index(oa_tool_calls_acc, idx, list(id = "", name = "", arguments = "", arguments_is_list = FALSE))
-            
-            if (!is.null(tc$id)) oa_tool_calls_acc[[idx]]$id <- paste0(oa_tool_calls_acc[[idx]]$id, tc$id)
-            
-            name_val <- NULL
-            if (!is.null(tc$`function`$name)) name_val <- tc$`function`$name
-            if (is.null(name_val) && !is.null(tc$name)) name_val <- tc$name
-            if (!is.null(name_val)) oa_tool_calls_acc[[idx]]$name <- paste0(oa_tool_calls_acc[[idx]]$name, name_val)
-            
-            args_val <- NULL
-            if (!is.null(tc$`function`$arguments)) args_val <- tc$`function`$arguments
-            if (is.null(args_val) && !is.null(tc$arguments)) args_val <- tc$arguments
-            
-            if (!is.null(args_val)) {
-              if (is.list(args_val) && !is.character(args_val)) {
-                oa_tool_calls_acc[[idx]]$arguments <- args_val
-                oa_tool_calls_acc[[idx]]$arguments_is_list <- TRUE
-              } else {
-                oa_tool_calls_acc[[idx]]$arguments <- paste0(oa_tool_calls_acc[[idx]]$arguments, args_val)
-              }
-            }
-          }
-        }
-        
-        if (!is.null(event_data$usage)) {
-          oa_full_usage <- event_data$usage
-        }
-        
+        map_openai_chunk(event_data, done = FALSE, agg)
       } else {
         # --- Native Anthropic format ---
-        last_event <- event_data
-        
-        if (event_type == "content_block_delta") {
-          delta <- event_data$delta
-          if (!is.null(delta) && delta$type == "text_delta" && !is.null(delta$text)) {
-            # Close thinking if needed
-            if (is_thinking) {
-              callback("\n</think>\n\n", FALSE)
-              is_thinking <- FALSE
-            }
-            
-            full_text <- paste0(full_text, delta$text)
-            callback(delta$text, FALSE)
-            
-            idx <- if (is.null(event_data$index)) length(content_blocks_acc) + 1 else event_data$index + 1
-            content_blocks_acc <- ensure_index(content_blocks_acc, idx, list(type = "text", text = ""))
-            content_blocks_acc[[idx]]$text <- paste0(content_blocks_acc[[idx]]$text, delta$text)
-            
-          } else if (!is.null(delta) && delta$type == "thinking_delta" && !is.null(delta$thinking)) {
-            if (!is_thinking) {
-              callback("<think>\n", FALSE)
-              is_thinking <- TRUE
-            }
-            thinking_text_acc <- paste0(thinking_text_acc, delta$thinking)
-            callback(delta$thinking, FALSE)
-            
-          } else if (!is.null(delta) && delta$type == "input_json_delta" && !is.null(delta$partial_json)) {
-            idx <- if (is.null(event_data$index)) length(tool_args_acc) + 1 else event_data$index + 1
-            tool_args_acc <- ensure_index(tool_args_acc, idx, "")
-            tool_args_acc[[idx]] <- paste0(tool_args_acc[[idx]], delta$partial_json)
-          }
-          
-        } else if (event_type == "content_block_start") {
-          cb <- event_data$content_block
-          idx <- if (is.null(event_data$index)) length(content_blocks_acc) + 1 else event_data$index + 1
-          
-          if (!is.null(cb) && !is.null(cb$type) && cb$type == "tool_use") {
-            tool_calls_acc <- ensure_index(tool_calls_acc, idx, NULL)
-            tool_calls_acc[[idx]] <- list(
-              id = if (is.null(cb$id)) "" else cb$id,
-              name = if (is.null(cb$name)) "" else cb$name,
-              arguments = cb$input
-            )
-            
-            content_blocks_acc <- ensure_index(content_blocks_acc, idx, list(type = "tool_use", id = "", name = "", input = NULL))
-            content_blocks_acc[[idx]] <- list(type = "tool_use", id = cb$id, name = cb$name, input = cb$input)
-            
-            tool_args_acc <- ensure_index(tool_args_acc, idx, "")
-            
-          } else if (!is.null(cb) && !is.null(cb$type) && cb$type == "text") {
-            content_blocks_acc <- ensure_index(content_blocks_acc, idx, list(type = "text", text = ""))
-            if (!is.null(cb$text)) content_blocks_acc[[idx]]$text <- cb$text
-            
-          } else if (!is.null(cb) && !is.null(cb$type) && cb$type == "thinking") {
-            if (!is_thinking) {
-              callback("<think>\n", FALSE)
-              is_thinking <- TRUE
-            }
-          }
-          
-        } else if (event_type == "content_block_stop") {
-          if (is_thinking) {
-            callback("\n</think>\n\n", FALSE)
-            is_thinking <- FALSE
-          }
-          
-        } else if (event_type == "message_delta") {
-          if (!is.null(event_data$delta$stop_reason)) {
-            stop_reason <- event_data$delta$stop_reason
-          }
-          if (!is.null(event_data$usage)) {
-             # Anthropic usage is usually partial in delta
-             full_usage <- list(
-               prompt_tokens = 0, # usually not sent here
-               completion_tokens = event_data$usage$output_tokens,
-               total_tokens = event_data$usage$output_tokens
-             )
-          }
-          
-        } else if (event_type == "message_stop") {
-          callback(NULL, TRUE)
-          # We can break here, but let's continue to ensure stream loop finishes naturally if connection closes
-          break
-        }
+        should_break <- map_anthropic_chunk(event_type, event_data, agg)
+        if (isTRUE(should_break)) break
       }
     }
   }
 
   # --- Finalize and Return Result ---
-  
   if (openai_seen) {
-    if (oa_is_reasoning) {
-      callback("\n</think>\n\n", FALSE)
-    }
-
-    final_tool_calls <- NULL
-    if (length(oa_tool_calls_acc) > 0) {
-      final_tool_calls <- lapply(oa_tool_calls_acc, function(tc) {
-        # Use the robust argument parser from tool.R
-        args_val <- if (isTRUE(tc$arguments_is_list)) {
-          tc$arguments
-        } else {
-          parse_tool_arguments(tc$arguments, tool_name = tc$name)
-        }
-        list(id = tc$id, name = tc$name, arguments = args_val)
-      })
-      final_tool_calls <- Filter(function(tc) nzchar(tc$name %||% ""), final_tool_calls)
-      if (length(final_tool_calls) == 0) final_tool_calls <- NULL
-    }
-    
-    GenerateResult$new(
-      text = oa_full_text,
-      usage = oa_full_usage,
-      finish_reason = oa_finish_reason,
-      raw_response = oa_last_response,
-      tool_calls = final_tool_calls
-    )
-    
-  } else {
-    # Native Anthropic
-    final_tool_calls <- NULL
-    all_indices <- union(seq_along(tool_calls_acc), seq_along(tool_args_acc))
-
-    if (length(all_indices) > 0) {
-      final_tool_calls <- lapply(all_indices, function(idx) {
-        tc <- tool_calls_acc[[idx]]
-        raw_args <- tool_args_acc[[idx]]
-
-        # Use the robust argument parser
-        args_val <- if (!is.null(raw_args) && nzchar(raw_args)) {
-          parse_tool_arguments(raw_args, tool_name = tc$name %||% "unknown")
-        } else if (!is.null(tc) && !is_empty_args(tc$arguments)) {
-          tc$arguments
-        } else {
-          list()
-        }
-
-        list(
-          id = if (!is.null(tc) && !is.null(tc$id)) tc$id else "",
-          name = if (!is.null(tc) && !is.null(tc$name)) tc$name else "",
-          arguments = args_val
-        )
-      })
-      final_tool_calls <- Filter(function(tc) nzchar(tc$name %||% ""), final_tool_calls)
-      if (length(final_tool_calls) == 0) final_tool_calls <- NULL
-    }
-    
-    # Reconstruct content blocks
-    content_blocks_final <- list()
-    max_idx <- max(c(seq_along(content_blocks_acc), 0))
-    if (max_idx > 0) {
-      for (idx in seq_len(max_idx)) {
-         if (idx <= length(content_blocks_acc)) {
-            cb <- content_blocks_acc[[idx]]
-            content_blocks_final[[length(content_blocks_final) + 1]] <- cb
-         }
-      }
-    }
-    
-    raw_response_final <- last_event %||% list()
-    raw_response_final$content <- content_blocks_final
-    
-    GenerateResult$new(
-      text = full_text,
-      usage = full_usage,
-      finish_reason = stop_reason,
-      raw_response = raw_response_final,
-      tool_calls = final_tool_calls
-    )
+    # Close any open reasoning block for OpenAI proxy path
+    agg$on_done()
   }
+
+  agg$finalize()
 }
 
 #' @title Anthropic Provider Class
@@ -707,10 +475,10 @@ AnthropicProvider <- R6::R6Class(
 #' model <- anthropic$language_model("claude-sonnet-4-20250514")
 #' }
 create_anthropic <- function(api_key = NULL,
-                              base_url = NULL,
-                              api_version = NULL,
-                              headers = NULL,
-                              name = NULL) {
+                             base_url = NULL,
+                             api_version = NULL,
+                             headers = NULL,
+                             name = NULL) {
   AnthropicProvider$new(
     api_key = api_key,
     base_url = base_url,

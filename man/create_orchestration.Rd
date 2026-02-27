@@ -27,9 +27,8 @@ create_orchestration(
 \item{...}{Additional arguments.}
 }
 \value{
-A FlowStack or Flow object.
+A Flow object.
 }
 \description{
-Creates an orchestration flow using either FlowStack or legacy Flow
-based on feature flags.
+Creates an orchestration flow using Flow. Provided for backward compatibility.
 }

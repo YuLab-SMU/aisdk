@@ -16,75 +16,19 @@ DeepSeekLanguageModel <- R6::R6Class(
     "DeepSeekLanguageModel",
     inherit = OpenAILanguageModel,
     public = list(
-        #' @description Generate text (non-streaming).
-        #' @param params A list of call options including messages, temperature, etc.
+        #' @description Parse the API response into a GenerateResult.
+        #' Overrides parent to extract DeepSeek-specific reasoning_content.
+        #' @param response The parsed API response.
         #' @return A GenerateResult object.
-        do_generate = function(params) {
-            url <- paste0(private$config$base_url, "/chat/completions")
-            headers <- private$get_headers()
+        parse_response = function(response) {
+            # Use parent's parsing for standard fields
+            result <- super$parse_response(response)
 
-            body <- list(
-                model = self$model_id,
-                messages = params$messages,
-                temperature = params$temperature %||% 0.7,
-                stream = FALSE
-            )
-
-            # Handle max_tokens
-            if (!is.null(params$max_tokens)) {
-                body$max_tokens <- params$max_tokens
-            }
-
-            # Add tools if provided
-            if (!is.null(params$tools) && length(params$tools) > 0) {
-                tools_list <- unname(params$tools)
-                body$tools <- lapply(tools_list, function(t) {
-                    if (inherits(t, "Tool")) {
-                        t$to_api_format("openai")
-                    } else {
-                        t # Assume already in correct format
-                    }
-                })
-            }
-
-            # Pass through extra parameters
-            handled_params <- c("messages", "temperature", "max_tokens", "tools", "stream", "model")
-            extra_params <- params[setdiff(names(params), handled_params)]
-            if (length(extra_params) > 0) {
-                body <- utils::modifyList(body, extra_params)
-            }
-
-            # Remove NULL entries
-            body <- body[!sapply(body, is.null)]
-
-            response <- post_to_api(url, headers, body)
-
-            # Parse response
+            # Extract DeepSeek-specific reasoning content
             choice <- response$choices[[1]]
+            result$reasoning <- choice$message$reasoning_content
 
-            # Parse tool_calls if present
-            tool_calls <- NULL
-            if (!is.null(choice$message$tool_calls)) {
-                tool_calls <- lapply(choice$message$tool_calls, function(tc) {
-                    list(
-                        id = tc$id,
-                        name = tc$`function`$name,
-                        arguments = parse_tool_arguments(tc$`function`$arguments, tool_name = tc$`function`$name)
-                    )
-                })
-            }
-
-            # Extract reasoning content (DeepSeek specific for deepseek-reasoner)
-            reasoning <- choice$message$reasoning_content
-
-            GenerateResult$new(
-                text = choice$message$content,
-                usage = response$usage,
-                finish_reason = choice$finish_reason,
-                raw_response = response,
-                tool_calls = tool_calls,
-                reasoning = reasoning
-            )
+            result
         }
     )
 )

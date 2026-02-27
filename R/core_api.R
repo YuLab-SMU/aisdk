@@ -22,6 +22,11 @@ NULL
 #' @param max_steps Maximum number of generation steps (tool execution loops).
 #'   Default 1 (single generation, no automatic tool execution).
 #'   Set to higher values (e.g., 5) to enable automatic tool execution.
+#' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
+#'   All tools are bound into an isolated R environment and replaced by a single
+#'   `execute_r_code` meta-tool. The LLM writes R code to batch-invoke tools,
+#'   filter data with dplyr/purrr, and return only summary results—dramatically
+#'   reducing token usage and latency. Default FALSE.
 #' @param skills Optional path to skills directory, or a SkillRegistry object.
 #'   When provided, skill tools are auto-injected and skill summaries are added
 #'   to the system prompt.
@@ -53,6 +58,7 @@ generate_text <- function(model,
                           max_tokens = NULL,
                           tools = NULL,
                           max_steps = 1,
+                          sandbox = FALSE,
                           skills = NULL,
                           session = NULL,
                           hooks = NULL,
@@ -84,6 +90,20 @@ generate_text <- function(model,
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
 
+  # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
+  if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
+    parent_env <- if (!is.null(session)) session$get_envir() else NULL
+    sandbox_mgr <- SandboxManager$new(
+      tools = tools,
+      parent_env = parent_env
+    )
+    # Inject sandbox usage instructions into system prompt
+    sandbox_prompt <- create_sandbox_system_prompt(sandbox_mgr)
+    system <- if (is.null(system)) sandbox_prompt else paste(system, "\n\n", sandbox_prompt, sep = "")
+    # Replace all tools with the single execute_r_code meta-tool
+    tools <- list(create_r_code_tool(sandbox_mgr))
+  }
+
   # Trigger on_generation_start
   if (!is.null(hooks)) {
     hooks$trigger_generation_start(model, prompt, tools)
@@ -105,6 +125,13 @@ generate_text <- function(model,
   step <- 0
   result <- NULL
 
+  # Circuit breaker state
+  consecutive_identical_calls <- 0
+  consecutive_tool_errors <- 0
+  last_tool_signature <- NULL
+  max_identical_calls <- 3 # Threshold for repeating identical tool calls
+  max_tool_errors <- 3 # Threshold for consecutive tool execution errors
+
   # ReAct loop
   tryCatch(
     {
@@ -123,9 +150,30 @@ generate_text <- function(model,
           all_tool_calls <- c(all_tool_calls, result$tool_calls)
 
           # If we've reached max_steps, return without executing
-          # If we've reached max_steps, return without executing
           if (step >= max_steps) {
             warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+            break
+          }
+
+          # --- Circuit Breaker: Detect repeated identical tool calls ---
+          current_signature <- paste(
+            vapply(result$tool_calls, function(tc) {
+              paste0(tc$name, ":", safe_to_json(tc$arguments, auto_unbox = TRUE))
+            }, character(1)),
+            collapse = "|"
+          )
+          if (identical(current_signature, last_tool_signature)) {
+            consecutive_identical_calls <- consecutive_identical_calls + 1
+          } else {
+            consecutive_identical_calls <- 0
+            last_tool_signature <- current_signature
+          }
+          if (consecutive_identical_calls >= max_identical_calls) {
+            warning(
+              "Circuit breaker triggered: model repeated identical tool calls ",
+              consecutive_identical_calls, " times."
+            )
+            result$finish_reason <- "tool_failure"
             break
           }
 
@@ -139,7 +187,39 @@ generate_text <- function(model,
             }
           }
 
-          tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+          # --- Circuit Breaker: Detect consecutive tool execution errors ---
+          tool_results <- tryCatch(
+            {
+              res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+              consecutive_tool_errors <- 0 # Reset on success
+              res
+            },
+            error = function(e) {
+              consecutive_tool_errors <<- consecutive_tool_errors + 1
+              if (consecutive_tool_errors >= max_tool_errors) {
+                warning(
+                  "Circuit breaker triggered: ", consecutive_tool_errors,
+                  " consecutive tool execution failures. Last error: ",
+                  conditionMessage(e)
+                )
+                NULL
+              } else {
+                # Return error message as tool result so model can self-correct
+                lapply(result$tool_calls, function(tc) {
+                  list(
+                    id = tc$id,
+                    name = tc$name,
+                    result = paste0("Error executing tool: ", conditionMessage(e))
+                  )
+                })
+              }
+            }
+          )
+
+          if (is.null(tool_results)) {
+            result$finish_reason <- "tool_failure"
+            break
+          }
 
           # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
           if (interactive()) {
@@ -221,6 +301,8 @@ generate_text <- function(model,
 #' @param tools Optional list of Tool objects for function calling.
 #' @param max_steps Maximum number of generation steps (tool execution loops).
 #'   Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.
+#' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
+#'   See \code{generate_text} for details. Default FALSE.
 #' @param skills Optional path to skills directory, or a SkillRegistry object.
 #' @param session Optional ChatSession object for shared state.
 #' @param hooks Optional HookHandler object.
@@ -243,6 +325,7 @@ stream_text <- function(model,
                         max_tokens = NULL,
                         tools = NULL,
                         max_steps = 1,
+                        sandbox = FALSE,
                         skills = NULL,
                         session = NULL,
                         hooks = NULL,
@@ -273,6 +356,20 @@ stream_text <- function(model,
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
 
+  # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
+  if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
+    parent_env <- if (!is.null(session)) session$get_envir() else NULL
+    sandbox_mgr <- SandboxManager$new(
+      tools = tools,
+      parent_env = parent_env
+    )
+    # Inject sandbox usage instructions into system prompt
+    sandbox_prompt <- create_sandbox_system_prompt(sandbox_mgr)
+    system <- if (is.null(system)) sandbox_prompt else paste(system, "\n\n", sandbox_prompt, sep = "")
+    # Replace all tools with the single execute_r_code meta-tool
+    tools <- list(create_r_code_tool(sandbox_mgr))
+  }
+
   # Trigger on_generation_start
   if (!is.null(hooks)) {
     hooks$trigger_generation_start(model, prompt, tools)
@@ -293,6 +390,13 @@ stream_text <- function(model,
   result <- NULL
 
   renderer <- create_stream_renderer()
+
+  # Circuit breaker state
+  consecutive_identical_calls <- 0
+  consecutive_tool_errors <- 0
+  last_tool_signature <- NULL
+  max_identical_calls <- 3
+  max_tool_errors <- 3
 
   # ReAct loop for streaming
   tryCatch(
@@ -328,6 +432,28 @@ stream_text <- function(model,
             break
           }
 
+          # --- Circuit Breaker: Detect repeated identical tool calls ---
+          current_signature <- paste(
+            vapply(result$tool_calls, function(tc) {
+              paste0(tc$name, ":", safe_to_json(tc$arguments, auto_unbox = TRUE))
+            }, character(1)),
+            collapse = "|"
+          )
+          if (identical(current_signature, last_tool_signature)) {
+            consecutive_identical_calls <- consecutive_identical_calls + 1
+          } else {
+            consecutive_identical_calls <- 0
+            last_tool_signature <- current_signature
+          }
+          if (consecutive_identical_calls >= max_identical_calls) {
+            warning(
+              "Circuit breaker triggered: model repeated identical tool calls ",
+              consecutive_identical_calls, " times."
+            )
+            result$finish_reason <- "tool_failure"
+            break
+          }
+
           # Execute tools (with hooks and optional session environment)
           tool_envir <- if (!is.null(session)) session$get_envir() else NULL
 
@@ -338,7 +464,38 @@ stream_text <- function(model,
             }
           }
 
-          tool_results <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+          # --- Circuit Breaker: Detect consecutive tool execution errors ---
+          tool_results <- tryCatch(
+            {
+              res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
+              consecutive_tool_errors <- 0
+              res
+            },
+            error = function(e) {
+              consecutive_tool_errors <<- consecutive_tool_errors + 1
+              if (consecutive_tool_errors >= max_tool_errors) {
+                warning(
+                  "Circuit breaker triggered: ", consecutive_tool_errors,
+                  " consecutive tool execution failures. Last error: ",
+                  conditionMessage(e)
+                )
+                NULL
+              } else {
+                lapply(result$tool_calls, function(tc) {
+                  list(
+                    id = tc$id,
+                    name = tc$name,
+                    result = paste0("Error executing tool: ", conditionMessage(e))
+                  )
+                })
+              }
+            }
+          )
+
+          if (is.null(tool_results)) {
+            result$finish_reason <- "tool_failure"
+            break
+          }
 
           # Log tool results
           if (interactive()) {
