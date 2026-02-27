@@ -12,6 +12,7 @@ generate_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  sandbox = FALSE,
   skills = NULL,
   session = NULL,
   hooks = NULL,
@@ -35,6 +36,12 @@ generate_text(
 \item{max_steps}{Maximum number of generation steps (tool execution loops).
 Default 1 (single generation, no automatic tool execution).
 Set to higher values (e.g., 5) to enable automatic tool execution.}
+
+\item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
+All tools are bound into an isolated R environment and replaced by a single
+\code{execute_r_code} meta-tool. The LLM writes R code to batch-invoke tools,
+filter data with dplyr/purrr, and return only summary results—dramatically
+reducing token usage and latency. Default FALSE.}
 
 \item{skills}{Optional path to skills directory, or a SkillRegistry object.
 When provided, skill tools are auto-injected and skill summaries are added

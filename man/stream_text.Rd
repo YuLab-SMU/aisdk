@@ -13,6 +13,7 @@ stream_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  sandbox = FALSE,
   skills = NULL,
   session = NULL,
   hooks = NULL,
@@ -37,6 +38,9 @@ stream_text(
 
 \item{max_steps}{Maximum number of generation steps (tool execution loops).
 Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.}
+
+\item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
+See \code{generate_text} for details. Default FALSE.}
 
 \item{skills}{Optional path to skills directory, or a SkillRegistry object.}
 

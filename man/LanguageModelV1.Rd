@@ -15,6 +15,8 @@ Uses \code{do_} prefix for internal methods to prevent direct usage by end-users
 \item{\code{provider}}{The provider identifier (e.g., "openai").}
 
 \item{\code{model_id}}{The model identifier (e.g., "gpt-4o").}
+
+\item{\code{capabilities}}{Model capability flags (e.g., is_reasoning_model).}
 }
 \if{html}{\out{</div>}}
 }
@@ -22,6 +24,7 @@ Uses \code{do_} prefix for internal methods to prevent direct usage by end-users
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-LanguageModelV1-new}{\code{LanguageModelV1$new()}}
+\item \href{#method-LanguageModelV1-has_capability}{\code{LanguageModelV1$has_capability()}}
 \item \href{#method-LanguageModelV1-generate}{\code{LanguageModelV1$generate()}}
 \item \href{#method-LanguageModelV1-stream}{\code{LanguageModelV1$stream()}}
 \item \href{#method-LanguageModelV1-do_generate}{\code{LanguageModelV1$do_generate()}}
@@ -37,7 +40,7 @@ Uses \code{do_} prefix for internal methods to prevent direct usage by end-users
 \subsection{Method \code{new()}}{
 Initialize the model with provider and model ID.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$new(provider, model_id)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$new(provider, model_id, capabilities = list())}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -46,8 +49,30 @@ Initialize the model with provider and model ID.
 \item{\code{provider}}{Provider name.}
 
 \item{\code{model_id}}{Model ID.}
+
+\item{\code{capabilities}}{Optional list of capability flags.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LanguageModelV1-has_capability"></a>}}
+\if{latex}{\out{\hypertarget{method-LanguageModelV1-has_capability}{}}}
+\subsection{Method \code{has_capability()}}{
+Check if model has a specific capability.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$has_capability(cap)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cap}}{Capability name (e.g., "is_reasoning_model").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Logical.
 }
 }
 \if{html}{\out{<hr>}}

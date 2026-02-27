@@ -15,7 +15,11 @@ Language model implementation for OpenAI's chat completions API.
 \itemize{
 \item \href{#method-OpenAILanguageModel-new}{\code{OpenAILanguageModel$new()}}
 \item \href{#method-OpenAILanguageModel-get_config}{\code{OpenAILanguageModel$get_config()}}
+\item \href{#method-OpenAILanguageModel-build_payload}{\code{OpenAILanguageModel$build_payload()}}
+\item \href{#method-OpenAILanguageModel-execute_request}{\code{OpenAILanguageModel$execute_request()}}
+\item \href{#method-OpenAILanguageModel-parse_response}{\code{OpenAILanguageModel$parse_response()}}
 \item \href{#method-OpenAILanguageModel-do_generate}{\code{OpenAILanguageModel$do_generate()}}
+\item \href{#method-OpenAILanguageModel-build_stream_payload}{\code{OpenAILanguageModel$build_stream_payload()}}
 \item \href{#method-OpenAILanguageModel-do_stream}{\code{OpenAILanguageModel$do_stream()}}
 \item \href{#method-OpenAILanguageModel-format_tool_result}{\code{OpenAILanguageModel$format_tool_result()}}
 \item \href{#method-OpenAILanguageModel-get_history_format}{\code{OpenAILanguageModel$get_history_format()}}
@@ -26,6 +30,7 @@ Language model implementation for OpenAI's chat completions API.
 <details open><summary>Inherited methods</summary>
 <ul>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-generate'><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-has_capability'><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-stream'><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
 </ul>
 </details>
@@ -36,7 +41,7 @@ Language model implementation for OpenAI's chat completions API.
 \subsection{Method \code{new()}}{
 Initialize the OpenAI language model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$new(model_id, config)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$new(model_id, config, capabilities = list())}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -45,6 +50,8 @@ Initialize the OpenAI language model.
 \item{\code{model_id}}{The model ID (e.g., "gpt-4o").}
 
 \item{\code{config}}{Configuration list with api_key, base_url, headers, etc.}
+
+\item{\code{capabilities}}{Optional list of capability flags.}
 }
 \if{html}{\out{</div>}}
 }
@@ -63,10 +70,76 @@ A list with provider configuration.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAILanguageModel-build_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAILanguageModel-build_payload}{}}}
+\subsection{Method \code{build_payload()}}{
+Build the request payload for non-streaming generation.
+Subclasses can override to customize payload construction.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$build_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with url, headers, and body.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAILanguageModel-execute_request"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAILanguageModel-execute_request}{}}}
+\subsection{Method \code{execute_request()}}{
+Execute the API request.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$execute_request(url, headers, body)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{url}}{The API endpoint URL.}
+
+\item{\code{headers}}{A named list of HTTP headers.}
+
+\item{\code{body}}{The request body.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The parsed API response.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAILanguageModel-parse_response"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAILanguageModel-parse_response}{}}}
+\subsection{Method \code{parse_response()}}{
+Parse the API response into a GenerateResult.
+Subclasses can override to extract provider-specific fields (e.g., reasoning_content).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$parse_response(response)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{response}}{The parsed API response.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateResult object.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-OpenAILanguageModel-do_generate"></a>}}
 \if{latex}{\out{\hypertarget{method-OpenAILanguageModel-do_generate}{}}}
 \subsection{Method \code{do_generate()}}{
-Generate text (non-streaming).
+Generate text (non-streaming). Uses template method pattern.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$do_generate(params)}\if{html}{\out{</div>}}
 }
@@ -80,6 +153,27 @@ Generate text (non-streaming).
 }
 \subsection{Returns}{
 A GenerateResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAILanguageModel-build_stream_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAILanguageModel-build_stream_payload}{}}}
+\subsection{Method \code{build_stream_payload()}}{
+Build the request payload for streaming generation.
+Subclasses can override to customize stream payload construction.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$build_stream_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with url, headers, and body.
 }
 }
 \if{html}{\out{<hr>}}

@@ -25,8 +25,9 @@ nvidia <- create_nvidia()
 model <- nvidia$language_model("z-ai/glm4.7")
 
 # Enable thinking/reasoning
-result <- generate_text(model, "Who are you?", 
-  chat_template_kwargs = list(enable_thinking = TRUE))
+result <- generate_text(model, "Who are you?",
+  chat_template_kwargs = list(enable_thinking = TRUE)
+)
 print(result$reasoning)
 }
 }

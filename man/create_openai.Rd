@@ -65,11 +65,11 @@ result <- generate_text(model, "Hello!")
 openai <- create_openai()
 model <- openai$responses_model("o1")
 result <- generate_text(model, "Solve this math problem...")
-print(result$reasoning)  # Access chain-of-thought
+print(result$reasoning) # Access chain-of-thought
 
 # Smart model selection (auto-detects best API)
-model <- openai$smart_model("o3-mini")  # Uses Responses API
-model <- openai$smart_model("gpt-4o")   # Uses Chat Completions API
+model <- openai$smart_model("o3-mini") # Uses Responses API
+model <- openai$smart_model("gpt-4o") # Uses Chat Completions API
 
 # Token limits - unified interface
 # For standard models: limits generated content
@@ -89,15 +89,7 @@ result <- model_resp$generate(messages = msgs, max_answer_tokens = 500)
 # Multi-turn conversation with Responses API
 model <- openai$responses_model("o1")
 result1 <- generate_text(model, "What is 2+2?")
-result2 <- generate_text(model, "Now multiply that by 3")  # Remembers context
-model$reset()  # Start fresh conversation
-
-# For Volcengine/Ark API
-volcengine <- create_openai(
-  api_key = Sys.getenv("ARK_API_KEY"),
-  base_url = "https://ark.cn-beijing.volces.com/api/v3",
-  name = "volcengine",
-  disable_stream_options = TRUE
-)
+result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
+model$reset() # Start fresh conversation
 }
 }
