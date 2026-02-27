@@ -9,11 +9,12 @@ create_flow(
   model,
   registry = NULL,
   max_depth = 5,
-  max_steps_per_agent = 10
+  max_steps_per_agent = 10,
+  enable_guardrails = TRUE
 )
 }
 \arguments{
-\item{session}{A ChatSession object for shared state.}
+\item{session}{A ChatSession object.}
 
 \item{model}{The default model ID to use (e.g., "openai:gpt-4o").}
 
@@ -22,16 +23,18 @@ create_flow(
 \item{max_depth}{Maximum delegation depth. Default 5.}
 
 \item{max_steps_per_agent}{Maximum ReAct steps per agent. Default 10.}
+
+\item{enable_guardrails}{Enable safety guardrails. Default TRUE.}
 }
 \value{
 A Flow object.
 }
 \description{
-Factory function to create a new Flow object for multi-agent orchestration.
+Factory function to create a new Flow object for enhanced multi-agent orchestration.
 }
 \examples{
 \dontrun{
-# Create a multi-agent flow
+# Create an enhanced multi-agent flow
 session <- create_chat_session()
 cleaner <- create_agent("Cleaner", "Cleans data")
 plotter <- create_agent("Plotter", "Creates plots")
@@ -42,10 +45,11 @@ manager <- create_agent("Manager", "Coordinates data analysis")
 flow <- create_flow(
   session = session,
   model = "openai:gpt-4o",
-  registry = registry
+  registry = registry,
+  enable_guardrails = TRUE
 )
 
-# Run the manager with auto-delegation
+# Run the manager with auto-delegation (unified delegate_task tool)
 result <- flow$run(manager, "Load data and create a visualization")
 }
 }

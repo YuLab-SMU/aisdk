@@ -18,7 +18,6 @@ NULL
 
 # Default feature flag values
 .sdk_features$use_shared_session <- TRUE
-.sdk_features$use_flow_stack <- TRUE
 .sdk_features$use_unified_delegate <- TRUE
 .sdk_features$use_enhanced_agents <- TRUE
 .sdk_features$strict_sandbox <- TRUE
@@ -95,7 +94,6 @@ sdk_list_features <- function() {
 #' @export
 sdk_reset_features <- function() {
   .sdk_features$use_shared_session <- TRUE
-  .sdk_features$use_flow_stack <- TRUE
   .sdk_features$use_unified_delegate <- TRUE
   .sdk_features$use_enhanced_agents <- TRUE
   .sdk_features$strict_sandbox <- TRUE
@@ -131,11 +129,11 @@ sdk_reset_features <- function() {
 #' session <- create_session(model = "openai:gpt-4o")
 #' }
 create_session <- function(model = NULL,
-                            system_prompt = NULL,
-                            tools = NULL,
-                            hooks = NULL,
-                            max_steps = 10,
-                            ...) {
+                           system_prompt = NULL,
+                           tools = NULL,
+                           hooks = NULL,
+                           max_steps = 10,
+                           ...) {
   if (sdk_feature("use_shared_session", TRUE)) {
     create_shared_session(
       model = model,
@@ -160,41 +158,30 @@ create_session <- function(model = NULL,
 
 #' @title Create Orchestration Flow (Compatibility Wrapper)
 #' @description
-#' Creates an orchestration flow using either FlowStack or legacy Flow
-#' based on feature flags.
+#' Creates an orchestration flow using Flow. Provided for backward compatibility.
 #' @param session A session object.
 #' @param model The default model ID.
 #' @param registry Optional AgentRegistry.
 #' @param max_depth Maximum delegation depth. Default 5.
 #' @param max_steps_per_agent Maximum ReAct steps per agent. Default 10.
 #' @param ... Additional arguments.
-#' @return A FlowStack or Flow object.
+#' @return A Flow object.
 #' @export
 create_orchestration <- function(session,
-                                  model,
-                                  registry = NULL,
-                                  max_depth = 5,
-                                  max_steps_per_agent = 10,
-                                  ...) {
-  if (sdk_feature("use_flow_stack", TRUE)) {
-    create_flow_stack(
-      session = session,
-      model = model,
-      registry = registry,
-      max_depth = max_depth,
-      max_steps_per_agent = max_steps_per_agent,
-      enable_guardrails = TRUE,
-      ...
-    )
-  } else {
-    create_flow(
-      session = session,
-      model = model,
-      registry = registry,
-      max_depth = max_depth,
-      max_steps_per_agent = max_steps_per_agent
-    )
-  }
+                                 model,
+                                 registry = NULL,
+                                 max_depth = 5,
+                                 max_steps_per_agent = 10,
+                                 ...) {
+  create_flow(
+    session = session,
+    model = model,
+    registry = registry,
+    max_depth = max_depth,
+    max_steps_per_agent = max_steps_per_agent,
+    enable_guardrails = TRUE,
+    ...
+  )
 }
 
 #' @title Create Standard Agent Registry
@@ -224,13 +211,13 @@ create_orchestration <- function(session,
 #' )
 #' }
 create_standard_registry <- function(include_data = TRUE,
-                                      include_file = TRUE,
-                                      include_env = TRUE,
-                                      include_coder = TRUE,
-                                      include_visualizer = TRUE,
-                                      include_planner = TRUE,
-                                      file_allowed_dirs = ".",
-                                      env_allow_install = FALSE) {
+                                     include_file = TRUE,
+                                     include_env = TRUE,
+                                     include_coder = TRUE,
+                                     include_visualizer = TRUE,
+                                     include_planner = TRUE,
+                                     file_allowed_dirs = ".",
+                                     env_allow_install = FALSE) {
   agents <- list()
 
   if (include_data && sdk_feature("use_enhanced_agents", TRUE)) {
@@ -282,7 +269,7 @@ create_standard_registry <- function(include_data = TRUE,
 #' }
 #' }
 check_sdk_compatibility <- function(code_version) {
-  current_version <- "1.0.0"  # SDK version
+  current_version <- "1.0.0" # SDK version
 
   suggestions <- character(0)
   compatible <- TRUE
@@ -295,10 +282,11 @@ check_sdk_compatibility <- function(code_version) {
 
   if (code_parts[1] < current_parts[1]) {
     compatible <- FALSE
-    suggestions <- c(suggestions,
+    suggestions <- c(
+      suggestions,
       "Major version upgrade detected. Review breaking changes:",
       "- ChatSession -> SharedSession (use create_session() for compatibility)",
-      "- Flow -> FlowStack (use create_orchestration() for compatibility)",
+      "- Flow now natively includes advanced features (use create_orchestration() for compatibility)",
       "- New standard agents available (DataAgent, FileAgent, EnvAgent)",
       "- Tool execution now supports sandboxing"
     )
@@ -306,7 +294,8 @@ check_sdk_compatibility <- function(code_version) {
 
   # Check minor version
   if (length(code_parts) >= 2 && code_parts[2] < 9) {
-    suggestions <- c(suggestions,
+    suggestions <- c(
+      suggestions,
       "Consider using new features:",
       "- Unified delegate_task tool for cleaner orchestration",
       "- Enhanced tracing and observability",
@@ -353,15 +342,13 @@ migrate_pattern <- function(pattern) {
       )
     ),
     "Flow" = list(
-      old_pattern = "Flow$new(...) or create_flow(...)",
-      new_pattern = "create_orchestration(...) or create_flow_stack(...)",
+      old_pattern = "create_flow(...)",
+      new_pattern = "create_orchestration(...) or create_flow(...)",
       example = paste0(
-        "# Old:\n",
+        "# Old (legacy basic flow):\n",
         "flow <- create_flow(session, model, registry)\n\n",
-        "# New (recommended):\n",
-        "flow <- create_orchestration(session, model, registry)\n\n",
-        "# Or explicitly:\n",
-        "flow <- create_flow_stack(\n",
+        "# New (Flow now natively has advanced features):\n",
+        "flow <- create_flow(\n",
         "  session = session,\n",
         "  model = model,\n",
         "  registry = registry,\n",
@@ -440,7 +427,7 @@ migrate_pattern <- function(pattern) {
 #' @return Invisible NULL (prints to console).
 #' @export
 print_migration_guide <- function(verbose = TRUE) {
-  cat("=" , rep("=", 60), "\n", sep = "")
+  cat("=", rep("=", 60), "\n", sep = "")
   cat("R AI SDK Migration Guide: v0.x -> v1.0\n")
   cat("=", rep("=", 60), "\n\n", sep = "")
 
@@ -448,7 +435,7 @@ print_migration_guide <- function(verbose = TRUE) {
   cat("-", rep("-", 40), "\n", sep = "")
   cat("This version introduces:\n")
   cat("- SharedSession: Enhanced session with sandboxing and tracing\n")
-  cat("- FlowStack: Improved orchestration with guardrails\n")
+  cat("- Flow: Improved orchestration with guardrails and tracing native support\n")
   cat("- Standard Agents: DataAgent, FileAgent, EnvAgent\n")
   cat("- Unified delegate_task tool\n")
   cat("- Feature flags for gradual migration\n\n")
@@ -464,7 +451,6 @@ print_migration_guide <- function(verbose = TRUE) {
   cat("-", rep("-", 40), "\n", sep = "")
   cat("# Disable new features for legacy compatibility:\n")
   cat("sdk_set_feature('use_shared_session', FALSE)\n")
-  cat("sdk_set_feature('use_flow_stack', FALSE)\n")
   cat("sdk_set_feature('use_enhanced_agents', FALSE)\n\n")
 
   if (verbose) {
