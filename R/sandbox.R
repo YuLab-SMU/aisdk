@@ -156,8 +156,9 @@ SandboxManager <- R6::R6Class(
 
             result <- tryCatch(
                 {
+                    parsed <- check_ast_safety(code_str)
                     captured <- utils::capture.output({
-                        eval(parse(text = code_str), envir = private$.env)
+                        eval(parsed, envir = private$.env)
                     })
                     output <- paste(captured, collapse = "\n")
 

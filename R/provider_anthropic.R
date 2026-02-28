@@ -404,7 +404,7 @@ stream_anthropic <- function(url, headers, body, callback) {
     agg$on_done()
   }
 
-  agg$finalize()
+  agg$build_result()
 }
 
 #' @title Anthropic Provider Class

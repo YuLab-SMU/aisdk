@@ -31,6 +31,7 @@ post_to_api <- function(url, headers, body,
   # CRAN policy: fail gracefully when internet is unavailable
   if (!curl::has_internet()) {
     message("Internet connection is not available. Cannot reach: ", url)
+    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
     return(NULL)
   }
 
@@ -139,6 +140,7 @@ stream_from_api <- function(url, headers, body, callback) {
   # CRAN policy: fail gracefully when internet is unavailable
   if (!curl::has_internet()) {
     message("Internet connection is not available. Cannot reach: ", url)
+    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
     return(invisible(NULL))
   }
 

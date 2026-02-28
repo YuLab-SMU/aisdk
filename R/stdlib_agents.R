@@ -23,21 +23,20 @@ NULL
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' data_agent <- create_data_agent()
-#' session <- create_shared_session(model = "openai:gpt-4o")
-#' session$set_var("sales", data.frame(
-#'   product = c("A", "B", "C"),
-#'   revenue = c(100, 200, 150)
-#' ))
-#' result <- data_agent$run(
-#'   "Calculate total revenue and find the top product",
-#'   session = session,
-#'   model = "openai:gpt-4o"
-#' )
+#'   data_agent <- create_data_agent()
+#'   session <- create_shared_session(model = "openai:gpt-4o")
+#'   session$set_var("sales", data.frame(
+#'     product = c("A", "B", "C"),
+#'     revenue = c(100, 200, 150)
+#'   ))
+#'   result <- data_agent$run(
+#'     "Calculate total revenue and find the top product",
+#'     session = session,
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
-
   # Tool: Execute dplyr/tidyr operations
   transform_data_tool <- Tool$new(
     name = "transform_data",
@@ -66,11 +65,11 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
       operations <- args$operations
 
       # Check input exists
-      if (!exists(input_var, envir = env, inherits = FALSE)) {
+      if (!exists(input_var, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", input_var, "' not found in session."))
       }
 
-      input_data <- get(input_var, envir = env)
+      input_data <- get(input_var, envir = env, inherits = TRUE)
       if (!is.data.frame(input_data)) {
         return(paste0("Error: '", input_var, "' is not a data frame."))
       }
@@ -82,8 +81,10 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 
       # Safe mode checks
       if (safe_mode) {
-        dangerous <- c("system", "shell", "eval", "parse", "source",
-                      "write", "save", "download", "url", "file\\.")
+        dangerous <- c(
+          "system", "shell", "eval", "parse", "source",
+          "write", "save", "download", "url", "file\\."
+        )
         for (pattern in dangerous) {
           if (grepl(pattern, operations, ignore.case = TRUE)) {
             return(paste0("Error: Unsafe operation detected: ", pattern))
@@ -92,26 +93,29 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
       }
 
       # Execute transformation
-      result <- tryCatch({
-        # Build and execute the pipeline
-        code <- paste0("input_data %>% ", operations)
-        output <- eval(parse(text = code), envir = list(
-          input_data = input_data,
-          `%>%` = dplyr::`%>%`
-        ), enclos = asNamespace("dplyr"))
+      result <- tryCatch(
+        {
+          # Build and execute the pipeline
+          code <- paste0("input_data %>% ", operations)
+          output <- eval(parse(text = code), envir = list(
+            input_data = input_data,
+            `%>%` = dplyr::`%>%`
+          ), enclos = asNamespace("dplyr"))
 
-        # Store result
-        assign(output_var, output, envir = env)
+          # Store result
+          assign(output_var, output, envir = env)
 
-        # Return summary
-        paste0(
-          "Transformation complete. '", output_var, "' now has ",
-          nrow(output), " rows x ", ncol(output), " columns.\n",
-          "Columns: ", paste(names(output), collapse = ", ")
-        )
-      }, error = function(e) {
-        paste0("Error in transformation: ", conditionMessage(e))
-      })
+          # Return summary
+          paste0(
+            "Transformation complete. '", output_var, "' now has ",
+            nrow(output), " rows x ", ncol(output), " columns.\n",
+            "Columns: ", paste(names(output), collapse = ", ")
+          )
+        },
+        error = function(e) {
+          paste0("Error in transformation: ", conditionMessage(e))
+        }
+      )
 
       result
     }
@@ -137,11 +141,11 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
       var_name <- args$var_name
       columns <- args$columns
 
-      if (!exists(var_name, envir = env, inherits = FALSE)) {
+      if (!exists(var_name, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", var_name, "' not found."))
       }
 
-      df <- get(var_name, envir = env)
+      df <- get(var_name, envir = env, inherits = TRUE)
       if (!is.data.frame(df)) {
         return(paste0("Error: '", var_name, "' is not a data frame."))
       }
@@ -231,35 +235,38 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
       by_columns <- trimws(strsplit(args$by_columns, ",")[[1]])
 
       # Get data frames
-      if (!exists(left_var, envir = env)) {
+      if (!exists(left_var, envir = env, inherits = TRUE)) {
         return(paste0("Error: '", left_var, "' not found."))
       }
-      if (!exists(right_var, envir = env)) {
+      if (!exists(right_var, envir = env, inherits = TRUE)) {
         return(paste0("Error: '", right_var, "' not found."))
       }
 
-      left_df <- get(left_var, envir = env)
-      right_df <- get(right_var, envir = env)
+      left_df <- get(left_var, envir = env, inherits = TRUE)
+      right_df <- get(right_var, envir = env, inherits = TRUE)
 
       # Perform join
-      result <- tryCatch({
-        join_fn <- switch(join_type,
-          "left" = dplyr::left_join,
-          "right" = dplyr::right_join,
-          "inner" = dplyr::inner_join,
-          "full" = dplyr::full_join
-        )
+      result <- tryCatch(
+        {
+          join_fn <- switch(join_type,
+            "left" = dplyr::left_join,
+            "right" = dplyr::right_join,
+            "inner" = dplyr::inner_join,
+            "full" = dplyr::full_join
+          )
 
-        output <- join_fn(left_df, right_df, by = by_columns)
-        assign(output_var, output, envir = env)
+          output <- join_fn(left_df, right_df, by = by_columns)
+          assign(output_var, output, envir = env)
 
-        paste0(
-          "Join complete. '", output_var, "' has ",
-          nrow(output), " rows x ", ncol(output), " columns."
-        )
-      }, error = function(e) {
-        paste0("Error in join: ", conditionMessage(e))
-      })
+          paste0(
+            "Join complete. '", output_var, "' has ",
+            nrow(output), " rows x ", ncol(output), " columns."
+          )
+        },
+        error = function(e) {
+          paste0("Error in join: ", conditionMessage(e))
+        }
+      )
 
       result
     }
@@ -277,13 +284,18 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
       }
 
       vars <- ls(env)
+      parent <- parent.env(env)
+      if (!identical(parent, emptyenv()) && !identical(parent, baseenv())) {
+        vars <- unique(c(vars, ls(parent)))
+      }
+
       if (length(vars) == 0) {
         return("No variables in session.")
       }
 
       data_frames <- character(0)
       for (v in vars) {
-        obj <- get(v, envir = env)
+        obj <- get(v, envir = env, inherits = TRUE)
         if (is.data.frame(obj)) {
           data_frames <- c(data_frames, sprintf(
             "- %s: %d rows x %d cols (%s)",
@@ -347,22 +359,23 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' file_agent <- create_file_agent(
-#'   allowed_dirs = c("./data", "./output"),
-#'   allowed_extensions = c("csv", "json", "txt", "rds")
-#' )
-#' result <- file_agent$run(
-#'   "Read the sales.csv file and store it as 'sales_data'",
-#'   session = session,
-#'   model = "openai:gpt-4o"
-#' )
+#'   file_agent <- create_file_agent(
+#'     allowed_dirs = c("./data", "./output"),
+#'     allowed_extensions = c("csv", "json", "txt", "rds")
+#'   )
+#'   result <- file_agent$run(
+#'     "Read the sales.csv file and store it as 'sales_data'",
+#'     session = session,
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_file_agent <- function(name = "FileAgent",
-                               allowed_dirs = ".",
-                               allowed_extensions = c("csv", "tsv", "txt", "json",
-                                                     "rds", "rda", "xlsx", "xls")) {
-
+                              allowed_dirs = ".",
+                              allowed_extensions = c(
+                                "csv", "tsv", "txt", "json",
+                                "rds", "rda", "xlsx", "xls"
+                              )) {
   # Helper to check path safety
   check_path_safety <- function(path, allowed_dirs) {
     # Normalize path
@@ -380,8 +393,10 @@ create_file_agent <- function(name = "FileAgent",
 
     list(
       safe = FALSE,
-      reason = paste0("Path '", path, "' is outside allowed directories: ",
-                     paste(allowed_dirs, collapse = ", "))
+      reason = paste0(
+        "Path '", path, "' is outside allowed directories: ",
+        paste(allowed_dirs, collapse = ", ")
+      )
     )
   }
 
@@ -393,8 +408,10 @@ create_file_agent <- function(name = "FileAgent",
     }
     list(
       safe = FALSE,
-      reason = paste0("Extension '.", ext, "' not allowed. Allowed: ",
-                     paste0(".", allowed_extensions, collapse = ", "))
+      reason = paste0(
+        "Extension '.", ext, "' not allowed. Allowed: ",
+        paste0(".", allowed_extensions, collapse = ", ")
+      )
     )
   }
 
@@ -437,51 +454,55 @@ create_file_agent <- function(name = "FileAgent",
 
       # Read based on extension
       ext <- tolower(tools::file_ext(path))
-      result <- tryCatch({
-        data <- switch(ext,
-          "csv" = {
-            if (requireNamespace("readr", quietly = TRUE)) {
-              readr::read_csv(path, show_col_types = FALSE)
-            } else {
-              utils::read.csv(path, stringsAsFactors = FALSE)
-            }
-          },
-          "tsv" = {
-            if (requireNamespace("readr", quietly = TRUE)) {
-              readr::read_tsv(path, show_col_types = FALSE)
-            } else {
-              utils::read.delim(path, stringsAsFactors = FALSE)
-            }
-          },
-          "txt" = readLines(path),
-          "json" = jsonlite::fromJSON(path),
-          "rds" = readRDS(path),
-          "rda" = {
-            load(path, envir = env)
-            return(paste0("Loaded objects from '", path, "' into session."))
-          },
-          "xlsx" = , "xls" = {
-            if (!requireNamespace("readxl", quietly = TRUE)) {
-              return("Error: readxl package required for Excel files.")
-            }
-            readxl::read_excel(path)
-          },
-          return(paste0("Error: Unsupported file type: .", ext))
-        )
-
-        assign(var_name, data, envir = env)
-
-        if (is.data.frame(data)) {
-          paste0(
-            "Read '", path, "' into '", var_name, "': ",
-            nrow(data), " rows x ", ncol(data), " columns"
+      result <- tryCatch(
+        {
+          data <- switch(ext,
+            "csv" = {
+              if (requireNamespace("readr", quietly = TRUE)) {
+                readr::read_csv(path, show_col_types = FALSE)
+              } else {
+                utils::read.csv(path, stringsAsFactors = FALSE)
+              }
+            },
+            "tsv" = {
+              if (requireNamespace("readr", quietly = TRUE)) {
+                readr::read_tsv(path, show_col_types = FALSE)
+              } else {
+                utils::read.delim(path, stringsAsFactors = FALSE)
+              }
+            },
+            "txt" = readLines(path),
+            "json" = jsonlite::fromJSON(path),
+            "rds" = readRDS(path),
+            "rda" = {
+              load(path, envir = env)
+              return(paste0("Loaded objects from '", path, "' into session."))
+            },
+            "xlsx" = ,
+            "xls" = {
+              if (!requireNamespace("readxl", quietly = TRUE)) {
+                return("Error: readxl package required for Excel files.")
+              }
+              readxl::read_excel(path)
+            },
+            return(paste0("Error: Unsupported file type: .", ext))
           )
-        } else {
-          paste0("Read '", path, "' into '", var_name, "'")
+
+          assign(var_name, data, envir = env)
+
+          if (is.data.frame(data)) {
+            paste0(
+              "Read '", path, "' into '", var_name, "': ",
+              nrow(data), " rows x ", ncol(data), " columns"
+            )
+          } else {
+            paste0("Read '", path, "' into '", var_name, "'")
+          }
+        },
+        error = function(e) {
+          paste0("Error reading file: ", conditionMessage(e))
         }
-      }, error = function(e) {
-        paste0("Error reading file: ", conditionMessage(e))
-      })
+      )
 
       result
     }
@@ -518,42 +539,45 @@ create_file_agent <- function(name = "FileAgent",
         return(paste0("Error: ", path_check$reason))
       }
 
-      if (!exists(var_name, envir = env)) {
+      if (!exists(var_name, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", var_name, "' not found."))
       }
 
-      data <- get(var_name, envir = env)
+      data <- get(var_name, envir = env, inherits = TRUE)
 
       # Auto-detect format from extension if not specified
       if (is.null(format) || format == "") {
         format <- tolower(tools::file_ext(path))
       }
 
-      result <- tryCatch({
-        switch(format,
-          "csv" = {
-            if (requireNamespace("readr", quietly = TRUE)) {
-              readr::write_csv(data, path)
-            } else {
-              utils::write.csv(data, path, row.names = FALSE)
-            }
-          },
-          "tsv" = {
-            if (requireNamespace("readr", quietly = TRUE)) {
-              readr::write_tsv(data, path)
-            } else {
-              utils::write.table(data, path, sep = "\t", row.names = FALSE)
-            }
-          },
-          "json" = jsonlite::write_json(data, path, auto_unbox = TRUE, pretty = TRUE),
-          "rds" = saveRDS(data, path),
-          return(paste0("Error: Unsupported format: ", format))
-        )
+      result <- tryCatch(
+        {
+          switch(format,
+            "csv" = {
+              if (requireNamespace("readr", quietly = TRUE)) {
+                readr::write_csv(data, path)
+              } else {
+                utils::write.csv(data, path, row.names = FALSE)
+              }
+            },
+            "tsv" = {
+              if (requireNamespace("readr", quietly = TRUE)) {
+                readr::write_tsv(data, path)
+              } else {
+                utils::write.table(data, path, sep = "\t", row.names = FALSE)
+              }
+            },
+            "json" = jsonlite::write_json(data, path, auto_unbox = TRUE, pretty = TRUE),
+            "rds" = saveRDS(data, path),
+            return(paste0("Error: Unsupported format: ", format))
+          )
 
-        paste0("Wrote '", var_name, "' to '", path, "'")
-      }, error = function(e) {
-        paste0("Error writing file: ", conditionMessage(e))
-      })
+          paste0("Wrote '", var_name, "' to '", path, "'")
+        },
+        error = function(e) {
+          paste0("Error writing file: ", conditionMessage(e))
+        }
+      )
 
       result
     }
@@ -583,8 +607,10 @@ create_file_agent <- function(name = "FileAgent",
         return(paste0("Error: Directory '", path, "' does not exist."))
       }
 
-      files <- list.files(path, pattern = pattern, recursive = recursive,
-                         full.names = TRUE)
+      files <- list.files(path,
+        pattern = pattern, recursive = recursive,
+        full.names = TRUE
+      )
 
       if (length(files) == 0) {
         return("No files found matching criteria.")
@@ -593,10 +619,12 @@ create_file_agent <- function(name = "FileAgent",
       # Get file info
       info <- file.info(files)
       summaries <- mapply(function(f, size, mtime) {
-        sprintf("- %s (%.1f KB, %s)",
-                basename(f),
-                size / 1024,
-                format(mtime, "%Y-%m-%d %H:%M"))
+        sprintf(
+          "- %s (%.1f KB, %s)",
+          basename(f),
+          size / 1024,
+          format(mtime, "%Y-%m-%d %H:%M")
+        )
       }, files, info$size, info$mtime, SIMPLIFY = TRUE)
 
       paste(c(paste0("Files in '", path, "':"), summaries), collapse = "\n")
@@ -678,18 +706,17 @@ create_file_agent <- function(name = "FileAgent",
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' env_agent <- create_env_agent(allow_install = TRUE)
-#' result <- env_agent$run(
-#'   "Check if tidyverse is installed and load it",
-#'   session = session,
-#'   model = "openai:gpt-4o"
-#' )
+#'   env_agent <- create_env_agent(allow_install = TRUE)
+#'   result <- env_agent$run(
+#'     "Check if tidyverse is installed and load it",
+#'     session = session,
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_env_agent <- function(name = "EnvAgent",
-                              allow_install = FALSE,
-                              allowed_repos = "https://cloud.r-project.org") {
-
+                             allow_install = FALSE,
+                             allowed_repos = "https://cloud.r-project.org") {
   # Tool: Check package
   check_package_tool <- Tool$new(
     name = "check_package",
@@ -721,16 +748,19 @@ create_env_agent <- function(name = "EnvAgent",
       pkg <- args$package
       quietly <- args$quietly %||% TRUE
 
-      result <- tryCatch({
-        if (quietly) {
-          suppressPackageStartupMessages(library(pkg, character.only = TRUE))
-        } else {
-          library(pkg, character.only = TRUE)
+      result <- tryCatch(
+        {
+          if (quietly) {
+            suppressPackageStartupMessages(library(pkg, character.only = TRUE))
+          } else {
+            library(pkg, character.only = TRUE)
+          }
+          paste0("Package '", pkg, "' loaded successfully")
+        },
+        error = function(e) {
+          paste0("Error loading '", pkg, "': ", conditionMessage(e))
         }
-        paste0("Package '", pkg, "' loaded successfully")
-      }, error = function(e) {
-        paste0("Error loading '", pkg, "': ", conditionMessage(e))
-      })
+      )
 
       result
     }
@@ -756,22 +786,25 @@ create_env_agent <- function(name = "EnvAgent",
       pkg <- args$package
       deps <- args$dependencies %||% TRUE
 
-      result <- tryCatch({
-        utils::install.packages(
-          pkg,
-          repos = allowed_repos,
-          dependencies = deps,
-          quiet = TRUE
-        )
+      result <- tryCatch(
+        {
+          utils::install.packages(
+            pkg,
+            repos = allowed_repos,
+            dependencies = deps,
+            quiet = TRUE
+          )
 
-        if (requireNamespace(pkg, quietly = TRUE)) {
-          paste0("Package '", pkg, "' installed successfully")
-        } else {
-          paste0("Installation completed but package '", pkg, "' not found")
+          if (requireNamespace(pkg, quietly = TRUE)) {
+            paste0("Package '", pkg, "' installed successfully")
+          } else {
+            paste0("Installation completed but package '", pkg, "' not found")
+          }
+        },
+        error = function(e) {
+          paste0("Error installing '", pkg, "': ", conditionMessage(e))
         }
-      }, error = function(e) {
-        paste0("Error installing '", pkg, "': ", conditionMessage(e))
-      })
+      )
 
       result
     }
@@ -801,8 +834,10 @@ create_env_agent <- function(name = "EnvAgent",
         },
         "installed" = {
           pkgs <- utils::installed.packages()[, "Package"]
-          paste0("Installed packages: ", length(pkgs), " total\n",
-                 "First 20: ", paste(head(pkgs, 20), collapse = ", "))
+          paste0(
+            "Installed packages: ", length(pkgs), " total\n",
+            "First 20: ", paste(head(pkgs, 20), collapse = ", ")
+          )
         },
         "search" = {
           if (is.null(pattern) || !nzchar(pattern)) {
@@ -813,8 +848,10 @@ create_env_agent <- function(name = "EnvAgent",
           if (length(matches) == 0) {
             paste0("No packages matching '", pattern, "'")
           } else {
-            paste(c(paste0("Packages matching '", pattern, "':"),
-                   paste0("- ", matches)), collapse = "\n")
+            paste(c(
+              paste0("Packages matching '", pattern, "':"),
+              paste0("- ", matches)
+            ), collapse = "\n")
           }
         }
       )
@@ -947,14 +984,14 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
       registry <- create_skill_registry(local_skills)
     }
   }
-  
+
   if (is.null(registry$get_skill("create_skill"))) {
-     rlang::abort("The 'create_skill' skill is required but not found in the registry.")
+    rlang::abort("The 'create_skill' skill is required but not found in the registry.")
   }
 
   # Get standard skill creation tools
   skill_tools <- create_skill_tools(registry)
-  
+
   # Get Skill Forge tools (Analysis & Verification)
   # Requires model for the verification loop
   forge_tools <- list()
@@ -969,12 +1006,10 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
   system_prompt <- paste0(
     "You are the Skill Architect, a senior AI engineer responsible for extending this system's capabilities.\n",
     "Your mission is to build robust, reusable 'Skills' that enable other agents to perform complex tasks.\n\n",
-    
     "## Core Principles\n",
     "1. **Conciseness**: Don't maximize token usage. Be efficient.\n",
     "2. **Progressive Disclosure**: Detailed docs go into 'references/', core workflow in 'SKILL.md'.\n",
     "3. **Verification**: Never assume it works. Always VERIFY with a test run.\n\n",
-
     "## The Workflow\n",
     "1. **Ingest**: Learn the domain. Use `analyze_r_package` if wrapping a package.\n",
     "2. **Design**: Plan the skill structure. What inputs? What outputs? Draft the `SKILL.md` in your mind.\n",
@@ -983,15 +1018,13 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
     "   - `write_skill_md.R`\n",
     "   - `write_script.R`\n",
     "4. **Verify**: Use `verify_skill` to spawn a tester. If it fails, iterate and fix.\n\n",
-
     "## Skill Structure\n",
     "- `SKILL.md`: YAML metadata + High-level instructions (Imperative mood).\n",
     "- `scripts/`: Self-contained R functions. Use `args` list for inputs.\n",
     "- `references/`: (Optional) Large documentation or tables.\n\n",
-
     "You have access to powerful tools. Use them wisely to build the next generation of capabilities."
   )
-  
+
   Agent$new(
     name = name,
     description = "Senior Skill Architect. Designs, implements, and verifies new system capabilities.",

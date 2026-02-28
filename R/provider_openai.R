@@ -220,7 +220,7 @@ OpenAILanguageModel <- R6::R6Class(
         map_openai_chunk(data, done, agg)
       })
 
-      agg$finalize()
+      agg$build_result()
     },
 
     #' @description Format a tool execution result for OpenAI's API.
