@@ -81,7 +81,7 @@ NvidiaProvider <- R6::R6Class(
 #' @return A NvidiaProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' nvidia <- create_nvidia()
 #' model <- nvidia$language_model("z-ai/glm4.7")
 #'

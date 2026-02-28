@@ -16,7 +16,7 @@ An AgentRegistry object.
 Factory function to create a new AgentRegistry.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create registry with agents
 cleaner <- create_agent("Cleaner", "Cleans data")
 plotter <- create_agent("Plotter", "Creates visualizations")

@@ -15,3 +15,5 @@
 ^.*\.Rcheck
 ^aisdk_.*\.tar\.gz$
 ^test_gemini\.py$
+^Rbuild\.R$
+^_pkgdown\.yml$

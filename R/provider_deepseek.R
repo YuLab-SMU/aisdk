@@ -89,7 +89,7 @@ DeepSeekProvider <- R6::R6Class(
 #' @return A DeepSeekProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Basic usage with deepseek-chat
 #' deepseek <- create_deepseek()
 #' model <- deepseek$language_model("deepseek-chat")
@@ -134,7 +134,7 @@ create_deepseek <- function(api_key = NULL,
 #' @return An AnthropicProvider object configured for DeepSeek.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Use DeepSeek via Anthropic API format
 #' deepseek <- create_deepseek_anthropic()
 #' model <- deepseek$language_model("deepseek-chat")

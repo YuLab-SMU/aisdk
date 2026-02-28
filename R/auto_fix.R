@@ -23,12 +23,16 @@ NULL
 #' # Simple usage - auto-fix a data transformation
 #' result <- auto_fix({
 #'   df <- read.csv("data.csv")
-#'   df %>% filter(value > 100) %>% summarize(mean = mean(value))
+#'   df %>%
+#'     filter(value > 100) %>%
+#'     summarize(mean = mean(value))
 #' })
 #'
 #' # With context for better error understanding
 #' result <- auto_fix(
-#'   expr = { model <- lm(y ~ x, data = df) },
+#'   expr = {
+#'     model <- lm(y ~ x, data = df)
+#'   },
 #'   context = "Fitting a linear regression model to predict sales"
 #' )
 #' }
@@ -57,23 +61,27 @@ auto_fix <- function(expr,
     }
 
     # Try to execute the current code
-    result <- tryCatch({
-      # Parse and evaluate the current code
-      parsed <- parse(text = current_code)
-      eval(parsed, envir = exec_env)
-    }, error = function(e) {
-      structure(
-        list(
-          error = conditionMessage(e),
-          call = deparse(conditionCall(e)),
-          traceback = capture_traceback()
-        ),
-        class = "auto_fix_error"
-      )
-    }, warning = function(w) {
-      # Capture warnings but continue execution
-      invokeRestart("muffleWarning")
-    })
+    result <- tryCatch(
+      {
+        # Parse and evaluate the current code
+        parsed <- parse(text = current_code)
+        eval(parsed, envir = exec_env)
+      },
+      error = function(e) {
+        structure(
+          list(
+            error = conditionMessage(e),
+            call = deparse(conditionCall(e)),
+            traceback = capture_traceback()
+          ),
+          class = "auto_fix_error"
+        )
+      },
+      warning = function(w) {
+        # Capture warnings but continue execution
+        tryInvokeRestart("muffleWarning")
+      }
+    )
 
     # Check if execution succeeded
     if (!inherits(result, "auto_fix_error")) {
@@ -103,7 +111,7 @@ auto_fix <- function(expr,
 
     # If this was the last attempt, give up
 
-if (attempt == max_attempts) {
+    if (attempt == max_attempts) {
       if (verbose) {
         message("[auto_fix] All attempts exhausted. Returning error.")
       }
@@ -143,18 +151,21 @@ if (attempt == max_attempts) {
     )
 
     # Call the LLM
-    llm_response <- tryCatch({
-      generate_text(
-        model = model,
-        prompt = fix_prompt,
-        system = AUTO_FIX_SYSTEM_PROMPT
-      )
-    }, error = function(e) {
-      if (verbose) {
-        message("[auto_fix] LLM call failed: ", conditionMessage(e))
+    llm_response <- tryCatch(
+      {
+        generate_text(
+          model = model,
+          prompt = fix_prompt,
+          system = AUTO_FIX_SYSTEM_PROMPT
+        )
+      },
+      error = function(e) {
+        if (verbose) {
+          message("[auto_fix] LLM call failed: ", conditionMessage(e))
+        }
+        NULL
       }
-      NULL
-    })
+    )
 
     if (is.null(llm_response)) {
       next
@@ -285,27 +296,30 @@ safe_eval <- function(expr, timeout_seconds = 30, envir = parent.frame()) {
   expr_text <- deparse(substitute(expr))
 
   # Use callr for isolated execution with timeout
-  tryCatch({
-    callr::r(
-      function(code, env_data) {
-        env <- list2env(env_data, parent = globalenv())
-        eval(parse(text = code), envir = env)
-      },
-      args = list(
-        code = paste(expr_text, collapse = "\n"),
-        env_data = as.list(envir)
-      ),
-      timeout = timeout_seconds
-    )
-  }, error = function(e) {
-    if (grepl("timeout", conditionMessage(e), ignore.case = TRUE)) {
-      rlang::abort(
-        "Execution timed out",
-        class = "safe_eval_timeout"
+  tryCatch(
+    {
+      callr::r(
+        function(code, env_data) {
+          env <- list2env(env_data, parent = globalenv())
+          eval(parse(text = code), envir = env)
+        },
+        args = list(
+          code = paste(expr_text, collapse = "\n"),
+          env_data = as.list(envir)
+        ),
+        timeout = timeout_seconds
       )
+    },
+    error = function(e) {
+      if (grepl("timeout", conditionMessage(e), ignore.case = TRUE)) {
+        rlang::abort(
+          "Execution timed out",
+          class = "safe_eval_timeout"
+        )
+      }
+      rlang::abort(conditionMessage(e))
     }
-    rlang::abort(conditionMessage(e))
-  })
+  )
 }
 
 #' @title Hypothesis-Fix-Verify Loop
@@ -331,11 +345,14 @@ hypothesis_fix_verify <- function(code,
     if (verbose) message(sprintf("[HFV] Iteration %d", i))
 
     # Execute
-    exec_result <- tryCatch({
-      eval(parse(text = current_code), envir = new.env(parent = globalenv()))
-    }, error = function(e) {
-      structure(list(error = conditionMessage(e)), class = "hfv_error")
-    })
+    exec_result <- tryCatch(
+      {
+        eval(parse(text = current_code), envir = new.env(parent = globalenv()))
+      },
+      error = function(e) {
+        structure(list(error = conditionMessage(e)), class = "hfv_error")
+      }
+    )
 
     # Check for execution error
     if (inherits(exec_result, "hfv_error")) {
@@ -360,11 +377,14 @@ hypothesis_fix_verify <- function(code,
 
     # Verify result if test function provided
     if (!is.null(test_fn)) {
-      verification <- tryCatch({
-        test_fn(exec_result)
-      }, error = function(e) {
-        FALSE
-      })
+      verification <- tryCatch(
+        {
+          test_fn(exec_result)
+        },
+        error = function(e) {
+          FALSE
+        }
+      )
 
       if (!verification) {
         if (verbose) message("[HFV] Verification failed")

@@ -135,7 +135,7 @@ AgentRegistry <- R6::R6Class(
 #' @return An AgentRegistry object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create registry with agents
 #' cleaner <- create_agent("Cleaner", "Cleans data")
 #' plotter <- create_agent("Plotter", "Creates visualizations")

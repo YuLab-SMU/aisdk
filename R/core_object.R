@@ -29,7 +29,7 @@
 #'   }
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Define a schema for the expected output
 #' schema <- z_object(
 #'   title = z_string(description = "Title of the article"),

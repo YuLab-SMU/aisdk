@@ -55,7 +55,7 @@ For advanced users who need fine-grained control:
 }
 
 \examples{
-\dontrun{
+\donttest{
 # Basic usage with Chat Completions API
 openai <- create_openai(api_key = "sk-...")
 model <- openai$language_model("gpt-4o")

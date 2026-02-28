@@ -18,7 +18,7 @@ using chain-of-thought reasoning. The planner helps decompose problems
 and create action plans.
 }
 \examples{
-\dontrun{
+\donttest{
 planner <- create_planner_agent()
 result <- planner$run(
   "How should I approach building a machine learning model for customer churn?",

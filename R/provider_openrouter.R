@@ -97,7 +97,7 @@ OpenRouterProvider <- R6::R6Class(
 #' @return An OpenRouterProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' openrouter <- create_openrouter()
 #'
 #' # Access any model via a unified API

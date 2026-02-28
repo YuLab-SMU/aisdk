@@ -35,9 +35,9 @@ Computer <- R6::R6Class("Computer",
 
     #' @description
     #' Initialize computer abstraction
-    #' @param working_dir Working directory (default: current directory)
+    #' @param working_dir Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().
     #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
-    initialize = function(working_dir = getwd(), sandbox_mode = "permissive") {
+    initialize = function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
       self$working_dir <- normalizePath(working_dir, mustWork = FALSE)
       self$sandbox_mode <- sandbox_mode
       self$execution_log <- list()
@@ -72,31 +72,34 @@ Computer <- R6::R6Class("Computer",
       }
 
       # Execute command
-      result <- tryCatch({
-        proc <- processx::run(
-          "bash",
-          args = c("-c", command),
-          wd = self$working_dir,
-          timeout = timeout_ms / 1000,
-          error_on_status = FALSE,
-          stdout = if (capture_output) "|" else NULL,
-          stderr = if (capture_output) "|" else NULL
-        )
+      result <- tryCatch(
+        {
+          proc <- processx::run(
+            "bash",
+            args = c("-c", command),
+            wd = self$working_dir,
+            timeout = timeout_ms / 1000,
+            error_on_status = FALSE,
+            stdout = if (capture_output) "|" else NULL,
+            stderr = if (capture_output) "|" else NULL
+          )
 
-        list(
-          stdout = proc$stdout,
-          stderr = proc$stderr,
-          exit_code = proc$status,
-          error = proc$status != 0
-        )
-      }, error = function(e) {
-        list(
-          stdout = "",
-          stderr = conditionMessage(e),
-          exit_code = 1,
-          error = TRUE
-        )
-      })
+          list(
+            stdout = proc$stdout,
+            stderr = proc$stderr,
+            exit_code = proc$status,
+            error = proc$status != 0
+          )
+        },
+        error = function(e) {
+          list(
+            stdout = "",
+            stderr = conditionMessage(e),
+            exit_code = 1,
+            error = TRUE
+          )
+        }
+      )
 
       result
     },
@@ -123,20 +126,23 @@ Computer <- R6::R6Class("Computer",
       }
 
       # Read file
-      tryCatch({
-        content <- paste(readLines(full_path, encoding = encoding, warn = FALSE), collapse = "\n")
-        list(
-          content = content,
-          error = FALSE,
-          path = full_path
-        )
-      }, error = function(e) {
-        list(
-          content = NULL,
-          error = TRUE,
-          message = conditionMessage(e)
-        )
-      })
+      tryCatch(
+        {
+          content <- paste(readLines(full_path, encoding = encoding, warn = FALSE), collapse = "\n")
+          list(
+            content = content,
+            error = FALSE,
+            path = full_path
+          )
+        },
+        error = function(e) {
+          list(
+            content = NULL,
+            error = TRUE,
+            message = conditionMessage(e)
+          )
+        }
+      )
     },
 
     #' @description
@@ -171,20 +177,23 @@ Computer <- R6::R6Class("Computer",
       }
 
       # Write file
-      tryCatch({
-        writeLines(content, full_path, useBytes = TRUE)
-        list(
-          success = TRUE,
-          error = FALSE,
-          path = full_path
-        )
-      }, error = function(e) {
-        list(
-          success = FALSE,
-          error = TRUE,
-          message = conditionMessage(e)
-        )
-      })
+      tryCatch(
+        {
+          writeLines(content, full_path, useBytes = TRUE)
+          list(
+            success = TRUE,
+            error = FALSE,
+            path = full_path
+          )
+        },
+        error = function(e) {
+          list(
+            success = FALSE,
+            error = TRUE,
+            message = conditionMessage(e)
+          )
+        }
+      )
     },
 
     #' @description
@@ -211,25 +220,28 @@ Computer <- R6::R6Class("Computer",
       }
 
       # Execute in isolated process
-      result <- tryCatch({
-        callr::r(
-          function(code_str, wd) {
-            setwd(wd)
-            eval(parse(text = code_str), envir = globalenv())
-          },
-          args = list(code_str = code, wd = self$working_dir),
-          timeout = timeout_ms / 1000,
-          show = capture_output,
-          error = "stack"
-        )
-      }, error = function(e) {
-        return(list(
-          result = NULL,
-          output = "",
-          error = TRUE,
-          message = conditionMessage(e)
-        ))
-      })
+      result <- tryCatch(
+        {
+          callr::r(
+            function(code_str, wd) {
+              setwd(wd)
+              eval(parse(text = code_str), envir = globalenv())
+            },
+            args = list(code_str = code, wd = self$working_dir),
+            timeout = timeout_ms / 1000,
+            show = capture_output,
+            error = "stack"
+          )
+        },
+        error = function(e) {
+          return(list(
+            result = NULL,
+            output = "",
+            error = TRUE,
+            message = conditionMessage(e)
+          ))
+        }
+      )
 
       # Format result
       if (is.list(result) && !is.null(result$error)) {
@@ -257,7 +269,6 @@ Computer <- R6::R6Class("Computer",
       invisible(self)
     }
   ),
-
   private = list(
     #' Log execution
     log_execution = function(operation, details) {
@@ -287,8 +298,8 @@ Computer <- R6::R6Class("Computer",
         "rm -rf /",
         "dd if=",
         "mkfs",
-        ":(){ :|:& };:",  # Fork bomb
-        "curl.*\\|.*bash",  # Pipe to bash
+        ":(){ :|:& };:", # Fork bomb
+        "curl.*\\|.*bash", # Pipe to bash
         "wget.*\\|.*bash"
       )
 
@@ -339,11 +350,11 @@ Computer <- R6::R6Class("Computer",
 #' a small set of primitives that agents can use to perform complex actions.
 #'
 #' @param computer Computer instance (default: create new)
-#' @param working_dir Working directory (default: current directory)
+#' @param working_dir Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
 #' @return List of Tool objects
 #' @export
-create_computer_tools <- function(computer = NULL, working_dir = getwd(), sandbox_mode = "permissive") {
+create_computer_tools <- function(computer = NULL, working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
   if (is.null(computer)) {
     computer <- Computer$new(working_dir = working_dir, sandbox_mode = sandbox_mode)
   }

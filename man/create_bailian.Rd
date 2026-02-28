@@ -33,7 +33,7 @@ DashScope platform hosts Qwen series and other models:
 }
 
 \examples{
-\dontrun{
+\donttest{
 bailian <- create_bailian()
 
 # Standard chat model

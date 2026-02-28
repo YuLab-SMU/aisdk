@@ -43,3 +43,6 @@ docs/
 .claude/
 artifacts/
 
+
+# R Check temporary directories
+..Rcheck/

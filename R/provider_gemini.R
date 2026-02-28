@@ -342,7 +342,7 @@ GeminiProvider <- R6::R6Class(
 #' @return A GeminiProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' gemini <- create_gemini(api_key = "AIza...")
 #' model <- gemini$language_model("gemini-1.5-pro")
 #' }

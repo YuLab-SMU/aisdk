@@ -4,7 +4,10 @@
 \alias{project_memory}
 \title{Project Memory System}
 \usage{
-project_memory(project_root = getwd(), db_name = "memory.sqlite")
+project_memory(
+  project_root = if (interactive()) getwd() else tempdir(),
+  db_name = "memory.sqlite"
+)
 }
 \arguments{
 \item{project_root}{Project root directory.}
@@ -22,7 +25,7 @@ Augmented Generation) and learning from past interactions.
 Factory function to create or connect to a project memory database.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create memory for current project
 memory <- project_memory()
 

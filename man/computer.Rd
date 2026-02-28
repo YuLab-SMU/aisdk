@@ -37,13 +37,16 @@ bash execution, and R code execution.
 \subsection{Method \code{new()}}{
 Initialize computer abstraction
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Computer$new(working_dir = getwd(), sandbox_mode = "permissive")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Computer$new(
+  working_dir = if (interactive()) getwd() else tempdir(),
+  sandbox_mode = "permissive"
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{working_dir}}{Working directory (default: current directory)}
+\item{\code{working_dir}}{Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().}
 
 \item{\code{sandbox_mode}}{Sandbox mode: "strict", "permissive", or "none"}
 }

@@ -580,7 +580,7 @@ Flow <- R6::R6Class(
 #' @return A Flow object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create an enhanced multi-agent flow
 #' session <- create_chat_session()
 #' cleaner <- create_agent("Cleaner", "Cleans data")

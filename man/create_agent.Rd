@@ -33,7 +33,7 @@ An Agent object.
 Factory function to create a new Agent object.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create a simple math agent
 math_agent <- create_agent(
   name = "MathAgent",

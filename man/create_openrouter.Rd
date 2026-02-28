@@ -33,7 +33,7 @@ OpenRouter provides access to hundreds of models from many providers:
 }
 
 \examples{
-\dontrun{
+\donttest{
 openrouter <- create_openrouter()
 
 # Access any model via a unified API

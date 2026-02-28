@@ -539,7 +539,7 @@ SkillStore <- R6::R6Class(
 #' @return The installed Skill object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Install from GitHub
 #' install_skill("aisdk/data-analysis")
 #'

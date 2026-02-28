@@ -16,7 +16,7 @@ NULL
 #' @return Invisible NULL.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(aisdk)
 #' register_ai_engine()
 #' # Now you can use ```{ai} chunks in your RMarkdown

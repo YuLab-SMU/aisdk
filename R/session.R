@@ -426,7 +426,7 @@ ChatSession <- R6::R6Class(
 #' @return A ChatSession object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create a chat session
 #' chat <- create_chat_session(
 #'   model = "openai:gpt-4o",
@@ -476,7 +476,7 @@ create_chat_session <- function(model = NULL,
 #' @return A ChatSession object with restored state.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Load a saved session
 #' chat <- load_chat_session("my_session.rds", tools = my_tools)
 #'

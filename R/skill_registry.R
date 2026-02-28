@@ -199,7 +199,7 @@ SkillRegistry <- R6::R6Class(
 #' @return A populated SkillRegistry object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Scan a skills directory
 #' registry <- create_skill_registry(".aimd/skills")
 #' 

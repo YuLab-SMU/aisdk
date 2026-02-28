@@ -25,7 +25,7 @@ strategy inspired by Opencode's experimental_repairToolCall:
 }
 }
 \examples{
-\dontrun{
+\donttest{
 # If LLM calls "GetWeather" but tool is "get_weather"
 repaired <- repair_tool_call(
   list(name = "GetWeather", arguments = list(city = "Tokyo")),

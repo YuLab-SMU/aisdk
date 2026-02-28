@@ -18,7 +18,7 @@ This function uses the same rendering engine as the streaming output,
 supporting headers, lists, code blocks, and other markdown elements.
 }
 \examples{
-\dontrun{
+\donttest{
 # Render simple text
 render_text("# Hello\n\nThis is **bold** text.")
 

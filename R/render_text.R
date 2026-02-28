@@ -8,7 +8,7 @@
 #' @return NULL (invisibly)
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Render simple text
 #' render_text("# Hello\n\nThis is **bold** text.")
 #'

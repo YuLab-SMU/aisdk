@@ -272,7 +272,7 @@ McpClient <- R6::R6Class(
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Connect to GitHub MCP server
 #' client <- create_mcp_client(
 #'   "npx",

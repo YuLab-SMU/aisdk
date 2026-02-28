@@ -534,7 +534,7 @@ McpRouter <- R6::R6Class(
 #' @return An McpDiscovery object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create discovery instance
 #' discovery <- mcp_discover()
 #'
@@ -557,7 +557,7 @@ mcp_discover <- function(registry_url = NULL) {
 #' @return An McpRouter object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create router
 #' router <- mcp_router()
 #'

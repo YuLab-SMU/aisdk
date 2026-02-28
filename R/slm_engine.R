@@ -410,7 +410,7 @@ SlmEngine <- R6::R6Class(
 #' @return An SlmEngine object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Load a GGUF model
 #' engine <- slm_engine("models/llama-3-8b-q4.gguf")
 #' engine$load()

@@ -120,7 +120,7 @@ VolcengineProvider <- R6::R6Class(
 #' @return A VolcengineProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' volcengine <- create_volcengine()
 #'
 #' # Chat API (standard models)

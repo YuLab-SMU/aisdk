@@ -91,7 +91,7 @@ SSEAggregator <- R6::R6Class(
         # ------------------------------------------------------------------
 
         #' @description Handle OpenAI-format tool call deltas.
-        #' @param tool_calls List of tool call delta objects from choices[0].delta.tool_calls.
+        #' @param tool_calls List of tool call delta objects from the choices delta.
         on_tool_call_delta = function(tool_calls) {
             if (is.null(tool_calls)) {
                 return(invisible())

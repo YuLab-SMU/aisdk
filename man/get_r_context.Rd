@@ -18,7 +18,7 @@ A single string containing the summaries of the requested variables.
 Generates a text summary of R objects to be used as context for the LLM.
 }
 \examples{
-\dontrun{
+\donttest{
 df <- data.frame(x = 1:10, y = rnorm(10))
 context <- get_r_context("df")
 cat(context)

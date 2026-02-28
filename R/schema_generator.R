@@ -107,7 +107,7 @@ get_param_docs <- function(func_name, package = NULL) {
 #' @return A z_object schema.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' my_func <- function(a = 1, b = "text", c = TRUE) {}
 #' schema <- create_schema_from_func(my_func)
 #' print(schema)

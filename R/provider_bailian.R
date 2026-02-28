@@ -95,7 +95,7 @@ BailianProvider <- R6::R6Class(
 #' @return A BailianProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' bailian <- create_bailian()
 #'
 #' # Standard chat model

@@ -18,7 +18,7 @@ Invisible previous value.
 Set a feature flag value. Use this to enable/disable SDK features.
 }
 \examples{
-\dontrun{
+\donttest{
 # Disable shared session for legacy compatibility
 sdk_set_feature("use_shared_session", FALSE)
 

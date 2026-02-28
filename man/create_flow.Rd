@@ -33,7 +33,7 @@ A Flow object.
 Factory function to create a new Flow object for enhanced multi-agent orchestration.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create an enhanced multi-agent flow
 session <- create_chat_session()
 cleaner <- create_agent("Cleaner", "Cleans data")

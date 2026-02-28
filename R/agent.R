@@ -362,7 +362,7 @@ Agent <- R6::R6Class(
 #' @return An Agent object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create a simple math agent
 #' math_agent <- create_agent(
 #'   name = "MathAgent",

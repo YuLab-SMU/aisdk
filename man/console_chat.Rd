@@ -11,7 +11,7 @@ console_chat(
   hooks = NULL,
   stream = TRUE,
   agent = "auto",
-  working_dir = getwd(),
+  working_dir = if (interactive()) getwd() else tempdir(),
   sandbox_mode = "permissive"
 )
 }
@@ -33,7 +33,7 @@ console_chat(
 \item An Agent object: Use the provided custom agent
 }}
 
-\item{working_dir}{Working directory for the console agent (default: current directory).}
+\item{working_dir}{Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.}
 
 \item{sandbox_mode}{Sandbox mode for the console agent: "strict", "permissive" (default), or "none".}
 }
@@ -49,7 +49,7 @@ file operations, R code execution, and more. Set \code{agent = NULL} for simple
 chat without tools.
 }
 \examples{
-\dontrun{
+\donttest{
 # Start with default agent (intelligent terminal mode)
 console_chat("openai:gpt-4o")
 

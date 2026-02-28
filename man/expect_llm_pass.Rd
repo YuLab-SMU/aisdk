@@ -25,7 +25,7 @@ Custom testthat expectation that evaluates whether an LLM response
 meets specified criteria. Uses an LLM judge to assess the response.
 }
 \examples{
-\dontrun{
+\donttest{
 test_that("agent answers math questions correctly", {
   result <- generate_text(
     model = "openai:gpt-4o",

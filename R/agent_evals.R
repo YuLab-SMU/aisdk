@@ -19,7 +19,7 @@ NULL
 #' @return Invisibly returns the evaluation result.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' test_that("agent answers math questions correctly", {
 #'   result <- generate_text(
 #'     model = "openai:gpt-4o",

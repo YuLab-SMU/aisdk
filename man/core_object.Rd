@@ -57,7 +57,7 @@ The model is instructed to output valid JSON matching the schema, which is
 then parsed and returned as an R list.
 }
 \examples{
-\dontrun{
+\donttest{
 # Define a schema for the expected output
 schema <- z_object(
   title = z_string(description = "Title of the article"),

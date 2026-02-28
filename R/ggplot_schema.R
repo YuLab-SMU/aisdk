@@ -1155,7 +1155,7 @@ ggplot_gtable_layout <- function(plot) {
 #' @return JSON string optimized for frontend.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' library(ggplot2)
 #' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
 #' json <- ggplot_to_frontend_json(p, width = 800, height = 600)

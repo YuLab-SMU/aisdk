@@ -28,7 +28,7 @@ xAI provides Grok models:
 }
 
 \examples{
-\dontrun{
+\donttest{
 xai <- create_xai()
 model <- xai$language_model("grok-4-1-fast-reasoning")
 result <- generate_text(model, "Explain quantum computing in one sentence.")

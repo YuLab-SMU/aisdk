@@ -30,7 +30,7 @@ An AnthropicProvider object.
 Factory function to create an Anthropic provider.
 }
 \examples{
-\dontrun{
+\donttest{
 anthropic <- create_anthropic(api_key = "sk-ant-...")
 model <- anthropic$language_model("claude-sonnet-4-20250514")
 }

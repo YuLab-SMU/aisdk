@@ -26,7 +26,7 @@ DeepSeek offers two main models:
 }
 }
 \examples{
-\dontrun{
+\donttest{
 # Basic usage with deepseek-chat
 deepseek <- create_deepseek()
 model <- deepseek$language_model("deepseek-chat")

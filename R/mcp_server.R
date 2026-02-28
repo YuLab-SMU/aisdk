@@ -278,7 +278,7 @@ McpServer <- R6::R6Class(
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create a server with a custom tool
 #' server <- create_mcp_server("my-r-server")
 #'

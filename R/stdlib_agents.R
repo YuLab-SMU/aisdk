@@ -21,7 +21,7 @@ NULL
 #' @return An Agent object configured for data manipulation.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data_agent <- create_data_agent()
 #' session <- create_shared_session(model = "openai:gpt-4o")
 #' session$set_var("sales", data.frame(
@@ -343,7 +343,7 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 #' @return An Agent object configured for file operations.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' file_agent <- create_file_agent(
 #'   allowed_dirs = c("./data", "./output"),
 #'   allowed_extensions = c("csv", "json", "txt", "rds")
@@ -672,7 +672,7 @@ create_file_agent <- function(name = "FileAgent",
 #' @return An Agent object configured for environment management.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' env_agent <- create_env_agent(allow_install = TRUE)
 #' result <- env_agent$run(
 #'   "Check if tidyverse is installed and load it",

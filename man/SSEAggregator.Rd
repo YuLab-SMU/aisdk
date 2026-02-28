@@ -115,7 +115,7 @@ Handle OpenAI-format tool call deltas.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{tool_calls}}{List of tool call delta objects from choices\link{0}.delta.tool_calls.}
+\item{\code{tool_calls}}{List of tool call delta objects from the choices delta.}
 }
 \if{html}{\out{</div>}}
 }

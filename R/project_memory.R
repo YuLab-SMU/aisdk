@@ -14,7 +14,6 @@ NULL
 #' @export
 ProjectMemory <- R6::R6Class(
   "ProjectMemory",
-
   public = list(
     #' @field db_path Path to the SQLite database file.
     db_path = NULL,
@@ -24,10 +23,10 @@ ProjectMemory <- R6::R6Class(
 
     #' @description
     #' Create or connect to a project memory database.
-    #' @param project_root Project root directory. Defaults to current working directory.
+    #' @param project_root Project root directory. Defaults to getwd() interactively, tempdir() otherwise.
     #' @param db_name Database filename. Defaults to "memory.sqlite".
     #' @return A new ProjectMemory object.
-    initialize = function(project_root = getwd(), db_name = "memory.sqlite") {
+    initialize = function(project_root = if (interactive()) getwd() else tempdir(), db_name = "memory.sqlite") {
       self$project_root <- normalizePath(project_root, mustWork = TRUE)
 
       # Create .aisdk directory if it doesn't exist
@@ -385,7 +384,6 @@ ProjectMemory <- R6::R6Class(
       invisible(self)
     }
   ),
-
   private = list(
     init_db = function() {
       con <- private$get_connection()
@@ -448,7 +446,6 @@ ProjectMemory <- R6::R6Class(
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_workflow_id ON workflow_nodes(workflow_id)")
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_session_id ON conversations(session_id)")
     },
-
     get_connection = function() {
       if (!requireNamespace("DBI", quietly = TRUE)) {
         rlang::abort("DBI package required for ProjectMemory. Install with: install.packages('DBI')")
@@ -459,7 +456,6 @@ ProjectMemory <- R6::R6Class(
 
       DBI::dbConnect(RSQLite::SQLite(), self$db_path)
     },
-
     generate_error_signature = function(error) {
       # Extract key parts of error for matching
       # Remove variable names, line numbers, etc.
@@ -491,7 +487,7 @@ ProjectMemory <- R6::R6Class(
 #' @return A ProjectMemory object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create memory for current project
 #' memory <- project_memory()
 #'
@@ -513,7 +509,7 @@ ProjectMemory <- R6::R6Class(
 #' # Search for relevant snippets
 #' memory$search_snippets("summarize")
 #' }
-project_memory <- function(project_root = getwd(), db_name = "memory.sqlite") {
+project_memory <- function(project_root = if (interactive()) getwd() else tempdir(), db_name = "memory.sqlite") {
   ProjectMemory$new(project_root, db_name)
 }
 

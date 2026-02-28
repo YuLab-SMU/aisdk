@@ -33,7 +33,7 @@ NULL
 #' @return The flag value.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Check if shared session is enabled
 #' if (sdk_feature("use_shared_session")) {
 #'   session <- create_shared_session(model = "openai:gpt-4o")
@@ -57,7 +57,7 @@ sdk_feature <- function(flag, default = NULL) {
 #' @return Invisible previous value.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Disable shared session for legacy compatibility
 #' sdk_set_feature("use_shared_session", FALSE)
 #'
@@ -76,7 +76,7 @@ sdk_set_feature <- function(flag, value) {
 #' @return A named list of feature flags.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # See all feature flags
 #' print(sdk_list_features())
 #' }
@@ -120,7 +120,7 @@ sdk_reset_features <- function() {
 #' @return A SharedSession or ChatSession object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Automatically uses SharedSession if feature enabled
 #' session <- create_session(model = "openai:gpt-4o")
 #'
@@ -199,7 +199,7 @@ create_orchestration <- function(session,
 #' @return An AgentRegistry object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create registry with all standard agents
 #' registry <- create_standard_registry()
 #'
@@ -261,7 +261,7 @@ create_standard_registry <- function(include_data = TRUE,
 #' @return A list with compatible (logical) and suggestions (character vector).
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' result <- check_sdk_compatibility("0.8.0")
 #' if (!result$compatible) {
 #'   cat("Migration needed:\n")
@@ -318,7 +318,7 @@ check_sdk_compatibility <- function(code_version) {
 #' @return A list with old_pattern, new_pattern, and example.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Get migration guidance for ChatSession
 #' guidance <- migrate_pattern("ChatSession")
 #' cat(guidance$example)

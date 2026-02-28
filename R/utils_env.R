@@ -138,7 +138,7 @@ get_anthropic_model_id <- function() {
 #' @return Invisible TRUE if successful
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Reload environment after modifying .Renviron
 #' reload_env()
 #' # Now use the new keys

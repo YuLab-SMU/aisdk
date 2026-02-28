@@ -20,7 +20,7 @@ An McpClient object
 Convenience function to create and connect to an MCP server.
 }
 \examples{
-\dontrun{
+\donttest{
 # Connect to GitHub MCP server
 client <- create_mcp_client(
   "npx",

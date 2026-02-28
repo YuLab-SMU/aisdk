@@ -22,7 +22,7 @@ A ChatSession object with restored state.
 Load a previously saved ChatSession from a file.
 }
 \examples{
-\dontrun{
+\donttest{
 # Load a saved session
 chat <- load_chat_session("my_session.rds", tools = my_tools)
 

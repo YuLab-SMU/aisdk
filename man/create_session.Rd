@@ -34,7 +34,7 @@ Creates a session using either the new SharedSession or legacy ChatSession
 based on feature flags. This provides a migration path for existing code.
 }
 \examples{
-\dontrun{
+\donttest{
 # Automatically uses SharedSession if feature enabled
 session <- create_session(model = "openai:gpt-4o")
 

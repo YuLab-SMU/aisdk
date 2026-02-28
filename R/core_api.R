@@ -43,7 +43,7 @@ NULL
 #'   }
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Using hooks
 #' my_hooks <- create_hooks(
 #'   on_generation_start = function(model, prompt, tools) message("Starting..."),
@@ -311,7 +311,7 @@ generate_text <- function(model,
 #' @return A GenerateResult object (accumulated from the stream).
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' model <- create_openai()$language_model("gpt-4o")
 #' stream_text(model, "Tell me a story", callback = function(text, done) {
 #'   if (!done) cat(text)
@@ -581,7 +581,7 @@ stream_text <- function(model,
 #' @return A list with embeddings and usage information.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' model <- create_openai()$embedding_model("text-embedding-3-small")
 #' result <- create_embeddings(model, "Hello, world!")
 #' print(length(result$embeddings[[1]]))

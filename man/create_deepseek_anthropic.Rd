@@ -26,7 +26,7 @@ Note: When using an unsupported model name, the API backend will automatically
 map it to \code{deepseek-chat}.
 }
 \examples{
-\dontrun{
+\donttest{
 # Use DeepSeek via Anthropic API format
 deepseek <- create_deepseek_anthropic()
 model <- deepseek$language_model("deepseek-chat")

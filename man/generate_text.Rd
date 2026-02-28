@@ -73,7 +73,7 @@ execute tool calls and feed results back to the LLM in a ReAct-style loop
 until the LLM produces a final response or max_steps is reached.
 }
 \examples{
-\dontrun{
+\donttest{
 # Using hooks
 my_hooks <- create_hooks(
   on_generation_start = function(model, prompt, tools) message("Starting..."),

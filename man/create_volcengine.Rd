@@ -59,7 +59,7 @@ For advanced users who want answer-only limits:
 }
 
 \examples{
-\dontrun{
+\donttest{
 volcengine <- create_volcengine()
 
 # Chat API (standard models)

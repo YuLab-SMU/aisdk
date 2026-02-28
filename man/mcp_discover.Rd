@@ -20,7 +20,7 @@ hot-swapping of tools at runtime.
 Factory function to create an MCP discovery instance.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create discovery instance
 discovery <- mcp_discover()
 

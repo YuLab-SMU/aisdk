@@ -14,7 +14,7 @@
 #' @return A Tool object ready for use with aiChatServer.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Create a tool that modifies a reactive value
 #' update_resolution_tool <- reactive_tool(
 #'   name = "update_resolution",

@@ -18,7 +18,7 @@ A populated SkillRegistry object.
 Convenience function to create and populate a SkillRegistry.
 }
 \examples{
-\dontrun{
+\donttest{
 # Scan a skills directory
 registry <- create_skill_registry(".aimd/skills")
 

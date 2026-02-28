@@ -60,7 +60,7 @@ Generate text using a language model with streaming output.
 This function provides a real-time stream of tokens through a callback.
 }
 \examples{
-\dontrun{
+\donttest{
 model <- create_openai()$language_model("gpt-4o")
 stream_text(model, "Tell me a story", callback = function(text, done) {
   if (!done) cat(text)

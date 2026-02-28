@@ -31,7 +31,7 @@ Factory function to create a Tool object. This is the recommended way
 to define tools for LLM function calling.
 }
 \examples{
-\dontrun{
+\donttest{
 # Define a weather tool
 get_weather <- tool(
   name = "get_weather",

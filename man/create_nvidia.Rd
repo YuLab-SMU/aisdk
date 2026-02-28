@@ -20,7 +20,7 @@ A NvidiaProvider object.
 Factory function to create a NVIDIA provider.
 }
 \examples{
-\dontrun{
+\donttest{
 nvidia <- create_nvidia()
 model <- nvidia$language_model("z-ai/glm4.7")
 

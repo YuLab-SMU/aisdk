@@ -1108,7 +1108,7 @@ OpenAIProvider <- R6::R6Class(
 #' @return An OpenAIProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' # Basic usage with Chat Completions API
 #' openai <- create_openai(api_key = "sk-...")
 #' model <- openai$language_model("gpt-4o")

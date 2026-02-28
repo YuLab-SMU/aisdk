@@ -33,7 +33,7 @@ A ChatSession object.
 Factory function to create a new ChatSession object.
 }
 \examples{
-\dontrun{
+\donttest{
 # Create a chat session
 chat <- create_chat_session(
   model = "openai:gpt-4o",

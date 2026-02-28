@@ -14,7 +14,7 @@ Registers the \code{{ai}} engine with knitr. Call this function once before
 knitting a document that uses \code{{ai}} chunks.
 }
 \examples{
-\dontrun{
+\donttest{
 library(aisdk)
 register_ai_engine()
 # Now you can use ```{ai} chunks in your RMarkdown

@@ -24,7 +24,7 @@ and LibTorch for quantized model execution.
 Factory function to create a new SLM Engine for local model inference.
 }
 \examples{
-\dontrun{
+\donttest{
 # Load a GGUF model
 engine <- slm_engine("models/llama-3-8b-q4.gguf")
 engine$load()

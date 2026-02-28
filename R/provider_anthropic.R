@@ -470,7 +470,7 @@ AnthropicProvider <- R6::R6Class(
 #' @return An AnthropicProvider object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' anthropic <- create_anthropic(api_key = "sk-ant-...")
 #' model <- anthropic$language_model("claude-sonnet-4-20250514")
 #' }

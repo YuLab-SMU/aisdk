@@ -24,18 +24,12 @@ create_custom_provider(
 
 \item{use_max_completion_tokens}{A boolean flag. If TRUE, injects the \code{is_reasoning_model} capability
 to ensure the model uses \code{max_completion_tokens} instead of \code{max_tokens}.}
-
-\item{model_id}{The specific model to use (e.g. "gpt-4o")}
 }
 \value{
 A custom provider object with a \code{language_model(model_id)} method.
-
-A LanguageModelV1 object instance.
 }
 \description{
 Creates a dynamic wrapper around existing model classes (OpenAI, Anthropic)
 based on user-provided configuration. The returned provider can be registered
 in the global \code{ProviderRegistry}.
-
-Get a Language Model instance for this custom provider.
 }

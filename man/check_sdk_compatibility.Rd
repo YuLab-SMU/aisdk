@@ -17,7 +17,7 @@ Check if code is compatible with the current SDK version and
 suggest migration steps if needed.
 }
 \examples{
-\dontrun{
+\donttest{
 result <- check_sdk_compatibility("0.8.0")
 if (!result$compatible) {
   cat("Migration needed:\n")
