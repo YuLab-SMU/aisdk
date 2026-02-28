@@ -14,7 +14,7 @@ This strategy instructs the LLM to produce valid JSON matching the schema,
 and handles parsing and validation of the output.
 }
 \section{Super class}{
-\code{aisdk::OutputStrategy} -> \code{ObjectStrategy}
+\code{\link[aisdk:OutputStrategy]{aisdk::OutputStrategy}} -> \code{ObjectStrategy}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

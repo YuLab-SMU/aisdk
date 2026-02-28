@@ -8,7 +8,7 @@ Language model implementation for Anthropic's Messages API.
 }
 \keyword{internal}
 \section{Super class}{
-\code{aisdk::LanguageModelV1} -> \code{AnthropicLanguageModel}
+\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{AnthropicLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

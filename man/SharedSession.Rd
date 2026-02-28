@@ -14,7 +14,7 @@ Extends ChatSession with:
 }
 }
 \section{Super class}{
-\code{aisdk::ChatSession} -> \code{SharedSession}
+\code{\link[aisdk:ChatSession]{aisdk::ChatSession}} -> \code{SharedSession}
 }
 \section{Methods}{
 \subsection{Public methods}{

@@ -10,7 +10,7 @@ like reasoning content extraction from models that support \code{reasoning_conte
 }
 \keyword{internal}
 \section{Super classes}{
-\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{VolcengineLanguageModel}
+\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{VolcengineLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

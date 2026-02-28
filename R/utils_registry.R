@@ -108,7 +108,24 @@ ProviderRegistry <- R6::R6Class(
 #' @export
 get_default_registry <- function() {
   if (is.null(.registry_env$default)) {
-    .registry_env$default <- ProviderRegistry$new()
+    reg <- ProviderRegistry$new()
+    # Auto-register default providers dynamically if their factory exists
+    tryCatch(
+      {
+        if (exists("create_openai", mode = "function")) reg$register("openai", suppressWarnings(create_openai()))
+        if (exists("create_anthropic", mode = "function")) reg$register("anthropic", suppressWarnings(create_anthropic()))
+        if (exists("create_gemini", mode = "function")) reg$register("gemini", suppressWarnings(create_gemini()))
+        if (exists("create_deepseek", mode = "function")) reg$register("deepseek", suppressWarnings(create_deepseek()))
+        if (exists("create_xai", mode = "function")) reg$register("xai", suppressWarnings(create_xai()))
+        if (exists("create_volcengine", mode = "function")) reg$register("volcengine", suppressWarnings(create_volcengine()))
+        if (exists("create_stepfun", mode = "function")) reg$register("stepfun", suppressWarnings(create_stepfun()))
+        if (exists("create_bailian", mode = "function")) reg$register("bailian", suppressWarnings(create_bailian()))
+        if (exists("create_openrouter", mode = "function")) reg$register("openrouter", suppressWarnings(create_openrouter()))
+      },
+      error = function(e) {}
+    )
+
+    .registry_env$default <- reg
   }
   .registry_env$default
 }

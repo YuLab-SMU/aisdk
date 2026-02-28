@@ -7,7 +7,7 @@
 Provider class for Volcengine (火山引擎) Ark platform.
 }
 \section{Super class}{
-\code{aisdk::OpenAIProvider} -> \code{VolcengineProvider}
+\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{VolcengineProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

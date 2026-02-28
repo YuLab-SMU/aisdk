@@ -55,7 +55,9 @@ Initialize the Gemini provider.
 \subsection{Method \code{language_model()}}{
 Create a language model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{GeminiProvider$language_model(model_id = "gemini-2.5-flash")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{GeminiProvider$language_model(
+  model_id = Sys.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

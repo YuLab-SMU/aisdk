@@ -10,7 +10,7 @@ like reasoning content extraction from \code{deepseek-reasoner} model.
 }
 \keyword{internal}
 \section{Super classes}{
-\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{DeepSeekLanguageModel}
+\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{DeepSeekLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

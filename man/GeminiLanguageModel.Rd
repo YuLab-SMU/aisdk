@@ -8,7 +8,7 @@ Language model implementation for Gemini's generateContent API.
 }
 \keyword{internal}
 \section{Super class}{
-\code{aisdk::LanguageModelV1} -> \code{GeminiLanguageModel}
+\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{GeminiLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

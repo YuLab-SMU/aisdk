@@ -7,7 +7,7 @@
 Provider class for DeepSeek.
 }
 \section{Super class}{
-\code{aisdk::OpenAIProvider} -> \code{DeepSeekProvider}
+\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{DeepSeekProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

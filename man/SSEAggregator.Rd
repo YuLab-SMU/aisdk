@@ -28,7 +28,7 @@ Handles two tool call formats:
 \item \href{#method-SSEAggregator-on_usage}{\code{SSEAggregator$on_usage()}}
 \item \href{#method-SSEAggregator-on_raw_response}{\code{SSEAggregator$on_raw_response()}}
 \item \href{#method-SSEAggregator-on_done}{\code{SSEAggregator$on_done()}}
-\item \href{#method-SSEAggregator-finalize}{\code{SSEAggregator$finalize()}}
+\item \href{#method-SSEAggregator-build_result}{\code{SSEAggregator$build_result()}}
 \item \href{#method-SSEAggregator-clone}{\code{SSEAggregator$clone()}}
 }
 }
@@ -224,12 +224,12 @@ Signal stream completion.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-SSEAggregator-finalize"></a>}}
-\if{latex}{\out{\hypertarget{method-SSEAggregator-finalize}{}}}
-\subsection{Method \code{finalize()}}{
+\if{html}{\out{<a id="method-SSEAggregator-build_result"></a>}}
+\if{latex}{\out{\hypertarget{method-SSEAggregator-build_result}{}}}
+\subsection{Method \code{build_result()}}{
 Finalize accumulated state into a GenerateResult.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$finalize()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$build_result()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{

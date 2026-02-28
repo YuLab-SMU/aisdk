@@ -21,18 +21,14 @@ Factory function to create a Stepfun provider.
 }
 \section{Supported Models}{
 
-Stepfun provides various models such as:
-\itemize{
-\item \strong{Standard}: "step-1-8k", "step-1-32k", "step-1-128k", "step-1-256k", "step-2-16k"
-}
 }
 
 \examples{
 \donttest{
 if (interactive()) {
-stepfun <- create_stepfun()
-model <- stepfun$language_model("step-1-8k")
-result <- generate_text(model, "Explain quantum computing in one sentence.")
+    stepfun <- create_stepfun()
+    model <- stepfun$language_model("step-1-8k")
+    result <- generate_text(model, "Explain quantum computing in one sentence.")
 }
 }
 }

@@ -21,7 +21,7 @@ The Responses API uses a different request/response format than Chat Completions
 }
 \keyword{internal}
 \section{Super class}{
-\code{aisdk::LanguageModelV1} -> \code{OpenAIResponsesLanguageModel}
+\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{OpenAIResponsesLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

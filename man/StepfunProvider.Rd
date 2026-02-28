@@ -7,7 +7,7 @@
 Provider class for Stepfun.
 }
 \section{Super class}{
-\code{aisdk::OpenAIProvider} -> \code{StepfunProvider}
+\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{StepfunProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -59,7 +59,7 @@ Create a language model.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "step-1-8k").}
+\item{\code{model_id}}{The model ID (e.g., "step-3.5-flash").}
 }
 \if{html}{\out{</div>}}
 }

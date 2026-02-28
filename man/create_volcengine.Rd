@@ -21,12 +21,6 @@ Factory function to create a Volcengine (火山引擎) provider using the Ark AP
 }
 \section{Supported Models}{
 
-Volcengine Ark platform hosts a variety of models:
-\itemize{
-\item \strong{Doubao (豆包)}: ByteDance's proprietary models (e.g., "doubao-1-5-pro-256k-250115")
-\item \strong{DeepSeek}: DeepSeek models hosted on Volcengine (e.g., "deepseek-r1-250120")
-\item Other third-party models available on the platform
-}
 }
 
 \section{API Formats}{
@@ -61,23 +55,23 @@ For advanced users who want answer-only limits:
 \examples{
 \donttest{
 if (interactive()) {
-volcengine <- create_volcengine()
+    volcengine <- create_volcengine()
 
-# Chat API (standard models)
-model <- volcengine$language_model("doubao-1-5-pro-256k-250115")
-result <- generate_text(model, "你好")
+    # Chat API (standard models)
+    model <- volcengine$language_model("doubao-1-5-pro-256k-250115")
+    result <- generate_text(model, "你好")
 
-# Responses API (reasoning models like DeepSeek)
-model <- volcengine$responses_model("deepseek-r1-250120")
+    # Responses API (reasoning models like DeepSeek)
+    model <- volcengine$responses_model("deepseek-r1-250120")
 
-# Default: max_tokens limits total output (reasoning + answer)
-result <- model$generate(messages = msgs, max_tokens = 2000)
+    # Default: max_tokens limits total output (reasoning + answer)
+    result <- model$generate(messages = msgs, max_tokens = 2000)
 
-# Advanced: limit only the answer part (reasoning can be longer)
-result <- model$generate(messages = msgs, max_answer_tokens = 500)
+    # Advanced: limit only the answer part (reasoning can be longer)
+    result <- model$generate(messages = msgs, max_answer_tokens = 500)
 
-# Smart model selection (auto-detects best API)
-model <- volcengine$smart_model("deepseek-r1-250120")
+    # Smart model selection (auto-detects best API)
+    model <- volcengine$smart_model("deepseek-r1-250120")
 }
 }
 }
