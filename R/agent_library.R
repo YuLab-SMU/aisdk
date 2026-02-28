@@ -25,20 +25,19 @@ NULL
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' coder <- create_coder_agent()
-#' session <- create_shared_session(model = "openai:gpt-4o")
-#' result <- coder$run(
-#'   "Create a data frame with 3 rows and calculate the mean",
-#'   session = session,
-#'   model = "openai:gpt-4o"
-#' )
+#'   coder <- create_coder_agent()
+#'   session <- create_shared_session(model = "openai:gpt-4o")
+#'   result <- coder$run(
+#'     "Create a data frame with 3 rows and calculate the mean",
+#'     session = session,
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_coder_agent <- function(name = "CoderAgent",
-                                safe_mode = TRUE,
-                                timeout_ms = 30000,
-                                max_output_lines = 200) {
-
+                               safe_mode = TRUE,
+                               timeout_ms = 30000,
+                               max_output_lines = 200) {
   # Enhanced safety patterns
   get_blocked_patterns <- function(mode) {
     # Always blocked (critical security)
@@ -78,63 +77,35 @@ create_coder_agent <- function(name = "CoderAgent",
     }
   }
 
-  # Tool: Execute R code with enhanced safety
-  execute_tool <- Tool$new(
-    name = "execute_r_code",
-    description = paste0(
-      "Execute R code in the session environment. ",
-      "Use this to create variables, compute values, manipulate data, etc. ",
-      "The code is executed in the shared session environment, so results ",
-      "are available to other agents. ",
-      if (safe_mode) "Safe mode is enabled: file I/O and network operations are restricted." else ""
-    ),
-    parameters = z_object(
-      code = z_string("R code to execute. Should be valid R syntax."),
-      description = z_string("Brief description of what this code does (for logging)")
-    ),
-    execute = function(args) {
-      env <- args$.envir
-      if (is.null(env)) {
-        return("Error: No session environment available. Run with a session.")
-      }
+  # Reusable Execution Engine
+  execute_engine <- function(args, env, is_readonly = FALSE) {
+    if (is.null(env)) {
+      return("Error: No session environment available. Run with a session.")
+    }
 
-      code <- args$code
-      desc <- args$description %||% "code execution"
+    code <- args$code
 
-      # Check for blocked patterns
-      if (safe_mode) {
-        patterns <- get_blocked_patterns("strict")
-        for (pattern in patterns) {
-          if (grepl(pattern, code, ignore.case = TRUE)) {
-            return(paste0(
-              "Error: Blocked operation detected. Pattern '", pattern,
-              "' is not allowed in safe mode. ",
-              "If you need this operation, ask the user to use FileAgent or EnvAgent."
-            ))
+    start_time <- Sys.time()
+    result <- tryCatch(
+      {
+        # Check for blocked patterns via AST Analysis if safe_mode is TRUE
+        if (safe_mode) {
+          # Fallback to parse if AST checker isn't loaded (e.g. testing)
+          if (exists("check_ast_safety", mode = "function")) {
+            parsed <- check_ast_safety(code)
+          } else {
+            parsed <- parse(text = code)
           }
+        } else {
+          parsed <- parse(text = code)
         }
-      }
 
-      # Execute with error handling and output capture
-      start_time <- Sys.time()
-      result <- tryCatch({
-        # Parse first to catch syntax errors
-        parsed <- tryCatch({
-          parse(text = code)
-        }, error = function(e) {
-          return(list(
-            success = FALSE,
-            error = paste0("Syntax error: ", conditionMessage(e))
-          ))
-        })
-
-        if (is.list(parsed) && !is.null(parsed$error)) {
-          return(parsed$error)
-        }
+        # For readonly, evaluate in an ephemeral child environment to prevent top-level variable mutation
+        exec_env <- if (is_readonly) new.env(parent = env) else env
 
         # Capture output
         output <- utils::capture.output({
-          value <- eval(parsed, envir = env)
+          value <- eval(parsed, envir = exec_env)
         })
 
         # Truncate output if too long
@@ -171,15 +142,52 @@ create_coder_agent <- function(name = "CoderAgent",
         } else {
           paste(msg, collapse = "\n")
         }
-      }, error = function(e) {
-        paste0("Error executing code: ", conditionMessage(e), "\n\n",
-               "Suggestion: Check variable names, function arguments, and data types.")
-      }, warning = function(w) {
+      },
+      error = function(e) {
+        paste0(
+          "Error executing code: ", conditionMessage(e), "\n\n",
+          "Suggestion: Check variable names, and ensure you have permission to modify assets."
+        )
+      },
+      warning = function(w) {
         paste0("Warning: ", conditionMessage(w))
-      })
+      }
+    )
 
-      result
-    }
+    result
+  }
+
+  # Tool: Execute Read-Only Analysis
+  execute_readonly_tool <- Tool$new(
+    name = "execute_readonly_analysis",
+    description = paste0(
+      "Execute R code for Exploratory Data Analysis (EDA) and querying. ",
+      "This code is strictly read-only and runs in an ephemeral environment. ",
+      "You cannot construct or modify global session variables with this tool. ",
+      "Use this by default to inspect objects, produce summaries, and test things."
+    ),
+    parameters = z_object(
+      code = z_string("R code to execute. Should be valid R syntax without global assignment."),
+      description = z_string("Brief description of what this code explores (for logging)")
+    ),
+    execute = function(args) execute_engine(args, args$.envir, is_readonly = TRUE)
+  )
+
+  # Tool: Execute State Mutation
+  execute_mutation_tool <- Tool$new(
+    name = "execute_state_mutation",
+    description = paste0(
+      "Execute R code to modify session state or create new shared variables. ",
+      "This tool executes directly in the shared session environment so results ",
+      "are permanently available to other agents. ",
+      "It requires explicit Human-in-the-Loop authorization for risky operations. ",
+      if (safe_mode) "Safe mode enforces strict AST checks and variable protection." else ""
+    ),
+    parameters = z_object(
+      code = z_string("R code to execute that intentionally assigns shared variables or modifies state."),
+      description = z_string("Brief description of the intended mutations (for logging)")
+    ),
+    execute = function(args) execute_engine(args, args$.envir, is_readonly = FALSE)
   )
 
   # Tool: List variables with enhanced info
@@ -204,10 +212,22 @@ create_coder_agent <- function(name = "CoderAgent",
       }
       show_hidden <- isTRUE(args$show_hidden)
 
-      vars <- if (is.null(pattern)) {
-        ls(env, all.names = show_hidden)
-      } else {
-        ls(env, pattern = pattern, all.names = show_hidden)
+      # List vars from session env and its parent (typically globalenv)
+      get_all_vars <- function(env_to_check) {
+        if (is.null(pattern)) {
+          ls(env_to_check, all.names = show_hidden)
+        } else {
+          ls(env_to_check, pattern = pattern, all.names = show_hidden)
+        }
+      }
+
+      vars <- get_all_vars(env)
+
+      # Try fetching from parent environment if it's not base/empty
+      parent <- parent.env(env)
+      if (!identical(parent, emptyenv()) && !identical(parent, baseenv())) {
+        parent_vars <- get_all_vars(parent)
+        vars <- unique(c(vars, parent_vars))
       }
 
       if (length(vars) == 0) {
@@ -216,31 +236,42 @@ create_coder_agent <- function(name = "CoderAgent",
 
       # Build detailed summary
       summaries <- sapply(vars, function(v) {
-        obj <- get(v, envir = env)
+        obj <- get(v, envir = env, inherits = TRUE)
         type <- paste(class(obj), collapse = ", ")
         size <- format(utils::object.size(obj), units = "auto")
 
+        # Check if variable is protected
+        protect_info <- ""
+        if (exists("sdk_is_var_locked", mode = "function") && sdk_is_var_locked(v)) {
+          meta <- sdk_get_var_metadata(v)
+          protect_info <- sprintf(" [PROTECTED: Cost %s]", meta$cost)
+        }
 
-        if (is.data.frame(obj)) {
-          sprintf("  %s: data.frame [%d x %d] (%s)\n    Columns: %s",
-                  v, nrow(obj), ncol(obj), size,
-                  paste(head(names(obj), 5), collapse = ", "))
+
+        base_summary <- if (is.data.frame(obj)) {
+          sprintf(
+            "  %s%s: data.frame [%d x %d] (%s)\n    Columns: %s",
+            v, protect_info, nrow(obj), ncol(obj), size,
+            paste(head(names(obj), 5), collapse = ", ")
+          )
         } else if (is.vector(obj) && !is.list(obj)) {
           preview <- if (length(obj) <= 5) {
             paste(head(obj, 5), collapse = ", ")
           } else {
             paste0(paste(head(obj, 3), collapse = ", "), ", ...")
           }
-          sprintf("  %s: %s [length %d] = %s", v, type, length(obj), preview)
+          sprintf("  %s%s: %s [length %d] = %s", v, protect_info, type, length(obj), preview)
         } else if (is.list(obj)) {
-          sprintf("  %s: list [%d elements] (%s)", v, length(obj), size)
+          sprintf("  %s%s: list [%d elements] (%s)", v, protect_info, length(obj), size)
         } else if (inherits(obj, "ggplot")) {
-          sprintf("  %s: ggplot object", v)
+          sprintf("  %s%s: ggplot object", v, protect_info)
         } else if (inherits(obj, "lm") || inherits(obj, "glm")) {
-          sprintf("  %s: %s model", v, class(obj)[1])
+          sprintf("  %s%s: %s model", v, protect_info, class(obj)[1])
         } else {
-          sprintf("  %s: %s (%s)", v, type, size)
+          sprintf("  %s%s: %s (%s)", v, protect_info, type, size)
         }
+
+        base_summary
       })
 
       paste(c("Session variables:", summaries), collapse = "\n")
@@ -264,11 +295,11 @@ create_coder_agent <- function(name = "CoderAgent",
       var_name <- args$var_name
       head_rows <- args$head_rows %||% 6
 
-      if (!exists(var_name, envir = env, inherits = FALSE)) {
+      if (!exists(var_name, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", var_name, "' not found in session."))
       }
 
-      obj <- get(var_name, envir = env)
+      obj <- get(var_name, envir = env, inherits = TRUE)
       lines <- c(paste0("Variable: ", var_name))
       lines <- c(lines, paste0("Type: ", paste(class(obj), collapse = ", ")))
       lines <- c(lines, paste0("Size: ", format(utils::object.size(obj), units = "auto")))
@@ -325,7 +356,8 @@ create_coder_agent <- function(name = "CoderAgent",
       # Common error patterns and suggestions
       if (grepl("object .* not found", error, ignore.case = TRUE)) {
         var_name <- gsub(".*object '([^']+)'.*", "\\1", error)
-        suggestions <- c(suggestions,
+        suggestions <- c(
+          suggestions,
           paste0("Variable '", var_name, "' doesn't exist."),
           "- Check spelling of variable name",
           "- Use list_session_variables to see available variables",
@@ -335,7 +367,8 @@ create_coder_agent <- function(name = "CoderAgent",
 
       if (grepl("could not find function", error, ignore.case = TRUE)) {
         fn_name <- gsub(".*function \"([^\"]+)\".*", "\\1", error)
-        suggestions <- c(suggestions,
+        suggestions <- c(
+          suggestions,
           paste0("Function '", fn_name, "' not found."),
           "- Check if the required package is loaded",
           "- Verify function name spelling",
@@ -344,7 +377,8 @@ create_coder_agent <- function(name = "CoderAgent",
       }
 
       if (grepl("unexpected", error, ignore.case = TRUE)) {
-        suggestions <- c(suggestions,
+        suggestions <- c(
+          suggestions,
           "Syntax error detected.",
           "- Check for missing parentheses, brackets, or quotes",
           "- Verify operator usage (+, -, *, /, etc.)",
@@ -353,7 +387,8 @@ create_coder_agent <- function(name = "CoderAgent",
       }
 
       if (grepl("subscript out of bounds", error, ignore.case = TRUE)) {
-        suggestions <- c(suggestions,
+        suggestions <- c(
+          suggestions,
           "Index out of range.",
           "- Check the dimensions of your data",
           "- Verify row/column indices are within bounds",
@@ -389,9 +424,10 @@ create_coder_agent <- function(name = "CoderAgent",
     "\nWorkflow:\n",
     "1. Check existing variables with list_session_variables\n",
     "2. Inspect relevant data with inspect_variable\n",
-    "3. Write and execute code with execute_r_code\n",
-    "4. If errors occur, use debug_error to analyze\n",
-    "5. Summarize what was done and what variables are available"
+    "3. Use execute_readonly_analysis for exploration and checking data\n",
+    "4. Use execute_state_mutation when you finally need to commit changes or create new variables\n",
+    "5. If errors occur, use debug_error to analyze\n",
+    "6. Summarize what was done and what variables are available"
   )
 
   Agent$new(
@@ -403,7 +439,7 @@ create_coder_agent <- function(name = "CoderAgent",
       if (safe_mode) "Safe mode enabled." else ""
     ),
     system_prompt = system_prompt,
-    tools = list(execute_tool, list_vars_tool, inspect_var_tool, debug_tool)
+    tools = list(execute_readonly_tool, execute_mutation_tool, list_vars_tool, inspect_var_tool, debug_tool)
   )
 }
 
@@ -423,11 +459,11 @@ create_coder_agent <- function(name = "CoderAgent",
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' planner <- create_planner_agent()
-#' result <- planner$run(
-#'   "How should I approach building a machine learning model for customer churn?",
-#'   model = "openai:gpt-4o"
-#' )
+#'   planner <- create_planner_agent()
+#'   result <- planner$run(
+#'     "How should I approach building a machine learning model for customer churn?",
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_planner_agent <- function(name = "PlannerAgent") {
@@ -444,7 +480,7 @@ create_planner_agent <- function(name = "PlannerAgent") {
       if (is.null(env)) {
         return("Warning: No session environment. Plan not persisted.")
       }
-      
+
       # Store plan in environment
       plans <- if (exists(".plans", envir = env)) get(".plans", envir = env) else list()
       plans[[args$plan_name]] <- list(
@@ -452,11 +488,11 @@ create_planner_agent <- function(name = "PlannerAgent") {
         created = Sys.time()
       )
       assign(".plans", plans, envir = env)
-      
+
       paste0("Plan '", args$plan_name, "' saved successfully.")
     }
   )
-  
+
   system_prompt <- paste0(
     "You are a strategic planning specialist that uses chain-of-thought reasoning ",
     "to break down complex problems into clear, actionable steps.\n\n",
@@ -473,7 +509,7 @@ create_planner_agent <- function(name = "PlannerAgent") {
     "- Brief explanations\n",
     "- Expected outcomes for each step"
   )
-  
+
   Agent$new(
     name = name,
     description = paste0(
@@ -507,22 +543,21 @@ create_planner_agent <- function(name = "PlannerAgent") {
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' visualizer <- create_visualizer_agent()
-#' session <- create_shared_session(model = "openai:gpt-4o")
-#' session$set_var("df", data.frame(x = 1:10, y = (1:10)^2))
-#' result <- visualizer$run(
-#'   "Create a scatter plot of df showing the relationship between x and y",
-#'   session = session,
-#'   model = "openai:gpt-4o"
-#' )
+#'   visualizer <- create_visualizer_agent()
+#'   session <- create_shared_session(model = "openai:gpt-4o")
+#'   session$set_var("df", data.frame(x = 1:10, y = (1:10)^2))
+#'   result <- visualizer$run(
+#'     "Create a scatter plot of df showing the relationship between x and y",
+#'     session = session,
+#'     model = "openai:gpt-4o"
+#'   )
 #' }
 #' }
 create_visualizer_agent <- function(name = "VisualizerAgent",
-                                     output_dir = NULL,
-                                     default_theme = "theme_minimal",
-                                     default_width = 8,
-                                     default_height = 6) {
-
+                                    output_dir = NULL,
+                                    default_theme = "theme_minimal",
+                                    default_width = 8,
+                                    default_height = 6) {
   # Tool: Create ggplot visualization
   create_plot_tool <- Tool$new(
     name = "create_ggplot",
@@ -556,55 +591,60 @@ create_visualizer_agent <- function(name = "VisualizerAgent",
       title <- args$title
       save_file <- args$save_file %||% FALSE
 
-      result <- tryCatch({
-        # Create execution environment with ggplot2 loaded
-        plot_env <- new.env(parent = env)
-        eval(parse(text = "library(ggplot2)"), envir = plot_env)
+      result <- tryCatch(
+        {
+          # Create execution environment with ggplot2 loaded
+          plot_env <- new.env(parent = env)
+          eval(parse(text = "library(ggplot2)"), envir = plot_env)
 
-        # Execute the plot code
-        parsed <- parse(text = code)
-        plot_obj <- eval(parsed, envir = plot_env)
+          # Execute the plot code
+          parsed <- parse(text = code)
+          plot_obj <- eval(parsed, envir = plot_env)
 
-        # Verify it's a ggplot
-        if (!inherits(plot_obj, "ggplot")) {
-          return("Error: Code did not produce a ggplot object. Make sure to use ggplot().")
-        }
+          # Verify it's a ggplot
+          if (!inherits(plot_obj, "ggplot")) {
+            return("Error: Code did not produce a ggplot object. Make sure to use ggplot().")
+          }
 
-        # Add title if provided
-        if (!is.null(title) && nzchar(title)) {
-          plot_obj <- plot_obj + ggplot2::ggtitle(title)
-        }
+          # Add title if provided
+          if (!is.null(title) && nzchar(title)) {
+            plot_obj <- plot_obj + ggplot2::ggtitle(title)
+          }
 
-        # Apply default theme if not already themed
-        if (!any(sapply(plot_obj$layers, function(l) inherits(l, "theme")))) {
-          theme_fn <- get(default_theme, envir = asNamespace("ggplot2"))
-          plot_obj <- plot_obj + theme_fn()
-        }
+          # Apply default theme if not already themed
+          if (!any(sapply(plot_obj$layers, function(l) inherits(l, "theme")))) {
+            theme_fn <- get(default_theme, envir = asNamespace("ggplot2"))
+            plot_obj <- plot_obj + theme_fn()
+          }
 
-        # Store the plot
-        assign(plot_name, plot_obj, envir = env)
-        assign(".last_plot", plot_obj, envir = env)
+          # Store the plot
+          assign(plot_name, plot_obj, envir = env)
+          assign(".last_plot", plot_obj, envir = env)
 
-        # Save to file if requested
-        if (save_file && !is.null(output_dir)) {
-          filepath <- file.path(output_dir, paste0(plot_name, ".png"))
-          ggplot2::ggsave(filepath, plot_obj, width = default_width, height = default_height)
-          paste0("Plot '", plot_name, "' created and saved to ", filepath)
-        } else {
-          # Get plot summary
-          n_layers <- length(plot_obj$layers)
-          geoms <- sapply(plot_obj$layers, function(l) class(l$geom)[1])
+          # Save to file if requested
+          if (save_file && !is.null(output_dir)) {
+            filepath <- file.path(output_dir, paste0(plot_name, ".png"))
+            ggplot2::ggsave(filepath, plot_obj, width = default_width, height = default_height)
+            paste0("Plot '", plot_name, "' created and saved to ", filepath)
+          } else {
+            # Get plot summary
+            n_layers <- length(plot_obj$layers)
+            geoms <- sapply(plot_obj$layers, function(l) class(l$geom)[1])
 
+            paste0(
+              "Plot '", plot_name, "' created successfully.\n",
+              "Layers: ", n_layers, " (", paste(unique(geoms), collapse = ", "), ")\n",
+              "Access: session$get_var('", plot_name, "') or print(.last_plot)"
+            )
+          }
+        },
+        error = function(e) {
           paste0(
-            "Plot '", plot_name, "' created successfully.\n",
-            "Layers: ", n_layers, " (", paste(unique(geoms), collapse = ", "), ")\n",
-            "Access: session$get_var('", plot_name, "') or print(.last_plot)"
+            "Error creating plot: ", conditionMessage(e), "\n",
+            "Tip: Check that all referenced variables exist and column names are correct."
           )
         }
-      }, error = function(e) {
-        paste0("Error creating plot: ", conditionMessage(e), "\n",
-               "Tip: Check that all referenced variables exist and column names are correct.")
-      })
+      )
 
       result
     }
@@ -627,11 +667,11 @@ create_visualizer_agent <- function(name = "VisualizerAgent",
       }
 
       var_name <- args$var_name
-      if (!exists(var_name, envir = env, inherits = FALSE)) {
+      if (!exists(var_name, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", var_name, "' not found in session."))
       }
 
-      obj <- get(var_name, envir = env)
+      obj <- get(var_name, envir = env, inherits = TRUE)
 
       if (!is.data.frame(obj)) {
         return(paste0("'", var_name, "' is not a data frame. Type: ", class(obj)[1]))
@@ -761,11 +801,11 @@ create_visualizer_agent <- function(name = "VisualizerAgent",
       y_col <- args$y_col
       group_col <- args$group_col
 
-      if (!exists(var_name, envir = env)) {
+      if (!exists(var_name, envir = env, inherits = TRUE)) {
         return(paste0("Error: Variable '", var_name, "' not found."))
       }
 
-      df <- get(var_name, envir = env)
+      df <- get(var_name, envir = env, inherits = TRUE)
       if (!is.data.frame(df)) {
         return("Error: Variable is not a data frame.")
       }
