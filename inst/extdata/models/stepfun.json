@@ -1,0 +1,336 @@
+[
+  {
+    "id": "step-1-32k",
+    "type": "language",
+    "description": "Model: step-1-32k",
+    "family": "step-1",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 5.0,
+      "output": 15.0,
+      "unit": "CNY/M tokens"
+    }
+  },
+  {
+    "id": "step-1v-32k",
+    "type": "language",
+    "description": "Vision enabled model with 32k context",
+    "family": "step-1v",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 15.0,
+      "output": 45.0,
+      "unit": "CNY/M tokens"
+    }
+  },
+  {
+    "id": "step-1-8k",
+    "type": "language",
+    "description": "Model: step-1-8k",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1-256k",
+    "type": "language",
+    "description": "Model: step-1-256k",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1v-8k",
+    "type": "language",
+    "description": "Model: step-1v-8k",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-2-16k",
+    "type": "language",
+    "description": "Model: step-2-16k",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1x-medium",
+    "type": "language",
+    "description": "Model: step-1x-medium",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-tts-mini",
+    "type": "language",
+    "description": "Model: step-tts-mini",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-2-16k-202411",
+    "type": "language",
+    "description": "Model: step-2-16k-202411",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-asr",
+    "type": "language",
+    "description": "Model: step-asr",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-1o-vision-32k",
+    "type": "language",
+    "description": "Model: step-1o-vision-32k",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-2-mini",
+    "type": "language",
+    "description": "Model: step-2-mini",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-2-16k-exp",
+    "type": "language",
+    "description": "Model: step-2-16k-exp",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1o-turbo-vision",
+    "type": "language",
+    "description": "Model: step-1o-turbo-vision",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1o-audio",
+    "type": "language",
+    "description": "Model: step-1o-audio",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-r1-v-mini",
+    "type": "language",
+    "description": "Model: step-r1-v-mini",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-tts-vivid",
+    "type": "language",
+    "description": "Model: step-tts-vivid",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-1x-edit",
+    "type": "language",
+    "description": "Model: step-1x-edit",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-1f-audio",
+    "type": "language",
+    "description": "Model: step-1f-audio",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-2x-large",
+    "type": "language",
+    "description": "Model: step-2x-large",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-3",
+    "type": "language",
+    "description": "Model: step-3",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-audio-2",
+    "type": "language",
+    "description": "Model: step-audio-2",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-audio-2-mini",
+    "type": "language",
+    "description": "Model: step-audio-2-mini",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-audio-2-mini-think",
+    "type": "language",
+    "description": "Model: step-audio-2-mini-think",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-audio-2-think",
+    "type": "language",
+    "description": "Model: step-audio-2-think",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-tts-2",
+    "type": "language",
+    "description": "Model: step-tts-2",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "dr-search-api",
+    "type": "language",
+    "description": "Model: dr-search-api",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-gui",
+    "type": "language",
+    "description": "Model: step-gui",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-3-agent-lite",
+    "type": "language",
+    "description": "Model: step-3-agent-lite",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "step-audio-r1.1",
+    "type": "language",
+    "description": "Model: step-audio-r1.1",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": true
+    }
+  },
+  {
+    "id": "step-3.5-flash",
+    "type": "language",
+    "description": "Model: step-3.5-flash",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  }
+]

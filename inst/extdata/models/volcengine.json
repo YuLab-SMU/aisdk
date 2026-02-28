@@ -1,0 +1,1866 @@
+[
+  {
+    "id": "doubao-lite-128k-240428",
+    "type": "language",
+    "description": "Model: doubao-lite-128k-240428",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-128k-240515",
+    "type": "language",
+    "description": "Model: doubao-pro-128k-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-4k-240328",
+    "type": "language",
+    "description": "Model: doubao-lite-4k-240328",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-32k-240428",
+    "type": "language",
+    "description": "Model: doubao-lite-32k-240428",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-240515",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-4k-character-240515",
+    "type": "language",
+    "description": "Model: doubao-lite-4k-character-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-text-240515",
+    "type": "language",
+    "description": "Model: doubao-embedding-text-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "mistral-7b-instruct-v0.2",
+    "type": "language",
+    "description": "Model: mistral-7b-instruct-v0.2",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-character-240515",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-character-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-functioncall-240515",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-functioncall-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-4k-pretrain-character-240516",
+    "type": "language",
+    "description": "Model: doubao-lite-4k-pretrain-character-240516",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-character-240528",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-character-240528",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-browsing-240524",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-browsing-240524",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-functioncall-240515",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-functioncall-240515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-functioncall-240615",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-functioncall-240615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-browsing-240615",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-browsing-240615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-240615",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-240615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-32k-240628",
+    "type": "language",
+    "description": "Model: doubao-lite-32k-240628",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-128k-240628",
+    "type": "language",
+    "description": "Model: doubao-pro-128k-240628",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-text-240715",
+    "type": "language",
+    "description": "Model: doubao-embedding-text-240715",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-4k-character-240728",
+    "type": "language",
+    "description": "Model: doubao-pro-4k-character-240728",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-functioncall-240815",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-functioncall-240815",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-240828",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-4k-character-240828",
+    "type": "language",
+    "description": "Model: doubao-lite-4k-character-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-character-240828",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-character-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-32k-240828",
+    "type": "language",
+    "description": "Model: doubao-lite-32k-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-128k-240828",
+    "type": "language",
+    "description": "Model: doubao-lite-128k-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-browsing-240828",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-browsing-240828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-functioncall-preview",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-functioncall-preview",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-large-text-240915",
+    "type": "language",
+    "description": "Model: doubao-embedding-large-text-240915",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-32k-character-241015",
+    "type": "language",
+    "description": "Model: doubao-lite-32k-character-241015",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-functioncall-241028",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-functioncall-241028",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-browsing-241115",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-browsing-241115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-vision-pro-32k-241028",
+    "type": "language",
+    "description": "Model: doubao-vision-pro-32k-241028",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-vision-lite-32k-241015",
+    "type": "language",
+    "description": "Model: doubao-vision-lite-32k-241015",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seaweed-241128",
+    "type": "language",
+    "description": "Model: doubao-seaweed-241128",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-256k-241115",
+    "type": "language",
+    "description": "Model: doubao-pro-256k-241115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-character-241215",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-character-241215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-pro-32k-241215",
+    "type": "language",
+    "description": "Model: doubao-pro-32k-241215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-lite-32k-250115",
+    "type": "language",
+    "description": "Model: doubao-1-5-lite-32k-250115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-32k-250115",
+    "type": "language",
+    "description": "Model: doubao-1-5-pro-32k-250115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-vision-pro-32k-250115",
+    "type": "language",
+    "description": "Model: doubao-1-5-vision-pro-32k-250115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-vision-241215",
+    "type": "language",
+    "description": "Model: doubao-embedding-vision-241215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-256k-250115",
+    "type": "language",
+    "description": "Model: doubao-1-5-pro-256k-250115",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-v3-241226",
+    "type": "language",
+    "description": "Model: deepseek-v3-241226",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-r1-distill-qwen-7b-250120",
+    "type": "language",
+    "description": "Model: deepseek-r1-distill-qwen-7b-250120",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-r1-distill-qwen-32b-250120",
+    "type": "language",
+    "description": "Model: deepseek-r1-distill-qwen-32b-250120",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-r1-250120",
+    "type": "language",
+    "description": "Model: deepseek-r1-250120",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-32k-character-250228",
+    "type": "language",
+    "description": "Model: doubao-1-5-pro-32k-character-250228",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1.5-vision-lite-250315",
+    "type": "language",
+    "description": "Model: doubao-1.5-vision-lite-250315",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-v3-250324",
+    "type": "language",
+    "description": "Model: deepseek-v3-250324",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1.5-vision-pro-250328",
+    "type": "language",
+    "description": "Model: doubao-1.5-vision-pro-250328",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-lite-32k-character-250228",
+    "type": "language",
+    "description": "Model: doubao-lite-32k-character-250228",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1.5-ui-tars-250328",
+    "type": "language",
+    "description": "Model: doubao-1.5-ui-tars-250328",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-vision-250328",
+    "type": "language",
+    "description": "Model: doubao-embedding-vision-250328",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-pro-250415",
+    "type": "language",
+    "description": "Model: doubao-1-5-thinking-pro-250415",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "wan2-1-14b-i2v-250225",
+    "type": "language",
+    "description": "Model: wan2-1-14b-i2v-250225",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "wan2-1-14b-t2v-250225",
+    "type": "language",
+    "description": "Model: wan2-1-14b-t2v-250225",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-pro-m-250415",
+    "type": "language",
+    "description": "Model: doubao-1-5-thinking-pro-m-250415",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-1-0-lite-i2v-250428",
+    "type": "language",
+    "description": "Model: doubao-seedance-1-0-lite-i2v-250428",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-1-0-lite-t2v-250428",
+    "type": "language",
+    "description": "Model: doubao-seedance-1-0-lite-t2v-250428",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedream-3-0-t2i-250415",
+    "type": "language",
+    "description": "Model: doubao-seedream-3-0-t2i-250415",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "wan2-1-14b-flf2v-250417",
+    "type": "language",
+    "description": "Model: wan2-1-14b-flf2v-250417",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-vision-pro-250428",
+    "type": "language",
+    "description": "Model: doubao-1-5-thinking-vision-pro-250428",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-pro-m-250428",
+    "type": "language",
+    "description": "Model: doubao-1-5-thinking-pro-m-250428",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-large-text-250515",
+    "type": "language",
+    "description": "Model: doubao-embedding-large-text-250515",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-ui-tars-250428",
+    "type": "language",
+    "description": "Model: doubao-1-5-ui-tars-250428",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-r1-250528",
+    "type": "language",
+    "description": "Model: deepseek-r1-250528",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-flash-250615",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-flash-250615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-250615",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-250615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-thinking-250615",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-thinking-250615",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-1-0-pro-250528",
+    "type": "language",
+    "description": "Model: doubao-seedance-1-0-pro-250528",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-vision-250615",
+    "type": "language",
+    "description": "Model: doubao-embedding-vision-250615",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-thinking-250715",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-thinking-250715",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-32k-character-250715",
+    "type": "language",
+    "description": "Model: doubao-1-5-pro-32k-character-250715",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seededit-3-0-i2i-250628",
+    "type": "language",
+    "description": "Model: doubao-seededit-3-0-i2i-250628",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-flash-250715",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-flash-250715",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "kimi-k2-250711",
+    "type": "language",
+    "description": "Model: kimi-k2-250711",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-vision-250815",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-vision-250815",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-v3-1-250821",
+    "type": "language",
+    "description": "Model: deepseek-v3-1-250821",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-flash-250828",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-flash-250828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "glm-4-5-air-20250728",
+    "type": "language",
+    "description": "Model: glm-4-5-air-20250728",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "qwen3-8b-20250429",
+    "type": "language",
+    "description": "Model: qwen3-8b-20250429",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "qwen3-32b-20250429",
+    "type": "language",
+    "description": "Model: qwen3-32b-20250429",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "qwen2-5-72b-20240919",
+    "type": "language",
+    "description": "Model: qwen2-5-72b-20240919",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedream-4-0-250828",
+    "type": "language",
+    "description": "Model: doubao-seedream-4-0-250828",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "kimi-k2-250905",
+    "type": "language",
+    "description": "Model: kimi-k2-250905",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-translation-250915",
+    "type": "language",
+    "description": "Model: doubao-seed-translation-250915",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-v3-1-terminus",
+    "type": "language",
+    "description": "Model: deepseek-v3-1-terminus",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-smart-router-250928",
+    "type": "language",
+    "description": "Model: doubao-smart-router-250928",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-251015",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-251015",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-1-0-pro-fast-251015",
+    "type": "language",
+    "description": "Model: doubao-seedance-1-0-pro-fast-251015",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-lite-251015",
+    "type": "language",
+    "description": "Model: doubao-seed-1-6-lite-251015",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed3d-1-0-250928",
+    "type": "language",
+    "description": "Model: doubao-seed3d-1-0-250928",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "kimi-k2-thinking-251104",
+    "type": "language",
+    "description": "Model: kimi-k2-thinking-251104",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-code-preview-251028",
+    "type": "language",
+    "description": "Model: doubao-seed-code-preview-251028",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "qwen3-0-6b-20250429",
+    "type": "language",
+    "description": "Model: qwen3-0-6b-20250429",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "qwen3-14b-20250429",
+    "type": "language",
+    "description": "Model: qwen3-14b-20250429",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedream-4-5-251128",
+    "type": "language",
+    "description": "Model: doubao-seedream-4-5-251128",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-embedding-vision-251215",
+    "type": "language",
+    "description": "Model: doubao-embedding-vision-251215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "deepseek-v3-2-251201",
+    "type": "language",
+    "description": "Model: deepseek-v3-2-251201",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-1-5-pro-251215",
+    "type": "language",
+    "description": "Model: doubao-seedance-1-5-pro-251215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "glm-4-7-251222",
+    "type": "language",
+    "description": "Model: glm-4-7-251222",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-1-8-251228",
+    "type": "language",
+    "description": "Model: doubao-seed-1-8-251228",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-2-0-lite-260215",
+    "type": "language",
+    "description": "Model: doubao-seed-2-0-lite-260215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedance-2-0-260128",
+    "type": "language",
+    "description": "Model: doubao-seedance-2-0-260128",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seedream-5-0-260128",
+    "type": "language",
+    "description": "Model: doubao-seedream-5-0-260128",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-2-0-mini-260215",
+    "type": "language",
+    "description": "Model: doubao-seed-2-0-mini-260215",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false
+    }
+  },
+  {
+    "id": "doubao-seed-2-0-pro-260215",
+    "type": "language",
+    "description": "旗舰级全能通用模型，面向 Agent 时代的复杂推理与长链路任务执行场景。",
+    "family": "Doubao-Seed-2.0",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true,
+      "search": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 128000,
+      "max_reasoning_tokens": 128000
+    },
+    "pricing": {
+      "input": 3.2,
+      "output": 16.0,
+      "cache_hit": 0.64,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 5000000,
+      "rpm": 30000
+    },
+    "input_types": [
+      "text",
+      "image",
+      "video"
+    ],
+    "output_types": [
+      "text"
+    ]
+  },
+  {
+    "id": "doubao-seed-2-0-code-preview-260215",
+    "type": "language",
+    "description": "豆包Seed 2.0代码预览模型，专门针对代码生成和理解进行优化。",
+    "family": "Doubao-Seed-2.0",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": false
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 64000
+    },
+    "pricing": {
+      "input": 2.0,
+      "output": 8.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-seed-2-0-mini-260215",
+    "type": "language",
+    "description": "Seed 2.0系列中的轻量级模型，适合低延迟、高并发、成本敏感场景，强调快速响应和灵活推理部署。",
+    "family": "Doubao-Seed-2.0",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 5000000,
+      "rpm": 30000
+    }
+  },
+  {
+    "id": "doubao-seed-2-0-lite-260215",
+    "type": "language",
+    "description": "Seed 2.0系列中的均衡模型，在性能和成本之间取得最佳平衡。",
+    "family": "Doubao-Seed-2.0",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 64000
+    },
+    "pricing": {
+      "input": 0.3,
+      "output": 0.6,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 5000000,
+      "rpm": 30000
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-thinking-250715",
+    "type": "language",
+    "description": "豆包1.6深度思考模型，支持auto/thinking/non-thinking三种思考模式，模型效果对比1.5版本大幅提升。",
+    "family": "Doubao-Seed-1.6",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true,
+      "search": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 224000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 8.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 3000000,
+      "rpm": 20000
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-flash-250715",
+    "type": "language",
+    "description": "豆包1.6快速版本，适合低延迟、高并发场景。",
+    "family": "Doubao-Seed-1.6",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 224000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 0.3,
+      "output": 0.6,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 3000000,
+      "rpm": 20000
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-250615",
+    "type": "language",
+    "description": "豆包1.6标准版，支持256K上下文，多模态深度思考模型。",
+    "family": "Doubao-Seed-1.6",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true,
+      "search": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 224000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 8.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 3000000,
+      "rpm": 20000
+    }
+  },
+  {
+    "id": "doubao-seed-1-8-251228",
+    "type": "language",
+    "description": "豆包1.8版本，面向多模态Agent场景定向优化，更强模型能力。",
+    "family": "Doubao-Seed-1.8",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true,
+      "search": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 3000000,
+      "rpm": 20000
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-32k-250115",
+    "type": "language",
+    "description": "豆包1.5专业版32K上下文模型，主力模型，适合处理复杂任务，在参考问答、总结摘要、创作、文本分类、角色扮演等场景表现出色。",
+    "family": "Doubao-1.5-Pro",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-1-5-pro-256k-250115",
+    "type": "language",
+    "description": "豆包1.5专业版256K超长上下文模型，适合长文档处理、复杂分析等场景。",
+    "family": "Doubao-1.5-Pro",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 16000
+    },
+    "pricing": {
+      "input": 5.0,
+      "output": 10.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 1000000,
+      "rpm": 5000
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-pro-250415",
+    "type": "language",
+    "description": "豆包1.5深度思考模型，具备强大的推理能力，适合复杂逻辑推理、数学问题求解等场景。",
+    "family": "Doubao-1.5-Thinking",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 16000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 4.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-1-5-thinking-vision-pro-250428",
+    "type": "language",
+    "description": "豆包1.5深度思考视觉版，具备强大的视觉理解能力和推理能力，不仅基于文字思考，更能基于所见画面进行立体深度思考。",
+    "family": "Doubao-1.5-Thinking",
+    "capabilities": {
+      "reasoning": true,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 16000
+    },
+    "pricing": {
+      "input": 1.5,
+      "output": 6.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-1-5-vision-pro-32k-250115",
+    "type": "language",
+    "description": "豆包1.5专业版视觉模型，具备强大的多模态理解能力，可处理图像输入。",
+    "family": "Doubao-1.5-Vision",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 3.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-pro-32k-functioncall-241028",
+    "type": "language",
+    "description": "豆包专业版函数调用模型，精准识别功能、抽取参数，适配复杂工具调用场景。",
+    "family": "Doubao-Pro-FunctionCall",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-pro-4k-functioncall-240615",
+    "type": "language",
+    "description": "豆包专业版函数调用模型4K版本，适合快速响应的函数调用场景。",
+    "family": "Doubao-Pro-FunctionCall",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 4000,
+      "max_input_tokens": 4000,
+      "max_output_tokens": 4000
+    },
+    "pricing": {
+      "input": 0.5,
+      "output": 1.5,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-embedding-text-240715",
+    "type": "language",
+    "description": "豆包文本向量化模型，聚焦向量检索使用场景，为LLM知识库提供核心理解能力，支持多语言。",
+    "family": "Doubao-Embedding",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "pricing": {
+      "input": 0.7,
+      "output": 0.7,
+      "unit": "CNY/M tokens"
+    }
+  },
+  {
+    "id": "doubao-embedding-large-text-250515",
+    "type": "language",
+    "description": "豆包大型文本向量化模型，提供更高精度的向量检索能力。",
+    "family": "Doubao-Embedding",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "pricing": {
+      "input": 0.7,
+      "output": 0.7,
+      "unit": "CNY/M tokens"
+    }
+  },
+  {
+    "id": "doubao-vision-pro-32k-241028",
+    "type": "language",
+    "description": "豆包专业版视觉理解模型，具备强大的图像理解和分析能力。",
+    "family": "Doubao-Vision",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 3.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-vision-lite-32k-241015",
+    "type": "language",
+    "description": "豆包轻量版视觉理解模型，适合成本敏感且需要视觉理解能力的场景。",
+    "family": "Doubao-Vision",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 4000
+    },
+    "pricing": {
+      "input": 0.5,
+      "output": 1.5,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-seed-1-6-vision-250815",
+    "type": "language",
+    "description": "豆包1.6视觉版，支持图像理解和多模态推理。",
+    "family": "Doubao-Seed-1.6",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 224000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 8.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 3000000,
+      "rpm": 20000
+    }
+  },
+  {
+    "id": "doubao-seed-code-preview-251028",
+    "type": "language",
+    "description": "豆包代码预览模型，专门针对代码生成和理解进行优化，支持256K上下文。",
+    "family": "Doubao-Seed-Code",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 64000
+    },
+    "pricing": {
+      "input": 2.0,
+      "output": 8.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "kimi-k2-250905",
+    "type": "language",
+    "description": "月之暗面Kimi K2模型，具备强大的长上下文处理能力和Agent能力。",
+    "family": "Kimi-K2",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 4.0,
+      "output": 16.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 1000000,
+      "rpm": 5000
+    }
+  },
+  {
+    "id": "kimi-k2-thinking-251104",
+    "type": "language",
+    "description": "月之暗面Kimi K2深度思考模型，具备强大的推理能力和Agent能力。",
+    "family": "Kimi-K2",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 4.0,
+      "output": 16.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 1000000,
+      "rpm": 5000
+    }
+  },
+  {
+    "id": "deepseek-r1-250528",
+    "type": "language",
+    "description": "DeepSeek R1推理模型，具备强大的深度思考和推理能力。",
+    "family": "DeepSeek-R1",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "context": {
+      "context_window": 64000,
+      "max_input_tokens": 64000,
+      "max_output_tokens": 32000,
+      "max_reasoning_tokens": 32000
+    },
+    "pricing": {
+      "input": 4.0,
+      "output": 16.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 1000000,
+      "rpm": 5000
+    }
+  },
+  {
+    "id": "deepseek-v3-1-250821",
+    "type": "language",
+    "description": "DeepSeek V3最新版本，多模态MoE模型，具备强大的推理和理解能力。",
+    "family": "DeepSeek-V3",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 64000,
+      "max_input_tokens": 64000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 4.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "glm-4-7-251222",
+    "type": "language",
+    "description": "智谱GLM-4-7最新版本，具备强大的多模态能力和长上下文处理能力。",
+    "family": "GLM-4",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 32000
+    },
+    "pricing": {
+      "input": 1.0,
+      "output": 4.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "qwen3-32b-20250429",
+    "type": "language",
+    "description": "阿里Qwen3 32B参数版本，具备强大的推理和指令遵循能力。",
+    "family": "Qwen3",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 8000
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2.0,
+      "unit": "CNY/M tokens"
+    },
+    "rate_limits": {
+      "tpm": 2000000,
+      "rpm": 10000
+    }
+  },
+  {
+    "id": "doubao-seedance-2-0-260128",
+    "type": "language",
+    "description": "豆包Seedance 2.0视频生成模型，支持文生视频、图生视频等多种视频生成能力。",
+    "family": "Doubao-Seedance",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "input_types": [
+      "text",
+      "image"
+    ],
+    "output_types": [
+      "video"
+    ]
+  },
+  {
+    "id": "doubao-seedream-5-0-260128",
+    "type": "language",
+    "description": "豆包Seedream 5.0图像生成模型，搭载联网检索，增强知识广度、参考一致性及专业场景生成质量。",
+    "family": "Doubao-Seedream",
+    "capabilities": {
+      "reasoning": false,
+      "vision": false,
+      "audio_input": false,
+      "function_call": false,
+      "structured_output": false
+    },
+    "input_types": [
+      "text",
+      "image"
+    ],
+    "output_types": [
+      "image"
+    ]
+  },
+  {
+    "id": "doubao-smart-router-250928",
+    "type": "language",
+    "description": "豆包智能路由模型，根据请求内容自动选择最优模型处理。",
+    "family": "Doubao-Smart-Router",
+    "capabilities": {
+      "reasoning": false,
+      "vision": true,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 64000
+    }
+  }
+]
