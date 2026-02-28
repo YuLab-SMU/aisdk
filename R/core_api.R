@@ -146,6 +146,19 @@ generate_text <- function(model,
         # Call the model
         result <- model$do_generate(params)
 
+        if (isTRUE(getOption("aisdk.debug", FALSE))) {
+          message("[DEBUG] generate_text step ", step, " | finish_reason: ", result$finish_reason)
+          raw_text <- result$text %||% ""
+          message("[DEBUG] response text (", nchar(raw_text), " chars): ",
+                  substr(raw_text, 1, min(500, nchar(raw_text))),
+                  if (nchar(raw_text) > 500) "... [truncated]" else "")
+          if (!is.null(result$usage)) {
+            message("[DEBUG] usage: prompt=", result$usage$prompt_tokens,
+                    " completion=", result$usage$completion_tokens,
+                    " total=", result$usage$total_tokens)
+          }
+        }
+
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
           # Store tool calls

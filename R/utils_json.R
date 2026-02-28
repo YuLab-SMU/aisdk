@@ -85,15 +85,23 @@ safe_parse_json <- function(text) {
     return(NULL)
   }
   
+  debug <- isTRUE(getOption("aisdk.debug", FALSE))
+  
   tryCatch({
     jsonlite::fromJSON(text, simplifyVector = TRUE)
   }, error = function(e) {
-    # If parsing fails, attempt to repair and re-parse
+    if (debug) {
+      message("[DEBUG] safe_parse_json: initial parse failed: ", e$message)
+      message("[DEBUG] safe_parse_json: attempting JSON repair...")
+    }
     fixed_text <- fix_json(text)
     tryCatch({
       jsonlite::fromJSON(fixed_text, simplifyVector = TRUE)
     }, error = function(e2) {
-      return(NULL) # Return NULL if repair also fails
+      if (debug) {
+        message("[DEBUG] safe_parse_json: repair also failed: ", e2$message)
+      }
+      return(NULL)
     })
   })
 }

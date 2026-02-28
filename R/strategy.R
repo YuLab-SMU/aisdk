@@ -80,23 +80,30 @@ ObjectStrategy <- R6::R6Class(
     #' @param is_final Logical, TRUE if this is the final output.
     #' @return The parsed R object (list), or NULL if parsing fails.
     validate = function(text, is_final = FALSE) {
+      debug <- isTRUE(getOption("aisdk.debug", FALSE))
+
       if (is.null(text) || nchar(trimws(text)) == 0) {
+        if (debug) message("[DEBUG] ObjectStrategy$validate: input text is NULL or empty")
         return(NULL)
       }
 
       # Remove potential Markdown code block markers
       clean_text <- text
-      # Remove ```json at the start and ``` at the end
       clean_text <- gsub("^\\s*```json\\s*", "", clean_text)
-      clean_text <- gsub("^\\s*```\\s*", "", clean_text) # generic code block
+      clean_text <- gsub("^\\s*```\\s*", "", clean_text)
       clean_text <- gsub("\\s*```\\s*$", "", clean_text)
       clean_text <- trimws(clean_text)
 
-      # Use safe_parse_json which handles repair
+      if (debug) {
+        message("[DEBUG] ObjectStrategy$validate: cleaned text (", nchar(clean_text), " chars)")
+      }
+
       obj <- safe_parse_json(clean_text)
 
-      # TODO: In the future, add schema validation here using a JSON Schema validator
-      # For now, we just return the parsed object
+      if (debug && is.null(obj)) {
+        message("[DEBUG] ObjectStrategy$validate: safe_parse_json returned NULL. First 300 chars of cleaned text:\n",
+                substr(clean_text, 1, min(300, nchar(clean_text))))
+      }
 
       return(obj)
     }

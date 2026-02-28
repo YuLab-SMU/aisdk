@@ -88,7 +88,23 @@ generate_object <- function(model,
   )
 
   # Parse the result using the strategy
+  if (isTRUE(getOption("aisdk.debug", FALSE))) {
+    raw_text <- result$text %||% ""
+    message("[DEBUG] generate_object raw_text (", nchar(raw_text), " chars):\n",
+            substr(raw_text, 1, min(1000, nchar(raw_text))),
+            if (nchar(raw_text) > 1000) "\n... [truncated]" else "")
+  }
+
   parsed_object <- strategy$validate(result$text, is_final = TRUE)
+
+  if (isTRUE(getOption("aisdk.debug", FALSE))) {
+    if (is.null(parsed_object)) {
+      message("[DEBUG] generate_object: JSON parsing returned NULL. ",
+              "The model output could not be parsed as valid JSON matching the schema.")
+    } else {
+      message("[DEBUG] generate_object: successfully parsed ", length(parsed_object), " top-level fields")
+    }
+  }
 
   # Return structured result
   structure(
