@@ -46,6 +46,8 @@ Initialize the Anthropic language model.
 \item{\code{model_id}}{The model ID (e.g., "claude-sonnet-4-20250514").}
 
 \item{\code{config}}{Configuration list with api_key, base_url, headers, etc.}
+
+\item{\code{capabilities}}{Optional list of capability flags.}
 }
 \if{html}{\out{</div>}}
 }

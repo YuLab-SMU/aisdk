@@ -45,12 +45,12 @@ NULL
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Using hooks
-#' my_hooks <- create_hooks(
-#'   on_generation_start = function(model, prompt, tools) message("Starting..."),
-#'   on_tool_start = function(tool, args) message("Calling tool ", tool$name)
-#' )
-#' result <- generate_text(model, "...", hooks = my_hooks)
+#'   # Using hooks
+#'   my_hooks <- create_hooks(
+#'     on_generation_start = function(model, prompt, tools) message("Starting..."),
+#'     on_tool_start = function(tool, args) message("Calling tool ", tool$name)
+#'   )
+#'   result <- generate_text(model, "...", hooks = my_hooks)
 #' }
 #' }
 generate_text <- function(model,
@@ -315,11 +315,11 @@ generate_text <- function(model,
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' model <- create_openai()$language_model("gpt-4o")
-#' stream_text(model, "Tell me a story", callback = function(text, done) {
-#'   if (!done) cat(text)
+#'   model <- create_openai()$language_model("gpt-4o")
+#'   stream_text(model, "Tell me a story", callback = function(text, done) {
+#'     if (!done) cat(text)
+#'   })
 #' }
-#' })
 #' }
 stream_text <- function(model,
                         prompt,
@@ -587,9 +587,9 @@ stream_text <- function(model,
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' model <- create_openai()$embedding_model("text-embedding-3-small")
-#' result <- create_embeddings(model, "Hello, world!")
-#' print(length(result$embeddings[[1]]))
+#'   model <- create_openai()$embedding_model("text-embedding-3-small")
+#'   result <- create_embeddings(model, "Hello, world!")
+#'   print(length(result$embeddings[[1]]))
 #' }
 #' }
 create_embeddings <- function(model, value, registry = NULL) {

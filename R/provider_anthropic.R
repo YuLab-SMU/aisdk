@@ -108,6 +108,7 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @description Initialize the Anthropic language model.
     #' @param model_id The model ID (e.g., "claude-sonnet-4-20250514").
     #' @param config Configuration list with api_key, base_url, headers, etc.
+    #' @param capabilities Optional list of capability flags.
     initialize = function(model_id, config, capabilities = list()) {
       super$initialize(
         provider = config$provider_name %||% "anthropic",
@@ -472,8 +473,8 @@ AnthropicProvider <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' anthropic <- create_anthropic(api_key = "sk-ant-...")
-#' model <- anthropic$language_model("claude-sonnet-4-20250514")
+#'   anthropic <- create_anthropic(api_key = "sk-ant-...")
+#'   model <- anthropic$language_model("claude-sonnet-4-20250514")
 #' }
 #' }
 create_anthropic <- function(api_key = NULL,

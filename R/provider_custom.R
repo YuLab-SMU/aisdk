@@ -62,9 +62,9 @@ create_custom_provider <- function(
                 self$name <- name
             },
 
-            #' Get a Language Model instance for this custom provider.
-            #' model_id: The specific model to use (e.g. "gpt-4o")
-            #' Returns a LanguageModelV1 object instance.
+            # Get a Language Model instance for this custom provider.
+            # model_id: The specific model to use (e.g. "gpt-4o")
+            # Returns a LanguageModelV1 object instance.
             language_model = function(model_id) {
                 # Core routing logic to instantiate the correct V2 abstract class
 

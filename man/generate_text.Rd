@@ -75,12 +75,12 @@ until the LLM produces a final response or max_steps is reached.
 \examples{
 \donttest{
 if (interactive()) {
-# Using hooks
-my_hooks <- create_hooks(
-  on_generation_start = function(model, prompt, tools) message("Starting..."),
-  on_tool_start = function(tool, args) message("Calling tool ", tool$name)
-)
-result <- generate_text(model, "...", hooks = my_hooks)
+  # Using hooks
+  my_hooks <- create_hooks(
+    on_generation_start = function(model, prompt, tools) message("Starting..."),
+    on_tool_start = function(tool, args) message("Calling tool ", tool$name)
+  )
+  result <- generate_text(model, "...", hooks = my_hooks)
 }
 }
 }

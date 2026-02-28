@@ -61,6 +61,8 @@ Initialize the OpenAI Responses language model.
 \item{\code{model_id}}{The model ID (e.g., "o1", "o3-mini", "gpt-4o").}
 
 \item{\code{config}}{Configuration list with api_key, base_url, headers, etc.}
+
+\item{\code{capabilities}}{Optional list of capability flags.}
 }
 \if{html}{\out{</div>}}
 }

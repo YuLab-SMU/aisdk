@@ -388,6 +388,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     #' @description Initialize the OpenAI Responses language model.
     #' @param model_id The model ID (e.g., "o1", "o3-mini", "gpt-4o").
     #' @param config Configuration list with api_key, base_url, headers, etc.
+    #' @param capabilities Optional list of capability flags.
     initialize = function(model_id, config, capabilities = list()) {
       super$initialize(
         provider = config$provider_name %||% "openai",
@@ -1110,41 +1111,41 @@ OpenAIProvider <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Basic usage with Chat Completions API
-#' openai <- create_openai(api_key = "sk-...")
-#' model <- openai$language_model("gpt-4o")
-#' result <- generate_text(model, "Hello!")
+#'   # Basic usage with Chat Completions API
+#'   openai <- create_openai(api_key = "sk-...")
+#'   model <- openai$language_model("gpt-4o")
+#'   result <- generate_text(model, "Hello!")
 #'
-#' # Using Responses API for reasoning models
-#' openai <- create_openai()
-#' model <- openai$responses_model("o1")
-#' result <- generate_text(model, "Solve this math problem...")
-#' print(result$reasoning) # Access chain-of-thought
+#'   # Using Responses API for reasoning models
+#'   openai <- create_openai()
+#'   model <- openai$responses_model("o1")
+#'   result <- generate_text(model, "Solve this math problem...")
+#'   print(result$reasoning) # Access chain-of-thought
 #'
-#' # Smart model selection (auto-detects best API)
-#' model <- openai$smart_model("o3-mini") # Uses Responses API
-#' model <- openai$smart_model("gpt-4o") # Uses Chat Completions API
+#'   # Smart model selection (auto-detects best API)
+#'   model <- openai$smart_model("o3-mini") # Uses Responses API
+#'   model <- openai$smart_model("gpt-4o") # Uses Chat Completions API
 #'
-#' # Token limits - unified interface
-#' # For standard models: limits generated content
-#' result <- model$generate(messages = msgs, max_tokens = 1000)
+#'   # Token limits - unified interface
+#'   # For standard models: limits generated content
+#'   result <- model$generate(messages = msgs, max_tokens = 1000)
 #'
-#' # For o1/o3 models: automatically maps to max_completion_tokens
-#' model_o1 <- openai$language_model("o1")
-#' result <- model_o1$generate(messages = msgs, max_tokens = 2000)
+#'   # For o1/o3 models: automatically maps to max_completion_tokens
+#'   model_o1 <- openai$language_model("o1")
+#'   result <- model_o1$generate(messages = msgs, max_tokens = 2000)
 #'
-#' # For Responses API: automatically maps to max_output_tokens (total limit)
-#' model_resp <- openai$responses_model("o1")
-#' result <- model_resp$generate(messages = msgs, max_tokens = 2000)
+#'   # For Responses API: automatically maps to max_output_tokens (total limit)
+#'   model_resp <- openai$responses_model("o1")
+#'   result <- model_resp$generate(messages = msgs, max_tokens = 2000)
 #'
-#' # Advanced: explicitly control answer-only limit (Volcengine Responses API)
-#' result <- model_resp$generate(messages = msgs, max_answer_tokens = 500)
+#'   # Advanced: explicitly control answer-only limit (Volcengine Responses API)
+#'   result <- model_resp$generate(messages = msgs, max_answer_tokens = 500)
 #'
-#' # Multi-turn conversation with Responses API
-#' model <- openai$responses_model("o1")
-#' result1 <- generate_text(model, "What is 2+2?")
-#' result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
-#' model$reset() # Start fresh conversation
+#'   # Multi-turn conversation with Responses API
+#'   model <- openai$responses_model("o1")
+#'   result1 <- generate_text(model, "What is 2+2?")
+#'   result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
+#'   model$reset() # Start fresh conversation
 #' }
 #' }
 create_openai <- function(api_key = NULL,
