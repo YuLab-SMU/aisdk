@@ -20,13 +20,16 @@ A NvidiaProvider object.
 Factory function to create a NVIDIA provider.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 nvidia <- create_nvidia()
 model <- nvidia$language_model("z-ai/glm4.7")
 
 # Enable thinking/reasoning
-result <- generate_text(model, "Who are you?", 
-  chat_template_kwargs = list(enable_thinking = TRUE))
+result <- generate_text(model, "Who are you?",
+  chat_template_kwargs = list(enable_thinking = TRUE)
+)
 print(result$reasoning)
+}
 }
 }

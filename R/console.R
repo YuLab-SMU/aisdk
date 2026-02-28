@@ -25,12 +25,13 @@ NULL
 #'   - `"auto"` (default): Use the built-in console agent with terminal tools
 #'   - `NULL`: Simple chat mode without tools
 #'   - An Agent object: Use the provided custom agent
-#' @param working_dir Working directory for the console agent (default: current directory).
+#' @param working_dir Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.
 #' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Start with default agent (intelligent terminal mode)
 #' console_chat("openai:gpt-4o")
 #'
@@ -56,13 +57,14 @@ NULL
 #' # /help          - Show available commands
 #' # /agent [on|off] - Toggle agent mode
 #' }
+#' }
 console_chat <- function(session = NULL,
                          system_prompt = NULL,
                          tools = NULL,
                          hooks = NULL,
                          stream = TRUE,
                          agent = "auto",
-                         working_dir = getwd(),
+                         working_dir = if (interactive()) getwd() else tempdir(),
                          sandbox_mode = "permissive") {
   # Ensure cli package is available
   if (!requireNamespace("cli", quietly = TRUE)) {

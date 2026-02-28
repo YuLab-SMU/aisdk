@@ -17,10 +17,12 @@ Forces R to re-read the .Renviron file without restarting the session.
 This is useful when you've modified .Renviron and don't want to restart R.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Reload environment after modifying .Renviron
 reload_env()
 # Now use the new keys
 Sys.getenv("OPENAI_API_KEY")
+}
 }
 }

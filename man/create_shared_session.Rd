@@ -36,7 +36,8 @@ A SharedSession object.
 Factory function to create a new SharedSession object.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create a shared session for multi-agent use
 session <- create_shared_session(
   model = "openai:gpt-4o",
@@ -49,5 +50,6 @@ result <- session$execute_code("x <- 1:10; mean(x)")
 
 # Check trace
 print(session$trace_summary())
+}
 }
 }

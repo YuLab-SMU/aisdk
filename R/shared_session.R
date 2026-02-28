@@ -595,7 +595,8 @@ SharedSession <- R6::R6Class(
 #' @return A SharedSession object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create a shared session for multi-agent use
 #' session <- create_shared_session(
 #'   model = "openai:gpt-4o",
@@ -608,6 +609,7 @@ SharedSession <- R6::R6Class(
 #'
 #' # Check trace
 #' print(session$trace_summary())
+#' }
 #' }
 create_shared_session <- function(model = NULL,
                                    system_prompt = NULL,

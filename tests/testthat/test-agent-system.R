@@ -1,4 +1,4 @@
-# Tests for SharedSession, FlowStack, and Standard Agents
+# Tests for SharedSession, Flow, and Standard Agents
 # Run with: testthat::test_file("tests/testthat/test-agent-system.R")
 
 openai_model_id <- get_openai_model_id()
@@ -113,11 +113,11 @@ test_that("SharedSession tracing works", {
   expect_true(summary$total_events > 0)
 })
 
-test_that("FlowStack initializes correctly", {
+test_that("Flow initializes correctly", {
   session <- SharedSession$new()
   registry <- AgentRegistry$new()
 
-  flow <- FlowStack$new(
+  flow <- Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry,
@@ -125,12 +125,11 @@ test_that("FlowStack initializes correctly", {
     enable_guardrails = TRUE
   )
 
-  expect_s3_class(flow, "FlowStack")
   expect_s3_class(flow, "Flow")
   expect_equal(flow$depth(), 0)
 })
 
-test_that("FlowStack generates unified delegate tool", {
+test_that("Flow generates unified delegate tool", {
   session <- SharedSession$new()
 
   # Create test agents
@@ -145,7 +144,7 @@ test_that("FlowStack generates unified delegate tool", {
 
   registry <- AgentRegistry$new(list(agent1, agent2))
 
-  flow <- FlowStack$new(
+  flow <- Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry
@@ -160,11 +159,11 @@ test_that("FlowStack generates unified delegate tool", {
   expect_true(grepl("TestAgent2", delegate_tool$description))
 })
 
-test_that("FlowStack delegation history tracking works", {
+test_that("Flow delegation history tracking works", {
   session <- SharedSession$new()
   registry <- AgentRegistry$new()
 
-  flow <- FlowStack$new(
+  flow <- Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry
@@ -250,7 +249,6 @@ test_that("Feature flags work correctly", {
 
   # Check defaults
   expect_true(sdk_feature("use_shared_session"))
-  expect_true(sdk_feature("use_flow_stack"))
   expect_false(sdk_feature("legacy_tool_format"))
 
   # Set a flag

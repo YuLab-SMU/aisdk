@@ -13,17 +13,20 @@ NULL
 #' Includes computer tools (bash, read_file, write_file, execute_r_code)
 #' plus additional console-specific tools.
 #'
-#' @param working_dir Working directory (default: current directory).
+#'
+#' @param working_dir Working directory. Defaults to getwd() interactively, tempdir() otherwise.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @return A list of Tool objects.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' tools <- create_console_tools()
 #' # Use with an agent or session
 #' session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
 #' }
-create_console_tools <- function(working_dir = getwd(), sandbox_mode = "permissive") {
+#' }
+create_console_tools <- function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
     # Get base computer tools
     computer_tools <- create_computer_tools(
         working_dir = working_dir,
@@ -214,14 +217,16 @@ create_console_tools <- function(working_dir = getwd(), sandbox_mode = "permissi
 #' This agent can execute commands, manage files, and run R code through
 #' natural language interaction.
 #'
-#' @param working_dir Working directory (default: current directory).
+#'
+#' @param working_dir Working directory. Defaults to getwd() interactively, tempdir() otherwise.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @param additional_tools Optional list of additional Tool objects to include.
 #' @param language Language for responses: "auto", "en", or "zh" (default: "auto").
 #' @return An Agent object configured for console interaction.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create default console agent
 #' agent <- create_console_agent()
 #'
@@ -231,7 +236,8 @@ create_console_tools <- function(working_dir = getwd(), sandbox_mode = "permissi
 #' # Use with console_chat
 #' console_chat("openai:gpt-4o", agent = agent)
 #' }
-create_console_agent <- function(working_dir = getwd(),
+#' }
+create_console_agent <- function(working_dir = if (interactive()) getwd() else tempdir(),
                                  sandbox_mode = "permissive",
                                  additional_tools = NULL,
                                  language = "auto") {

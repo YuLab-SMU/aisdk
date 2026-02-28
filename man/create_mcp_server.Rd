@@ -18,7 +18,8 @@ An McpServer object
 Convenience function to create an MCP server.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create a server with a custom tool
 server <- create_mcp_server("my-r-server")
 
@@ -36,5 +37,6 @@ server$add_tool(tool(
 
 # Start listening (blocking)
 server$listen()
+}
 }
 }

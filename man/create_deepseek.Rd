@@ -26,7 +26,8 @@ DeepSeek offers two main models:
 }
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Basic usage with deepseek-chat
 deepseek <- create_deepseek()
 model <- deepseek$language_model("deepseek-chat")
@@ -43,5 +44,6 @@ print(result$reasoning) # Chain-of-thought reasoning
 
 # Streaming with reasoning
 stream_text(model_reasoner, "Explain quantum entanglement step by step")
+}
 }
 }

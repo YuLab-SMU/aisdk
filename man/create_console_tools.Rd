@@ -4,10 +4,13 @@
 \alias{create_console_tools}
 \title{Create Console Tools}
 \usage{
-create_console_tools(working_dir = getwd(), sandbox_mode = "permissive")
+create_console_tools(
+  working_dir = if (interactive()) getwd() else tempdir(),
+  sandbox_mode = "permissive"
+)
 }
 \arguments{
-\item{working_dir}{Working directory (default: current directory).}
+\item{working_dir}{Working directory. Defaults to getwd() interactively, tempdir() otherwise.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none" (default: "permissive").}
 }
@@ -20,9 +23,11 @@ Includes computer tools (bash, read_file, write_file, execute_r_code)
 plus additional console-specific tools.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 tools <- create_console_tools()
 # Use with an agent or session
 session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
+}
 }
 }

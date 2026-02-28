@@ -25,12 +25,14 @@ Creates an agent specialized in R environment and package management.
 The agent can check, install, and manage R packages with safety controls.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 env_agent <- create_env_agent(allow_install = TRUE)
 result <- env_agent$run(
   "Check if tidyverse is installed and load it",
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

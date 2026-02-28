@@ -16,9 +16,11 @@ A list with old_pattern, new_pattern, and example.
 Provides migration guidance for legacy code patterns.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Get migration guidance for ChatSession
 guidance <- migrate_pattern("ChatSession")
 cat(guidance$example)
+}
 }
 }

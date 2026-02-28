@@ -39,12 +39,14 @@ Inspects an R function and generates a z_object schema based on its arguments
 and default values.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 my_func <- function(a = 1, b = "text", c = TRUE) {}
 schema <- create_schema_from_func(my_func)
 print(schema)
 
 # Override defaults
 schema_override <- create_schema_from_func(my_func, params = list(a = 99))
+}
 }
 }

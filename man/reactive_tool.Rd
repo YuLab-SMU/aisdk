@@ -27,7 +27,8 @@ The execute function receives \code{rv} (reactiveValues) and \code{session} as
 the first two arguments, followed by any tool-specific parameters.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create a tool that modifies a reactive value
 update_resolution_tool <- reactive_tool(
   name = "update_resolution",
@@ -53,6 +54,7 @@ server <- function(input, output, session) {
   )
 
   aiChatServer("chat", model = "openai:gpt-4o", tools = wrapped_tools)
+}
 }
 }
 }

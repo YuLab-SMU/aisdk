@@ -20,7 +20,8 @@ hot-swapping of tools at runtime.
 Factory function to create an MCP discovery instance.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create discovery instance
 discovery <- mcp_discover()
 
@@ -32,5 +33,6 @@ discovery$register("my-server", "localhost", 3000)
 
 # List all discovered endpoints
 discovery$list_endpoints()
+}
 }
 }

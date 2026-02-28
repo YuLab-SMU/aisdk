@@ -18,7 +18,7 @@ NULL
 #' @export
 GenerateResult <- R6::R6Class(
   "GenerateResult",
-  lock_objects = FALSE,  # Allow dynamic field addition
+  lock_objects = FALSE, # Allow dynamic field addition
   public = list(
     #' @field text The generated text content.
     text = NULL,
@@ -96,13 +96,24 @@ LanguageModelV1 <- R6::R6Class(
     provider = NULL,
     #' @field model_id The model identifier (e.g., "gpt-4o").
     model_id = NULL,
+    #' @field capabilities Model capability flags (e.g., is_reasoning_model).
+    capabilities = list(),
 
     #' @description Initialize the model with provider and model ID.
     #' @param provider Provider name.
     #' @param model_id Model ID.
-    initialize = function(provider, model_id) {
+    #' @param capabilities Optional list of capability flags.
+    initialize = function(provider, model_id, capabilities = list()) {
       self$provider <- provider
       self$model_id <- model_id
+      self$capabilities <- capabilities
+    },
+
+    #' @description Check if model has a specific capability.
+    #' @param cap Capability name (e.g., "is_reasoning_model").
+    #' @return Logical.
+    has_capability = function(cap) {
+      isTRUE(self$capabilities[[cap]])
     },
 
     #' @description Public generation method (wrapper for do_generate).
@@ -147,9 +158,9 @@ LanguageModelV1 <- R6::R6Class(
     #' @description Get the message format used by this model's API for history.
     #' @return A character string ("openai" or "anthropic").
     get_history_format = function() {
-       # Subclasses should override this.
-       # Defaulting to "openai" as it's the most common standard for proxies.
-       "openai"
+      # Subclasses should override this.
+      # Defaulting to "openai" as it's the most common standard for proxies.
+      "openai"
     }
   )
 )

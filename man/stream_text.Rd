@@ -13,6 +13,7 @@ stream_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  sandbox = FALSE,
   skills = NULL,
   session = NULL,
   hooks = NULL,
@@ -38,6 +39,9 @@ stream_text(
 \item{max_steps}{Maximum number of generation steps (tool execution loops).
 Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.}
 
+\item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
+See \code{generate_text} for details. Default FALSE.}
+
 \item{skills}{Optional path to skills directory, or a SkillRegistry object.}
 
 \item{session}{Optional ChatSession object for shared state.}
@@ -56,10 +60,12 @@ Generate text using a language model with streaming output.
 This function provides a real-time stream of tokens through a callback.
 }
 \examples{
-\dontrun{
-model <- create_openai()$language_model("gpt-4o")
-stream_text(model, "Tell me a story", callback = function(text, done) {
-  if (!done) cat(text)
-})
+\donttest{
+if (interactive()) {
+  model <- create_openai()$language_model("gpt-4o")
+  stream_text(model, "Tell me a story", callback = function(text, done) {
+    if (!done) cat(text)
+  })
+}
 }
 }

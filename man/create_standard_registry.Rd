@@ -40,7 +40,8 @@ Creates an AgentRegistry pre-populated with standard library agents
 based on feature flags.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create registry with all standard agents
 registry <- create_standard_registry()
 
@@ -50,5 +51,6 @@ registry <- create_standard_registry(
   include_env = FALSE,
   include_planner = FALSE
 )
+}
 }
 }

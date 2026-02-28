@@ -426,7 +426,8 @@ ChatSession <- R6::R6Class(
 #' @return A ChatSession object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create a chat session
 #' chat <- create_chat_session(
 #'   model = "openai:gpt-4o",
@@ -449,6 +450,7 @@ ChatSession <- R6::R6Class(
 #'
 #' # Save session
 #' chat$save("my_session.rds")
+#' }
 #' }
 create_chat_session <- function(model = NULL,
                                 system_prompt = NULL,
@@ -476,12 +478,14 @@ create_chat_session <- function(model = NULL,
 #' @return A ChatSession object with restored state.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Load a saved session
 #' chat <- load_chat_session("my_session.rds", tools = my_tools)
 #'
 #' # Continue where you left off
 #' response <- chat$send("Let's continue our discussion")
+#' }
 #' }
 load_chat_session <- function(path, tools = NULL, hooks = NULL, registry = NULL) {
   # Detect format

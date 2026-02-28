@@ -10,7 +10,7 @@ Connect to an MCP server via Server-Sent Events (SSE).
 Manages connection to a remote MCP server via SSE transport.
 }
 \section{Super class}{
-\code{\link[aisdk:McpClient]{aisdk::McpClient}} -> \code{McpSseClient}
+\code{aisdk::McpClient} -> \code{McpSseClient}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

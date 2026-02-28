@@ -4,11 +4,14 @@
 \alias{Flow}
 \title{Flow Class}
 \description{
-R6 class representing the orchestration layer for multi-agent systems.
-Manages the call stack, context switching, and delegation between agents.
-
-The Flow acts as the "conductor" - it suspends the calling agent,
-activates the delegate agent, and resumes the caller with the result.
+R6 class representing an orchestration layer for multi-agent systems.
+Features:
+\itemize{
+\item Comprehensive delegation tracing
+\item Automatic delegate_task tool generation
+\item Depth and context limits with guardrails
+\item Result aggregation and summarization
+}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -20,7 +23,11 @@ activates the delegate agent, and resumes the caller with the result.
 \item \href{#method-Flow-set_global_context}{\code{Flow$set_global_context()}}
 \item \href{#method-Flow-global_context}{\code{Flow$global_context()}}
 \item \href{#method-Flow-delegate}{\code{Flow$delegate()}}
+\item \href{#method-Flow-generate_delegate_tool}{\code{Flow$generate_delegate_tool()}}
 \item \href{#method-Flow-run}{\code{Flow$run()}}
+\item \href{#method-Flow-get_delegation_history}{\code{Flow$get_delegation_history()}}
+\item \href{#method-Flow-delegation_stats}{\code{Flow$delegation_stats()}}
+\item \href{#method-Flow-clear_history}{\code{Flow$clear_history()}}
 \item \href{#method-Flow-print}{\code{Flow$print()}}
 \item \href{#method-Flow-clone}{\code{Flow$clone()}}
 }
@@ -36,22 +43,28 @@ Initialize a new Flow.
   model,
   registry = NULL,
   max_depth = 5,
-  max_steps_per_agent = 10
+  max_steps_per_agent = 10,
+  max_context_tokens = 4000,
+  enable_guardrails = TRUE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{session}}{A ChatSession object for shared state between agents.}
+\item{\code{session}}{A ChatSession object.}
 
-\item{\code{model}}{The default model ID to use (e.g., "openai:gpt-4o").}
+\item{\code{model}}{The default model ID to use.}
 
 \item{\code{registry}}{Optional AgentRegistry for agent lookup.}
 
-\item{\code{max_depth}}{Maximum delegation depth (prevents infinite loops). Default 5.}
+\item{\code{max_depth}}{Maximum delegation depth. Default 5.}
 
 \item{\code{max_steps_per_agent}}{Maximum ReAct steps per agent. Default 10.}
+
+\item{\code{max_context_tokens}}{Maximum context tokens per delegation. Default 4000.}
+
+\item{\code{enable_guardrails}}{Enable safety guardrails. Default TRUE.}
 }
 \if{html}{\out{</div>}}
 }
@@ -132,9 +145,9 @@ The global context string.
 \if{html}{\out{<a id="method-Flow-delegate"></a>}}
 \if{latex}{\out{\hypertarget{method-Flow-delegate}{}}}
 \subsection{Method \code{delegate()}}{
-Delegate a task to another agent.
+Delegate a task to another agent with enhanced tracking.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Flow$delegate(agent, task, context = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Flow$delegate(agent, task, context = NULL, priority = "normal")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -145,31 +158,40 @@ Delegate a task to another agent.
 \item{\code{task}}{The task instruction.}
 
 \item{\code{context}}{Optional additional context.}
+
+\item{\code{priority}}{Task priority: "high", "normal", "low". Default "normal".}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-This is the core orchestration method. It:
-\enumerate{
-\item Checks depth limit
-\item Pushes current agent to stack (if any)
-\item Builds recursive context
-\item Executes the delegate agent
-\item Pops and returns result
+\subsection{Returns}{
+The text result from the delegate agent.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Flow-generate_delegate_tool"></a>}}
+\if{latex}{\out{\hypertarget{method-Flow-generate_delegate_tool}{}}}
+\subsection{Method \code{generate_delegate_tool()}}{
+Generate the delegate_task tool for manager agents.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Flow$generate_delegate_tool()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+Creates a single unified tool that can delegate to any registered agent.
+This is more efficient than generating separate tools per agent.
 }
 
 \subsection{Returns}{
-The text result from the delegate agent.
+A Tool object for delegation.
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Flow-run"></a>}}
 \if{latex}{\out{\hypertarget{method-Flow-run}{}}}
 \subsection{Method \code{run()}}{
-Run a primary agent (the Manager).
+Run a primary agent with enhanced orchestration.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Flow$run(agent, task)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Flow$run(agent, task, use_unified_delegate = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -178,16 +200,61 @@ Run a primary agent (the Manager).
 \item{\code{agent}}{The primary/manager Agent to run.}
 
 \item{\code{task}}{The user's task/input.}
+
+\item{\code{use_unified_delegate}}{Use single delegate_task tool. Default TRUE.}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-Entry point for a multi-agent flow. The primary agent is run with
-delegation tools automatically injected from the registry.
+\subsection{Returns}{
+The final result from the primary agent.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Flow-get_delegation_history"></a>}}
+\if{latex}{\out{\hypertarget{method-Flow-get_delegation_history}{}}}
+\subsection{Method \code{get_delegation_history()}}{
+Get delegation history.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Flow$get_delegation_history(agent_name = NULL, limit = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{agent_name}}{Optional filter by agent name.}
+
+\item{\code{limit}}{Maximum number of records to return.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list of delegation records.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Flow-delegation_stats"></a>}}
+\if{latex}{\out{\hypertarget{method-Flow-delegation_stats}{}}}
+\subsection{Method \code{delegation_stats()}}{
+Get delegation statistics.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Flow$delegation_stats()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-The final result from the primary agent.
+A list with counts, timing, and success rates.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Flow-clear_history"></a>}}
+\if{latex}{\out{\hypertarget{method-Flow-clear_history}{}}}
+\subsection{Method \code{clear_history()}}{
+Clear delegation history.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Flow$clear_history()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Invisible self for chaining.
 }
 }
 \if{html}{\out{<hr>}}

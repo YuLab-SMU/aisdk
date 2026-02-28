@@ -362,7 +362,8 @@ Agent <- R6::R6Class(
 #' @return An Agent object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create a simple math agent
 #' math_agent <- create_agent(
 #'   name = "MathAgent",
@@ -379,6 +380,7 @@ Agent <- R6::R6Class(
 #'   description = "Stock analysis agent",
 #'   skills = "auto"
 #' )
+#' }
 #' }
 create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL, model = NULL) {
   Agent$new(

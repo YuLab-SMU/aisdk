@@ -23,7 +23,8 @@ NULL
 #' @return An Agent object configured for R code execution.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' coder <- create_coder_agent()
 #' session <- create_shared_session(model = "openai:gpt-4o")
 #' result <- coder$run(
@@ -31,6 +32,7 @@ NULL
 #'   session = session,
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_coder_agent <- function(name = "CoderAgent",
                                 safe_mode = TRUE,
@@ -419,12 +421,14 @@ create_coder_agent <- function(name = "CoderAgent",
 #' @return An Agent object configured for planning and reasoning.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' planner <- create_planner_agent()
 #' result <- planner$run(
 #'   "How should I approach building a machine learning model for customer churn?",
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_planner_agent <- function(name = "PlannerAgent") {
   # Create a tool to save plans to session memory
@@ -501,7 +505,8 @@ create_planner_agent <- function(name = "PlannerAgent") {
 #' @return An Agent object configured for data visualization.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' visualizer <- create_visualizer_agent()
 #' session <- create_shared_session(model = "openai:gpt-4o")
 #' session$set_var("df", data.frame(x = 1:10, y = (1:10)^2))
@@ -510,6 +515,7 @@ create_planner_agent <- function(name = "PlannerAgent") {
 #'   session = session,
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_visualizer_agent <- function(name = "VisualizerAgent",
                                      output_dir = NULL,

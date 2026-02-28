@@ -20,9 +20,11 @@ A list with embeddings and usage information.
 Generate embeddings for text using an embedding model.
 }
 \examples{
-\dontrun{
-model <- create_openai()$embedding_model("text-embedding-3-small")
-result <- create_embeddings(model, "Hello, world!")
-print(length(result$embeddings[[1]]))
+\donttest{
+if (interactive()) {
+  model <- create_openai()$embedding_model("text-embedding-3-small")
+  result <- create_embeddings(model, "Hello, world!")
+  print(length(result$embeddings[[1]]))
+}
 }
 }

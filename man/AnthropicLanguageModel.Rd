@@ -8,7 +8,7 @@ Language model implementation for Anthropic's Messages API.
 }
 \keyword{internal}
 \section{Super class}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{AnthropicLanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{AnthropicLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -26,6 +26,7 @@ Language model implementation for Anthropic's Messages API.
 <details open><summary>Inherited methods</summary>
 <ul>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-generate'><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-has_capability'><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-stream'><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
 </ul>
 </details>
@@ -36,7 +37,7 @@ Language model implementation for Anthropic's Messages API.
 \subsection{Method \code{new()}}{
 Initialize the Anthropic language model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{AnthropicLanguageModel$new(model_id, config)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{AnthropicLanguageModel$new(model_id, config, capabilities = list())}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -45,6 +46,8 @@ Initialize the Anthropic language model.
 \item{\code{model_id}}{The model ID (e.g., "claude-sonnet-4-20250514").}
 
 \item{\code{config}}{Configuration list with api_key, base_url, headers, etc.}
+
+\item{\code{capabilities}}{Optional list of capability flags.}
 }
 \if{html}{\out{</div>}}
 }

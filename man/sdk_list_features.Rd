@@ -13,8 +13,10 @@ A named list of feature flags.
 List all available feature flags and their current values.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # See all feature flags
 print(sdk_list_features())
+}
 }
 }

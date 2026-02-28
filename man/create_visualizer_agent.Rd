@@ -33,7 +33,8 @@ Enhanced version with plot type recommendations, theme support, and
 automatic data inspection.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 visualizer <- create_visualizer_agent()
 session <- create_shared_session(model = "openai:gpt-4o")
 session$set_var("df", data.frame(x = 1:10, y = (1:10)^2))
@@ -42,5 +43,6 @@ result <- visualizer$run(
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

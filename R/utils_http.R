@@ -28,92 +28,100 @@ post_to_api <- function(url, headers, body,
                         max_retries = 2,
                         initial_delay_ms = 2000,
                         backoff_factor = 2) {
+  # CRAN policy: fail gracefully when internet is unavailable
+  if (!curl::has_internet()) {
+    message("Internet connection is not available. Cannot reach: ", url)
+    return(NULL)
+  }
+
   attempt <- 0
   delay_ms <- initial_delay_ms
 
   repeat {
     attempt <- attempt + 1
 
-    tryCatch({
-      req <- httr2::request(url)
-      req <- httr2::req_headers(req, !!!headers)
-      req <- httr2::req_body_json(req, body)
-      req <- httr2::req_timeout(req, 120)  # 2 minute timeout
-      req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
+    tryCatch(
+      {
+        req <- httr2::request(url)
+        req <- httr2::req_headers(req, !!!headers)
+        req <- httr2::req_body_json(req, body)
+        req <- httr2::req_timeout(req, 120) # 2 minute timeout
+        req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
-      resp <- httr2::req_perform(req)
-      status <- httr2::resp_status(resp)
+        resp <- httr2::req_perform(req)
+        status <- httr2::resp_status(resp)
 
-      if (status >= 200 && status < 300) {
-        # Handle empty response body (like Opencode does)
-        # Some servers return 200 with no Content-Length and empty body
-        resp_text <- tryCatch(
-          httr2::resp_body_string(resp),
-          error = function(e) ""
-        )
+        if (status >= 200 && status < 300) {
+          # Handle empty response body (like Opencode does)
+          # Some servers return 200 with no Content-Length and empty body
+          resp_text <- tryCatch(
+            httr2::resp_body_string(resp),
+            error = function(e) ""
+          )
 
-        if (is.null(resp_text) || nchar(trimws(resp_text)) == 0) {
-          return(list())  # Return empty list instead of parse error
-        }
-
-        # Try to parse JSON with repair fallback
-        return(tryCatch(
-          jsonlite::fromJSON(resp_text, simplifyVector = FALSE),
-          error = function(e) {
-            # Try to repair and re-parse
-            repaired <- fix_json(resp_text)
-            tryCatch(
-              jsonlite::fromJSON(repaired, simplifyVector = FALSE),
-              error = function(e2) {
-                # Return raw text wrapped in a list as last resort
-                list(`_raw_response` = resp_text)
-              }
-            )
+          if (is.null(resp_text) || nchar(trimws(resp_text)) == 0) {
+            return(list()) # Return empty list instead of parse error
           }
-        ))
-      } else {
-        # Check if retryable (rate limit or server error)
-        is_retryable <- status == 429 || status >= 500
 
-        if (!is_retryable || attempt > max_retries) {
-          error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+          # Try to parse JSON with repair fallback
+          return(tryCatch(
+            jsonlite::fromJSON(resp_text, simplifyVector = FALSE),
+            error = function(e) {
+              # Try to repair and re-parse
+              repaired <- fix_json(resp_text)
+              tryCatch(
+                jsonlite::fromJSON(repaired, simplifyVector = FALSE),
+                error = function(e2) {
+                  # Return raw text wrapped in a list as last resort
+                  list(`_raw_response` = resp_text)
+                }
+              )
+            }
+          ))
+        } else {
+          # Check if retryable (rate limit or server error)
+          is_retryable <- status == 429 || status >= 500
+
+          if (!is_retryable || attempt > max_retries) {
+            error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+            rlang::abort(c(
+              paste0("API request failed with status ", status),
+              "i" = paste0("URL: ", url),
+              "x" = error_body
+            ), class = "aisdk_api_error")
+          }
+
+          # Get retry delay from headers if available
+          retry_after <- httr2::resp_header(resp, "retry-after")
+          retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
+
+          if (!is.null(retry_after_ms)) {
+            delay_ms <- as.numeric(retry_after_ms)
+          } else if (!is.null(retry_after)) {
+            delay_ms <- as.numeric(retry_after) * 1000
+          }
+
+          message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+          Sys.sleep(delay_ms / 1000)
+          delay_ms <- delay_ms * backoff_factor
+        }
+      },
+      error = function(e) {
+        if (inherits(e, "aisdk_api_error")) {
+          rlang::cnd_signal(e)
+        }
+        if (attempt > max_retries) {
           rlang::abort(c(
-            paste0("API request failed with status ", status),
+            "API request failed after all retries",
             "i" = paste0("URL: ", url),
-            "x" = error_body
-          ), class = "aisdk_api_error")
+            "x" = conditionMessage(e)
+          ), class = "aisdk_api_error", parent = e)
         }
-
-        # Get retry delay from headers if available
-        retry_after <- httr2::resp_header(resp, "retry-after")
-        retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
-
-        if (!is.null(retry_after_ms)) {
-          delay_ms <- as.numeric(retry_after_ms)
-        } else if (!is.null(retry_after)) {
-          delay_ms <- as.numeric(retry_after) * 1000
-        }
-
-        message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+        message(sprintf("Network error, retrying in %d ms...", delay_ms))
         Sys.sleep(delay_ms / 1000)
         delay_ms <- delay_ms * backoff_factor
       }
-
-    }, error = function(e) {
-      if (inherits(e, "aisdk_api_error")) {
-        rlang::cnd_signal(e)
-      }
-      if (attempt > max_retries) {
-        rlang::abort(c(
-          "API request failed after all retries",
-          "i" = paste0("URL: ", url),
-          "x" = conditionMessage(e)
-        ), class = "aisdk_api_error", parent = e)
-      }
-      message(sprintf("Network error, retrying in %d ms...", delay_ms))
-      Sys.sleep(delay_ms / 1000)
-      delay_ms <- delay_ms * backoff_factor
-    })
+    )
   }
 }
 
@@ -128,6 +136,12 @@ post_to_api <- function(url, headers, body,
 #' @param callback A function called for each parsed SSE data chunk.
 #' @keywords internal
 stream_from_api <- function(url, headers, body, callback) {
+  # CRAN policy: fail gracefully when internet is unavailable
+  if (!curl::has_internet()) {
+    message("Internet connection is not available. Cannot reach: ", url)
+    return(invisible(NULL))
+  }
+
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
   req <- httr2::req_body_json(req, body)
@@ -178,7 +192,7 @@ stream_from_api <- function(url, headers, body, callback) {
     )
 
     if (!is.null(event)) {
-      consecutive_errors <- 0  # Reset on successful event
+      consecutive_errors <- 0 # Reset on successful event
 
       # Standard SSE handling
       # OpenAI and compatible APIs usually send JSON in the 'data' field
@@ -189,25 +203,33 @@ stream_from_api <- function(url, headers, body, callback) {
         }
 
         # Parse JSON data with repair fallback
-        tryCatch({
-          data <- jsonlite::fromJSON(event$data, simplifyVector = FALSE)
-          # Pass parsed data to callback
-          callback(data, done = FALSE)
-        }, error = function(e) {
-          # Try to repair JSON before giving up
-          tryCatch({
-            repaired_data <- fix_json(event$data)
-            data <- jsonlite::fromJSON(repaired_data, simplifyVector = FALSE)
+        tryCatch(
+          {
+            data <- jsonlite::fromJSON(event$data, simplifyVector = FALSE)
+            # Pass parsed data to callback
             callback(data, done = FALSE)
-          }, error = function(e2) {
-            # Log warning but don't crash - graceful degradation
-            debug_opt <- getOption("aisdk.debug", FALSE)
-            if (isTRUE(debug_opt)) {
-              message("Warning: Malformed JSON in SSE data (skipping): ",
-                      substr(event$data, 1, 100))
-            }
-          })
-        })
+          },
+          error = function(e) {
+            # Try to repair JSON before giving up
+            tryCatch(
+              {
+                repaired_data <- fix_json(event$data)
+                data <- jsonlite::fromJSON(repaired_data, simplifyVector = FALSE)
+                callback(data, done = FALSE)
+              },
+              error = function(e2) {
+                # Log warning but don't crash - graceful degradation
+                debug_opt <- getOption("aisdk.debug", FALSE)
+                if (isTRUE(debug_opt)) {
+                  message(
+                    "Warning: Malformed JSON in SSE data (skipping): ",
+                    substr(event$data, 1, 100)
+                  )
+                }
+              }
+            )
+          }
+        )
       }
     }
   }

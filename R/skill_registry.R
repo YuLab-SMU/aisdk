@@ -199,7 +199,8 @@ SkillRegistry <- R6::R6Class(
 #' @return A populated SkillRegistry object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Scan a skills directory
 #' registry <- create_skill_registry(".aimd/skills")
 #' 
@@ -208,6 +209,7 @@ SkillRegistry <- R6::R6Class(
 #' 
 #' # Get a specific skill
 #' skill <- registry$get_skill("seurat_analysis")
+#' }
 #' }
 create_skill_registry <- function(path, recursive = FALSE) {
   registry <- SkillRegistry$new()

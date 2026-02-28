@@ -41,16 +41,16 @@ ProviderRegistry <- R6::R6Class(
     #' @param id Model ID in the format "provider:model" (e.g., "openai:gpt-4o").
     #' @return A LanguageModelV1 object.
     language_model = function(id) {
-      parts <- strsplit(id, private$separator, fixed = TRUE)[[1]]
-      if (length(parts) != 2) {
+      sep_pos <- regexpr(private$separator, id, fixed = TRUE)
+      if (sep_pos < 1) {
         rlang::abort(c(
           paste0("Invalid model ID format: ", id),
           "i" = paste0("Expected format: provider", private$separator, "model"),
           "i" = "Example: openai:gpt-4o"
         ))
       }
-      provider_id <- parts[1]
-      model_id <- parts[2]
+      provider_id <- substr(id, 1, sep_pos - 1)
+      model_id <- substr(id, sep_pos + 1, nchar(id))
 
       provider <- private$providers[[provider_id]]
       if (is.null(provider)) {
@@ -74,12 +74,12 @@ ProviderRegistry <- R6::R6Class(
     #' @param id Model ID in the format "provider:model".
     #' @return An EmbeddingModelV1 object.
     embedding_model = function(id) {
-      parts <- strsplit(id, private$separator, fixed = TRUE)[[1]]
-      if (length(parts) != 2) {
+      sep_pos <- regexpr(private$separator, id, fixed = TRUE)
+      if (sep_pos < 1) {
         rlang::abort(paste0("Invalid model ID format: ", id))
       }
-      provider_id <- parts[1]
-      model_id <- parts[2]
+      provider_id <- substr(id, 1, sep_pos - 1)
+      model_id <- substr(id, sep_pos + 1, nchar(id))
 
       provider <- private$providers[[provider_id]]
       if (is.null(provider)) {

@@ -11,10 +11,12 @@ NULL
 #' @return A single string containing the summaries of the requested variables.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' df <- data.frame(x = 1:10, y = rnorm(10))
 #' context <- get_r_context("df")
 #' cat(context)
+#' }
 #' }
 get_r_context <- function(vars, envir = parent.frame()) {
   if (is.null(vars) || length(vars) == 0) {

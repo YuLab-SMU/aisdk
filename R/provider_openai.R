@@ -32,21 +32,31 @@ OpenAILanguageModel <- R6::R6Class(
     #' @description Initialize the OpenAI language model.
     #' @param model_id The model ID (e.g., "gpt-4o").
     #' @param config Configuration list with api_key, base_url, headers, etc.
-    initialize = function(model_id, config) {
-      super$initialize(provider = config$provider_name %||% "openai", model_id = model_id)
+    #' @param capabilities Optional list of capability flags.
+    initialize = function(model_id, config, capabilities = list()) {
+      # Auto-detect reasoning model capability if not explicitly set
+      if (is.null(capabilities$is_reasoning_model)) {
+        capabilities$is_reasoning_model <- grepl("^o[0-9]", model_id, ignore.case = TRUE)
+      }
+      super$initialize(
+        provider = config$provider_name %||% "openai",
+        model_id = model_id,
+        capabilities = capabilities
+      )
       private$config <- config
     },
-    
+
     #' @description Get the configuration list.
     #' @return A list with provider configuration.
     get_config = function() {
       private$config
     },
 
-    #' @description Generate text (non-streaming).
-    #' @param params A list of call options including messages, temperature, etc.
-    #' @return A GenerateResult object.
-    do_generate = function(params) {
+    #' @description Build the request payload for non-streaming generation.
+    #' Subclasses can override to customize payload construction.
+    #' @param params A list of call options.
+    #' @return A list with url, headers, and body.
+    build_payload = function(params) {
       url <- paste0(private$config$base_url, "/chat/completions")
       headers <- private$get_headers()
 
@@ -58,19 +68,14 @@ OpenAILanguageModel <- R6::R6Class(
       )
 
       # ==========================================================
-      # Smart Token Limit Mapping
-      # SDK exposes unified `max_tokens`, internally maps to correct API field
+      # Smart Token Limit Mapping (capability-driven)
       # ==========================================================
-      # Check for explicit overrides in extra_body first (escape hatch for advanced users)
       explicit_completion_tokens <- params$max_completion_tokens
 
       if (!is.null(explicit_completion_tokens)) {
-        # User explicitly specified max_completion_tokens (for o1/o3 models)
         body$max_completion_tokens <- explicit_completion_tokens
       } else if (!is.null(params$max_tokens)) {
-        # Standard max_tokens: map based on model type
-        # o1/o3 models require max_completion_tokens (includes reasoning + answer)
-        if (grepl("^o[0-9]", self$model_id, ignore.case = TRUE)) {
+        if (self$has_capability("is_reasoning_model")) {
           body$max_completion_tokens <- params$max_tokens
         } else {
           body$max_tokens <- params$max_tokens
@@ -79,31 +84,42 @@ OpenAILanguageModel <- R6::R6Class(
 
       # Add tools if provided
       if (!is.null(params$tools) && length(params$tools) > 0) {
-        # Ensure tools are unnamed so they serialize to a JSON array
         tools_list <- unname(params$tools)
         body$tools <- lapply(tools_list, function(t) {
           if (inherits(t, "Tool")) {
             t$to_api_format("openai")
           } else {
-            t  # Assume already in correct format
+            t
           }
         })
       }
 
-      # NEW: Pass through any extra parameters (e.g., thinking, log probs)
-      # We exclude known parameters that are already handled explicitly
+      # Pass through any extra parameters
       handled_params <- c("messages", "temperature", "max_tokens", "max_completion_tokens", "tools", "stream", "model")
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
       }
 
-      # Remove NULL entries
       body <- body[!sapply(body, is.null)]
 
-      response <- post_to_api(url, headers, body)
+      list(url = url, headers = headers, body = body)
+    },
 
-      # Parse response
+    #' @description Execute the API request.
+    #' @param url The API endpoint URL.
+    #' @param headers A named list of HTTP headers.
+    #' @param body The request body.
+    #' @return The parsed API response.
+    execute_request = function(url, headers, body) {
+      post_to_api(url, headers, body)
+    },
+
+    #' @description Parse the API response into a GenerateResult.
+    #' Subclasses can override to extract provider-specific fields (e.g., reasoning_content).
+    #' @param response The parsed API response.
+    #' @return A GenerateResult object.
+    parse_response = function(response) {
       choice <- response$choices[[1]]
 
       # Parse tool_calls if present
@@ -127,11 +143,20 @@ OpenAILanguageModel <- R6::R6Class(
       )
     },
 
-    #' @description Generate text (streaming).
-    #' @param params A list of call options.
-    #' @param callback A function called for each chunk: callback(text, done).
+    #' @description Generate text (non-streaming). Uses template method pattern.
+    #' @param params A list of call options including messages, temperature, etc.
     #' @return A GenerateResult object.
-    do_stream = function(params, callback) {
+    do_generate = function(params) {
+      payload <- self$build_payload(params)
+      response <- self$execute_request(payload$url, payload$headers, payload$body)
+      self$parse_response(response)
+    },
+
+    #' @description Build the request payload for streaming generation.
+    #' Subclasses can override to customize stream payload construction.
+    #' @param params A list of call options.
+    #' @return A list with url, headers, and body.
+    build_stream_payload = function(params) {
       url <- paste0(private$config$base_url, "/chat/completions")
       headers <- private$get_headers()
 
@@ -142,19 +167,19 @@ OpenAILanguageModel <- R6::R6Class(
         stream = TRUE
       )
 
-      # Smart Token Limit Mapping (same logic as do_generate)
+      # Smart Token Limit Mapping (capability-driven)
       explicit_completion_tokens <- params$max_completion_tokens
       if (!is.null(explicit_completion_tokens)) {
         body$max_completion_tokens <- explicit_completion_tokens
       } else if (!is.null(params$max_tokens)) {
-        if (grepl("^o[0-9]", self$model_id, ignore.case = TRUE)) {
+        if (self$has_capability("is_reasoning_model")) {
           body$max_completion_tokens <- params$max_tokens
         } else {
           body$max_tokens <- params$max_tokens
         }
       }
 
-      # NEW: Pass through any extra parameters
+      # Pass through any extra parameters
       handled_params <- c("messages", "temperature", "max_tokens", "max_completion_tokens", "tools", "stream", "model")
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
@@ -163,139 +188,39 @@ OpenAILanguageModel <- R6::R6Class(
 
       # Add tools if provided
       if (!is.null(params$tools) && length(params$tools) > 0) {
-        # Ensure tools are unnamed so they serialize to a JSON array
         tools_list <- unname(params$tools)
         body$tools <- lapply(tools_list, function(t) {
           if (inherits(t, "Tool")) {
             t$to_api_format("openai")
           } else {
-            t  # Assume already in correct format
+            t
           }
         })
       }
 
-      # Add stream_options only if not disabled (some providers like Volcengine don't support it)
+      # Add stream_options only if not disabled
       if (is.null(body$stream_options) && !isTRUE(private$config$disable_stream_options)) {
         body$stream_options <- list(include_usage = TRUE)
       }
 
       body <- body[!sapply(body, is.null)]
 
-      # State for tracking response
-      is_reasoning <- FALSE
-      full_text <- ""
-      full_reasoning <- ""
-      tool_calls_acc <- list()
-      finish_reason <- NULL
-      full_usage <- NULL
-      last_response <- NULL
-      ensure_index <- function(lst, idx, default) {
-        if (length(lst) < idx) {
-          for (i in seq(from = length(lst) + 1, to = idx)) {
-            lst[[i]] <- default
-          }
-        }
-        lst
-      }
+      list(url = url, headers = headers, body = body)
+    },
 
-      stream_from_api(url, headers, body, callback = function(data, done) {
-        if (done) {
-          if (is_reasoning) {
-            callback("\n</think>\n\n", done = FALSE)
-          }
-          callback(NULL, done = TRUE)
-        } else if (!is.null(data$choices) && length(data$choices) > 0) {
-          last_response <<- data
-          delta <- data$choices[[1]]$delta
-          choice <- data$choices[[1]]
-          
-          if (!is.null(choice$finish_reason)) {
-            finish_reason <<- choice$finish_reason
-          }
-          
-          # NEW: Handle reasoning content (e.g. for DeepSeek/Doubao)
-          if (!is.null(delta$reasoning_content) && nchar(delta$reasoning_content) > 0) {
-            if (!is_reasoning) {
-              callback("<think>\n", done = FALSE)
-              is_reasoning <<- TRUE
-            }
-            full_reasoning <<- paste0(full_reasoning, delta$reasoning_content)
-            callback(delta$reasoning_content, done = FALSE)
-          }
-          
-          # EXISTING: Handle content
-          if (!is.null(delta$content) && nchar(delta$content) > 0) {
-            if (is_reasoning) {
-              # Transition from reasoning to content
-              callback("\n</think>\n\n", done = FALSE)
-              is_reasoning <<- FALSE
-            }
-            full_text <<- paste0(full_text, delta$content)
-            callback(delta$content, done = FALSE)
-          }
+    #' @description Generate text (streaming).
+    #' @param params A list of call options.
+    #' @param callback A function called for each chunk: callback(text, done).
+    #' @return A GenerateResult object.
+    do_stream = function(params, callback) {
+      payload <- self$build_stream_payload(params)
+      agg <- SSEAggregator$new(callback)
 
-          # NEW: Handle tool calls
-          if (!is.null(delta$tool_calls)) {
-            for (tc in delta$tool_calls) {
-              idx <- if (!is.null(tc$index)) tc$index + 1 else length(tool_calls_acc) + 1
-              tool_calls_acc <<- ensure_index(tool_calls_acc, idx, list(id = "", name = "", arguments = "", arguments_is_list = FALSE))
-              if (!is.null(tc$id)) tool_calls_acc[[idx]]$id <<- paste0(tool_calls_acc[[idx]]$id, tc$id)
-              name_val <- NULL
-              if (!is.null(tc$`function`$name)) name_val <- tc$`function`$name
-              if (is.null(name_val) && !is.null(tc$name)) name_val <- tc$name
-              if (is.null(name_val) && !is.null(tc$tool_name)) name_val <- tc$tool_name
-              if (!is.null(name_val)) tool_calls_acc[[idx]]$name <<- paste0(tool_calls_acc[[idx]]$name, name_val)
-              args_val <- NULL
-              if (!is.null(tc$`function`$arguments)) args_val <- tc$`function`$arguments
-              if (is.null(args_val) && !is.null(tc$arguments)) args_val <- tc$arguments
-              if (!is.null(args_val)) {
-                if (is.list(args_val) && !is.character(args_val)) {
-                  tool_calls_acc[[idx]]$arguments <- args_val
-                  tool_calls_acc[[idx]]$arguments_is_list <- TRUE
-                } else {
-                  tool_calls_acc[[idx]]$arguments <<- paste0(tool_calls_acc[[idx]]$arguments, args_val)
-                }
-              }
-            }
-          }
-        }
-        
-        if (!is.null(data$usage)) {
-          full_usage <<- data$usage
-        }
+      stream_from_api(payload$url, payload$headers, payload$body, callback = function(data, done) {
+        map_openai_chunk(data, done, agg)
       })
 
-      # Finalize tool calls
-      final_tool_calls <- NULL
-      if (length(tool_calls_acc) > 0) {
-        final_tool_calls <- lapply(tool_calls_acc, function(tc) {
-          # Use the robust argument parser from tool.R
-          args_val <- if (isTRUE(tc$arguments_is_list)) {
-            tc$arguments
-          } else {
-            parse_tool_arguments(tc$arguments, tool_name = tc$name)
-          }
-
-          list(
-            id = tc$id,
-            name = tc$name,
-            arguments = args_val
-          )
-        })
-        final_tool_calls <- Filter(function(tc) nzchar(tc$name %||% ""), final_tool_calls)
-        if (length(final_tool_calls) == 0) {
-          final_tool_calls <- NULL
-        }
-      }
-
-      GenerateResult$new(
-        text = full_text,
-        usage = full_usage,
-        finish_reason = finish_reason,
-        raw_response = last_response,
-        tool_calls = final_tool_calls,
-        reasoning = full_reasoning
-      )
+      agg$finalize()
     },
 
     #' @description Format a tool execution result for OpenAI's API.
@@ -339,7 +264,6 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
   private = list(
     config = NULL,
     last_response_id = NULL,
-
     get_headers = function() {
       h <- list(
         `Content-Type` = "application/json",
@@ -427,7 +351,6 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
           } else if (!is.null(item$content)) {
             reasoning_content <- item$content
           }
-
         } else if (item_type == "message") {
           # Final message content
           if (is.list(item$content)) {
@@ -439,7 +362,6 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
           } else if (is.character(item$content)) {
             text_content <- paste0(text_content, item$content)
           }
-
         } else if (item_type == "function_call") {
           # Tool/function calls
           if (is.null(tool_calls)) tool_calls <- list()
@@ -466,8 +388,13 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     #' @description Initialize the OpenAI Responses language model.
     #' @param model_id The model ID (e.g., "o1", "o3-mini", "gpt-4o").
     #' @param config Configuration list with api_key, base_url, headers, etc.
-    initialize = function(model_id, config) {
-      super$initialize(provider = config$provider_name %||% "openai", model_id = model_id)
+    #' @param capabilities Optional list of capability flags.
+    initialize = function(model_id, config, capabilities = list()) {
+      super$initialize(
+        provider = config$provider_name %||% "openai",
+        model_id = model_id,
+        capabilities = capabilities
+      )
       private$config <- config
     },
 
@@ -528,8 +455,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       # SDK maps unified `max_tokens` to `max_output_tokens` for safety
       # ==========================================================
       # Check for explicit overrides (escape hatch for advanced users)
-      explicit_output_tokens <- params$max_output_tokens  # Total limit
-      explicit_answer_tokens <- params$max_answer_tokens  # Answer-only limit
+      explicit_output_tokens <- params$max_output_tokens # Total limit
+      explicit_answer_tokens <- params$max_answer_tokens # Answer-only limit
 
       if (!is.null(explicit_output_tokens)) {
         # User explicitly wants total limit (reasoning + answer)
@@ -733,7 +660,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
               }
             }
           } else if (event_type == "response.content_part.delta" ||
-                     event_type == "response.output_text.delta") {
+            event_type == "response.output_text.delta") {
             # Text content delta
             # Support both formats:
             # - OpenAI: delta is object with text field
@@ -753,9 +680,9 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
               callback(delta_text, done = FALSE)
             }
           } else if (event_type == "response.reasoning.delta" ||
-                     event_type == "response.reasoning_summary_text.delta" ||
-                     event_type == "response.reasoning_summary.delta" ||
-                     event_type == "response.reasoning_content.delta") {
+            event_type == "response.reasoning_summary_text.delta" ||
+            event_type == "response.reasoning_summary.delta" ||
+            event_type == "response.reasoning_content.delta") {
             # Reasoning content delta
             # Support multiple formats:
             # - OpenAI: response.reasoning.delta (delta is object with text field)
@@ -983,14 +910,17 @@ stream_responses_api <- function(url, headers, body, callback) {
         break
       }
 
-      tryCatch({
-        data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
-        # Use the event type from the parsed data if available
-        actual_type <- data$type %||% event_type
-        callback(actual_type, data, done = FALSE)
-      }, error = function(e) {
-        # Skip malformed JSON
-      })
+      tryCatch(
+        {
+          data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
+          # Use the event type from the parsed data if available
+          actual_type <- data$type %||% event_type
+          callback(actual_type, data, done = FALSE)
+        },
+        error = function(e) {
+          # Skip malformed JSON
+        }
+      )
     }
   }
 
@@ -1179,58 +1109,52 @@ OpenAIProvider <- R6::R6Class(
 #' @return An OpenAIProvider object.
 #' @export
 #' @examples
-#' \dontrun{
-#' # Basic usage with Chat Completions API
-#' openai <- create_openai(api_key = "sk-...")
-#' model <- openai$language_model("gpt-4o")
-#' result <- generate_text(model, "Hello!")
+#' \donttest{
+#' if (interactive()) {
+#'   # Basic usage with Chat Completions API
+#'   openai <- create_openai(api_key = "sk-...")
+#'   model <- openai$language_model("gpt-4o")
+#'   result <- generate_text(model, "Hello!")
 #'
-#' # Using Responses API for reasoning models
-#' openai <- create_openai()
-#' model <- openai$responses_model("o1")
-#' result <- generate_text(model, "Solve this math problem...")
-#' print(result$reasoning)  # Access chain-of-thought
+#'   # Using Responses API for reasoning models
+#'   openai <- create_openai()
+#'   model <- openai$responses_model("o1")
+#'   result <- generate_text(model, "Solve this math problem...")
+#'   print(result$reasoning) # Access chain-of-thought
 #'
-#' # Smart model selection (auto-detects best API)
-#' model <- openai$smart_model("o3-mini")  # Uses Responses API
-#' model <- openai$smart_model("gpt-4o")   # Uses Chat Completions API
+#'   # Smart model selection (auto-detects best API)
+#'   model <- openai$smart_model("o3-mini") # Uses Responses API
+#'   model <- openai$smart_model("gpt-4o") # Uses Chat Completions API
 #'
-#' # Token limits - unified interface
-#' # For standard models: limits generated content
-#' result <- model$generate(messages = msgs, max_tokens = 1000)
+#'   # Token limits - unified interface
+#'   # For standard models: limits generated content
+#'   result <- model$generate(messages = msgs, max_tokens = 1000)
 #'
-#' # For o1/o3 models: automatically maps to max_completion_tokens
-#' model_o1 <- openai$language_model("o1")
-#' result <- model_o1$generate(messages = msgs, max_tokens = 2000)
+#'   # For o1/o3 models: automatically maps to max_completion_tokens
+#'   model_o1 <- openai$language_model("o1")
+#'   result <- model_o1$generate(messages = msgs, max_tokens = 2000)
 #'
-#' # For Responses API: automatically maps to max_output_tokens (total limit)
-#' model_resp <- openai$responses_model("o1")
-#' result <- model_resp$generate(messages = msgs, max_tokens = 2000)
+#'   # For Responses API: automatically maps to max_output_tokens (total limit)
+#'   model_resp <- openai$responses_model("o1")
+#'   result <- model_resp$generate(messages = msgs, max_tokens = 2000)
 #'
-#' # Advanced: explicitly control answer-only limit (Volcengine Responses API)
-#' result <- model_resp$generate(messages = msgs, max_answer_tokens = 500)
+#'   # Advanced: explicitly control answer-only limit (Volcengine Responses API)
+#'   result <- model_resp$generate(messages = msgs, max_answer_tokens = 500)
 #'
-#' # Multi-turn conversation with Responses API
-#' model <- openai$responses_model("o1")
-#' result1 <- generate_text(model, "What is 2+2?")
-#' result2 <- generate_text(model, "Now multiply that by 3")  # Remembers context
-#' model$reset()  # Start fresh conversation
-#'
-#' # For Volcengine/Ark API
-#' volcengine <- create_openai(
-#'   api_key = Sys.getenv("ARK_API_KEY"),
-#'   base_url = "https://ark.cn-beijing.volces.com/api/v3",
-#'   name = "volcengine",
-#'   disable_stream_options = TRUE
-#' )
+#'   # Multi-turn conversation with Responses API
+#'   model <- openai$responses_model("o1")
+#'   result1 <- generate_text(model, "What is 2+2?")
+#'   result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
+#'   model$reset() # Start fresh conversation
+#' }
 #' }
 create_openai <- function(api_key = NULL,
-                         base_url = NULL,
-                         organization = NULL,
-                         project = NULL,
-                         headers = NULL,
-                         name = NULL,
-                         disable_stream_options = FALSE) {
+                          base_url = NULL,
+                          organization = NULL,
+                          project = NULL,
+                          headers = NULL,
+                          name = NULL,
+                          disable_stream_options = FALSE) {
   OpenAIProvider$new(
     api_key = api_key,
     base_url = base_url,
@@ -1239,65 +1163,6 @@ create_openai <- function(api_key = NULL,
     headers = headers,
     name = name,
     disable_stream_options = disable_stream_options
-  )
-}
-
-#' @title Create Volcengine/Ark Provider
-#' @description
-#' Convenience function to create a Volcengine (火山引擎) provider using the Ark API.
-#' This is a wrapper around create_openai with Volcengine-specific defaults.
-#'
-#' @section Token Limit Parameters for Volcengine Responses API:
-#' Volcengine's Responses API has two mutually exclusive token limit parameters:
-#'
-#' \itemize{
-#'   \item `max_output_tokens`: Total limit including reasoning + answer (default mapping)
-#'   \item `max_tokens` (API level): Answer-only limit, excluding reasoning
-#' }
-#'
-#' The SDK's unified `max_tokens` parameter maps to `max_output_tokens` by default,
-#' which is the **safe choice** to prevent runaway reasoning costs.
-#'
-#' For advanced users who want answer-only limits:
-#' \itemize{
-#'   \item Use `max_answer_tokens` parameter to explicitly set answer-only limit
-#'   \item Use `max_output_tokens` parameter to explicitly set total limit
-#' }
-#'
-#' @param api_key Volcengine API key. Defaults to ARK_API_KEY env var.
-#' @param base_url Base URL for API calls. Defaults to https://ark.cn-beijing.volces.com/api/v3.
-#' @param headers Optional additional headers.
-#' @return An OpenAIProvider object configured for Volcengine.
-#' @export
-#' @examples
-#' \dontrun{
-#' volcengine <- create_volcengine()
-#'
-#' # Chat API (standard models)
-#' model <- volcengine$language_model("doubao-1-5-pro-256k-250115")
-#' result <- generate_text(model, "你好")
-#'
-#' # Responses API (reasoning models like DeepSeek)
-#' model <- volcengine$responses_model("deepseek-r1-250120")
-#'
-#' # Default: max_tokens limits total output (reasoning + answer)
-#' result <- model$generate(messages = msgs, max_tokens = 2000)
-#'
-#' # Advanced: limit only the answer part (reasoning can be longer)
-#' result <- model$generate(messages = msgs, max_answer_tokens = 500)
-#'
-#' # Advanced: explicitly set total limit
-#' result <- model$generate(messages = msgs, max_output_tokens = 3000)
-#' }
-create_volcengine <- function(api_key = NULL,
-                              base_url = NULL,
-                              headers = NULL) {
-  create_openai(
-    api_key = api_key %||% Sys.getenv("ARK_API_KEY"),
-    base_url = base_url %||% "https://ark.cn-beijing.volces.com/api/v3",
-    name = "volcengine",
-    headers = headers,
-    disable_stream_options = TRUE
   )
 }
 

@@ -210,12 +210,14 @@ repair_json_string <- function(json_str) {
 #' @return A repaired tool call list, or an "invalid" tool call if unrepairable.
 #' @keywords internal
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # If LLM calls "GetWeather" but tool is "get_weather"
 #' repaired <- repair_tool_call(
 #'   list(name = "GetWeather", arguments = list(city = "Tokyo")),
 #'   tools = list(get_weather_tool)
 #' )
+#' }
 #' }
 repair_tool_call <- function(tool_call, tools, error_message = NULL) {
   original_name <- tool_call$name
@@ -636,7 +638,8 @@ normalize_tool_execute <- function(execute) {
 #' @rdname tool_factory
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Define a weather tool
 #' get_weather <- tool(
 #'   name = "get_weather",
@@ -657,6 +660,7 @@ normalize_tool_execute <- function(execute) {
 #'   prompt = "What's the weather in Tokyo?",
 #'   tools = list(get_weather)
 #' )
+#' }
 #' }
 tool <- function(name, description, parameters = NULL, execute = NULL, layer = "llm") {
   if (is.function(parameters) && is.null(execute)) {

@@ -33,7 +33,8 @@ A ChatSession object.
 Factory function to create a new ChatSession object.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create a chat session
 chat <- create_chat_session(
   model = "openai:gpt-4o",
@@ -56,5 +57,6 @@ print(chat$stats())
 
 # Save session
 chat$save("my_session.rds")
+}
 }
 }

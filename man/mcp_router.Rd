@@ -13,7 +13,8 @@ An McpRouter object.
 Factory function to create an MCP router for aggregating multiple servers.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create router
 router <- mcp_router()
 
@@ -33,5 +34,6 @@ router$remove_client("github")
 
 # Cleanup
 router$close()
+}
 }
 }

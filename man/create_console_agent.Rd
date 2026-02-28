@@ -5,14 +5,14 @@
 \title{Create Console Agent}
 \usage{
 create_console_agent(
-  working_dir = getwd(),
+  working_dir = if (interactive()) getwd() else tempdir(),
   sandbox_mode = "permissive",
   additional_tools = NULL,
   language = "auto"
 )
 }
 \arguments{
-\item{working_dir}{Working directory (default: current directory).}
+\item{working_dir}{Working directory. Defaults to getwd() interactively, tempdir() otherwise.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none" (default: "permissive").}
 
@@ -29,7 +29,8 @@ This agent can execute commands, manage files, and run R code through
 natural language interaction.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Create default console agent
 agent <- create_console_agent()
 
@@ -38,5 +39,6 @@ agent <- create_console_agent(working_dir = "~/projects/myapp")
 
 # Use with console_chat
 console_chat("openai:gpt-4o", agent = agent)
+}
 }
 }

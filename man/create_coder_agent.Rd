@@ -29,7 +29,8 @@ execute R code in the session environment, making results available to other
 agents. Enhanced version with better safety controls and debugging support.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 coder <- create_coder_agent()
 session <- create_shared_session(model = "openai:gpt-4o")
 result <- coder$run(
@@ -37,5 +38,6 @@ result <- coder$run(
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

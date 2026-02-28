@@ -539,7 +539,8 @@ SkillStore <- R6::R6Class(
 #' @return The installed Skill object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Install from GitHub
 #' install_skill("aisdk/data-analysis")
 #'
@@ -548,6 +549,7 @@ SkillStore <- R6::R6Class(
 #'
 #' # Force reinstall
 #' install_skill("aisdk/ml-tools", force = TRUE)
+#' }
 #' }
 install_skill <- function(skill_ref, version = NULL, force = FALSE) {
   store <- get_skill_store()

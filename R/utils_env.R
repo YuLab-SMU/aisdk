@@ -12,18 +12,18 @@ NULL
 enable_api_tests <- function() {
   # Check environment variable
   env_flag <- Sys.getenv("ENABLE_API_TESTS")
-  
+
   if (env_flag == "") {
     # Default: only enable if API keys are present
     openai_key <- Sys.getenv("OPENAI_API_KEY")
     anthropic_key <- Sys.getenv("ANTHROPIC_API_KEY")
-    
+
     has_openai <- nzchar(openai_key) && !grepl("^your_|^example_", openai_key)
     has_anthropic <- nzchar(anthropic_key) && !grepl("^your_|^example_", anthropic_key)
-    
+
     return(has_openai || has_anthropic)
   }
-  
+
   return(toupper(env_flag) == "TRUE")
 }
 
@@ -38,6 +38,9 @@ has_api_key <- function(provider) {
     return(nzchar(key) && !grepl("^your_|^example_", key))
   } else if (provider == "anthropic") {
     key <- Sys.getenv("ANTHROPIC_API_KEY")
+    return(nzchar(key) && !grepl("^your_|^example_", key))
+  } else if (provider == "stepfun") {
+    key <- Sys.getenv("STEPFUN_API_KEY")
     return(nzchar(key) && !grepl("^your_|^example_", key))
   } else if (provider == "api") {
     # Generic check for ANY key
@@ -135,24 +138,26 @@ get_anthropic_model_id <- function() {
 #' @return Invisible TRUE if successful
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Reload environment after modifying .Renviron
 #' reload_env()
 #' # Now use the new keys
 #' Sys.getenv("OPENAI_API_KEY")
+#' }
 #' }
 reload_env <- function(path = ".Renviron") {
   if (!file.exists(path)) {
     warning(paste0(".Renviron file not found at: ", path))
     return(invisible(FALSE))
   }
-  
+
   # Read the environment file
   readRenviron(path)
-  
+
   message(paste0("[OK] Environment reloaded from: ", path))
   message("[OK] New values are now available in Sys.getenv()")
-  
+
   invisible(TRUE)
 }
 
@@ -166,34 +171,34 @@ reload_env <- function(path = ".Renviron") {
 #' @export
 update_renviron <- function(updates, path = ".Renviron") {
   lines <- if (file.exists(path)) readLines(path) else character(0)
-  
+
   for (key in names(updates)) {
     value <- updates[[key]]
     if (is.null(value) || value == "") next
-    
+
     # Check if key exists (ignore commented lines)
     pattern <- paste0("^\\s*", key, "\\s*=")
     idx <- grep(pattern, lines)
-    
+
     new_line <- paste0(key, "=", value)
-    
+
     if (length(idx) > 0) {
       lines[idx[1]] <- new_line
     } else {
       lines <- c(lines, new_line)
     }
   }
-  
+
   # Ensure newline at end
   if (length(lines) > 0 && nchar(lines[length(lines)]) > 0) {
     # It's fine, writeLines adds newline
   }
-  
+
   writeLines(lines, path)
-  
+
   # Reload to apply changes immediately
   reload_env(path)
-  
+
   invisible(TRUE)
 }
 
@@ -202,29 +207,31 @@ update_renviron <- function(updates, path = ".Renviron") {
 #' @return Data frame with added logical columns
 #' @keywords internal
 annotate_model_capabilities <- function(df) {
-  if (nrow(df) == 0) return(df)
-  
+  if (nrow(df) == 0) {
+    return(df)
+  }
+
   df$function_calling <- FALSE
   df$thinking <- FALSE
   df$vision <- FALSE
-  
+
   # Heuristics
   id <- tolower(df$id)
-  
+
   # Function calling: Most modern models support it
   # OpenAI: almost all recent ones
   # Anthropic: Claude 3+
   # DeepSeek: Chat models usually do
   # Llama 3: groq supports it
-  
+
   df$function_calling <- grepl("gpt-|claude-3|deepseek|llama-3|mixtral", id)
-  
+
   # Vision
   df$vision <- grepl("gpt-4o|vision|claude-3|gemini|llava", id)
-  
+
   # Thinking / Reasoning
   df$thinking <- grepl("o1-|o3-|r1|reasoning", id)
-  
+
   df
 }
 
@@ -240,41 +247,43 @@ fetch_api_models <- function(provider, api_key = NULL, base_url = NULL) {
   if (is.null(api_key) || nchar(api_key) == 0) {
     return(data.frame(id = character(0), function_calling = logical(0), thinking = logical(0), vision = logical(0)))
   }
-  
+
   # Normalize provider name
   provider <- tolower(provider)
   models_list <- character(0)
-  
+
   # OpenAI-compatible providers
   openai_compatible <- c("openai", "nvidia", "deepseek", "groq")
-  
+
   if (provider %in% openai_compatible) {
     if (is.null(base_url) || nchar(base_url) == 0) {
-       if (provider == "openai") base_url <- "https://api.openai.com/v1"
-       if (provider == "nvidia") base_url <- "https://integrate.api.nvidia.com/v1"
-       if (provider == "deepseek") base_url <- "https://api.deepseek.com"
-       if (provider == "groq") base_url <- "https://api.groq.com/openai/v1"
+      if (provider == "openai") base_url <- "https://api.openai.com/v1"
+      if (provider == "nvidia") base_url <- "https://integrate.api.nvidia.com/v1"
+      if (provider == "deepseek") base_url <- "https://api.deepseek.com"
+      if (provider == "groq") base_url <- "https://api.groq.com/openai/v1"
     }
-    
+
     url <- paste0(sub("/$", "", base_url), "/models")
     headers <- list(
       Authorization = paste("Bearer", api_key)
     )
-    
-    tryCatch({
-      req <- httr2::request(url)
-      req <- httr2::req_headers(req, !!!headers)
-      req <- httr2::req_retry(req, max_tries = 2)
-      
-      resp <- httr2::req_perform(req)
-      data <- httr2::resp_body_json(resp)
-      
-      models_list <- vapply(data$data, function(m) m$id, character(1))
-      models_list <- sort(models_list)
-      
-    }, error = function(e) {
-      warning("Failed to fetch models: ", e$message)
-    })
+
+    tryCatch(
+      {
+        req <- httr2::request(url)
+        req <- httr2::req_headers(req, !!!headers)
+        req <- httr2::req_retry(req, max_tries = 2)
+
+        resp <- httr2::req_perform(req)
+        data <- httr2::resp_body_json(resp)
+
+        models_list <- vapply(data$data, function(m) m$id, character(1))
+        models_list <- sort(models_list)
+      },
+      error = function(e) {
+        warning("Failed to fetch models: ", e$message)
+      }
+    )
   } else if (provider == "anthropic") {
     # Anthropic doesn't have a public models list API yet.
     # Return a curated list.
@@ -288,7 +297,7 @@ fetch_api_models <- function(provider, api_key = NULL, base_url = NULL) {
       "claude-3-haiku-20240307"
     )
   }
-  
+
   if (length(models_list) > 0) {
     df <- data.frame(id = models_list, stringsAsFactors = FALSE)
     return(annotate_model_capabilities(df))

@@ -534,7 +534,8 @@ McpRouter <- R6::R6Class(
 #' @return An McpDiscovery object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create discovery instance
 #' discovery <- mcp_discover()
 #'
@@ -547,6 +548,7 @@ McpRouter <- R6::R6Class(
 #' # List all discovered endpoints
 #' discovery$list_endpoints()
 #' }
+#' }
 mcp_discover <- function(registry_url = NULL) {
   McpDiscovery$new(registry_url)
 }
@@ -557,7 +559,8 @@ mcp_discover <- function(registry_url = NULL) {
 #' @return An McpRouter object.
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
+#' if (interactive()) {
 #' # Create router
 #' router <- mcp_router()
 #'
@@ -577,6 +580,7 @@ mcp_discover <- function(registry_url = NULL) {
 #'
 #' # Cleanup
 #' router$close()
+#' }
 #' }
 mcp_router <- function() {
   McpRouter$new()

@@ -20,7 +20,8 @@ The installed Skill object.
 Install a skill from the global skill store or a GitHub repository.
 }
 \examples{
-\dontrun{
+\donttest{
+if (interactive()) {
 # Install from GitHub
 install_skill("aisdk/data-analysis")
 
@@ -29,5 +30,6 @@ install_skill("aisdk/visualization", version = "1.2.0")
 
 # Force reinstall
 install_skill("aisdk/ml-tools", force = TRUE)
+}
 }
 }

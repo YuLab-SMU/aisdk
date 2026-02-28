@@ -19,14 +19,16 @@ NULL
 #' @return Invisibly returns the evaluation result.
 #' @export
 #' @examples
-#' \dontrun{
-#' test_that("agent answers math questions correctly", {
-#'   result <- generate_text(
-#'     model = "openai:gpt-4o",
-#'     prompt = "What is 2 + 2?"
-#'   )
-#'   expect_llm_pass(result, "The response should contain the number 4")
-#' })
+#' \donttest{
+#' if (interactive()) {
+#'   test_that("agent answers math questions correctly", {
+#'     result <- generate_text(
+#'       model = "openai:gpt-4o",
+#'       prompt = "What is 2 + 2?"
+#'     )
+#'     expect_llm_pass(result, "The response should contain the number 4")
+#'   })
+#' }
 #' }
 expect_llm_pass <- function(response,
                             criteria,
@@ -68,27 +70,30 @@ Respond with ONLY a JSON object in this exact format:
   )
 
   # Get evaluation
-  eval_result <- tryCatch({
-    result <- generate_text(
-      model = judge_model,
-      prompt = eval_prompt,
-      system = "You are an objective evaluator. Respond only with the requested JSON format."
-    )
+  eval_result <- tryCatch(
+    {
+      result <- generate_text(
+        model = judge_model,
+        prompt = eval_prompt,
+        system = "You are an objective evaluator. Respond only with the requested JSON format."
+      )
 
-    # Parse JSON response
-    json_match <- regmatches(
-      result$text,
-      regexpr("\\{[^}]+\\}", result$text)
-    )
+      # Parse JSON response
+      json_match <- regmatches(
+        result$text,
+        regexpr("\\{[^}]+\\}", result$text)
+      )
 
-    if (length(json_match) > 0) {
-      jsonlite::fromJSON(json_match)
-    } else {
-      list(score = 0, reasoning = "Failed to parse evaluation response")
+      if (length(json_match) > 0) {
+        jsonlite::fromJSON(json_match)
+      } else {
+        list(score = 0, reasoning = "Failed to parse evaluation response")
+      }
+    },
+    error = function(e) {
+      list(score = 0, reasoning = paste("Evaluation error:", conditionMessage(e)))
     }
-  }, error = function(e) {
-    list(score = 0, reasoning = paste("Evaluation error:", conditionMessage(e)))
-  })
+  )
 
   # Build expectation
   passed <- eval_result$score >= threshold
@@ -224,26 +229,29 @@ Where hallucination_score is:
     ground_truth
   )
 
-  result <- tryCatch({
-    eval_response <- generate_text(
-      model = judge_model,
-      prompt = check_prompt,
-      system = "You are a fact-checker. Be thorough but fair."
-    )
+  result <- tryCatch(
+    {
+      eval_response <- generate_text(
+        model = judge_model,
+        prompt = check_prompt,
+        system = "You are a fact-checker. Be thorough but fair."
+      )
 
-    json_match <- regmatches(
-      eval_response$text,
-      regexpr("\\{[^}]*\\}", eval_response$text, perl = TRUE)
-    )
+      json_match <- regmatches(
+        eval_response$text,
+        regexpr("\\{[^}]*\\}", eval_response$text, perl = TRUE)
+      )
 
-    if (length(json_match) > 0) {
-      jsonlite::fromJSON(json_match)
-    } else {
-      list(hallucination_score = 1, hallucinations = list(), reasoning = "Parse error")
+      if (length(json_match) > 0) {
+        jsonlite::fromJSON(json_match)
+      } else {
+        list(hallucination_score = 1, hallucinations = list(), reasoning = "Parse error")
+      }
+    },
+    error = function(e) {
+      list(hallucination_score = 1, hallucinations = list(), reasoning = conditionMessage(e))
     }
-  }, error = function(e) {
-    list(hallucination_score = 1, hallucinations = list(), reasoning = conditionMessage(e))
-  })
+  )
 
   passed <- result$hallucination_score <= tolerance
 
@@ -286,7 +294,7 @@ benchmark_agent <- function(agent,
                             verbose = TRUE) {
   # Determine model
   model <- if (inherits(agent, "Agent")) {
-    NULL  # Agent will use its own model
+    NULL # Agent will use its own model
   } else if (is.character(agent)) {
     agent
   } else {
@@ -300,48 +308,59 @@ benchmark_agent <- function(agent,
     task <- tasks[[i]]
 
     if (verbose) {
-      message(sprintf("[%d/%d] Running: %s",
-                      i, length(tasks),
-                      substr(task$prompt, 1, 50)))
+      message(sprintf(
+        "[%d/%d] Running: %s",
+        i, length(tasks),
+        substr(task$prompt, 1, 50)
+      ))
     }
 
     task_start <- Sys.time()
 
     # Run the task
-    response <- tryCatch({
-      if (inherits(agent, "Agent")) {
-        agent$run(task$prompt)
-      } else {
-        generate_text(
-          model = model,
-          prompt = task$prompt,
-          tools = tools
-        )
+    response <- tryCatch(
+      {
+        if (inherits(agent, "Agent")) {
+          agent$run(task$prompt)
+        } else {
+          generate_text(
+            model = model,
+            prompt = task$prompt,
+            tools = tools
+          )
+        }
+      },
+      error = function(e) {
+        list(text = "", error = conditionMessage(e))
       }
-    }, error = function(e) {
-      list(text = "", error = conditionMessage(e))
-    })
+    )
 
     task_time <- as.numeric(difftime(Sys.time(), task_start, units = "secs"))
 
     # Evaluate response
-    eval_result <- tryCatch({
-      if (!is.null(task$expected)) {
-        expect_llm_pass(response, task$expected, threshold = 0)
-      } else {
-        list(score = NA, reasoning = "No criteria provided")
+    eval_result <- tryCatch(
+      {
+        if (!is.null(task$expected)) {
+          expect_llm_pass(response, task$expected, threshold = 0)
+        } else {
+          list(score = NA, reasoning = "No criteria provided")
+        }
+      },
+      error = function(e) {
+        list(score = 0, reasoning = conditionMessage(e))
       }
-    }, error = function(e) {
-      list(score = 0, reasoning = conditionMessage(e))
-    })
+    )
 
     # Check hallucination if ground truth provided
     hallucination_result <- if (!is.null(task$ground_truth)) {
-      tryCatch({
-        expect_no_hallucination(response, task$ground_truth, tolerance = 1)
-      }, error = function(e) {
-        list(hallucination_score = NA, reasoning = conditionMessage(e))
-      })
+      tryCatch(
+        {
+          expect_no_hallucination(response, task$ground_truth, tolerance = 1)
+        },
+        error = function(e) {
+          list(hallucination_score = NA, reasoning = conditionMessage(e))
+        }
+      )
     } else {
       list(hallucination_score = NA)
     }
@@ -431,7 +450,9 @@ private_calculate_tool_accuracy <- function(results, tasks) {
     }
   }
 
-  if (total == 0) return(NA)
+  if (total == 0) {
+    return(NA)
+  }
   correct / total
 }
 
@@ -455,8 +476,10 @@ print.benchmark_result <- function(x, ...) {
   if (length(x$by_category) > 1) {
     cat("\nBy Category:\n")
     for (cat in x$by_category) {
-      cat(sprintf("  %s: %.2f (%d tasks)\n",
-                  cat$category, cat$mean_score, cat$count))
+      cat(sprintf(
+        "  %s: %.2f (%d tasks)\n",
+        cat$category, cat$mean_score, cat$count
+      ))
     }
   }
 

@@ -3,7 +3,8 @@
 
 create_artifact_dir <- function(base_dir = NULL) {
   if (is.null(base_dir) || !nzchar(base_dir)) {
-    base_dir <- file.path(getwd(), "artifacts")
+    fallback <- if (interactive()) file.path(getwd(), "artifacts") else file.path(tempdir(), "artifacts")
+    base_dir <- fallback
   }
   ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
   dir <- file.path(base_dir, ts)
@@ -38,9 +39,15 @@ sanitize_filename <- function(name, default_ext = "txt") {
 }
 
 is_safe_subpath <- function(path) {
-  if (is.null(path) || !nzchar(path)) return(TRUE)
-  if (grepl("(^[A-Za-z]:)|(^/)|(^\\\\\\\\)", path)) return(FALSE)
-  if (grepl("\\.\\.", path)) return(FALSE)
+  if (is.null(path) || !nzchar(path)) {
+    return(TRUE)
+  }
+  if (grepl("(^[A-Za-z]:)|(^/)|(^\\\\\\\\)", path)) {
+    return(FALSE)
+  }
+  if (grepl("\\.\\.", path)) {
+    return(FALSE)
+  }
   TRUE
 }
 
@@ -128,10 +135,14 @@ create_artifact_tools <- function(default_dir = NULL) {
         inner <- sub("^```\\{r\\s*", "", header)
         inner <- sub("\\}\\s*$", "", inner)
         inner <- trimws(inner)
-        if (!nzchar(inner)) return(NULL)
+        if (!nzchar(inner)) {
+          return(NULL)
+        }
         parts <- strsplit(inner, ",")[[1]]
         label <- trimws(parts[1])
-        if (!nzchar(label)) return(NULL)
+        if (!nzchar(label)) {
+          return(NULL)
+        }
         label
       }
 
@@ -200,10 +211,14 @@ create_artifact_tools <- function(default_dir = NULL) {
         inner <- sub("^```\\{r\\s*", "", header)
         inner <- sub("\\}\\s*$", "", inner)
         inner <- trimws(inner)
-        if (!nzchar(inner)) return(NULL)
+        if (!nzchar(inner)) {
+          return(NULL)
+        }
         parts <- strsplit(inner, ",")[[1]]
         label <- trimws(parts[1])
-        if (!nzchar(label)) return(NULL)
+        if (!nzchar(label)) {
+          return(NULL)
+        }
         label
       }
 
@@ -287,8 +302,10 @@ create_artifact_tools <- function(default_dir = NULL) {
       chunk_lines <- c(header, args$code, "```")
 
       if (!is.null(args$after_heading) && nzchar(args$after_heading)) {
-        idx <- grep(paste0("^#+\\s+", gsub("([\\^\\$\\.|\\(\\)\\[\\]\\*\\+\\?\\\\])", "\\\\\\1", args$after_heading)),
-                    lines)
+        idx <- grep(
+          paste0("^#+\\s+", gsub("([\\^\\$\\.|\\(\\)\\[\\]\\*\\+\\?\\\\])", "\\\\\\1", args$after_heading)),
+          lines
+        )
         if (length(idx) > 0) {
           insert_at <- idx[1]
           lines <- c(lines[1:insert_at], "", chunk_lines, "", lines[(insert_at + 1):length(lines)])
@@ -325,8 +342,10 @@ create_artifact_tools <- function(default_dir = NULL) {
       text_lines <- unlist(strsplit(args$text, "\n", fixed = TRUE))
 
       if (!is.null(args$after_heading) && nzchar(args$after_heading)) {
-        idx <- grep(paste0("^#+\\s+", gsub("([\\^\\$\\.|\\(\\)\\[\\]\\*\\+\\?\\\\])", "\\\\\\1", args$after_heading)),
-                    lines)
+        idx <- grep(
+          paste0("^#+\\s+", gsub("([\\^\\$\\.|\\(\\)\\[\\]\\*\\+\\?\\\\])", "\\\\\\1", args$after_heading)),
+          lines
+        )
         if (length(idx) > 0) {
           insert_at <- idx[1]
           lines <- c(lines[1:insert_at], "", text_lines, "", lines[(insert_at + 1):length(lines)])
@@ -350,7 +369,9 @@ create_artifact_tools <- function(default_dir = NULL) {
     ),
     execute = function(args) {
       env <- args$.envir
-      if (is.null(env)) return("Error: No session environment available.")
+      if (is.null(env)) {
+        return("Error: No session environment available.")
+      }
       dir <- get_artifact_dir(env, default_dir)
       filename <- sanitize_filename(args$filename, "Rmd")
       path <- safe_join(dir, NULL, filename)
@@ -368,10 +389,14 @@ create_artifact_tools <- function(default_dir = NULL) {
         inner <- sub("^```\\{r\\s*", "", header)
         inner <- sub("\\}\\s*$", "", inner)
         inner <- trimws(inner)
-        if (!nzchar(inner)) return(NULL)
+        if (!nzchar(inner)) {
+          return(NULL)
+        }
         parts <- strsplit(inner, ",")[[1]]
         label <- trimws(parts[1])
-        if (!nzchar(label)) return(NULL)
+        if (!nzchar(label)) {
+          return(NULL)
+        }
         label
       }
 
@@ -386,11 +411,14 @@ create_artifact_tools <- function(default_dir = NULL) {
           if (!is.null(current_label) && identical(current_label, args$label)) {
             code <- paste(chunk_lines, collapse = "\n")
             # execute in session env
-            output <- tryCatch({
-              utils::capture.output(eval(parse(text = code), envir = env))
-            }, error = function(e) {
-              paste0("Error: ", conditionMessage(e))
-            })
+            output <- tryCatch(
+              {
+                utils::capture.output(eval(parse(text = code), envir = env))
+              },
+              error = function(e) {
+                paste0("Error: ", conditionMessage(e))
+              }
+            )
             return(paste(c("Chunk output:", output), collapse = "\n"))
           }
           in_chunk <- FALSE
@@ -412,7 +440,8 @@ create_artifact_tools <- function(default_dir = NULL) {
     parameters = z_object(
       filename = z_string("Rmd filename in artifact directory"),
       output_format = z_enum(c("html_document", "pdf_document", "word_document"),
-                             description = "Output format"),
+        description = "Output format"
+      ),
       output_file = z_string("Optional output filename (without path).")
     ),
     execute = function(args) {
@@ -441,18 +470,21 @@ create_artifact_tools <- function(default_dir = NULL) {
         output_file <- sanitize_filename(output_file, default_ext)
       }
 
-      result <- tryCatch({
-        out <- rmarkdown::render(
-          input = input_path,
-          output_format = output_format,
-          output_dir = dir,
-          output_file = output_file,
-          quiet = TRUE
-        )
-        paste0("Rendered Rmd to ", out)
-      }, error = function(e) {
-        paste0("Error rendering Rmd: ", conditionMessage(e))
-      })
+      result <- tryCatch(
+        {
+          out <- rmarkdown::render(
+            input = input_path,
+            output_format = output_format,
+            output_dir = dir,
+            output_file = output_file,
+            quiet = TRUE
+          )
+          paste0("Rendered Rmd to ", out)
+        },
+        error = function(e) {
+          paste0("Error rendering Rmd: ", conditionMessage(e))
+        }
+      )
 
       result
     }
@@ -471,7 +503,9 @@ create_artifact_tools <- function(default_dir = NULL) {
     ),
     execute = function(args) {
       env <- args$.envir
-      if (is.null(env)) return("Error: No session environment available.")
+      if (is.null(env)) {
+        return("Error: No session environment available.")
+      }
       if (!exists(args$plot_var, envir = env, inherits = FALSE)) {
         return(paste0("Error: plot variable '", args$plot_var, "' not found."))
       }
@@ -507,7 +541,9 @@ create_artifact_tools <- function(default_dir = NULL) {
     ),
     execute = function(args) {
       env <- args$.envir
-      if (is.null(env)) return("Error: No session environment available.")
+      if (is.null(env)) {
+        return("Error: No session environment available.")
+      }
       if (!exists(args$var_name, envir = env, inherits = FALSE)) {
         return(paste0("Error: variable '", args$var_name, "' not found."))
       }
@@ -523,18 +559,21 @@ create_artifact_tools <- function(default_dir = NULL) {
       subdir <- args$subdir
       path <- safe_join(dir, subdir, filename)
 
-      result <- tryCatch({
-        switch(format,
-          "csv" = utils::write.csv(data, path, row.names = FALSE),
-          "tsv" = utils::write.table(data, path, sep = "\t", row.names = FALSE),
-          "json" = jsonlite::write_json(data, path, auto_unbox = TRUE, pretty = TRUE),
-          "rds" = saveRDS(data, path),
-          stop(paste0("Unsupported format: ", format))
-        )
-        paste0("Saved data artifact to ", path)
-      }, error = function(e) {
-        paste0("Error saving data: ", conditionMessage(e))
-      })
+      result <- tryCatch(
+        {
+          switch(format,
+            "csv" = utils::write.csv(data, path, row.names = FALSE),
+            "tsv" = utils::write.table(data, path, sep = "\t", row.names = FALSE),
+            "json" = jsonlite::write_json(data, path, auto_unbox = TRUE, pretty = TRUE),
+            "rds" = saveRDS(data, path),
+            stop(paste0("Unsupported format: ", format))
+          )
+          paste0("Saved data artifact to ", path)
+        },
+        error = function(e) {
+          paste0("Error saving data: ", conditionMessage(e))
+        }
+      )
 
       result
     }
@@ -562,8 +601,10 @@ create_artifact_tools <- function(default_dir = NULL) {
     }
   )
 
-  list(save_text_tool, save_rmd_tool, render_rmd_tool,
-       get_rmd_chunks_tool, update_rmd_chunk_tool, append_rmd_chunk_tool,
-       append_rmd_text_tool, run_rmd_chunk_tool,
-       save_plot_tool, save_data_tool, list_artifacts_tool)
+  list(
+    save_text_tool, save_rmd_tool, render_rmd_tool,
+    get_rmd_chunks_tool, update_rmd_chunk_tool, append_rmd_chunk_tool,
+    append_rmd_text_tool, run_rmd_chunk_tool,
+    save_plot_tool, save_data_tool, list_artifacts_tool
+  )
 }
