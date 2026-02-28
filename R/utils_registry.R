@@ -61,6 +61,11 @@ ProviderRegistry <- R6::R6Class(
         ))
       }
 
+      # Evaluate lazy factories
+      if (is.function(provider) && length(formals(provider)) == 0) {
+        provider <- provider()
+      }
+
       if (is.function(provider)) {
         return(provider(model_id))
       } else if (inherits(provider, "R6") && !is.null(provider$language_model)) {
@@ -86,6 +91,11 @@ ProviderRegistry <- R6::R6Class(
         rlang::abort(paste0("Provider not found: ", provider_id))
       }
 
+      # Evaluate lazy factories
+      if (is.function(provider) && length(formals(provider)) == 0) {
+        provider <- provider()
+      }
+
       if (inherits(provider, "R6") && !is.null(provider$embedding_model)) {
         return(provider$embedding_model(model_id))
       } else {
@@ -109,18 +119,18 @@ ProviderRegistry <- R6::R6Class(
 get_default_registry <- function() {
   if (is.null(.registry_env$default)) {
     reg <- ProviderRegistry$new()
-    # Auto-register default providers dynamically if their factory exists
+    # Auto-register default providers lazily to ensure fresh environment variables
     tryCatch(
       {
-        if (exists("create_openai", mode = "function")) reg$register("openai", suppressWarnings(create_openai()))
-        if (exists("create_anthropic", mode = "function")) reg$register("anthropic", suppressWarnings(create_anthropic()))
-        if (exists("create_gemini", mode = "function")) reg$register("gemini", suppressWarnings(create_gemini()))
-        if (exists("create_deepseek", mode = "function")) reg$register("deepseek", suppressWarnings(create_deepseek()))
-        if (exists("create_xai", mode = "function")) reg$register("xai", suppressWarnings(create_xai()))
-        if (exists("create_volcengine", mode = "function")) reg$register("volcengine", suppressWarnings(create_volcengine()))
-        if (exists("create_stepfun", mode = "function")) reg$register("stepfun", suppressWarnings(create_stepfun()))
-        if (exists("create_bailian", mode = "function")) reg$register("bailian", suppressWarnings(create_bailian()))
-        if (exists("create_openrouter", mode = "function")) reg$register("openrouter", suppressWarnings(create_openrouter()))
+        if (exists("create_openai", mode = "function")) reg$register("openai", function() suppressWarnings(create_openai()))
+        if (exists("create_anthropic", mode = "function")) reg$register("anthropic", function() suppressWarnings(create_anthropic()))
+        if (exists("create_gemini", mode = "function")) reg$register("gemini", function() suppressWarnings(create_gemini()))
+        if (exists("create_deepseek", mode = "function")) reg$register("deepseek", function() suppressWarnings(create_deepseek()))
+        if (exists("create_xai", mode = "function")) reg$register("xai", function() suppressWarnings(create_xai()))
+        if (exists("create_volcengine", mode = "function")) reg$register("volcengine", function() suppressWarnings(create_volcengine()))
+        if (exists("create_stepfun", mode = "function")) reg$register("stepfun", function() suppressWarnings(create_stepfun()))
+        if (exists("create_bailian", mode = "function")) reg$register("bailian", function() suppressWarnings(create_bailian()))
+        if (exists("create_openrouter", mode = "function")) reg$register("openrouter", function() suppressWarnings(create_openrouter()))
       },
       error = function(e) {}
     )
