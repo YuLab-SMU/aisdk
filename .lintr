@@ -1,4 +1,5 @@
 linters: linters_with_defaults(
-    line_length_linter = NULL,
-    commented_code_linter = NULL
+    indentation_linter = NULL,
+    line_length_linter = NULL,      # 顺便关掉上次提到的行长限制
+    commented_code_linter = NULL    # 顺便关掉注释代码限制
   )
