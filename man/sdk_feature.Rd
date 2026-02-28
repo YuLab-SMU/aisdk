@@ -19,9 +19,11 @@ Get the current value of a feature flag.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Check if shared session is enabled
 if (sdk_feature("use_shared_session")) {
   session <- create_shared_session(model = "openai:gpt-4o")
+}
 } else {
   session <- create_chat_session(model = "openai:gpt-4o")
 }

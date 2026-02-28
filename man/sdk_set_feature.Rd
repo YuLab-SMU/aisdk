@@ -19,10 +19,12 @@ Set a feature flag value. Use this to enable/disable SDK features.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Disable shared session for legacy compatibility
 sdk_set_feature("use_shared_session", FALSE)
 
 # Enable legacy tool format
 sdk_set_feature("legacy_tool_format", TRUE)
+}
 }
 }

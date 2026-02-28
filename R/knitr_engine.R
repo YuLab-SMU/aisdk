@@ -17,9 +17,11 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' library(aisdk)
 #' register_ai_engine()
 #' # Now you can use ```{ai} chunks in your RMarkdown
+#' }
 #' }
 register_ai_engine <- function() {
   if (!requireNamespace("knitr", quietly = TRUE)) {

@@ -30,6 +30,7 @@ natural language interaction.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create default console agent
 agent <- create_console_agent()
 
@@ -38,5 +39,6 @@ agent <- create_console_agent(working_dir = "~/projects/myapp")
 
 # Use with console_chat
 console_chat("openai:gpt-4o", agent = agent)
+}
 }
 }

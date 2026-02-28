@@ -23,7 +23,9 @@ Factory function to create a Gemini provider.
 }
 \examples{
 \donttest{
+if (interactive()) {
 gemini <- create_gemini(api_key = "AIza...")
 model <- gemini$language_model("gemini-1.5-pro")
+}
 }
 }

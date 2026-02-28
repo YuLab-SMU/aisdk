@@ -50,6 +50,7 @@ chat without tools.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Start with default agent (intelligent terminal mode)
 console_chat("openai:gpt-4o")
 
@@ -74,5 +75,6 @@ console_chat("openai:gpt-4o", agent = agent)
 # /clear         - Clear conversation history
 # /help          - Show available commands
 # /agent [on|off] - Toggle agent mode
+}
 }
 }

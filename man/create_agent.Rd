@@ -34,6 +34,7 @@ Factory function to create a new Agent object.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create a simple math agent
 math_agent <- create_agent(
   name = "MathAgent",
@@ -50,5 +51,6 @@ stock_agent <- create_agent(
   description = "Stock analysis agent",
   skills = "auto"
 )
+}
 }
 }

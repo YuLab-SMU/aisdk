@@ -17,8 +17,10 @@ Provides migration guidance for legacy code patterns.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Get migration guidance for ChatSession
 guidance <- migrate_pattern("ChatSession")
 cat(guidance$example)
+}
 }
 }

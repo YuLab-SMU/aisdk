@@ -19,10 +19,12 @@ and create action plans.
 }
 \examples{
 \donttest{
+if (interactive()) {
 planner <- create_planner_agent()
 result <- planner$run(
   "How should I approach building a machine learning model for customer churn?",
   model = "openai:gpt-4o"
 )
+}
 }
 }

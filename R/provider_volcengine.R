@@ -121,6 +121,7 @@ VolcengineProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' volcengine <- create_volcengine()
 #'
 #' # Chat API (standard models)
@@ -138,6 +139,7 @@ VolcengineProvider <- R6::R6Class(
 #'
 #' # Smart model selection (auto-detects best API)
 #' model <- volcengine$smart_model("deepseek-r1-250120")
+#' }
 #' }
 create_volcengine <- function(api_key = NULL,
                               base_url = NULL,

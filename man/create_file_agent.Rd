@@ -26,6 +26,7 @@ The agent can read, write, and manage files with safety guardrails.
 }
 \examples{
 \donttest{
+if (interactive()) {
 file_agent <- create_file_agent(
   allowed_dirs = c("./data", "./output"),
   allowed_extensions = c("csv", "json", "txt", "rds")
@@ -35,5 +36,6 @@ result <- file_agent$run(
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

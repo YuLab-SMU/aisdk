@@ -34,6 +34,7 @@ Factory function to create a new Flow object for enhanced multi-agent orchestrat
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create an enhanced multi-agent flow
 session <- create_chat_session()
 cleaner <- create_agent("Cleaner", "Cleans data")
@@ -51,5 +52,6 @@ flow <- create_flow(
 
 # Run the manager with auto-delegation (unified delegate_task tool)
 result <- flow$run(manager, "Load data and create a visualization")
+}
 }
 }

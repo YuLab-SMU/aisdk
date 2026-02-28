@@ -20,12 +20,14 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' test_that("agent answers math questions correctly", {
 #'   result <- generate_text(
 #'     model = "openai:gpt-4o",
 #'     prompt = "What is 2 + 2?"
 #'   )
 #'   expect_llm_pass(result, "The response should contain the number 4")
+#' }
 #' })
 #' }
 expect_llm_pass <- function(response,

@@ -273,6 +273,7 @@ McpClient <- R6::R6Class(
 #'
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Connect to GitHub MCP server
 #' client <- create_mcp_client(
 #'   "npx",
@@ -291,6 +292,7 @@ McpClient <- R6::R6Class(
 #' )
 #'
 #' client$close()
+#' }
 #' }
 create_mcp_client <- function(command, args = character(), env = NULL) {
   McpClient$new(command, args, env)

@@ -18,10 +18,12 @@ suggest migration steps if needed.
 }
 \examples{
 \donttest{
+if (interactive()) {
 result <- check_sdk_compatibility("0.8.0")
 if (!result$compatible) {
   cat("Migration needed:\n")
   cat(paste(result$suggestions, collapse = "\n"))
+}
 }
 }
 }

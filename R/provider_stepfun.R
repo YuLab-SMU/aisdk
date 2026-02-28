@@ -79,9 +79,11 @@ StepfunProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' stepfun <- create_stepfun()
 #' model <- stepfun$language_model("step-1-8k")
 #' result <- generate_text(model, "Explain quantum computing in one sentence.")
+#' }
 #' }
 create_stepfun <- function(api_key = NULL,
                            base_url = NULL,

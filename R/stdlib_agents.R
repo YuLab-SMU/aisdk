@@ -22,6 +22,7 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' data_agent <- create_data_agent()
 #' session <- create_shared_session(model = "openai:gpt-4o")
 #' session$set_var("sales", data.frame(
@@ -33,6 +34,7 @@ NULL
 #'   session = session,
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 
@@ -344,6 +346,7 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' file_agent <- create_file_agent(
 #'   allowed_dirs = c("./data", "./output"),
 #'   allowed_extensions = c("csv", "json", "txt", "rds")
@@ -353,6 +356,7 @@ create_data_agent <- function(name = "DataAgent", safe_mode = TRUE) {
 #'   session = session,
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_file_agent <- function(name = "FileAgent",
                                allowed_dirs = ".",
@@ -673,12 +677,14 @@ create_file_agent <- function(name = "FileAgent",
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' env_agent <- create_env_agent(allow_install = TRUE)
 #' result <- env_agent$run(
 #'   "Check if tidyverse is installed and load it",
 #'   session = session,
 #'   model = "openai:gpt-4o"
 #' )
+#' }
 #' }
 create_env_agent <- function(name = "EnvAgent",
                               allow_install = FALSE,

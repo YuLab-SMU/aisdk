@@ -58,6 +58,7 @@ then parsed and returned as an R list.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Define a schema for the expected output
 schema <- z_object(
   title = z_string(description = "Title of the article"),
@@ -74,5 +75,6 @@ result <- generate_object(
 
 print(result$object$title)
 print(result$object$sentiment)
+}
 }
 }

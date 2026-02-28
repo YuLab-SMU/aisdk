@@ -21,6 +21,7 @@ Factory function to create an MCP discovery instance.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create discovery instance
 discovery <- mcp_discover()
 
@@ -32,5 +33,6 @@ discovery$register("my-server", "localhost", 3000)
 
 # List all discovered endpoints
 discovery$list_endpoints()
+}
 }
 }

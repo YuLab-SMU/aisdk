@@ -14,7 +14,9 @@ List all available feature flags and their current values.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # See all feature flags
 print(sdk_list_features())
+}
 }
 }

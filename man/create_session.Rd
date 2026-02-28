@@ -35,11 +35,13 @@ based on feature flags. This provides a migration path for existing code.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Automatically uses SharedSession if feature enabled
 session <- create_session(model = "openai:gpt-4o")
 
 # Force legacy session
 sdk_set_feature("use_shared_session", FALSE)
 session <- create_session(model = "openai:gpt-4o")
+}
 }
 }

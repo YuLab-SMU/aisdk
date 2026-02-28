@@ -98,6 +98,7 @@ OpenRouterProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' openrouter <- create_openrouter()
 #'
 #' # Access any model via a unified API
@@ -108,6 +109,7 @@ OpenRouterProvider <- R6::R6Class(
 #' model <- openrouter$language_model("deepseek/deepseek-r1")
 #' result <- generate_text(model, "Solve: 15 * 23")
 #' print(result$reasoning)
+#' }
 #' }
 create_openrouter <- function(api_key = NULL,
                               base_url = NULL,

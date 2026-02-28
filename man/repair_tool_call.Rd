@@ -26,11 +26,13 @@ strategy inspired by Opencode's experimental_repairToolCall:
 }
 \examples{
 \donttest{
+if (interactive()) {
 # If LLM calls "GetWeather" but tool is "get_weather"
 repaired <- repair_tool_call(
   list(name = "GetWeather", arguments = list(city = "Tokyo")),
   tools = list(get_weather_tool)
 )
+}
 }
 }
 \keyword{internal}

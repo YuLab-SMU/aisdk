@@ -21,6 +21,7 @@ the session environment.
 }
 \examples{
 \donttest{
+if (interactive()) {
 data_agent <- create_data_agent()
 session <- create_shared_session(model = "openai:gpt-4o")
 session$set_var("sales", data.frame(
@@ -32,5 +33,6 @@ result <- data_agent$run(
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

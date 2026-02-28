@@ -24,8 +24,10 @@ plus additional console-specific tools.
 }
 \examples{
 \donttest{
+if (interactive()) {
 tools <- create_console_tools()
 # Use with an agent or session
 session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
+}
 }
 }

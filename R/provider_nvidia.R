@@ -82,6 +82,7 @@ NvidiaProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' nvidia <- create_nvidia()
 #' model <- nvidia$language_model("z-ai/glm4.7")
 #'
@@ -90,6 +91,7 @@ NvidiaProvider <- R6::R6Class(
 #'   chat_template_kwargs = list(enable_thinking = TRUE)
 #' )
 #' print(result$reasoning)
+#' }
 #' }
 create_nvidia <- function(api_key = NULL,
                           base_url = NULL,

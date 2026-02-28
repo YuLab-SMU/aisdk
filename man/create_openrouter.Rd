@@ -34,6 +34,7 @@ OpenRouter provides access to hundreds of models from many providers:
 
 \examples{
 \donttest{
+if (interactive()) {
 openrouter <- create_openrouter()
 
 # Access any model via a unified API
@@ -44,5 +45,6 @@ result <- generate_text(model, "Hello!")
 model <- openrouter$language_model("deepseek/deepseek-r1")
 result <- generate_text(model, "Solve: 15 * 23")
 print(result$reasoning)
+}
 }
 }

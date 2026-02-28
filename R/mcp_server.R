@@ -279,6 +279,7 @@ McpServer <- R6::R6Class(
 #'
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Create a server with a custom tool
 #' server <- create_mcp_server("my-r-server")
 #'
@@ -296,6 +297,7 @@ McpServer <- R6::R6Class(
 #'
 #' # Start listening (blocking)
 #' server$listen()
+#' }
 #' }
 create_mcp_server <- function(name = "r-mcp-server", version = "0.1.0") {
   McpServer$new(name, version)

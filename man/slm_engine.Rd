@@ -25,6 +25,7 @@ Factory function to create a new SLM Engine for local model inference.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Load a GGUF model
 engine <- slm_engine("models/llama-3-8b-q4.gguf")
 engine$load()
@@ -38,5 +39,6 @@ engine$stream("Tell me a story", callback = cat)
 
 # Cleanup
 engine$unload()
+}
 }
 }

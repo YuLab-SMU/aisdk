@@ -56,6 +56,7 @@ For advanced users who need fine-grained control:
 
 \examples{
 \donttest{
+if (interactive()) {
 # Basic usage with Chat Completions API
 openai <- create_openai(api_key = "sk-...")
 model <- openai$language_model("gpt-4o")
@@ -91,5 +92,6 @@ model <- openai$responses_model("o1")
 result1 <- generate_text(model, "What is 2+2?")
 result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
 model$reset() # Start fresh conversation
+}
 }
 }

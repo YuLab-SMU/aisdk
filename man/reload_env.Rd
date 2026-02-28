@@ -18,9 +18,11 @@ This is useful when you've modified .Renviron and don't want to restart R.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Reload environment after modifying .Renviron
 reload_env()
 # Now use the new keys
 Sys.getenv("OPENAI_API_KEY")
+}
 }
 }

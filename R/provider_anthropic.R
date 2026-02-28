@@ -471,8 +471,10 @@ AnthropicProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' anthropic <- create_anthropic(api_key = "sk-ant-...")
 #' model <- anthropic$language_model("claude-sonnet-4-20250514")
+#' }
 #' }
 create_anthropic <- function(api_key = NULL,
                              base_url = NULL,

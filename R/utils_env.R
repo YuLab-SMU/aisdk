@@ -139,10 +139,12 @@ get_anthropic_model_id <- function() {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Reload environment after modifying .Renviron
 #' reload_env()
 #' # Now use the new keys
 #' Sys.getenv("OPENAI_API_KEY")
+#' }
 #' }
 reload_env <- function(path = ".Renviron") {
   if (!file.exists(path)) {

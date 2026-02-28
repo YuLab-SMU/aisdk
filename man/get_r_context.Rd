@@ -19,8 +19,10 @@ Generates a text summary of R objects to be used as context for the LLM.
 }
 \examples{
 \donttest{
+if (interactive()) {
 df <- data.frame(x = 1:10, y = rnorm(10))
 context <- get_r_context("df")
 cat(context)
+}
 }
 }

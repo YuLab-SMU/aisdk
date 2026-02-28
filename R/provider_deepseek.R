@@ -90,6 +90,7 @@ DeepSeekProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Basic usage with deepseek-chat
 #' deepseek <- create_deepseek()
 #' model <- deepseek$language_model("deepseek-chat")
@@ -106,6 +107,7 @@ DeepSeekProvider <- R6::R6Class(
 #'
 #' # Streaming with reasoning
 #' stream_text(model_reasoner, "Explain quantum entanglement step by step")
+#' }
 #' }
 create_deepseek <- function(api_key = NULL,
                             base_url = NULL,
@@ -135,6 +137,7 @@ create_deepseek <- function(api_key = NULL,
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Use DeepSeek via Anthropic API format
 #' deepseek <- create_deepseek_anthropic()
 #' model <- deepseek$language_model("deepseek-chat")
@@ -142,6 +145,7 @@ create_deepseek <- function(api_key = NULL,
 #'
 #' # This is useful for tools that expect Anthropic API format
 #' # such as Claude Code integration
+#' }
 #' }
 create_deepseek_anthropic <- function(api_key = NULL,
                                       headers = NULL) {

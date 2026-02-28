@@ -411,6 +411,7 @@ SlmEngine <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Load a GGUF model
 #' engine <- slm_engine("models/llama-3-8b-q4.gguf")
 #' engine$load()
@@ -424,6 +425,7 @@ SlmEngine <- R6::R6Class(
 #'
 #' # Cleanup
 #' engine$unload()
+#' }
 #' }
 slm_engine <- function(model_path, backend = "gguf", config = list()) {
   SlmEngine$new(model_path, backend, config)

@@ -41,6 +41,7 @@ based on feature flags.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create registry with all standard agents
 registry <- create_standard_registry()
 
@@ -50,5 +51,6 @@ registry <- create_standard_registry(
   include_env = FALSE,
   include_planner = FALSE
 )
+}
 }
 }

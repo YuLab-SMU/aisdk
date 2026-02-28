@@ -108,12 +108,14 @@ get_param_docs <- function(func_name, package = NULL) {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' my_func <- function(a = 1, b = "text", c = TRUE) {}
 #' schema <- create_schema_from_func(my_func)
 #' print(schema)
 #' 
 #' # Override defaults
 #' schema_override <- create_schema_from_func(my_func, params = list(a = 99))
+#' }
 #' }
 create_schema_from_func <- function(func, include_args = NULL, exclude_args = NULL,
                                     params = NULL, func_name = NULL,

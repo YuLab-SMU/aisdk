@@ -34,9 +34,11 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Check if shared session is enabled
 #' if (sdk_feature("use_shared_session")) {
 #'   session <- create_shared_session(model = "openai:gpt-4o")
+#' }
 #' } else {
 #'   session <- create_chat_session(model = "openai:gpt-4o")
 #' }
@@ -58,11 +60,13 @@ sdk_feature <- function(flag, default = NULL) {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Disable shared session for legacy compatibility
 #' sdk_set_feature("use_shared_session", FALSE)
 #'
 #' # Enable legacy tool format
 #' sdk_set_feature("legacy_tool_format", TRUE)
+#' }
 #' }
 sdk_set_feature <- function(flag, value) {
   old_value <- sdk_feature(flag)
@@ -77,8 +81,10 @@ sdk_set_feature <- function(flag, value) {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # See all feature flags
 #' print(sdk_list_features())
+#' }
 #' }
 sdk_list_features <- function() {
   flags <- ls(.sdk_features)
@@ -121,12 +127,14 @@ sdk_reset_features <- function() {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Automatically uses SharedSession if feature enabled
 #' session <- create_session(model = "openai:gpt-4o")
 #'
 #' # Force legacy session
 #' sdk_set_feature("use_shared_session", FALSE)
 #' session <- create_session(model = "openai:gpt-4o")
+#' }
 #' }
 create_session <- function(model = NULL,
                            system_prompt = NULL,
@@ -200,6 +208,7 @@ create_orchestration <- function(session,
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Create registry with all standard agents
 #' registry <- create_standard_registry()
 #'
@@ -209,6 +218,7 @@ create_orchestration <- function(session,
 #'   include_env = FALSE,
 #'   include_planner = FALSE
 #' )
+#' }
 #' }
 create_standard_registry <- function(include_data = TRUE,
                                      include_file = TRUE,
@@ -262,10 +272,12 @@ create_standard_registry <- function(include_data = TRUE,
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' result <- check_sdk_compatibility("0.8.0")
 #' if (!result$compatible) {
 #'   cat("Migration needed:\n")
 #'   cat(paste(result$suggestions, collapse = "\n"))
+#' }
 #' }
 #' }
 check_sdk_compatibility <- function(code_version) {
@@ -319,9 +331,11 @@ check_sdk_compatibility <- function(code_version) {
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Get migration guidance for ChatSession
 #' guidance <- migrate_pattern("ChatSession")
 #' cat(guidance$example)
+#' }
 #' }
 migrate_pattern <- function(pattern) {
   migrations <- list(

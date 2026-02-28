@@ -30,6 +30,7 @@ agents. Enhanced version with better safety controls and debugging support.
 }
 \examples{
 \donttest{
+if (interactive()) {
 coder <- create_coder_agent()
 session <- create_shared_session(model = "openai:gpt-4o")
 result <- coder$run(
@@ -37,5 +38,6 @@ result <- coder$run(
   session = session,
   model = "openai:gpt-4o"
 )
+}
 }
 }

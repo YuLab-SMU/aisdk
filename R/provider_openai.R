@@ -1109,6 +1109,7 @@ OpenAIProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Basic usage with Chat Completions API
 #' openai <- create_openai(api_key = "sk-...")
 #' model <- openai$language_model("gpt-4o")
@@ -1144,6 +1145,7 @@ OpenAIProvider <- R6::R6Class(
 #' result1 <- generate_text(model, "What is 2+2?")
 #' result2 <- generate_text(model, "Now multiply that by 3") # Remembers context
 #' model$reset() # Start fresh conversation
+#' }
 #' }
 create_openai <- function(api_key = NULL,
                           base_url = NULL,

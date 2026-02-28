@@ -31,6 +31,7 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Start with default agent (intelligent terminal mode)
 #' console_chat("openai:gpt-4o")
 #'
@@ -55,6 +56,7 @@ NULL
 #' # /clear         - Clear conversation history
 #' # /help          - Show available commands
 #' # /agent [on|off] - Toggle agent mode
+#' }
 #' }
 console_chat <- function(session = NULL,
                          system_prompt = NULL,

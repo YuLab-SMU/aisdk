@@ -26,6 +26,7 @@ Factory function to create or connect to a project memory database.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Create memory for current project
 memory <- project_memory()
 
@@ -46,5 +47,6 @@ memory$store_fix(
 
 # Search for relevant snippets
 memory$search_snippets("summarize")
+}
 }
 }

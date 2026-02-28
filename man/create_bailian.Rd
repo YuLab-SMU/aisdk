@@ -34,6 +34,7 @@ DashScope platform hosts Qwen series and other models:
 
 \examples{
 \donttest{
+if (interactive()) {
 bailian <- create_bailian()
 
 # Standard chat model
@@ -47,5 +48,6 @@ print(result$reasoning) # Chain-of-thought reasoning
 
 # Default model (qwen-plus)
 model <- bailian$language_model()
+}
 }
 }

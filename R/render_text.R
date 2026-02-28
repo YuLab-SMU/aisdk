@@ -9,11 +9,13 @@
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Render simple text
 #' render_text("# Hello\n\nThis is **bold** text.")
 #'
 #' # Render with code block
 #' render_text("Here is some R code:\n\n```r\nx <- 1:10\nmean(x)\n```")
+#' }
 #' }
 render_text <- function(text) {
   # Handle GenerateResult objects

@@ -21,6 +21,7 @@ Convenience function to create and connect to an MCP server.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Connect to GitHub MCP server
 client <- create_mcp_client(
   "npx",
@@ -39,5 +40,6 @@ result <- generate_text(
 )
 
 client$close()
+}
 }
 }

@@ -29,8 +29,10 @@ Stepfun provides various models such as:
 
 \examples{
 \donttest{
+if (interactive()) {
 stepfun <- create_stepfun()
 model <- stepfun$language_model("step-1-8k")
 result <- generate_text(model, "Explain quantum computing in one sentence.")
+}
 }
 }

@@ -21,8 +21,10 @@ Generate embeddings for text using an embedding model.
 }
 \examples{
 \donttest{
+if (interactive()) {
 model <- create_openai()$embedding_model("text-embedding-3-small")
 result <- create_embeddings(model, "Hello, world!")
 print(length(result$embeddings[[1]]))
+}
 }
 }

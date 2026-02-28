@@ -488,6 +488,7 @@ ProjectMemory <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Create memory for current project
 #' memory <- project_memory()
 #'
@@ -508,6 +509,7 @@ ProjectMemory <- R6::R6Class(
 #'
 #' # Search for relevant snippets
 #' memory$search_snippets("summarize")
+#' }
 #' }
 project_memory <- function(project_root = if (interactive()) getwd() else tempdir(), db_name = "memory.sqlite") {
   ProjectMemory$new(project_root, db_name)

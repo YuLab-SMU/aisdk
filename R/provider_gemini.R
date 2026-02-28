@@ -343,8 +343,10 @@ GeminiProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' gemini <- create_gemini(api_key = "AIza...")
 #' model <- gemini$language_model("gemini-1.5-pro")
+#' }
 #' }
 create_gemini <- function(api_key = NULL,
                           base_url = NULL,

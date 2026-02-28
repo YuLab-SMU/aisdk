@@ -79,9 +79,11 @@ XAIProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' xai <- create_xai()
 #' model <- xai$language_model("grok-4-1-fast-reasoning")
 #' result <- generate_text(model, "Explain quantum computing in one sentence.")
+#' }
 #' }
 create_xai <- function(api_key = NULL,
                        base_url = NULL,

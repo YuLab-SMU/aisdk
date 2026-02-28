@@ -27,6 +27,7 @@ map it to \code{deepseek-chat}.
 }
 \examples{
 \donttest{
+if (interactive()) {
 # Use DeepSeek via Anthropic API format
 deepseek <- create_deepseek_anthropic()
 model <- deepseek$language_model("deepseek-chat")
@@ -34,5 +35,6 @@ result <- generate_text(model, "Hello!")
 
 # This is useful for tools that expect Anthropic API format
 # such as Claude Code integration
+}
 }
 }

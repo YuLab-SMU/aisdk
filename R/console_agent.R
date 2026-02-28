@@ -20,9 +20,11 @@ NULL
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' tools <- create_console_tools()
 #' # Use with an agent or session
 #' session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
+#' }
 #' }
 create_console_tools <- function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
     # Get base computer tools
@@ -224,6 +226,7 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Create default console agent
 #' agent <- create_console_agent()
 #'
@@ -232,6 +235,7 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 #'
 #' # Use with console_chat
 #' console_chat("openai:gpt-4o", agent = agent)
+#' }
 #' }
 create_console_agent <- function(working_dir = if (interactive()) getwd() else tempdir(),
                                  sandbox_mode = "permissive",

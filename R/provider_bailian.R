@@ -96,6 +96,7 @@ BailianProvider <- R6::R6Class(
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' bailian <- create_bailian()
 #'
 #' # Standard chat model
@@ -109,6 +110,7 @@ BailianProvider <- R6::R6Class(
 #'
 #' # Default model (qwen-plus)
 #' model <- bailian$language_model()
+#' }
 #' }
 create_bailian <- function(api_key = NULL,
                            base_url = NULL,

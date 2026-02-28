@@ -15,6 +15,7 @@
 #' @export
 #' @examples
 #' \donttest{
+#' if (interactive()) {
 #' # Create a tool that modifies a reactive value
 #' update_resolution_tool <- reactive_tool(
 #'   name = "update_resolution",
@@ -40,6 +41,7 @@
 #'   )
 #'
 #'   aiChatServer("chat", model = "openai:gpt-4o", tools = wrapped_tools)
+#' }
 #' }
 #' }
 reactive_tool <- function(name, description, parameters, execute) {

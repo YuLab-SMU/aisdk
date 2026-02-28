@@ -60,6 +60,7 @@ For advanced users who want answer-only limits:
 
 \examples{
 \donttest{
+if (interactive()) {
 volcengine <- create_volcengine()
 
 # Chat API (standard models)
@@ -77,5 +78,6 @@ result <- model$generate(messages = msgs, max_answer_tokens = 500)
 
 # Smart model selection (auto-detects best API)
 model <- volcengine$smart_model("deepseek-r1-250120")
+}
 }
 }
