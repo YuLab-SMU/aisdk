@@ -100,12 +100,13 @@ maintains conversation history, and supports advanced features like:</p><ul><li>
 <li><p><a href="#method-OpenAIResponsesLanguageModel-get_history_format"><code>OpenAIResponsesLanguageModel$get_history_format()</code></a></p></li>
 <li><p><a href="#method-OpenAIResponsesLanguageModel-clone"><code>OpenAIResponsesLanguageModel$clone()</code></a></p></li>
 </ul></div><p><details open><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href="LanguageModelV1.html#method-generate"><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href="LanguageModelV1.html#method-has_capability"><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href="LanguageModelV1.html#method-stream"><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
 </ul></details></p><hr><a id="method-OpenAIResponsesLanguageModel-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Initialize the OpenAI Responses language model.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/OpenAIResponsesLanguageModel.html">OpenAIResponsesLanguageModel</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">model_id</span>, <span class="va">config</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/OpenAIResponsesLanguageModel.html">OpenAIResponsesLanguageModel</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">model_id</span>, <span class="va">config</span>, capabilities <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -116,6 +117,10 @@ maintains conversation history, and supports advanced features like:</p><ul><li>
 
 <dt><code>config</code></dt>
 <dd><p>Configuration list with api_key, base_url, headers, etc.</p></dd>
+
+
+<dt><code>capabilities</code></dt>
+<dd><p>Optional list of capability flags.</p></dd>
 
 
 </dl><p></p></div>

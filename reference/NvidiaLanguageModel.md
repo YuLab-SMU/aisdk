@@ -15,15 +15,20 @@ like "enable_thinking" and reasoning content extraction.
 
 ### Public methods
 
-- [`NvidiaLanguageModel$do_generate()`](#method-NvidiaLanguageModel-do_generate)
+- [`NvidiaLanguageModel$parse_response()`](#method-NvidiaLanguageModel-parse_response)
 
 - [`NvidiaLanguageModel$clone()`](#method-NvidiaLanguageModel-clone)
 
 Inherited methods
 
 - [`aisdk::LanguageModelV1$generate()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-generate)
+- [`aisdk::LanguageModelV1$has_capability()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-has_capability)
 - [`aisdk::LanguageModelV1$stream()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-stream)
+- [`aisdk::OpenAILanguageModel$build_payload()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-build_payload)
+- [`aisdk::OpenAILanguageModel$build_stream_payload()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-build_stream_payload)
+- [`aisdk::OpenAILanguageModel$do_generate()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-do_generate)
 - [`aisdk::OpenAILanguageModel$do_stream()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-do_stream)
+- [`aisdk::OpenAILanguageModel$execute_request()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-execute_request)
 - [`aisdk::OpenAILanguageModel$format_tool_result()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-format_tool_result)
 - [`aisdk::OpenAILanguageModel$get_config()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-get_config)
 - [`aisdk::OpenAILanguageModel$get_history_format()`](https://YuLab-SMU.github.io/aisdk/reference/OpenAILanguageModel.html#method-get_history_format)
@@ -31,19 +36,20 @@ Inherited methods
 
 ------------------------------------------------------------------------
 
-### Method `do_generate()`
+### Method `parse_response()`
 
-Generate text (non-streaming).
+Parse the API response into a GenerateResult. Overrides parent to
+extract NVIDIA-specific reasoning_content.
 
 #### Usage
 
-    NvidiaLanguageModel$do_generate(params)
+    NvidiaLanguageModel$parse_response(response)
 
 #### Arguments
 
-- `params`:
+- `response`:
 
-  A list of call options including messages, temperature, etc.
+  The parsed API response.
 
 #### Returns
 

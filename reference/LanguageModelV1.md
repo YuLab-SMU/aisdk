@@ -18,11 +18,17 @@ usage by end-users.
 
   The model identifier (e.g., "gpt-4o").
 
+- `capabilities`:
+
+  Model capability flags (e.g., is_reasoning_model).
+
 ## Methods
 
 ### Public methods
 
 - [`LanguageModelV1$new()`](#method-LanguageModelV1-new)
+
+- [`LanguageModelV1$has_capability()`](#method-LanguageModelV1-has_capability)
 
 - [`LanguageModelV1$generate()`](#method-LanguageModelV1-generate)
 
@@ -46,7 +52,7 @@ Initialize the model with provider and model ID.
 
 #### Usage
 
-    LanguageModelV1$new(provider, model_id)
+    LanguageModelV1$new(provider, model_id, capabilities = list())
 
 #### Arguments
 
@@ -57,6 +63,30 @@ Initialize the model with provider and model ID.
 - `model_id`:
 
   Model ID.
+
+- `capabilities`:
+
+  Optional list of capability flags.
+
+------------------------------------------------------------------------
+
+### Method `has_capability()`
+
+Check if model has a specific capability.
+
+#### Usage
+
+    LanguageModelV1$has_capability(cap)
+
+#### Arguments
+
+- `cap`:
+
+  Capability name (e.g., "is_reasoning_model").
+
+#### Returns
+
+Logical.
 
 ------------------------------------------------------------------------
 

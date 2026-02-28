@@ -179,41 +179,6 @@ skill_tools <- create_skill_tools(registry)
 agent <- create_agent(tools = skill_tools, ...)
 ```
 
-### Genesis System
-
-**Genesis V1** (`genesis.R`): Zero-configuration execution - Direct
-mode: Single agent with all skills loaded, direct execution - Plan mode:
-Architect analyzes task, discovers agents, assembles team - Automatic
-fallback to code execution if tools fail - Artifact management for
-plots, data, reports - **NEW**: Computer tools mode with
-`use_computer_tools = TRUE` for reduced context usage
-
-**Genesis V2** (`genesis_v2.R`): Plan-Execute-Refine (PER)
-architecture - **Plan**: Architect defines success criteria -
-**Execute**: Direct agent runs task with skills - **Refine**: Evaluator
-checks quality, Refiner suggests improvements - **Iterate**: Automatic
-retry until quality threshold met - Quality-driven with configurable
-thresholds and max iterations - **NEW**: Computer tools mode with
-`use_computer_tools = TRUE` for reduced context usage
-
-**Computer Tools Mode** (2026 Pattern):
-
-``` r
-# Traditional mode (loads all skill tools into context)
-result <- genesis("Analyze iris dataset")
-
-# Computer tools mode (30-50% less context usage)
-result <- genesis("Analyze iris dataset", use_computer_tools = TRUE)
-
-# Genesis V2 with computer tools
-result <- genesis_v2(
-  "Complex analysis task",
-  use_computer_tools = TRUE,
-  max_iterations = 5,
-  quality_threshold = 85
-)
-```
-
 ### MCP (Model Context Protocol)
 
 **Server** (`mcp_server.R`): Expose R functions as MCP tools - Stdio
@@ -296,11 +261,9 @@ Agents load skills dynamically using `load_skill` and
 - `R/agent.R`: Agent class and execution logic
 - `R/tool.R`: Tool system with multi-layer defense + tool layer
   attribute
-- `R/computer.R`: **NEW** Computer abstraction layer (atomic tools,
-  hierarchical action space)
+- `R/computer.R`: Computer abstraction layer (atomic tools, hierarchical
+  action space)
 - `R/session.R`: Stateful conversation management
-- `R/genesis.R`: Genesis V1 (direct execution) + computer tools mode
-- `R/genesis_v2.R`: Genesis V2 (PER architecture) + computer tools mode
 - `R/skill.R`: Skill loading and execution
 - `R/mcp_server.R`, `R/mcp_client.R`: MCP protocol implementation
 - `R/provider_anthropic.R`, `R/provider_openai.R`: Provider

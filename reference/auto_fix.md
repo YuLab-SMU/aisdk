@@ -57,12 +57,16 @@ if (FALSE) { # \dontrun{
 # Simple usage - auto-fix a data transformation
 result <- auto_fix({
   df <- read.csv("data.csv")
-  df %>% filter(value > 100) %>% summarize(mean = mean(value))
+  df %>%
+    filter(value > 100) %>%
+    summarize(mean = mean(value))
 })
 
 # With context for better error understanding
 result <- auto_fix(
-  expr = { model <- lm(y ~ x, data = df) },
+  expr = {
+    model <- lm(y ~ x, data = df)
+  },
   context = "Fitting a linear regression model to predict sales"
 )
 } # }

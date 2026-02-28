@@ -29,7 +29,8 @@ An McpClient object
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Connect to GitHub MCP server
 client <- create_mcp_client(
   "npx",
@@ -48,5 +49,6 @@ result <- generate_text(
 )
 
 client$close()
-} # }
+}
+# }
 ```

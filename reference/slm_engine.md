@@ -33,7 +33,8 @@ An SlmEngine object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Load a GGUF model
 engine <- slm_engine("models/llama-3-8b-q4.gguf")
 engine$load()
@@ -47,5 +48,6 @@ engine$stream("Tell me a story", callback = cat)
 
 # Cleanup
 engine$unload()
-} # }
+}
+# }
 ```

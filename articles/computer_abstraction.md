@@ -45,41 +45,6 @@ flexibility for complex tasks.
 
 ## Basic Usage
 
-### Using Genesis with Computer Tools
-
-The simplest way to use the computer abstraction is through the
-[`genesis()`](https://YuLab-SMU.github.io/aisdk/reference/genesis.md)
-function:
-
-``` r
-library(aisdk)
-
-# Traditional mode (loads all skill tools into context)
-result <- genesis("Analyze the iris dataset")
-
-# Computer tools mode (30-50% less context usage)
-result <- genesis(
-  "Analyze the iris dataset and create a summary plot",
-  use_computer_tools = TRUE
-)
-```
-
-### Genesis V2 with Computer Tools
-
-For complex tasks requiring quality assurance:
-
-``` r
-result <- genesis_v2(
-  "Build a complete data analysis pipeline with visualizations",
-  use_computer_tools = TRUE,
-  max_iterations = 5,
-  quality_threshold = 85,
-  verbose = TRUE
-)
-```
-
-## Advanced Usage
-
 ### Creating a Computer Instance
 
 For fine-grained control, create a Computer instance directly:
@@ -250,18 +215,7 @@ comp$clear_log()
 
 ## Best Practices
 
-### 1. Choose the Right Mode
-
-Use traditional mode (`use_computer_tools = FALSE`) when: - You need
-simple, straightforward tasks - Working with a small number of
-well-defined tools - Backward compatibility is important
-
-Use computer tools mode (`use_computer_tools = TRUE`) when: - Tasks
-involve complex data analysis pipelines - You need to run custom scripts
-or CLIs - Context window usage is a concern - Tasks require flexible,
-dynamic actions
-
-### 2. Set Appropriate Sandboxing
+### 1. Set Appropriate Sandboxing
 
 ``` r
 # Development: No sandboxing for flexibility
@@ -274,7 +228,7 @@ comp <- Computer$new(sandbox_mode = "permissive")
 comp <- Computer$new(sandbox_mode = "strict")
 ```
 
-### 3. Structure Your Skills
+### 2. Structure Your Skills
 
 For computer tools mode, organize skills with clear SKILL.md files:
 
@@ -298,7 +252,7 @@ Execute: `bash('Rscript inst/skills/data_analysis/scripts/analyze.R')`
 Pass parameters via environment variables or modify the script.
 ```
 
-### 4. Handle Errors Gracefully
+### 3. Handle Errors Gracefully
 
 ``` r
 result <- comp$bash("Rscript analysis.R")
@@ -325,12 +279,10 @@ if (result$error) {
 
 ## Performance Tips
 
-1.  **Cache Expensive Operations**: Use the `cache` parameter in
-    [`genesis()`](https://YuLab-SMU.github.io/aisdk/reference/genesis.md)
-2.  **Optimize Scripts**: Keep skill scripts focused and efficient
-3.  **Use Appropriate Timeouts**: Set `timeout_ms` based on expected
+1.  **Optimize Scripts**: Keep skill scripts focused and efficient
+2.  **Use Appropriate Timeouts**: Set `timeout_ms` based on expected
     execution time
-4.  **Monitor Context Usage**: Enable `verbose = TRUE` to track token
+3.  **Monitor Context Usage**: Enable `verbose = TRUE` to track token
     usage
 
 ## Troubleshooting
@@ -358,8 +310,6 @@ result <- comp$bash("Rscript long_analysis.R", timeout_ms = 120000)
 
 ## References
 
-- [Genesis User
-  Guide](https://YuLab-SMU.github.io/aisdk/doc/GENESIS_USER_GUIDE.md)
 - [Building
   Agents](https://YuLab-SMU.github.io/aisdk/articles/agents.md)
 - [Tools Reference](https://YuLab-SMU.github.io/aisdk/articles/tools.md)

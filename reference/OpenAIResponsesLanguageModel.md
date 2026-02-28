@@ -48,6 +48,7 @@ Completions:
 Inherited methods
 
 - [`aisdk::LanguageModelV1$generate()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-generate)
+- [`aisdk::LanguageModelV1$has_capability()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-has_capability)
 - [`aisdk::LanguageModelV1$stream()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-stream)
 
 ------------------------------------------------------------------------
@@ -58,7 +59,7 @@ Initialize the OpenAI Responses language model.
 
 #### Usage
 
-    OpenAIResponsesLanguageModel$new(model_id, config)
+    OpenAIResponsesLanguageModel$new(model_id, config, capabilities = list())
 
 #### Arguments
 
@@ -69,6 +70,10 @@ Initialize the OpenAI Responses language model.
 - `config`:
 
   Configuration list with api_key, base_url, headers, etc.
+
+- `capabilities`:
+
+  Optional list of capability flags.
 
 ------------------------------------------------------------------------
 

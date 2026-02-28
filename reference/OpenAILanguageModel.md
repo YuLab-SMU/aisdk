@@ -15,7 +15,15 @@ Language model implementation for OpenAI's chat completions API.
 
 - [`OpenAILanguageModel$get_config()`](#method-OpenAILanguageModel-get_config)
 
+- [`OpenAILanguageModel$build_payload()`](#method-OpenAILanguageModel-build_payload)
+
+- [`OpenAILanguageModel$execute_request()`](#method-OpenAILanguageModel-execute_request)
+
+- [`OpenAILanguageModel$parse_response()`](#method-OpenAILanguageModel-parse_response)
+
 - [`OpenAILanguageModel$do_generate()`](#method-OpenAILanguageModel-do_generate)
+
+- [`OpenAILanguageModel$build_stream_payload()`](#method-OpenAILanguageModel-build_stream_payload)
 
 - [`OpenAILanguageModel$do_stream()`](#method-OpenAILanguageModel-do_stream)
 
@@ -28,6 +36,7 @@ Language model implementation for OpenAI's chat completions API.
 Inherited methods
 
 - [`aisdk::LanguageModelV1$generate()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-generate)
+- [`aisdk::LanguageModelV1$has_capability()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-has_capability)
 - [`aisdk::LanguageModelV1$stream()`](https://YuLab-SMU.github.io/aisdk/reference/LanguageModelV1.html#method-stream)
 
 ------------------------------------------------------------------------
@@ -38,7 +47,7 @@ Initialize the OpenAI language model.
 
 #### Usage
 
-    OpenAILanguageModel$new(model_id, config)
+    OpenAILanguageModel$new(model_id, config, capabilities = list())
 
 #### Arguments
 
@@ -49,6 +58,10 @@ Initialize the OpenAI language model.
 - `config`:
 
   Configuration list with api_key, base_url, headers, etc.
+
+- `capabilities`:
+
+  Optional list of capability flags.
 
 ------------------------------------------------------------------------
 
@@ -66,9 +79,79 @@ A list with provider configuration.
 
 ------------------------------------------------------------------------
 
+### Method `build_payload()`
+
+Build the request payload for non-streaming generation. Subclasses can
+override to customize payload construction.
+
+#### Usage
+
+    OpenAILanguageModel$build_payload(params)
+
+#### Arguments
+
+- `params`:
+
+  A list of call options.
+
+#### Returns
+
+A list with url, headers, and body.
+
+------------------------------------------------------------------------
+
+### Method `execute_request()`
+
+Execute the API request.
+
+#### Usage
+
+    OpenAILanguageModel$execute_request(url, headers, body)
+
+#### Arguments
+
+- `url`:
+
+  The API endpoint URL.
+
+- `headers`:
+
+  A named list of HTTP headers.
+
+- `body`:
+
+  The request body.
+
+#### Returns
+
+The parsed API response.
+
+------------------------------------------------------------------------
+
+### Method `parse_response()`
+
+Parse the API response into a GenerateResult. Subclasses can override to
+extract provider-specific fields (e.g., reasoning_content).
+
+#### Usage
+
+    OpenAILanguageModel$parse_response(response)
+
+#### Arguments
+
+- `response`:
+
+  The parsed API response.
+
+#### Returns
+
+A GenerateResult object.
+
+------------------------------------------------------------------------
+
 ### Method `do_generate()`
 
-Generate text (non-streaming).
+Generate text (non-streaming). Uses template method pattern.
 
 #### Usage
 
@@ -83,6 +166,27 @@ Generate text (non-streaming).
 #### Returns
 
 A GenerateResult object.
+
+------------------------------------------------------------------------
+
+### Method `build_stream_payload()`
+
+Build the request payload for streaming generation. Subclasses can
+override to customize stream payload construction.
+
+#### Usage
+
+    OpenAILanguageModel$build_stream_payload(params)
+
+#### Arguments
+
+- `params`:
+
+  A list of call options.
+
+#### Returns
+
+A list with url, headers, and body.
 
 ------------------------------------------------------------------------
 

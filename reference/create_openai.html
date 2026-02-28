@@ -114,51 +114,45 @@ correct API field based on the model and API type:</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Basic usage with Chat Completions API</span></span></span>
-<span class="r-in"><span><span class="va">openai</span> <span class="op">&lt;-</span> <span class="fu">create_openai</span><span class="op">(</span>api_key <span class="op">=</span> <span class="st">"sk-..."</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Hello!"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="co"># Basic usage with Chat Completions API</span></span></span>
+<span class="r-in"><span>  <span class="va">openai</span> <span class="op">&lt;-</span> <span class="fu">create_openai</span><span class="op">(</span>api_key <span class="op">=</span> <span class="st">"sk-..."</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Hello!"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Using Responses API for reasoning models</span></span></span>
-<span class="r-in"><span><span class="va">openai</span> <span class="op">&lt;-</span> <span class="fu">create_openai</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Solve this math problem..."</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">reasoning</span><span class="op">)</span>  <span class="co"># Access chain-of-thought</span></span></span>
+<span class="r-in"><span>  <span class="co"># Using Responses API for reasoning models</span></span></span>
+<span class="r-in"><span>  <span class="va">openai</span> <span class="op">&lt;-</span> <span class="fu">create_openai</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Solve this math problem..."</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">reasoning</span><span class="op">)</span> <span class="co"># Access chain-of-thought</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Smart model selection (auto-detects best API)</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">smart_model</span><span class="op">(</span><span class="st">"o3-mini"</span><span class="op">)</span>  <span class="co"># Uses Responses API</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">smart_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span>   <span class="co"># Uses Chat Completions API</span></span></span>
+<span class="r-in"><span>  <span class="co"># Smart model selection (auto-detects best API)</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">smart_model</span><span class="op">(</span><span class="st">"o3-mini"</span><span class="op">)</span> <span class="co"># Uses Responses API</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">smart_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span> <span class="co"># Uses Chat Completions API</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Token limits - unified interface</span></span></span>
-<span class="r-in"><span><span class="co"># For standard models: limits generated content</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Token limits - unified interface</span></span></span>
+<span class="r-in"><span>  <span class="co"># For standard models: limits generated content</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># For o1/o3 models: automatically maps to max_completion_tokens</span></span></span>
-<span class="r-in"><span><span class="va">model_o1</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_o1</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># For o1/o3 models: automatically maps to max_completion_tokens</span></span></span>
+<span class="r-in"><span>  <span class="va">model_o1</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_o1</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># For Responses API: automatically maps to max_output_tokens (total limit)</span></span></span>
-<span class="r-in"><span><span class="va">model_resp</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_resp</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># For Responses API: automatically maps to max_output_tokens (total limit)</span></span></span>
+<span class="r-in"><span>  <span class="va">model_resp</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_resp</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_tokens <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Advanced: explicitly control answer-only limit (Volcengine Responses API)</span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_resp</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_answer_tokens <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Advanced: explicitly control answer-only limit (Volcengine Responses API)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="va">model_resp</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span>messages <span class="op">=</span> <span class="va">msgs</span>, max_answer_tokens <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Multi-turn conversation with Responses API</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result1</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"What is 2+2?"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">result2</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Now multiply that by 3"</span><span class="op">)</span>  <span class="co"># Remembers context</span></span></span>
-<span class="r-in"><span><span class="va">model</span><span class="op">$</span><span class="fu">reset</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Start fresh conversation</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># For Volcengine/Ark API</span></span></span>
-<span class="r-in"><span><span class="va">volcengine</span> <span class="op">&lt;-</span> <span class="fu">create_openai</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  api_key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"ARK_API_KEY"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  base_url <span class="op">=</span> <span class="st">"https://ark.cn-beijing.volces.com/api/v3"</span>,</span></span>
-<span class="r-in"><span>  name <span class="op">=</span> <span class="st">"volcengine"</span>,</span></span>
-<span class="r-in"><span>  disable_stream_options <span class="op">=</span> <span class="cn">TRUE</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span>  <span class="co"># Multi-turn conversation with Responses API</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="va">openai</span><span class="op">$</span><span class="fu">responses_model</span><span class="op">(</span><span class="st">"o1"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result1</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"What is 2+2?"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">result2</span> <span class="op">&lt;-</span> <span class="fu"><a href="generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, <span class="st">"Now multiply that by 3"</span><span class="op">)</span> <span class="co"># Remembers context</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span><span class="op">$</span><span class="fu">reset</span><span class="op">(</span><span class="op">)</span> <span class="co"># Start fresh conversation</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

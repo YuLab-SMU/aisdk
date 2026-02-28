@@ -23,10 +23,12 @@ Invisible TRUE if successful
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Reload environment after modifying .Renviron
 reload_env()
 # Now use the new keys
 Sys.getenv("OPENAI_API_KEY")
-} # }
+}
+# }
 ```

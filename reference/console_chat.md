@@ -17,7 +17,7 @@ console_chat(
   hooks = NULL,
   stream = TRUE,
   agent = "auto",
-  working_dir = getwd(),
+  working_dir = if (interactive()) getwd() else tempdir(),
   sandbox_mode = "permissive"
 )
 ```
@@ -58,7 +58,8 @@ console_chat(
 
 - working_dir:
 
-  Working directory for the console agent (default: current directory).
+  Working directory for the console agent. Defaults to getwd()
+  interactively, tempdir() otherwise.
 
 - sandbox_mode:
 
@@ -72,7 +73,8 @@ The ChatSession object (invisibly) when chat ends.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Start with default agent (intelligent terminal mode)
 console_chat("openai:gpt-4o")
 
@@ -97,5 +99,6 @@ console_chat("openai:gpt-4o", agent = agent)
 # /clear         - Clear conversation history
 # /help          - Show available commands
 # /agent [on|off] - Toggle agent mode
-} # }
+}
+# }
 ```

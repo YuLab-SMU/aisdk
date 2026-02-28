@@ -16,8 +16,8 @@ hooks <- telemetry$as_hooks()
 
 # Pass hooks to generation
 generate_text(
-  model = "openai:gpt-4o", 
-  prompt = "Hello", 
+  model = "openai:gpt-4o",
+  prompt = "Hello",
   hooks = hooks
 )
 ```
@@ -35,8 +35,8 @@ an R6 object. Always assign inside the `hooks` list.
 # Permission hook: only allow "read_file" automatically
 # "write_file" will trigger a request for approval (or denial in non-interactive)
 perm_hook <- create_permission_hook(
-  mode = "escalate", 
-  allowlist = c("read_file") 
+  mode = "escalate",
+  allowlist = c("read_file")
 )
 
 # Combine with other hooks
@@ -45,16 +45,20 @@ hooks$hooks$on_tool_approval <- perm_hook$hooks$on_tool_approval
 
 ## Tool Caching
 
-``` r
-Wrap tools with `cache_tool()` to memoize their results. The `...` in the example is a placeholder and cannot be run directly in the console.
-slow_tool <- tool(..., execute = function(args) { Sys.sleep(5); ... })
+Wrap tools with
+[`cache_tool()`](https://YuLab-SMU.github.io/aisdk/reference/cache_tool.md)
+to memoize their results.
 
+``` r
 # For example, we have a time-consuming tool `slow_tool` that sleeps for 5 seconds and then returns the input parameter `x`.
 slow_tool <- tool(
   name = "slow_tool",
   description = "Sleep 5 seconds and return x",
   parameters = z_object(x = z_number("Input number")),
-  execute = function(args) { Sys.sleep(5); args$x }
+  execute = function(args) {
+    Sys.sleep(5)
+    args$x
+  }
 )
 
 # Cached version

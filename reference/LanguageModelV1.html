@@ -67,6 +67,10 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 <dd><p>The model identifier (e.g., "gpt-4o").</p></dd>
 
 
+<dt><code>capabilities</code></dt>
+<dd><p>Model capability flags (e.g., is_reasoning_model).</p></dd>
+
+
 </dl><p></p></div>
     </div>
     <div class="section level2">
@@ -76,6 +80,7 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 
 <ul><li><p><a href="#method-LanguageModelV1-new"><code>LanguageModelV1$new()</code></a></p></li>
+<li><p><a href="#method-LanguageModelV1-has_capability"><code>LanguageModelV1$has_capability()</code></a></p></li>
 <li><p><a href="#method-LanguageModelV1-generate"><code>LanguageModelV1$generate()</code></a></p></li>
 <li><p><a href="#method-LanguageModelV1-stream"><code>LanguageModelV1$stream()</code></a></p></li>
 <li><p><a href="#method-LanguageModelV1-do_generate"><code>LanguageModelV1$do_generate()</code></a></p></li>
@@ -87,7 +92,7 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Initialize the model with provider and model ID.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/LanguageModelV1.html">LanguageModelV1</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">provider</span>, <span class="va">model_id</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/LanguageModelV1.html">LanguageModelV1</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">provider</span>, <span class="va">model_id</span>, capabilities <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -100,18 +105,42 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 <dd><p>Model ID.</p></dd>
 
 
+<dt><code>capabilities</code></dt>
+<dd><p>Optional list of capability flags.</p></dd>
+
+
 </dl><p></p></div>
+</div>
+
+</div><p></p><hr><a id="method-LanguageModelV1-has_capability"></a><div class="section">
+<h3 id="method-has-capability-">Method <code>has_capability()</code><a class="anchor" aria-label="anchor" href="#method-has-capability-"></a></h3>
+<p>Check if model has a specific capability.</p><div class="section">
+<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">has_capability</span><span class="op">(</span><span class="va">cap</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>cap</code></dt>
+<dd><p>Capability name (e.g., "is_reasoning_model").</p></dd>
+
+
+</dl><p></p></div>
+</div>
+<div class="section">
+<h4 id="returns">Returns<a class="anchor" aria-label="anchor" href="#returns"></a></h4>
+<p>Logical.</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-generate"></a><div class="section">
 <h3 id="method-generate-">Method <code>generate()</code><a class="anchor" aria-label="anchor" href="#method-generate-"></a></h3>
 <p>Public generation method (wrapper for do_generate).</p><div class="section">
-<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">generate</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Call options passed to do_generate.</p></dd>
 
@@ -119,19 +148,19 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns">Returns<a class="anchor" aria-label="anchor" href="#returns"></a></h4>
+<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
 <p>A GenerateResult object.</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-stream"></a><div class="section">
 <h3 id="method-stream-">Method <code>stream()</code><a class="anchor" aria-label="anchor" href="#method-stream-"></a></h3>
 <p>Public streaming method (wrapper for do_stream).</p><div class="section">
-<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span><span class="va">callback</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
+<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>callback</code></dt>
 <dd><p>Function to call with each chunk.</p></dd>
 
@@ -143,19 +172,19 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
+<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
 <p>A GenerateResult object.</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-do_generate"></a><div class="section">
 <h3 id="method-do-generate-">Method <code>do_generate()</code><a class="anchor" aria-label="anchor" href="#method-do-generate-"></a></h3>
 <p>Generate text (non-streaming). Abstract method.</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">do_generate</span><span class="op">(</span><span class="va">params</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
+<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>params</code></dt>
 <dd><p>A list of call options.</p></dd>
 
@@ -163,19 +192,19 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
+<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
 <p>A GenerateResult object.</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-do_stream"></a><div class="section">
 <h3 id="method-do-stream-">Method <code>do_stream()</code><a class="anchor" aria-label="anchor" href="#method-do-stream-"></a></h3>
 <p>Generate text (streaming). Abstract method.</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">do_stream</span><span class="op">(</span><span class="va">params</span>, <span class="va">callback</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
+<h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>params</code></dt>
 <dd><p>A list of call options.</p></dd>
 
@@ -187,19 +216,19 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
+<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
 <p>A GenerateResult object (accumulated from the stream).</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-format_tool_result"></a><div class="section">
 <h3 id="method-format-tool-result-">Method <code>format_tool_result()</code><a class="anchor" aria-label="anchor" href="#method-format-tool-result-"></a></h3>
 <p>Format a tool execution result for the provider's API.</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">format_tool_result</span><span class="op">(</span><span class="va">tool_call_id</span>, <span class="va">tool_name</span>, <span class="va">result_content</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
+<h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>tool_call_id</code></dt>
 <dd><p>The ID of the tool call.</p></dd>
 
@@ -215,31 +244,31 @@ Uses <code>do_</code> prefix for internal methods to prevent direct usage by end
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
+<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
 <p>A list formatted as a message for this provider's API.</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-get_history_format"></a><div class="section">
 <h3 id="method-get-history-format-">Method <code>get_history_format()</code><a class="anchor" aria-label="anchor" href="#method-get-history-format-"></a></h3>
 <p>Get the message format used by this model's API for history.</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">get_history_format</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
 <p>A character string ("openai" or "anthropic").</p>
 </div>
 
 </div><p></p><hr><a id="method-LanguageModelV1-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">LanguageModelV1</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
+<h4 id="arguments-7">Arguments<a class="anchor" aria-label="anchor" href="#arguments-7"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 

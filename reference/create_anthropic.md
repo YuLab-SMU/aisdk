@@ -43,8 +43,10 @@ An AnthropicProvider object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-anthropic <- create_anthropic(api_key = "sk-ant-...")
-model <- anthropic$language_model("claude-sonnet-4-20250514")
-} # }
+# \donttest{
+if (interactive()) {
+  anthropic <- create_anthropic(api_key = "sk-ant-...")
+  model <- anthropic$language_model("claude-sonnet-4-20250514")
+}
+# }
 ```

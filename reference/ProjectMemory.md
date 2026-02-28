@@ -56,13 +56,17 @@ Create or connect to a project memory database.
 
 #### Usage
 
-    ProjectMemory$new(project_root = getwd(), db_name = "memory.sqlite")
+    ProjectMemory$new(
+      project_root = if (interactive()) getwd() else tempdir(),
+      db_name = "memory.sqlite"
+    )
 
 #### Arguments
 
 - `project_root`:
 
-  Project root directory. Defaults to current working directory.
+  Project root directory. Defaults to getwd() interactively, tempdir()
+  otherwise.
 
 - `db_name`:
 

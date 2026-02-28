@@ -15,6 +15,7 @@ stream_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  sandbox = FALSE,
   skills = NULL,
   session = NULL,
   hooks = NULL,
@@ -58,6 +59,11 @@ stream_text(
   Maximum number of generation steps (tool execution loops). Default 1.
   Set to higher values (e.g., 5) to enable automatic tool execution.
 
+- sandbox:
+
+  Logical. If TRUE, enables R-native programmatic sandbox mode. See
+  `generate_text` for details. Default FALSE.
+
 - skills:
 
   Optional path to skills directory, or a SkillRegistry object.
@@ -85,10 +91,12 @@ A GenerateResult object (accumulated from the stream).
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-model <- create_openai()$language_model("gpt-4o")
-stream_text(model, "Tell me a story", callback = function(text, done) {
-  if (!done) cat(text)
-})
-} # }
+# \donttest{
+if (interactive()) {
+  model <- create_openai()$language_model("gpt-4o")
+  stream_text(model, "Tell me a story", callback = function(text, done) {
+    if (!done) cat(text)
+  })
+}
+# }
 ```

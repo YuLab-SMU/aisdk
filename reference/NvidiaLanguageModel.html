@@ -66,26 +66,32 @@ like "enable_thinking" and reasoning content extraction.</p>
 <div class="section">
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 
-<ul><li><p><a href="#method-NvidiaLanguageModel-do_generate"><code>NvidiaLanguageModel$do_generate()</code></a></p></li>
+<ul><li><p><a href="#method-NvidiaLanguageModel-parse_response"><code>NvidiaLanguageModel$parse_response()</code></a></p></li>
 <li><p><a href="#method-NvidiaLanguageModel-clone"><code>NvidiaLanguageModel$clone()</code></a></p></li>
 </ul></div><p><details><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href="LanguageModelV1.html#method-generate"><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href="LanguageModelV1.html#method-has_capability"><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href="LanguageModelV1.html#method-stream"><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_payload"><a href="OpenAILanguageModel.html#method-build_payload"><code>aisdk::OpenAILanguageModel$build_payload()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_stream_payload"><a href="OpenAILanguageModel.html#method-build_stream_payload"><code>aisdk::OpenAILanguageModel$build_stream_payload()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_generate"><a href="OpenAILanguageModel.html#method-do_generate"><code>aisdk::OpenAILanguageModel$do_generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_stream"><a href="OpenAILanguageModel.html#method-do_stream"><code>aisdk::OpenAILanguageModel$do_stream()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="execute_request"><a href="OpenAILanguageModel.html#method-execute_request"><code>aisdk::OpenAILanguageModel$execute_request()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="format_tool_result"><a href="OpenAILanguageModel.html#method-format_tool_result"><code>aisdk::OpenAILanguageModel$format_tool_result()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_config"><a href="OpenAILanguageModel.html#method-get_config"><code>aisdk::OpenAILanguageModel$get_config()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_history_format"><a href="OpenAILanguageModel.html#method-get_history_format"><code>aisdk::OpenAILanguageModel$get_history_format()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="initialize"><a href="OpenAILanguageModel.html#method-initialize"><code>aisdk::OpenAILanguageModel$initialize()</code></a></span></li>
-</ul></details></p><hr><a id="method-NvidiaLanguageModel-do_generate"></a><div class="section">
-<h3 id="method-do-generate-">Method <code>do_generate()</code><a class="anchor" aria-label="anchor" href="#method-do-generate-"></a></h3>
-<p>Generate text (non-streaming).</p><div class="section">
+</ul></details></p><hr><a id="method-NvidiaLanguageModel-parse_response"></a><div class="section">
+<h3 id="method-parse-response-">Method <code>parse_response()</code><a class="anchor" aria-label="anchor" href="#method-parse-response-"></a></h3>
+<p>Parse the API response into a GenerateResult.
+Overrides parent to extract NVIDIA-specific reasoning_content.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">NvidiaLanguageModel</span><span class="op">$</span><span class="fu">do_generate</span><span class="op">(</span><span class="va">params</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">NvidiaLanguageModel</span><span class="op">$</span><span class="fu">parse_response</span><span class="op">(</span><span class="va">response</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>params</code></dt>
-<dd><p>A list of call options including messages, temperature, etc.</p></dd>
+<p></p><div class="arguments"><dl><dt><code>response</code></dt>
+<dd><p>The parsed API response.</p></dd>
 
 
 </dl><p></p></div>

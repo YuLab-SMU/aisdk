@@ -22,11 +22,13 @@ A list with compatible (logical) and suggestions (character vector).
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 result <- check_sdk_compatibility("0.8.0")
 if (!result$compatible) {
   cat("Migration needed:\n")
   cat(paste(result$suggestions, collapse = "\n"))
 }
-} # }
+}
+# }
 ```

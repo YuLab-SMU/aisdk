@@ -63,6 +63,7 @@ This function provides a real-time stream of tokens through a callback.</p>
 <span>  max_tokens <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tools <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_steps <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  sandbox <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  skills <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  session <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -108,6 +109,11 @@ This function provides a real-time stream of tokens through a callback.</p>
 Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.</p></dd>
 
 
+<dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
+<dd><p>Logical. If TRUE, enables R-native programmatic sandbox mode.
+See <code>generate_text</code> for details. Default FALSE.</p></dd>
+
+
 <dt id="arg-skills">skills<a class="anchor" aria-label="anchor" href="#arg-skills"></a></dt>
 <dd><p>Optional path to skills directory, or a SkillRegistry object.</p></dd>
 
@@ -135,12 +141,14 @@ Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.</p
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">stream_text</span><span class="op">(</span><span class="va">model</span>, <span class="st">"Tell me a story"</span>, callback <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">text</span>, <span class="va">done</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">done</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">text</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">stream_text</span><span class="op">(</span><span class="va">model</span>, <span class="st">"Tell me a story"</span>, callback <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">text</span>, <span class="va">done</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">done</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">text</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

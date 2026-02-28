@@ -1,7 +1,7 @@
 # Create Orchestration Flow (Compatibility Wrapper)
 
-Creates an orchestration flow using either FlowStack or legacy Flow
-based on feature flags.
+Creates an orchestration flow using Flow. Provided for backward
+compatibility.
 
 ## Usage
 
@@ -44,4 +44,4 @@ create_orchestration(
 
 ## Value
 
-A FlowStack or Flow object.
+A Flow object.

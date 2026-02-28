@@ -2,32 +2,22 @@
 
 ## All functions
 
-- [`ARCHITECT_PROMPT_TEMPLATE`](https://YuLab-SMU.github.io/aisdk/reference/ARCHITECT_PROMPT_TEMPLATE.md)
-  : Architect Agent for Team Composition
-- [`ARCHITECT_V2_PROMPT_TEMPLATE`](https://YuLab-SMU.github.io/aisdk/reference/ARCHITECT_V2_PROMPT_TEMPLATE.md)
-  : Architect V2: Enhanced Meta-Agent with Success Criteria
-- [`AgentLibrary`](https://YuLab-SMU.github.io/aisdk/reference/AgentLibrary.md)
-  : Agent Discovery Library
 - [`AgentRegistry`](https://YuLab-SMU.github.io/aisdk/reference/AgentRegistry.md)
   : AgentRegistry Class
 - [`AgentTeam`](https://YuLab-SMU.github.io/aisdk/reference/AgentTeam.md)
   : AgentTeam Class
 - [`AnthropicProvider`](https://YuLab-SMU.github.io/aisdk/reference/AnthropicProvider.md)
   : Anthropic Provider Class
-- [`ArchitectV2`](https://YuLab-SMU.github.io/aisdk/reference/ArchitectV2.md)
-  : Architect V2 R6 Class
+- [`BailianProvider`](https://YuLab-SMU.github.io/aisdk/reference/BailianProvider.md)
+  : Bailian Provider Class
 - [`ChatSession`](https://YuLab-SMU.github.io/aisdk/reference/ChatSession.md)
   : ChatSession Class
 - [`DeepSeekProvider`](https://YuLab-SMU.github.io/aisdk/reference/DeepSeekProvider.md)
   : DeepSeek Provider Class
-- [`EVALUATOR_PROMPT`](https://YuLab-SMU.github.io/aisdk/reference/EVALUATOR_PROMPT.md)
-  : Evaluator Agent: Result Quality Assessment
 - [`EmbeddingModelV1`](https://YuLab-SMU.github.io/aisdk/reference/EmbeddingModelV1.md)
   : Embedding Model V1 (Abstract Base Class)
-- [`Evaluator`](https://YuLab-SMU.github.io/aisdk/reference/Evaluator.md)
-  : Evaluator R6 Class
-- [`FlowStack`](https://YuLab-SMU.github.io/aisdk/reference/FlowStack.md)
-  : FlowStack Class
+- [`GeminiProvider`](https://YuLab-SMU.github.io/aisdk/reference/GeminiProvider.md)
+  : Gemini Provider Class
 - [`GenerateResult`](https://YuLab-SMU.github.io/aisdk/reference/GenerateResult.md)
   : Generate Result
 - [`HookHandler`](https://YuLab-SMU.github.io/aisdk/reference/HookHandler.md)
@@ -52,16 +42,16 @@
   : Object Strategy
 - [`OpenAIProvider`](https://YuLab-SMU.github.io/aisdk/reference/OpenAIProvider.md)
   : OpenAI Provider Class
+- [`OpenRouterProvider`](https://YuLab-SMU.github.io/aisdk/reference/OpenRouterProvider.md)
+  : OpenRouter Provider Class
 - [`OutputStrategy`](https://YuLab-SMU.github.io/aisdk/reference/OutputStrategy.md)
   : Output Strategy Interface
 - [`ProjectMemory`](https://YuLab-SMU.github.io/aisdk/reference/ProjectMemory.md)
   : Project Memory Class
 - [`ProviderRegistry`](https://YuLab-SMU.github.io/aisdk/reference/ProviderRegistry.md)
   : Provider Registry
-- [`REFINER_PROMPT`](https://YuLab-SMU.github.io/aisdk/reference/REFINER_PROMPT.md)
-  : Refiner Agent: Failure Analysis and Improvement Strategy
-- [`Refiner`](https://YuLab-SMU.github.io/aisdk/reference/Refiner.md) :
-  Refiner R6 Class
+- [`SandboxManager`](https://YuLab-SMU.github.io/aisdk/reference/SandboxManager.md)
+  : SandboxManager Class
 - [`SharedSession`](https://YuLab-SMU.github.io/aisdk/reference/SharedSession.md)
   : SharedSession Class
 - [`SkillRegistry`](https://YuLab-SMU.github.io/aisdk/reference/SkillRegistry.md)
@@ -70,6 +60,12 @@
   : Skill Store Class
 - [`SlmEngine`](https://YuLab-SMU.github.io/aisdk/reference/SlmEngine.md)
   : SLM Engine Class
+- [`StepfunProvider`](https://YuLab-SMU.github.io/aisdk/reference/StepfunProvider.md)
+  : Stepfun Provider Class
+- [`VolcengineProvider`](https://YuLab-SMU.github.io/aisdk/reference/VolcengineProvider.md)
+  : Volcengine Provider Class
+- [`XAIProvider`](https://YuLab-SMU.github.io/aisdk/reference/XAIProvider.md)
+  : xAI Provider Class
 - [`Agent`](https://YuLab-SMU.github.io/aisdk/reference/agent.md) :
   Agent Class
 - [`agent_evals`](https://YuLab-SMU.github.io/aisdk/reference/agent_evals.md)
@@ -85,8 +81,6 @@
 - [`aisdk`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   [`aisdk-package`](https://YuLab-SMU.github.io/aisdk/reference/aisdk-package.md)
   : aisdk: AI SDK for R
-- [`analyze_genesis_history()`](https://YuLab-SMU.github.io/aisdk/reference/analyze_genesis_history.md)
-  : Extract insights from Genesis V2 execution history
 - [`analyze_r_package()`](https://YuLab-SMU.github.io/aisdk/reference/analyze_r_package.md)
   : Analyze R Package for Skill Creation
 - [`apiConfigServer()`](https://YuLab-SMU.github.io/aisdk/reference/apiConfigServer.md)
@@ -97,8 +91,6 @@
   : Autonomous Data Science Pipelines
 - [`benchmark_agent()`](https://YuLab-SMU.github.io/aisdk/reference/benchmark_agent.md)
   : Benchmark Agent
-- [`benchmark_genesis_v2()`](https://YuLab-SMU.github.io/aisdk/reference/benchmark_genesis_v2.md)
-  : Create a Genesis V2 benchmark suite
 - [`cache`](https://YuLab-SMU.github.io/aisdk/reference/cache.md) :
   Caching System
 - [`cache_tool()`](https://YuLab-SMU.github.io/aisdk/reference/cache_tool.md)
@@ -107,8 +99,6 @@
   : Check SDK Version Compatibility
 - [`clear_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/clear_ai_session.md)
   : Clear AI Engine Session
-- [`clear_genesis_cache()`](https://YuLab-SMU.github.io/aisdk/reference/clear_genesis_cache.md)
-  : Clear team composition cache
 - [`compat`](https://YuLab-SMU.github.io/aisdk/reference/compat.md) :
   Compatibility Layer: Feature Flags and Migration Support
 - [`Computer`](https://YuLab-SMU.github.io/aisdk/reference/computer.md)
@@ -137,10 +127,8 @@
   : Create an Agent Registry
 - [`create_anthropic()`](https://YuLab-SMU.github.io/aisdk/reference/create_anthropic.md)
   : Create Anthropic Provider
-- [`create_architect_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_architect_agent.md)
-  : Create Architect agent for team composition
-- [`create_architect_v2()`](https://YuLab-SMU.github.io/aisdk/reference/create_architect_v2.md)
-  : Create Architect V2 agent
+- [`create_bailian()`](https://YuLab-SMU.github.io/aisdk/reference/create_bailian.md)
+  : Create Alibaba Cloud Bailian Provider
 - [`create_chat_session()`](https://YuLab-SMU.github.io/aisdk/reference/create_chat_session.md)
   : Create a Chat Session
 - [`create_coder_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.md)
@@ -151,6 +139,8 @@
   : Create Console Agent
 - [`create_console_tools()`](https://YuLab-SMU.github.io/aisdk/reference/create_console_tools.md)
   : Create Console Tools
+- [`create_custom_provider()`](https://YuLab-SMU.github.io/aisdk/reference/create_custom_provider.md)
+  : Create a custom provider
 - [`create_data_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_data_agent.md)
   : Create a DataAgent
 - [`create_deepseek()`](https://YuLab-SMU.github.io/aisdk/reference/create_deepseek.md)
@@ -161,14 +151,12 @@
   : Create Embeddings
 - [`create_env_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_env_agent.md)
   : Create an EnvAgent
-- [`create_evaluator_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_evaluator_agent.md)
-  : Create Evaluator agent
 - [`create_file_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_file_agent.md)
   : Create a FileAgent
 - [`create_flow()`](https://YuLab-SMU.github.io/aisdk/reference/create_flow.md)
   : Create a Flow
-- [`create_flow_stack()`](https://YuLab-SMU.github.io/aisdk/reference/create_flow_stack.md)
-  : Create a FlowStack
+- [`create_gemini()`](https://YuLab-SMU.github.io/aisdk/reference/create_gemini.md)
+  : Create Gemini Provider
 - [`create_hooks()`](https://YuLab-SMU.github.io/aisdk/reference/create_hooks.md)
   : Create Hooks
 - [`create_mcp_client()`](https://YuLab-SMU.github.io/aisdk/reference/create_mcp_client.md)
@@ -181,14 +169,18 @@
   : Create NVIDIA Provider
 - [`create_openai()`](https://YuLab-SMU.github.io/aisdk/reference/create_openai.md)
   : Create OpenAI Provider
+- [`create_openrouter()`](https://YuLab-SMU.github.io/aisdk/reference/create_openrouter.md)
+  : Create OpenRouter Provider
 - [`create_orchestration()`](https://YuLab-SMU.github.io/aisdk/reference/create_orchestration.md)
   : Create Orchestration Flow (Compatibility Wrapper)
 - [`create_permission_hook()`](https://YuLab-SMU.github.io/aisdk/reference/create_permission_hook.md)
   : Create Permission Hook
 - [`create_planner_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_planner_agent.md)
   : Create a PlannerAgent
-- [`create_refiner_agent()`](https://YuLab-SMU.github.io/aisdk/reference/create_refiner_agent.md)
-  : Create Refiner agent
+- [`create_r_code_tool()`](https://YuLab-SMU.github.io/aisdk/reference/create_r_code_tool.md)
+  : Create R Code Interpreter Tool
+- [`create_sandbox_system_prompt()`](https://YuLab-SMU.github.io/aisdk/reference/create_sandbox_system_prompt.md)
+  : Create Sandbox System Prompt
 - [`create_schema_from_func()`](https://YuLab-SMU.github.io/aisdk/reference/create_schema_from_func.md)
   : Create Schema from Function
 - [`create_session()`](https://YuLab-SMU.github.io/aisdk/reference/create_session.md)
@@ -207,6 +199,8 @@
   : Create Skill Tools
 - [`create_standard_registry()`](https://YuLab-SMU.github.io/aisdk/reference/create_standard_registry.md)
   : Create Standard Agent Registry
+- [`create_stepfun()`](https://YuLab-SMU.github.io/aisdk/reference/create_stepfun.md)
+  : Create Stepfun Provider
 - [`create_team()`](https://YuLab-SMU.github.io/aisdk/reference/create_team.md)
   : Create an Agent Team
 - [`create_telemetry()`](https://YuLab-SMU.github.io/aisdk/reference/create_telemetry.md)
@@ -215,10 +209,10 @@
   : Create a VisualizerAgent
 - [`create_volcengine()`](https://YuLab-SMU.github.io/aisdk/reference/create_volcengine.md)
   : Create Volcengine/Ark Provider
+- [`create_xai()`](https://YuLab-SMU.github.io/aisdk/reference/create_xai.md)
+  : Create xAI Provider
 - [`create_z_ggtree()`](https://YuLab-SMU.github.io/aisdk/reference/create_z_ggtree.md)
   : Create Schema for ggtree Function
-- [`.genesis_cache`](https://YuLab-SMU.github.io/aisdk/reference/dot-genesis_cache.md)
-  : Genesis: Zero-Configuration Direct Execution
 - [`download_model()`](https://YuLab-SMU.github.io/aisdk/reference/download_model.md)
   : Download Model from Hugging Face
 - [`enable_api_tests()`](https://YuLab-SMU.github.io/aisdk/reference/enable_api_tests.md)
@@ -231,26 +225,14 @@
   : Expect No Hallucination
 - [`expect_tool_selection()`](https://YuLab-SMU.github.io/aisdk/reference/expect_tool_selection.md)
   : Expect Tool Selection
-- [`export_genesis_result()`](https://YuLab-SMU.github.io/aisdk/reference/export_genesis_result.md)
-  : Export Genesis V2 result to JSON
 - [`extract_geom_params()`](https://YuLab-SMU.github.io/aisdk/reference/extract_geom_params.md)
   : Extract Geom Parameters from ggproto Object
 - [`fetch_api_models()`](https://YuLab-SMU.github.io/aisdk/reference/fetch_api_models.md)
   : Fetch available models from API provider
 - [`Flow`](https://YuLab-SMU.github.io/aisdk/reference/flow.md) : Flow
   Class
-- [`flow_stack`](https://YuLab-SMU.github.io/aisdk/reference/flow_stack.md)
-  : FlowStack: Enhanced Multi-Agent Orchestration
 - [`generate_text()`](https://YuLab-SMU.github.io/aisdk/reference/generate_text.md)
   : Generate Text
-- [`genesis()`](https://YuLab-SMU.github.io/aisdk/reference/genesis.md)
-  : Execute a task with automatic agent discovery and team assembly
-- [`genesis_cache_info()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_cache_info.md)
-  : Get cache statistics
-- [`genesis_v2()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2.md)
-  : Genesis V2: Direct Execute-Refine Architecture
-- [`genesis_v2_stats()`](https://YuLab-SMU.github.io/aisdk/reference/genesis_v2_stats.md)
-  : Get Genesis V2 statistics
 - [`get_ai_session()`](https://YuLab-SMU.github.io/aisdk/reference/get_ai_session.md)
   : Get AI Engine Session
 - [`get_anthropic_base_url()`](https://YuLab-SMU.github.io/aisdk/reference/get_anthropic_base_url.md)
@@ -273,8 +255,6 @@
   : Get OpenAI Model ID from environment
 - [`get_r_context()`](https://YuLab-SMU.github.io/aisdk/reference/get_r_context.md)
   : Get R Context
-- [`get_skill_library()`](https://YuLab-SMU.github.io/aisdk/reference/get_skill_library.md)
-  : Get current skill library path
 - [`get_skill_store()`](https://YuLab-SMU.github.io/aisdk/reference/get_skill_store.md)
   : Get Skill Store
 - [`ggplot_to_frontend_json()`](https://YuLab-SMU.github.io/aisdk/reference/ggplot_to_frontend_json.md)
@@ -287,8 +267,6 @@
   Hooks System
 - [`hypothesis_fix_verify()`](https://YuLab-SMU.github.io/aisdk/reference/hypothesis_fix_verify.md)
   : Hypothesis-Fix-Verify Loop
-- [`import_genesis_result()`](https://YuLab-SMU.github.io/aisdk/reference/import_genesis_result.md)
-  : Import Genesis V2 result from JSON
 - [`init_skill()`](https://YuLab-SMU.github.io/aisdk/reference/init_skill.md)
   : Initialize a New Skill
 - [`install_skill()`](https://YuLab-SMU.github.io/aisdk/reference/install_skill.md)
@@ -311,28 +289,18 @@
   : Multimodal Helpers
 - [`package_skill()`](https://YuLab-SMU.github.io/aisdk/reference/package_skill.md)
   : Package a Skill
-- [`parse_architect_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_response.md)
-  : Parse Architect's JSON response
-- [`parse_architect_v2_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_architect_v2_response.md)
-  : Parse Architect V2's JSON response
-- [`parse_evaluator_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_evaluator_response.md)
-  : Parse Evaluator's JSON response
-- [`parse_refiner_response()`](https://YuLab-SMU.github.io/aisdk/reference/parse_refiner_response.md)
-  : Parse Refiner's JSON response
-- [`plot_genesis_progression()`](https://YuLab-SMU.github.io/aisdk/reference/plot_genesis_progression.md)
-  : Visualize Genesis V2 score progression
 - [`print(`*`<GenerateObjectResult>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.GenerateObjectResult.md)
   : Print GenerateObjectResult
 - [`print(`*`<benchmark_result>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.benchmark_result.md)
   : Print Benchmark Result
 - [`print(`*`<z_schema>`*`)`](https://YuLab-SMU.github.io/aisdk/reference/print.z_schema.md)
   : Print Method for z_schema
-- [`print_genesis_v2_result()`](https://YuLab-SMU.github.io/aisdk/reference/print_genesis_v2_result.md)
-  : Print Genesis V2 result summary
 - [`print_migration_guide()`](https://YuLab-SMU.github.io/aisdk/reference/print_migration_guide.md)
   : Print Migration Guide
 - [`project_memory()`](https://YuLab-SMU.github.io/aisdk/reference/project_memory.md)
   : Project Memory System
+- [`provider_custom`](https://YuLab-SMU.github.io/aisdk/reference/provider_custom.md)
+  : Custom Provider Factory
 - [`r_data_tasks()`](https://YuLab-SMU.github.io/aisdk/reference/r_data_tasks.md)
   : Create R Data Tasks Benchmark
 - [`reactive_tool()`](https://YuLab-SMU.github.io/aisdk/reference/reactive_tool.md)
@@ -349,6 +317,8 @@
   : Safe JSON Parser
 - [`safe_to_json()`](https://YuLab-SMU.github.io/aisdk/reference/safe_to_json.md)
   : Safe Serialization to JSON
+- [`sandbox`](https://YuLab-SMU.github.io/aisdk/reference/sandbox.md) :
+  R-Native Programmatic Sandbox
 - [`scan_skills()`](https://YuLab-SMU.github.io/aisdk/reference/scan_skills.md)
   : Scan for Skills
 - [`schema`](https://YuLab-SMU.github.io/aisdk/reference/schema.md) :
@@ -369,8 +339,6 @@
   : Search Skills
 - [`session`](https://YuLab-SMU.github.io/aisdk/reference/session.md) :
   Session Management: Stateful Chat Sessions
-- [`set_skill_library()`](https://YuLab-SMU.github.io/aisdk/reference/set_skill_library.md)
-  : Set default skill library path
 - [`shared_session`](https://YuLab-SMU.github.io/aisdk/reference/shared_session.md)
   : SharedSession: Enhanced Multi-Agent Session Management
 - [`Skill`](https://YuLab-SMU.github.io/aisdk/reference/skill.md) :

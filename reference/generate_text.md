@@ -19,6 +19,7 @@ generate_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  sandbox = FALSE,
   skills = NULL,
   session = NULL,
   hooks = NULL,
@@ -59,6 +60,15 @@ generate_text(
   (single generation, no automatic tool execution). Set to higher values
   (e.g., 5) to enable automatic tool execution.
 
+- sandbox:
+
+  Logical. If TRUE, enables R-native programmatic sandbox mode. All
+  tools are bound into an isolated R environment and replaced by a
+  single `execute_r_code` meta-tool. The LLM writes R code to
+  batch-invoke tools, filter data with dplyr/purrr, and return only
+  summary results—dramatically reducing token usage and latency. Default
+  FALSE.
+
 - skills:
 
   Optional path to skills directory, or a SkillRegistry object. When
@@ -94,12 +104,14 @@ max_steps \> 1 and tools are used, the result includes:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Using hooks
-my_hooks <- create_hooks(
-  on_generation_start = function(model, prompt, tools) message("Starting..."),
-  on_tool_start = function(tool, args) message("Calling tool ", tool$name)
-)
-result <- generate_text(model, "...", hooks = my_hooks)
-} # }
+# \donttest{
+if (interactive()) {
+  # Using hooks
+  my_hooks <- create_hooks(
+    on_generation_start = function(model, prompt, tools) message("Starting..."),
+    on_tool_start = function(tool, args) message("Calling tool ", tool$name)
+  )
+  result <- generate_text(model, "...", hooks = my_hooks)
+}
+# }
 ```

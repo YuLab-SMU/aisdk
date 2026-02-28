@@ -84,7 +84,8 @@ A GenerateObjectResult with:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Define a schema for the expected output
 schema <- z_object(
   title = z_string(description = "Title of the article"),
@@ -101,5 +102,6 @@ result <- generate_object(
 
 print(result$object$title)
 print(result$object$sentiment)
-} # }
+}
+# }
 ```

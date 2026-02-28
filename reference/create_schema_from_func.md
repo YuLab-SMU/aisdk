@@ -54,12 +54,14 @@ A z_object schema.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 my_func <- function(a = 1, b = "text", c = TRUE) {}
 schema <- create_schema_from_func(my_func)
 print(schema)
 
 # Override defaults
 schema_override <- create_schema_from_func(my_func, params = list(a = 99))
-} # }
+}
+# }
 ```

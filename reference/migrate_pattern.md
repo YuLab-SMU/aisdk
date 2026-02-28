@@ -21,9 +21,11 @@ A list with old_pattern, new_pattern, and example.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Get migration guidance for ChatSession
 guidance <- migrate_pattern("ChatSession")
 cat(guidance$example)
-} # }
+}
+# }
 ```

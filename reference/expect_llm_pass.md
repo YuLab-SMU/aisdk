@@ -38,13 +38,15 @@ Invisibly returns the evaluation result.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-test_that("agent answers math questions correctly", {
-  result <- generate_text(
-    model = "openai:gpt-4o",
-    prompt = "What is 2 + 2?"
-  )
-  expect_llm_pass(result, "The response should contain the number 4")
-})
-} # }
+# \donttest{
+if (interactive()) {
+  test_that("agent answers math questions correctly", {
+    result <- generate_text(
+      model = "openai:gpt-4o",
+      prompt = "What is 2 + 2?"
+    )
+    expect_llm_pass(result, "The response should contain the number 4")
+  })
+}
+# }
 ```

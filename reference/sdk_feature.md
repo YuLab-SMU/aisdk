@@ -25,12 +25,14 @@ The flag value.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Check if shared session is enabled
 if (sdk_feature("use_shared_session")) {
   session <- create_shared_session(model = "openai:gpt-4o")
+}
 } else {
   session <- create_chat_session(model = "openai:gpt-4o")
 }
-} # }
+# }
 ```

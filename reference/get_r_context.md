@@ -25,9 +25,11 @@ A single string containing the summaries of the requested variables.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 df <- data.frame(x = 1:10, y = rnorm(10))
 context <- get_r_context("df")
 cat(context)
-} # }
+}
+# }
 ```

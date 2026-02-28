@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="AI SDK for R - Unified Interface for AI Model Providers">
-<meta name="description" content="A production-grade AI SDK for R featuring a layered architecture (Specification, Utilities, Providers, Core), middleware support, robust error handling with exponential backoff, support for multiple AI model providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP ecosystem, autonomous data science pipelines with self-healing code execution, and a global skill store for sharing AI capabilities.">
-<meta property="og:description" content="A production-grade AI SDK for R featuring a layered architecture (Specification, Utilities, Providers, Core), middleware support, robust error handling with exponential backoff, support for multiple AI model providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP ecosystem, autonomous data science pipelines with self-healing code execution, and a global skill store for sharing AI capabilities.">
+<meta name="description" content="A production-grade AI SDK for R featuring a layered architecture (Specification, Utilities, Providers, Core), middleware support, robust error handling with exponential backoff, support for multiple AI model providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP ecosystem, multi-agent orchestration, progressive knowledge loading through skills, and a global skill store for sharing AI capabilities.">
+<meta property="og:description" content="A production-grade AI SDK for R featuring a layered architecture (Specification, Utilities, Providers, Core), middleware support, robust error handling with exponential backoff, support for multiple AI model providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP ecosystem, multi-agent orchestration, progressive knowledge loading through skills, and a global skill store for sharing AI capabilities.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -71,21 +71,6 @@
 </h2>
 <ul>
 <li>
-<strong>🚀 Genesis V2 (NEW!)</strong>: Plan-Execute-Refine architecture with automatic quality assurance
-<ul>
-<li>
-<strong>Genesis V1</strong>: One-line execution with auto-discovery: <code>genesis("Analyze iris dataset")</code>
-</li>
-<li>
-<strong>Genesis V2</strong>: Iterative refinement with quality checks: <code>genesis_v2("Complex task", auto_refine = TRUE)</code>
-</li>
-<li>Automatic agent discovery and team assembly</li>
-<li>AI-powered team composition via Architect agent</li>
-<li>Quality evaluation and automatic improvement</li>
-<li>Smart caching for performance</li>
-</ul>
-</li>
-<li>
 <strong>Unified API</strong>: Switch between OpenAI and Anthropic models with a single line of code.</li>
 <li>
 <strong>Agentic Framework</strong>: Built-in support for <strong>Agents</strong>, <strong>Tasks</strong>, and <strong>Flows</strong>.
@@ -120,56 +105,9 @@
 <h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
 <div class="section level3">
-<h3 id="id_-genesis-zero-configuration-execution">🚀 Genesis: Zero-Configuration Execution<a class="anchor" aria-label="anchor" href="#id_-genesis-zero-configuration-execution"></a>
-</h3>
-<div class="section level4">
-<h4 id="genesis-v1-simple--fast">Genesis V1: Simple &amp; Fast<a class="anchor" aria-label="anchor" href="#genesis-v1-simple--fast"></a>
-</h4>
-<p>The easiest way to use aisdk - just describe what you want:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk" class="external-link">aisdk</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Set your API key</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>ANTHROPIC_API_KEY <span class="op">=</span> <span class="st">"your-api-key"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># One line - that's it!</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/genesis.html">genesis</a></span><span class="op">(</span><span class="st">"Analyze the iris dataset and create a scatter plot"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># With verbose output to see what's happening</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/genesis.html">genesis</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Analyze the mtcars dataset and summarize key statistics"</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><strong>What Genesis V1 does automatically:</strong> 1. Discovers available agents from your skill library 2. Analyzes your task to understand requirements 3. Selects the optimal combination of agents 4. Assembles a team and executes the task</p>
-</div>
-<div class="section level4">
-<h4 id="genesis-v2-plan-execute-refine-new">Genesis V2: Plan-Execute-Refine (NEW!)<a class="anchor" aria-label="anchor" href="#genesis-v2-plan-execute-refine-new"></a>
-</h4>
-<p>For complex tasks requiring quality assurance and iterative improvement:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Automatic quality checks and refinement</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/genesis_v2.html">genesis_v2</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Analyze iris dataset and create a comprehensive report with visualizations"</span>,</span>
-<span>  max_iterations <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  quality_threshold <span class="op">=</span> <span class="fl">80</span>,</span>
-<span>  auto_refine <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check results</span></span>
-<span><span class="fu"><a href="reference/print_genesis_v2_result.html">print_genesis_v2_result</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Analyze execution history</span></span>
-<span><span class="fu"><a href="reference/analyze_genesis_history.html">analyze_genesis_history</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></code></pre></div>
-<p><strong>What Genesis V2 adds:</strong> 1. <strong>Plan</strong>: Architect defines success criteria 2. <strong>Execute</strong>: Team runs the task 3. <strong>Refine</strong>: Evaluator checks quality, Refiner suggests improvements 4. <strong>Iterate</strong>: Automatically retry or replan until quality threshold is met</p>
-<p><strong>Learn more</strong>: - <a href="docs/GENESIS_USER_GUIDE.html">Genesis User Guide</a> - <a href="docs/GENESIS_V2_PER_DESIGN.html">Genesis V2 PER Design</a> - <a href="docs/GENESIS_V1_VS_V2.html">V1 vs V2 Comparison</a></p>
-<hr>
-</div>
-</div>
-<div class="section level3">
 <h3 id="basic-text-generation">Basic Text Generation<a class="anchor" aria-label="anchor" href="#basic-text-generation"></a>
 </h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk" class="external-link">aisdk</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/file.edit.html" class="external-link">file.edit</a></span><span class="op">(</span><span class="st">".env"</span><span class="op">)</span></span>
@@ -190,7 +128,7 @@
 <h3 id="building-an-agent">Building an Agent<a class="anchor" aria-label="anchor" href="#building-an-agent"></a>
 </h3>
 <p>Create an agent with tools to solve tasks:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define a calculator tool (schema inferred from the function signature)</span></span>
 <span><span class="va">calc_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/tool_factory.html">tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"add_numbers"</span>,</span>
@@ -218,7 +156,7 @@
 <h3 id="stateful-conversations">Stateful Conversations<a class="anchor" aria-label="anchor" href="#stateful-conversations"></a>
 </h3>
 <p>Agents are stateless by default. To have a multi-turn conversation where the agent remembers previous interactions, create a <em>Chat Session</em> from the agent:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a session from the agent</span></span>
 <span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">create_session</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
 <span></span>
@@ -233,7 +171,7 @@
 </h3>
 <p>The Skills system allows you to package specialized knowledge and tools that can be dynamically loaded by agents. This saves context window space and keeps your agents focused.</p>
 <p><strong>Use the Demo Skill</strong>:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Initialize the registry and tools</span></span>
 <span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/create_skill_registry.html">create_skill_registry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"skills"</span>, package <span class="op">=</span> <span class="st">"aisdk"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">skill_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/create_skill_tools.html">create_skill_tools</a></span><span class="op">(</span><span class="va">registry</span><span class="op">)</span></span>

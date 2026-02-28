@@ -88,8 +88,8 @@ including telemetry, hooks, and cost tracking.</p>
 <span></span>
 <span><span class="co"># Pass hooks to generation</span></span>
 <span><span class="fu"><a href="../reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>, </span>
-<span>  prompt <span class="op">=</span> <span class="st">"Hello"</span>, </span>
+<span>  model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>,</span>
+<span>  prompt <span class="op">=</span> <span class="st">"Hello"</span>,</span>
 <span>  hooks <span class="op">=</span> <span class="va">hooks</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -106,8 +106,8 @@ R6 object. Always assign inside the <code>hooks</code> list.</p>
 <code class="sourceCode R"><span><span class="co"># Permission hook: only allow "read_file" automatically</span></span>
 <span><span class="co"># "write_file" will trigger a request for approval (or denial in non-interactive)</span></span>
 <span><span class="va">perm_hook</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_permission_hook.html">create_permission_hook</a></span><span class="op">(</span></span>
-<span>  mode <span class="op">=</span> <span class="st">"escalate"</span>, </span>
-<span>  allowlist <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"read_file"</span><span class="op">)</span> </span>
+<span>  mode <span class="op">=</span> <span class="st">"escalate"</span>,</span>
+<span>  allowlist <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"read_file"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Combine with other hooks</span></span>
@@ -116,25 +116,28 @@ R6 object. Always assign inside the <code>hooks</code> list.</p>
 <div class="section level2">
 <h2 id="tool-caching">Tool Caching<a class="anchor" aria-label="anchor" href="#tool-caching"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>Wrap tools with <span class="st">`</span><span class="at">cache_tool()</span><span class="st">`</span> to memoize their results. The <span class="st">`</span><span class="at">...</span><span class="st">`</span> <span class="cf">in</span> the example is a placeholder and cannot be run directly <span class="cf">in</span> the console.</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>slow_tool <span class="ot">&lt;-</span> <span class="fu">tool</span>(..., <span class="at">execute =</span> <span class="cf">function</span>(args) { <span class="fu">Sys.sleep</span>(<span class="dv">5</span>); ... })</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># For example, we have a time-consuming tool `slow_tool` that sleeps for 5 seconds and then returns the input parameter `x`.</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>slow_tool <span class="ot">&lt;-</span> <span class="fu">tool</span>(</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"slow_tool"</span>,</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">"Sleep 5 seconds and return x"</span>,</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">parameters =</span> <span class="fu">z_object</span>(<span class="at">x =</span> <span class="fu">z_number</span>(<span class="st">"Input number"</span>)),</span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">execute =</span> <span class="cf">function</span>(args) { <span class="fu">Sys.sleep</span>(<span class="dv">5</span>); args<span class="sc">$</span>x }</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>)</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co"># Cached version</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>fast_tool <span class="ot">&lt;-</span> <span class="fu">cache_tool</span>(slow_tool)</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co"># First call: 5 seconds</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>fast_tool<span class="sc">$</span><span class="fu">run</span>(<span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span>))</span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co"># Second call: Instant</span></span>
-<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>fast_tool<span class="sc">$</span><span class="fu">run</span>(<span class="fu">list</span>(<span class="at">x =</span> <span class="dv">1</span>))</span></code></pre></div>
+<p>Wrap tools with <code><a href="../reference/cache_tool.html">cache_tool()</a></code> to memoize their
+results.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># For example, we have a time-consuming tool `slow_tool` that sleeps for 5 seconds and then returns the input parameter `x`.</span></span>
+<span><span class="va">slow_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tool_factory.html">tool</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"slow_tool"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Sleep 5 seconds and return x"</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="../reference/z_object.html">z_object</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="../reference/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"Input number"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span></span>
+<span>    <span class="va">args</span><span class="op">$</span><span class="va">x</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Cached version</span></span>
+<span><span class="va">fast_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cache_tool.html">cache_tool</a></span><span class="op">(</span><span class="va">slow_tool</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># First call: 5 seconds</span></span>
+<span><span class="va">fast_tool</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Second call: Instant</span></span>
+<span><span class="va">fast_tool</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -9,7 +9,10 @@ Factory function to create or connect to a project memory database.
 ## Usage
 
 ``` r
-project_memory(project_root = getwd(), db_name = "memory.sqlite")
+project_memory(
+  project_root = if (interactive()) getwd() else tempdir(),
+  db_name = "memory.sqlite"
+)
 ```
 
 ## Arguments
@@ -29,7 +32,8 @@ A ProjectMemory object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Create memory for current project
 memory <- project_memory()
 
@@ -50,5 +54,6 @@ memory$store_fix(
 
 # Search for relevant snippets
 memory$search_snippets("summarize")
-} # }
+}
+# }
 ```

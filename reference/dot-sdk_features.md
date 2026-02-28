@@ -12,4 +12,4 @@ compatibility.
 
 ## Format
 
-An object of class `environment` of length 8.
+An object of class `environment` of length 7.

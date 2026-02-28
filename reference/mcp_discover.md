@@ -25,7 +25,8 @@ An McpDiscovery object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Create discovery instance
 discovery <- mcp_discover()
 
@@ -37,5 +38,6 @@ discovery$register("my-server", "localhost", 3000)
 
 # List all discovered endpoints
 discovery$list_endpoints()
-} # }
+}
+# }
 ```

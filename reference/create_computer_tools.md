@@ -9,7 +9,7 @@ actions.
 ``` r
 create_computer_tools(
   computer = NULL,
-  working_dir = getwd(),
+  working_dir = if (interactive()) getwd() else tempdir(),
   sandbox_mode = "permissive"
 )
 ```
@@ -22,7 +22,8 @@ create_computer_tools(
 
 - working_dir:
 
-  Working directory (default: current directory)
+  Working directory. Defaults to getwd() in interactive mode, otherwise
+  tempdir().
 
 - sandbox_mode:
 

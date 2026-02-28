@@ -1,11 +1,15 @@
 # Flow Class
 
-R6 class representing the orchestration layer for multi-agent systems.
-Manages the call stack, context switching, and delegation between
-agents.
+R6 class representing an orchestration layer for multi-agent systems.
+Features:
 
-The Flow acts as the "conductor" - it suspends the calling agent,
-activates the delegate agent, and resumes the caller with the result.
+- Comprehensive delegation tracing
+
+- Automatic delegate_task tool generation
+
+- Depth and context limits with guardrails
+
+- Result aggregation and summarization
 
 ## Methods
 
@@ -25,7 +29,15 @@ activates the delegate agent, and resumes the caller with the result.
 
 - [`Flow$delegate()`](#method-Flow-delegate)
 
+- [`Flow$generate_delegate_tool()`](#method-Flow-generate_delegate_tool)
+
 - [`Flow$run()`](#method-Flow-run)
+
+- [`Flow$get_delegation_history()`](#method-Flow-get_delegation_history)
+
+- [`Flow$delegation_stats()`](#method-Flow-delegation_stats)
+
+- [`Flow$clear_history()`](#method-Flow-clear_history)
 
 - [`Flow$print()`](#method-Flow-print)
 
@@ -44,18 +56,20 @@ Initialize a new Flow.
       model,
       registry = NULL,
       max_depth = 5,
-      max_steps_per_agent = 10
+      max_steps_per_agent = 10,
+      max_context_tokens = 4000,
+      enable_guardrails = TRUE
     )
 
 #### Arguments
 
 - `session`:
 
-  A ChatSession object for shared state between agents.
+  A ChatSession object.
 
 - `model`:
 
-  The default model ID to use (e.g., "openai:gpt-4o").
+  The default model ID to use.
 
 - `registry`:
 
@@ -63,11 +77,19 @@ Initialize a new Flow.
 
 - `max_depth`:
 
-  Maximum delegation depth (prevents infinite loops). Default 5.
+  Maximum delegation depth. Default 5.
 
 - `max_steps_per_agent`:
 
   Maximum ReAct steps per agent. Default 10.
+
+- `max_context_tokens`:
+
+  Maximum context tokens per delegation. Default 4000.
+
+- `enable_guardrails`:
+
+  Enable safety guardrails. Default TRUE.
 
 ------------------------------------------------------------------------
 
@@ -149,11 +171,11 @@ The global context string.
 
 ### Method `delegate()`
 
-Delegate a task to another agent.
+Delegate a task to another agent with enhanced tracking.
 
 #### Usage
 
-    Flow$delegate(agent, task, context = NULL)
+    Flow$delegate(agent, task, context = NULL, priority = "normal")
 
 #### Arguments
 
@@ -169,19 +191,9 @@ Delegate a task to another agent.
 
   Optional additional context.
 
-#### Details
+- `priority`:
 
-This is the core orchestration method. It:
-
-1.  Checks depth limit
-
-2.  Pushes current agent to stack (if any)
-
-3.  Builds recursive context
-
-4.  Executes the delegate agent
-
-5.  Pops and returns result
+  Task priority: "high", "normal", "low". Default "normal".
 
 #### Returns
 
@@ -189,13 +201,32 @@ The text result from the delegate agent.
 
 ------------------------------------------------------------------------
 
-### Method `run()`
+### Method `generate_delegate_tool()`
 
-Run a primary agent (the Manager).
+Generate the delegate_task tool for manager agents.
 
 #### Usage
 
-    Flow$run(agent, task)
+    Flow$generate_delegate_tool()
+
+#### Details
+
+Creates a single unified tool that can delegate to any registered agent.
+This is more efficient than generating separate tools per agent.
+
+#### Returns
+
+A Tool object for delegation.
+
+------------------------------------------------------------------------
+
+### Method `run()`
+
+Run a primary agent with enhanced orchestration.
+
+#### Usage
+
+    Flow$run(agent, task, use_unified_delegate = TRUE)
 
 #### Arguments
 
@@ -207,14 +238,65 @@ Run a primary agent (the Manager).
 
   The user's task/input.
 
-#### Details
+- `use_unified_delegate`:
 
-Entry point for a multi-agent flow. The primary agent is run with
-delegation tools automatically injected from the registry.
+  Use single delegate_task tool. Default TRUE.
 
 #### Returns
 
 The final result from the primary agent.
+
+------------------------------------------------------------------------
+
+### Method `get_delegation_history()`
+
+Get delegation history.
+
+#### Usage
+
+    Flow$get_delegation_history(agent_name = NULL, limit = NULL)
+
+#### Arguments
+
+- `agent_name`:
+
+  Optional filter by agent name.
+
+- `limit`:
+
+  Maximum number of records to return.
+
+#### Returns
+
+A list of delegation records.
+
+------------------------------------------------------------------------
+
+### Method `delegation_stats()`
+
+Get delegation statistics.
+
+#### Usage
+
+    Flow$delegation_stats()
+
+#### Returns
+
+A list with counts, timing, and success rates.
+
+------------------------------------------------------------------------
+
+### Method `clear_history()`
+
+Clear delegation history.
+
+#### Usage
+
+    Flow$clear_history()
+
+#### Returns
+
+Invisible self for chaining.
 
 ------------------------------------------------------------------------
 

@@ -25,7 +25,8 @@ A populated SkillRegistry object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Scan a skills directory
 registry <- create_skill_registry(".aimd/skills")
 
@@ -34,5 +35,6 @@ registry$list_skills()
 
 # Get a specific skill
 skill <- registry$get_skill("seurat_analysis")
-} # }
+}
+# }
 ```

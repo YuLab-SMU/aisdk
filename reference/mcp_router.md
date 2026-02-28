@@ -16,7 +16,8 @@ An McpRouter object.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 # Create router
 router <- mcp_router()
 
@@ -36,5 +37,6 @@ router$remove_client("github")
 
 # Cleanup
 router$close()
-} # }
+}
+# }
 ```

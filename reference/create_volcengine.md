@@ -1,8 +1,7 @@
 # Create Volcengine/Ark Provider
 
-Convenience function to create a Volcengine (火山引擎) provider using
-the Ark API. This is a wrapper around create_openai with
-Volcengine-specific defaults.
+Factory function to create a Volcengine (火山引擎) provider using the
+Ark API.
 
 ## Usage
 
@@ -27,7 +26,29 @@ create_volcengine(api_key = NULL, base_url = NULL, headers = NULL)
 
 ## Value
 
-An OpenAIProvider object configured for Volcengine.
+A VolcengineProvider object.
+
+## Supported Models
+
+Volcengine Ark platform hosts a variety of models:
+
+- **Doubao (豆包)**: ByteDance's proprietary models (e.g.,
+  "doubao-1-5-pro-256k-250115")
+
+- **DeepSeek**: DeepSeek models hosted on Volcengine (e.g.,
+  "deepseek-r1-250120")
+
+- Other third-party models available on the platform
+
+## API Formats
+
+Volcengine supports both Chat Completions API and Responses API:
+
+- `language_model()`: Uses Chat Completions API (standard)
+
+- `responses_model()`: Uses Responses API (for reasoning models)
+
+- `smart_model()`: Auto-selects based on model ID
 
 ## Token Limit Parameters for Volcengine Responses API
 
@@ -52,7 +73,8 @@ For advanced users who want answer-only limits:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
+if (interactive()) {
 volcengine <- create_volcengine()
 
 # Chat API (standard models)
@@ -68,7 +90,8 @@ result <- model$generate(messages = msgs, max_tokens = 2000)
 # Advanced: limit only the answer part (reasoning can be longer)
 result <- model$generate(messages = msgs, max_answer_tokens = 500)
 
-# Advanced: explicitly set total limit
-result <- model$generate(messages = msgs, max_output_tokens = 3000)
-} # }
+# Smart model selection (auto-detects best API)
+model <- volcengine$smart_model("deepseek-r1-250120")
+}
+# }
 ```
