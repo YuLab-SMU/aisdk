@@ -63,9 +63,12 @@ OpenAILanguageModel <- R6::R6Class(
       body <- list(
         model = self$model_id,
         messages = params$messages,
-        temperature = params$temperature %||% 0.7,
         stream = FALSE
       )
+
+      if (!is.null(params$temperature)) {
+        body$temperature <- params$temperature
+      }
 
       # ==========================================================
       # Smart Token Limit Mapping (capability-driven)
@@ -163,9 +166,12 @@ OpenAILanguageModel <- R6::R6Class(
       body <- list(
         model = self$model_id,
         messages = params$messages,
-        temperature = params$temperature %||% 0.7,
         stream = TRUE
       )
+
+      if (!is.null(params$temperature)) {
+        body$temperature <- params$temperature
+      }
 
       # Smart Token Limit Mapping (capability-driven)
       explicit_completion_tokens <- params$max_completion_tokens
