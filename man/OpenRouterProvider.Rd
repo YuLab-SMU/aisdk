@@ -7,7 +7,7 @@
 Provider class for OpenRouter.
 }
 \section{Super class}{
-\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{OpenRouterProvider}
+\code{aisdk::OpenAIProvider} -> \code{OpenRouterProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

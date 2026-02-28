@@ -10,7 +10,7 @@ like reasoning content extraction from reasoning models.
 }
 \keyword{internal}
 \section{Super classes}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{OpenRouterLanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{OpenRouterLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

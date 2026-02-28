@@ -7,7 +7,7 @@
 Provider class for NVIDIA.
 }
 \section{Super class}{
-\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{NvidiaProvider}
+\code{aisdk::OpenAIProvider} -> \code{NvidiaProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

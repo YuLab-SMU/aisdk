@@ -7,7 +7,7 @@
 Provider class for xAI.
 }
 \section{Super class}{
-\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{XAIProvider}
+\code{aisdk::OpenAIProvider} -> \code{XAIProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

@@ -10,7 +10,7 @@ like "enable_thinking" and reasoning content extraction.
 }
 \keyword{internal}
 \section{Super classes}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{NvidiaLanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{NvidiaLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

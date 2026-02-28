@@ -7,7 +7,7 @@
 Provider class for Stepfun.
 }
 \section{Super class}{
-\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{StepfunProvider}
+\code{aisdk::OpenAIProvider} -> \code{StepfunProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

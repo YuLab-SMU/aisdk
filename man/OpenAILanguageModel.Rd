@@ -8,7 +8,7 @@ Language model implementation for OpenAI's chat completions API.
 }
 \keyword{internal}
 \section{Super class}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{OpenAILanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{OpenAILanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

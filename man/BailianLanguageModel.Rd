@@ -10,7 +10,7 @@ like reasoning content extraction from Qwen reasoning models.
 }
 \keyword{internal}
 \section{Super classes}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{BailianLanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{BailianLanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

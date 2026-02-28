@@ -7,7 +7,7 @@
 Provider class for Alibaba Cloud Bailian (百炼) / DashScope platform.
 }
 \section{Super class}{
-\code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{BailianProvider}
+\code{aisdk::OpenAIProvider} -> \code{BailianProvider}
 }
 \section{Methods}{
 \subsection{Public methods}{

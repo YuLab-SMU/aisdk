@@ -9,7 +9,7 @@ Inherits from OpenAILanguageModel as xAI provides An OpenAI-compatible API.
 }
 \keyword{internal}
 \section{Super classes}{
-\code{\link[aisdk:LanguageModelV1]{aisdk::LanguageModelV1}} -> \code{\link[aisdk:OpenAILanguageModel]{aisdk::OpenAILanguageModel}} -> \code{XAILanguageModel}
+\code{aisdk::LanguageModelV1} -> \code{aisdk::OpenAILanguageModel} -> \code{XAILanguageModel}
 }
 \section{Methods}{
 \subsection{Public methods}{

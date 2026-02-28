@@ -8,7 +8,7 @@ Embedding model implementation for OpenAI's embeddings API.
 }
 \keyword{internal}
 \section{Super class}{
-\code{\link[aisdk:EmbeddingModelV1]{aisdk::EmbeddingModelV1}} -> \code{OpenAIEmbeddingModel}
+\code{aisdk::EmbeddingModelV1} -> \code{OpenAIEmbeddingModel}
 }
 \section{Methods}{
 \subsection{Public methods}{
