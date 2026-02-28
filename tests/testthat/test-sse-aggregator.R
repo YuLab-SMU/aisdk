@@ -23,7 +23,7 @@ test_that("SSEAggregator accumulates text deltas", {
     agg$on_text_delta("World!")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$text, "Hello, World!")
     expect_equal(chunks, c("Hello", ", ", "World!"))
@@ -43,7 +43,7 @@ test_that("SSEAggregator handles reasoning transitions", {
     agg$on_text_delta("answer")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$text, "answer")
     expect_equal(result$reasoning, "thinking...")
@@ -69,7 +69,7 @@ test_that("SSEAggregator closes reasoning on done", {
     agg$on_reasoning_delta("still thinking")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_true(done_called)
     # Reasoning should be closed before done callback
@@ -89,7 +89,7 @@ test_that("SSEAggregator handles reasoning_start and block_stop", {
     agg$on_text_delta("answer")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$reasoning, "deep thought")
     expect_equal(result$text, "answer")
@@ -111,7 +111,7 @@ test_that("SSEAggregator ignores empty text deltas", {
     agg$on_reasoning_delta("")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$text, "")
     expect_equal(result$reasoning, "")
@@ -143,7 +143,7 @@ test_that("SSEAggregator accumulates OpenAI-format tool calls", {
     ))
 
     agg$on_finish_reason("tool_calls")
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(length(result$tool_calls), 1)
     expect_equal(result$tool_calls[[1]]$id, "call_123")
@@ -164,7 +164,7 @@ test_that("SSEAggregator handles multiple tool calls", {
         list(index = 1, id = "call_2", `function` = list(name = "fn2", arguments = '{"b":2}'))
     ))
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(length(result$tool_calls), 2)
     expect_equal(result$tool_calls[[1]]$name, "fn1")
@@ -183,7 +183,7 @@ test_that("SSEAggregator handles tool calls with list arguments", {
         )
     ))
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$tool_calls[[1]]$arguments$key, "value")
 })
@@ -199,7 +199,7 @@ test_that("SSEAggregator filters tool calls with empty names", {
         list(index = 1, id = "call_2", `function` = list(name = "", arguments = "{}"))
     ))
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(length(result$tool_calls), 1)
     expect_equal(result$tool_calls[[1]]$name, "valid_fn")
@@ -220,7 +220,7 @@ test_that("SSEAggregator handles Anthropic-format tool calls", {
     agg$on_tool_input_delta(0, 'ty": ')
     agg$on_tool_input_delta(0, '"London"}')
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(length(result$tool_calls), 1)
     expect_equal(result$tool_calls[[1]]$id, "toolu_123")
@@ -240,7 +240,7 @@ test_that("SSEAggregator stores usage and finish_reason", {
     agg$on_finish_reason("stop")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$finish_reason, "stop")
     expect_equal(result$usage$prompt_tokens, 10)
@@ -254,7 +254,7 @@ test_that("SSEAggregator stores raw response", {
     agg$on_raw_response(raw)
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$raw_response$id, "chatcmpl-123")
 })
@@ -334,7 +334,7 @@ test_that("map_openai_chunk handles tool call deltas", {
 
     map_openai_chunk(data, done = FALSE, agg)
 
-    result <- agg$finalize()
+    result <- agg$build_result()
     expect_equal(result$finish_reason, "tool_calls")
     expect_equal(result$tool_calls[[1]]$name, "test")
     expect_equal(result$usage$total_tokens, 8)
@@ -393,7 +393,7 @@ test_that("map_anthropic_chunk handles input_json_delta", {
     )
     map_anthropic_chunk("content_block_delta", delta_data, agg)
 
-    result <- agg$finalize()
+    result <- agg$build_result()
     expect_equal(result$tool_calls[[1]]$name, "search")
     expect_equal(result$tool_calls[[1]]$arguments$query, "test")
 })
@@ -435,7 +435,7 @@ test_that("map_anthropic_chunk handles message_delta with stop_reason", {
 
     map_anthropic_chunk("message_delta", event_data, agg)
 
-    result <- agg$finalize()
+    result <- agg$build_result()
     expect_equal(result$finish_reason, "end_turn")
     expect_equal(result$usage$completion_tokens, 42)
 })
@@ -474,7 +474,7 @@ test_that("SSEAggregator handles reasoning then text then tool calls", {
     agg$on_finish_reason("tool_calls")
     agg$on_done()
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$reasoning, "Let me think...")
     expect_equal(result$text, "Based on my analysis, I need to call a tool.")
@@ -504,7 +504,7 @@ test_that("Full OpenAI streaming simulation via map_openai_chunk", {
     ), FALSE, agg)
     map_openai_chunk(NULL, TRUE, agg)
 
-    result <- agg$finalize()
+    result <- agg$build_result()
 
     expect_equal(result$text, "Hi there")
     expect_equal(result$finish_reason, "stop")

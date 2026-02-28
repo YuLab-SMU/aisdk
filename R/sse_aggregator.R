@@ -203,7 +203,7 @@ SSEAggregator <- R6::R6Class(
 
         #' @description Finalize accumulated state into a GenerateResult.
         #' @return A GenerateResult object.
-        finalize = function() {
+        build_result = function() {
             final_tool_calls <- private$finalize_tool_calls()
 
             GenerateResult$new(

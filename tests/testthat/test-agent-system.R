@@ -224,7 +224,8 @@ test_that("Enhanced CoderAgent has debug tools", {
 
   # Check for enhanced tools
   tool_names <- sapply(agent$tools, function(t) t$name)
-  expect_true("execute_r_code" %in% tool_names)
+  expect_true("execute_readonly_analysis" %in% tool_names)
+  expect_true("execute_state_mutation" %in% tool_names)
   expect_true("list_session_variables" %in% tool_names)
   expect_true("inspect_variable" %in% tool_names)
   expect_true("debug_error" %in% tool_names)
