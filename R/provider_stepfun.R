@@ -50,12 +50,12 @@ StepfunProvider <- R6::R6Class(
         },
 
         #' @description Create a language model.
-        #' @param model_id The model ID (e.g., "step-1-8k").
+        #' @param model_id The model ID (e.g., "step-3.5-flash").
         #' @return A StepfunLanguageModel object.
         language_model = function(model_id = NULL) {
             model_id <- model_id %||% Sys.getenv("STEPFUN_MODEL", unset = "")
             if (is.null(model_id) || model_id == "") {
-                model_id <- "step-1-8k"
+                model_id <- "step-3.5-flash"
             }
             StepfunLanguageModel$new(model_id, private$config)
         }
@@ -67,10 +67,7 @@ StepfunProvider <- R6::R6Class(
 #' Factory function to create a Stepfun provider.
 #'
 #' @section Supported Models:
-#' Stepfun provides various models such as:
-#' \itemize{
-#'   \item \strong{Standard}: "step-1-8k", "step-1-32k", "step-1-128k", "step-1-256k", "step-2-16k"
-#' }
+#' @eval generate_model_docs("stepfun")
 #'
 #' @param api_key Stepfun API key. Defaults to STEPFUN_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://api.stepfun.com/v1.
@@ -80,9 +77,9 @@ StepfunProvider <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' stepfun <- create_stepfun()
-#' model <- stepfun$language_model("step-1-8k")
-#' result <- generate_text(model, "Explain quantum computing in one sentence.")
+#'     stepfun <- create_stepfun()
+#'     model <- stepfun$language_model("step-1-8k")
+#'     result <- generate_text(model, "Explain quantum computing in one sentence.")
 #' }
 #' }
 create_stepfun <- function(api_key = NULL,

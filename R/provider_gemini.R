@@ -116,9 +116,13 @@ GeminiLanguageModel <- R6::R6Class(
         #' @param stream Whether to build for streaming
         #' @return A list with url, headers, and body.
         build_payload_internal = function(params, stream = FALSE) {
-            # For gemini, api key is passed as query param `key`
             endpoint <- if (stream) "streamGenerateContent?alt=sse&key=" else "generateContent?key="
-            url <- paste0(private$config$base_url, "/", self$model_id, ":", endpoint, private$config$api_key)
+
+            base <- private$config$base_url
+            if (!grepl("/models$", base)) {
+                base <- paste0(base, "/models")
+            }
+            url <- paste0(base, "/", self$model_id, ":", endpoint, private$config$api_key)
             headers <- private$get_headers()
 
             formatted <- private$format_messages(params$messages)
@@ -265,7 +269,7 @@ GeminiLanguageModel <- R6::R6Class(
                 }
             })
 
-            agg$finalize()
+            agg$build_result()
         },
 
         #' @description Format a tool execution result for Gemini's API.
@@ -323,7 +327,7 @@ GeminiProvider <- R6::R6Class(
         #' @description Create a language model.
         #' @param model_id The model ID (e.g., "gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash").
         #' @return A GeminiLanguageModel object.
-        language_model = function(model_id = "gemini-2.5-flash") {
+        language_model = function(model_id = Sys.getenv("GEMINI_MODEL", "gemini-2.5-flash")) {
             GeminiLanguageModel$new(model_id, private$config)
         }
     ),
@@ -344,8 +348,8 @@ GeminiProvider <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' gemini <- create_gemini(api_key = "AIza...")
-#' model <- gemini$language_model("gemini-1.5-pro")
+#'     gemini <- create_gemini(api_key = "AIza...")
+#'     model <- gemini$language_model("gemini-1.5-pro")
 #' }
 #' }
 create_gemini <- function(api_key = NULL,

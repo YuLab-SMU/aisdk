@@ -52,9 +52,9 @@ test_that("Stepfun provider requires model_id if env not set", {
     Sys.setenv(STEPFUN_MODEL = "")
     on.exit(Sys.setenv(STEPFUN_MODEL = old_model))
 
-    # According to our implementation, STEPFUN_MODEL defaults to "step-1-8k"
+    # According to our implementation, STEPFUN_MODEL defaults to "step-3.5-flash"
     model <- provider$language_model()
-    expect_equal(model$model_id, "step-1-8k")
+    expect_equal(model$model_id, "step-3.5-flash")
 })
 
 test_that("create_stepfun() warns when API key is missing", {
