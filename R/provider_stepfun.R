@@ -66,7 +66,6 @@ StepfunProvider <- R6::R6Class(
 #' @description
 #' Factory function to create a Stepfun provider.
 #'
-#' @section Supported Models:
 #' @eval generate_model_docs("stepfun")
 #'
 #' @param api_key Stepfun API key. Defaults to STEPFUN_API_KEY env var.

@@ -81,7 +81,6 @@ VolcengineProvider <- R6::R6Class(
 #' @description
 #' Factory function to create a Volcengine (火山引擎) provider using the Ark API.
 #'
-#' @section Supported Models:
 #' @eval generate_model_docs("volcengine")
 #'
 #' @section API Formats:

@@ -21,6 +21,24 @@ Factory function to create a Volcengine (火山引擎) provider using the Ark AP
 }
 \section{Supported Models}{
 
+\itemize{
+\item \strong{doubao-lite-128k-240428}: Model: doubao-lite-128k-240428
+\item \strong{doubao-pro-128k-240515}: Model: doubao-pro-128k-240515
+\item \strong{doubao-lite-4k-240328}: Model: doubao-lite-4k-240328
+\item \strong{doubao-lite-32k-240428}: Model: doubao-lite-32k-240428
+\item \strong{doubao-pro-4k-240515}: Model: doubao-pro-4k-240515
+\item \strong{doubao-lite-4k-character-240515}: Model: doubao-lite-4k-character-240515
+\item \strong{doubao-embedding-text-240515}: Model: doubao-embedding-text-240515
+\item \strong{mistral-7b-instruct-v0.2}: Model: mistral-7b-instruct-v0.2 (Vision)
+\item \strong{doubao-pro-4k-character-240515}: Model: doubao-pro-4k-character-240515
+\item \strong{doubao-pro-4k-functioncall-240515}: Model: doubao-pro-4k-functioncall-240515
+\item \strong{doubao-lite-4k-pretrain-character-240516}: Model: doubao-lite-4k-pretrain-character-240516
+\item \strong{doubao-pro-32k-character-240528}: Model: doubao-pro-32k-character-240528
+\item \strong{doubao-pro-4k-browsing-240524}: Model: doubao-pro-4k-browsing-240524
+\item \strong{doubao-pro-32k-functioncall-240515}: Model: doubao-pro-32k-functioncall-240515
+\item \strong{doubao-pro-4k-functioncall-240615}: Model: doubao-pro-4k-functioncall-240615
+\item \emph{... and 123 more models. Use \code{list_models("volcengine")} to see all.}
+}
 }
 
 \section{API Formats}{

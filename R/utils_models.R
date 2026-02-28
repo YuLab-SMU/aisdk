@@ -12,16 +12,28 @@ NULL
 #' @keywords internal
 load_models_config <- function() {
     config_dir <- system.file("extdata", "models", package = "aisdk")
-    if (config_dir == "") {
+    if (config_dir == "" || !dir.exists(config_dir)) {
         # Fallback for development/devtools mode
         if (dir.exists("inst/extdata/models")) {
             config_dir <- "inst/extdata/models"
         } else if (dir.exists(file.path("..", "inst", "extdata", "models"))) {
             config_dir <- file.path("..", "inst", "extdata", "models")
+        } else {
+            # Last resort: search for the directory
+            possible_paths <- c(
+                file.path(getwd(), "inst/extdata/models"),
+                file.path(getwd(), "extdata/models")
+            )
+            for (p in possible_paths) {
+                if (dir.exists(p)) {
+                    config_dir <- p
+                    break
+                }
+            }
         }
     }
 
-    if (!dir.exists(config_dir)) {
+    if (config_dir == "" || !dir.exists(config_dir)) {
         return(list())
     }
 
@@ -29,7 +41,12 @@ load_models_config <- function() {
     config <- list()
     for (file in json_files) {
         provider_name <- tools::file_path_sans_ext(basename(file))
-        config[[provider_name]] <- jsonlite::read_json(file)
+        config[[provider_name]] <- tryCatch(
+            jsonlite::read_json(file),
+            error = function(e) {
+                NULL
+            }
+        )
     }
 
     config
@@ -130,7 +147,7 @@ generate_model_docs <- function(provider, max_items = 15) {
     config <- load_models_config()
 
     if (is.null(config[[provider]])) {
-        return("No models documented for this provider.")
+        return(c("@section Supported Models:", "No models documented for this provider."))
     }
 
     models <- config[[provider]]
@@ -138,7 +155,7 @@ generate_model_docs <- function(provider, max_items = 15) {
     truncated <- total > max_items
     display_models <- if (truncated) models[seq_len(max_items)] else models
 
-    lines <- c("\\itemize{")
+    lines <- c("@section Supported Models:", "\\itemize{")
     for (m in display_models) {
         # Build capability tags
         caps <- m$capabilities %||% list()
@@ -173,5 +190,5 @@ generate_model_docs <- function(provider, max_items = 15) {
     }
 
     lines <- c(lines, "}")
-    paste(lines, collapse = "\n")
+    return(lines)
 }

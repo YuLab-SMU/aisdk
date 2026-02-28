@@ -21,6 +21,24 @@ Factory function to create a Stepfun provider.
 }
 \section{Supported Models}{
 
+\itemize{
+\item \strong{step-1-32k}: Model: step-1-32k (Tools) | ctx: 32k
+\item \strong{step-1v-32k}: Vision enabled model with 32k context (Vision, Tools) | ctx: 32k
+\item \strong{step-1-8k}: Model: step-1-8k
+\item \strong{step-1-256k}: Model: step-1-256k
+\item \strong{step-1v-8k}: Model: step-1v-8k (Vision)
+\item \strong{step-2-16k}: Model: step-2-16k
+\item \strong{step-1x-medium}: Model: step-1x-medium
+\item \strong{step-tts-mini}: Model: step-tts-mini (Audio)
+\item \strong{step-2-16k-202411}: Model: step-2-16k-202411
+\item \strong{step-asr}: Model: step-asr (Audio)
+\item \strong{step-1o-vision-32k}: Model: step-1o-vision-32k (Vision)
+\item \strong{step-2-mini}: Model: step-2-mini
+\item \strong{step-2-16k-exp}: Model: step-2-16k-exp
+\item \strong{step-1o-turbo-vision}: Model: step-1o-turbo-vision (Vision)
+\item \strong{step-1o-audio}: Model: step-1o-audio (Audio)
+\item \emph{... and 16 more models. Use \code{list_models("stepfun")} to see all.}
+}
 }
 
 \examples{
