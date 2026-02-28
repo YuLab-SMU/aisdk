@@ -31,13 +31,13 @@ agents. Enhanced version with better safety controls and debugging support.
 \examples{
 \donttest{
 if (interactive()) {
-coder <- create_coder_agent()
-session <- create_shared_session(model = "openai:gpt-4o")
-result <- coder$run(
-  "Create a data frame with 3 rows and calculate the mean",
-  session = session,
-  model = "openai:gpt-4o"
-)
+  coder <- create_coder_agent()
+  session <- create_shared_session(model = "openai:gpt-4o")
+  result <- coder$run(
+    "Create a data frame with 3 rows and calculate the mean",
+    session = session,
+    model = "openai:gpt-4o"
+  )
 }
 }
 }

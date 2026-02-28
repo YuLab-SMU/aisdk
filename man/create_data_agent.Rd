@@ -22,17 +22,17 @@ the session environment.
 \examples{
 \donttest{
 if (interactive()) {
-data_agent <- create_data_agent()
-session <- create_shared_session(model = "openai:gpt-4o")
-session$set_var("sales", data.frame(
-  product = c("A", "B", "C"),
-  revenue = c(100, 200, 150)
-))
-result <- data_agent$run(
-  "Calculate total revenue and find the top product",
-  session = session,
-  model = "openai:gpt-4o"
-)
+  data_agent <- create_data_agent()
+  session <- create_shared_session(model = "openai:gpt-4o")
+  session$set_var("sales", data.frame(
+    product = c("A", "B", "C"),
+    revenue = c(100, 200, 150)
+  ))
+  result <- data_agent$run(
+    "Calculate total revenue and find the top product",
+    session = session,
+    model = "openai:gpt-4o"
+  )
 }
 }
 }
