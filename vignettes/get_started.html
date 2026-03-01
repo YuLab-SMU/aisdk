@@ -407,7 +407,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Create a model instance using provider factory functions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Create an OpenAI model</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create an Anthropic / Gemini model</span></span>
 <span><span class="co"># model &lt;- create_anthropic()$language_model("claude-3-5-sonnet-20241022")</span></span>
@@ -419,10 +419,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="co"># model &lt;- create_stepfun()$language_model("step-1-8k")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="generating-text" class="level3"><h3 class="anchored" data-anchor-id="generating-text">3. Generating Text</h3>
-<p>Use <code><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text()</a></code> for simple request-response interactions.</p>
+<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code> for simple request-response interactions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Simple prompt</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"What are the advantages of using R6 classes in R?"</span></span>
 <span><span class="op">)</span></span>
@@ -430,16 +430,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Using a system prompt for behavior control</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  system <span class="op">=</span> <span class="st">"You are a helpful R programming expert."</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Explain the difference between `lapply` and `sapply`."</span></span>
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="streaming-responses" class="level3"><h3 class="anchored" data-anchor-id="streaming-responses">4. Streaming Responses</h3>
-<p>For real-time output, use <code><a href="https://YuLab-SMU.github.io/aisdk/reference/stream_text.html">stream_text()</a></code> with a callback.</p>
+<p>For real-time output, use <code><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text()</a></code> with a callback.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/stream_text.html">stream_text</a></span><span class="op">(</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Write a short poem about data science."</span>,</span>
 <span>  callback <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">chunk</span>, <span class="va">done</span><span class="op">)</span> <span class="op">{</span></span>
@@ -451,7 +451,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>For stateful conversations, use <code>ChatSession</code>. It automatically manages history and provides a higher-level API.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Initialize a session</span></span>
-<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://YuLab-SMU.github.io/aisdk/reference/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># First message</span></span>
 <span><span class="va">res1</span> <span class="op">&lt;-</span> <span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"Hi, I'm analyzing gene expression data."</span><span class="op">)</span></span>
@@ -468,11 +468,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>aisdk</strong> makes it easy to give LLMs access to R functions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Define a tool using the schema DSL</span></span>
-<span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html">tool</a></span><span class="op">(</span></span>
+<span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"get_weather"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Get current weather for a city"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    city <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"The city name, e.g., Beijing"</span><span class="op">)</span></span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>    city <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"The city name, e.g., Beijing"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"The weather in"</span>, <span class="va">args</span><span class="op">$</span><span class="va">city</span>, <span class="st">"is sunny, 25°C."</span><span class="op">)</span></span>
@@ -480,7 +480,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Use the tool</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"What's the weather like in Shanghai?"</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span></span>

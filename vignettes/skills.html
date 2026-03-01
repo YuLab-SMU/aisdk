@@ -415,24 +415,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create an agent that 'auto-discovers' skills in a specific path</span></span>
-<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_agent.html">create_agent</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Analyst"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Data analyst with specialized skills"</span>,</span>
 <span>  skills <span class="op">=</span> <span class="st">"./my_project/skills"</span> <span class="co"># Path to your skills directory</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># When running, the agent will see 'data_cleaner' in its available tools list.</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="st">"Clean the 'dirty_data' frame in the session."</span>, model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="manual-skill-management" class="level2"><h2 class="anchored" data-anchor-id="manual-skill-management">Manual Skill Management</h2>
 <p>You can also use a <code>SkillRegistry</code> for more fine-grained control.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># 1. Create a registry</span></span>
-<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_skill_registry.html">create_skill_registry</a></span><span class="op">(</span><span class="st">"./skills"</span><span class="op">)</span></span>
+<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_skill_registry.html">create_skill_registry</a></span><span class="op">(</span><span class="st">"./skills"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Add skills to a model interaction manually</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Use the 'genomics' skill to identify markers."</span>,</span>
 <span>  skills <span class="op">=</span> <span class="va">registry</span></span>

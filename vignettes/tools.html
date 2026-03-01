@@ -409,43 +409,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string()</a></code></td>
 <td><code>string</code></td>
 <td><code>character</code></td>
 </tr>
 <tr class="even">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_number.html">z_number()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number()</a></code></td>
 <td><code>number</code></td>
 <td><code>numeric</code></td>
 </tr>
 <tr class="odd">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_integer.html">z_integer()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_integer.html">z_integer()</a></code></td>
 <td><code>integer</code></td>
 <td><code>integer</code></td>
 </tr>
 <tr class="even">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_boolean.html">z_boolean()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_boolean.html">z_boolean()</a></code></td>
 <td><code>boolean</code></td>
 <td><code>logical</code></td>
 </tr>
 <tr class="odd">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_enum.html">z_enum()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_enum.html">z_enum()</a></code></td>
 <td><code>string</code></td>
 <td>
 <code>character</code> (subset)</td>
 </tr>
 <tr class="even">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object()</a></code></td>
 <td><code>object</code></td>
 <td><code>list</code></td>
 </tr>
 <tr class="odd">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_array.html">z_array()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_array.html">z_array()</a></code></td>
 <td><code>array</code></td>
 <td><code>list</code></td>
 </tr>
 <tr class="even">
-<td><code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_dataframe.html">z_dataframe()</a></code></td>
+<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_dataframe.html">z_dataframe()</a></code></td>
 <td><code>array</code></td>
 <td>
 <code>list</code> of <code>objects</code>
@@ -456,13 +456,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">calc_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html">tool</a></span><span class="op">(</span></span>
+<span><span class="va">calc_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"calculate"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Perform a mathematical calculation on two numbers"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    a <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The first number"</span><span class="op">)</span>,</span>
-<span>    b <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The second number"</span><span class="op">)</span>,</span>
-<span>    operation <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_enum.html">z_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"add"</span>, <span class="st">"subtract"</span>, <span class="st">"multiply"</span>, <span class="st">"divide"</span><span class="op">)</span>, <span class="st">"The operator"</span><span class="op">)</span></span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>    a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The first number"</span><span class="op">)</span>,</span>
+<span>    b <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The second number"</span><span class="op">)</span>,</span>
+<span>    operation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_enum.html">z_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"add"</span>, <span class="st">"subtract"</span>, <span class="st">"multiply"</span>, <span class="st">"divide"</span><span class="op">)</span>, <span class="st">"The operator"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">a</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span></span>
@@ -479,13 +479,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section></section><section id="using-tools" class="level2"><h2 class="anchored" data-anchor-id="using-tools">Using Tools</h2>
-<p>You can use tools with <code><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text()</a></code> or with an <code>Agent</code>.</p>
+<p>You can use tools with <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code> or with an <code>Agent</code>.</p>
 <section id="with-generate_text" class="level3"><h3 class="anchored" data-anchor-id="with-generate_text">With <code>generate_text()</code>
 </h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"What is 123 multiplied by 456?"</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">calc_tool</span><span class="op">)</span></span>
@@ -497,12 +497,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section></section><section id="the-execution-environment" class="level2"><h2 class="anchored" data-anchor-id="the-execution-environment">The Execution Environment</h2>
 <p>Inside the <code>execute</code> function, you can access the current session environment via <code>args$.envir</code>. This allows tools to share state (like data frames or models) across multiple steps.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">state_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html">tool</a></span><span class="op">(</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">state_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"save_state"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Save a value to the session environment"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    key <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Variable name"</span><span class="op">)</span>,</span>
-<span>    value <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_any.html">z_any</a></span><span class="op">(</span><span class="st">"Value to save"</span><span class="op">)</span></span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>    key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Variable name"</span><span class="op">)</span>,</span>
+<span>    value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_any.html">z_any</a></span><span class="op">(</span><span class="st">"Value to save"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="co"># .envir is automatically injected by the SDK</span></span>
@@ -519,7 +519,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="tool-layers" class="level3"><h3 class="anchored" data-anchor-id="tool-layers">Tool Layers</h3>
 <p>You can categorize tools into “layers” for better organization.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">my_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/tool_factory.html">tool</a></span><span class="op">(</span><span class="va">...</span>, layer <span class="op">=</span> <span class="st">"data_analysis"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">my_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span><span class="va">...</span>, layer <span class="op">=</span> <span class="st">"data_analysis"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="read-only-vs.-state-mutating" class="level3"><h3 class="anchored" data-anchor-id="read-only-vs.-state-mutating">Read-Only vs.&nbsp;State-Mutating</h3>
 <p>When building autonomous agents, it is a best practice to strictly separate tools by their side effects:</p>
@@ -533,9 +533,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="automatic-repair" class="level3"><h3 class="anchored" data-anchor-id="automatic-repair">Automatic Repair</h3>
 <p><strong>aisdk</strong> includes built-in mechanisms to repair small JSON errors in tool arguments and fuzzy-match tool names if the LLM makes a minor typo.</p>
 </section><section id="computer-abstraction" class="level3"><h3 class="anchored" data-anchor-id="computer-abstraction">Computer Abstraction</h3>
-<p>The <code><a href="https://YuLab-SMU.github.io/aisdk/reference/create_computer_tools.html">create_computer_tools()</a></code> function provides a standardized set of tools for filesystem and bash operations, complete with safety sandboxing.</p>
+<p>The <code><a href="https://rdrr.io/pkg/aisdk/man/create_computer_tools.html">create_computer_tools()</a></code> function provides a standardized set of tools for filesystem and bash operations, complete with safety sandboxing.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">computer_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_computer_tools.html">create_computer_tools</a></span><span class="op">(</span>working_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html">getwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">computer_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_computer_tools.html">create_computer_tools</a></span><span class="op">(</span>working_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html">getwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Includes: bash, read_file, write_file, execute_r_code</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>For more details on computer tools, see the <a href="computer_abstraction.html">Computer Abstraction</a> vignette.</p>

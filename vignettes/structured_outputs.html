@@ -380,21 +380,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header><p>In many AI applications, you need the model to return data in a specific, machine-readable format (like JSON) rather than free-form text. <strong>aisdk</strong> provides robust support for structured outputs using JSON Schema.</p>
 <section id="using-generate_text-with-response_format" class="level2"><h2 class="anchored" data-anchor-id="using-generate_text-with-response_format">Using <code>generate_text</code> with <code>response_format</code>
 </h2>
-<p>The primary way to get structured data is to pass a <code>z_schema</code> to the <code>response_format</code> argument of <code><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text()</a></code>.</p>
+<p>The primary way to get structured data is to pass a <code>z_schema</code> to the <code>response_format</code> argument of <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 1. Define your data structure</span></span>
-<span><span class="va">recipe_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Name of the dish"</span><span class="op">)</span>,</span>
-<span>  ingredients <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_array.html">z_array</a></span><span class="op">(</span><span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"List of ingredients"</span><span class="op">)</span>,</span>
-<span>  prep_time_mins <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_integer.html">z_integer</a></span><span class="op">(</span><span class="st">"Preparation time in minutes"</span><span class="op">)</span></span>
+<span><span class="va">recipe_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Name of the dish"</span><span class="op">)</span>,</span>
+<span>  ingredients <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_array.html">z_array</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"List of ingredients"</span><span class="op">)</span>,</span>
+<span>  prep_time_mins <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_integer.html">z_integer</a></span><span class="op">(</span><span class="st">"Preparation time in minutes"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Request structured output</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Give me a simple recipe for a classic Omelette."</span>,</span>
 <span>  response_format <span class="op">=</span> <span class="va">recipe_schema</span></span>
@@ -405,16 +405,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">object</span><span class="op">$</span><span class="va">ingredients</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="extracting-tabular-data" class="level2"><h2 class="anchored" data-anchor-id="extracting-tabular-data">Extracting Tabular Data</h2>
-<p>The <code><a href="https://YuLab-SMU.github.io/aisdk/reference/z_dataframe.html">z_dataframe()</a></code> helper is specifically designed for extracting lists of objects that can be easily converted into an R <code>data.frame</code>.</p>
+<p>The <code><a href="https://rdrr.io/pkg/aisdk/man/z_dataframe.html">z_dataframe()</a></code> helper is specifically designed for extracting lists of objects that can be easily converted into an R <code>data.frame</code>.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Define a schema for a list of genes</span></span>
-<span><span class="va">gene_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_dataframe.html">z_dataframe</a></span><span class="op">(</span></span>
-<span>  gene_symbol <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Standard gene symbol"</span><span class="op">)</span>,</span>
-<span>  fold_change <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"Log2 fold change value"</span><span class="op">)</span>,</span>
-<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"Adjusted p-value"</span><span class="op">)</span></span>
+<span><span class="va">gene_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_dataframe.html">z_dataframe</a></span><span class="op">(</span></span>
+<span>  gene_symbol <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Standard gene symbol"</span><span class="op">)</span>,</span>
+<span>  fold_change <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"Log2 fold change value"</span><span class="op">)</span>,</span>
+<span>  p_value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"Adjusted p-value"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Extract gene expression data: BRCA1 (FC=2.5, p=0.01), TP53 (FC=-1.2, p=0.04)."</span>,</span>
 <span>  response_format <span class="op">=</span> <span class="va">gene_schema</span></span>
@@ -430,16 +430,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="nested-structures" class="level2"><h2 class="anchored" data-anchor-id="nested-structures">Nested Structures</h2>
 <p>The Schema DSL supports arbitrary nesting, allowing you to model complex hierarchical data.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">report_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    author <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    timestamp <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">report_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>    author <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    timestamp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  sections <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_array.html">z_array</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>      title <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>      content <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>      word_count <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_integer.html">z_integer</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  sections <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_array.html">z_array</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>      title <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>      content <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>      word_count <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_integer.html">z_integer</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>

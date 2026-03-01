@@ -384,16 +384,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header><p><strong>aisdk</strong> provides seamless integration with Shiny, allowing you to build AI-powered applications where the AI can control the UI and interact with reactive input/output.</p>
 <section id="the-ai-chat-ui" class="level2"><h2 class="anchored" data-anchor-id="the-ai-chat-ui">The AI Chat UI</h2>
-<p>Use <code><a href="https://YuLab-SMU.github.io/aisdk/reference/aiChatUI.html">aiChatUI()</a></code> and <code><a href="https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.html">aiChatServer()</a></code> to add a chat interface.</p>
+<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI()</a></code> and <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer()</a></code> to add a chat interface.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html">fluidPage</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/aiChatUI.html">aiChatUI</a></span><span class="op">(</span><span class="st">"chat"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI</a></span><span class="op">(</span><span class="st">"chat"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.html">aiChatServer</a></span><span class="op">(</span><span class="st">"chat"</span>, model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span><span class="st">"chat"</span>, model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -405,11 +405,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>  title <span class="op">=</span> <span class="st">"My Plot"</span></span>
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="create-reactive-tools" class="level3"><h3 class="anchored" data-anchor-id="create-reactive-tools">2. Create Reactive Tools</h3>
-<p>Use <code><a href="https://YuLab-SMU.github.io/aisdk/reference/reactive_tool.html">reactive_tool()</a></code> to define tools that can read/write these values.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">change_color</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/reactive_tool.html">reactive_tool</a></span><span class="op">(</span></span>
+<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool()</a></code> to define tools that can read/write these values.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">change_color</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"change_color"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Change the plot color"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_object.html">z_object</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">rv</span>, <span class="va">session</span>, <span class="va">color</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">rv</span><span class="op">$</span><span class="va">plot_color</span> <span class="op">&lt;-</span> <span class="va">color</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"Changed color to"</span>, <span class="va">color</span><span class="op">)</span></span>
@@ -420,14 +420,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>  <span class="co"># ... rv definition ...</span></span>
 <span>  </span>
 <span>  <span class="co"># Wrap tools with current session context</span></span>
-<span>  <span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/wrap_reactive_tools.html">wrap_reactive_tools</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">change_color</span><span class="op">)</span>, <span class="va">rv</span>, <span class="va">session</span><span class="op">)</span></span>
+<span>  <span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/wrap_reactive_tools.html">wrap_reactive_tools</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">change_color</span><span class="op">)</span>, <span class="va">rv</span>, <span class="va">session</span><span class="op">)</span></span>
 <span>  </span>
 <span>  <span class="co"># Provide context so AI "sees" the current state</span></span>
 <span>  <span class="va">get_context</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactive.html">reactive</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>current_color <span class="op">=</span> <span class="va">rv</span><span class="op">$</span><span class="va">plot_color</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/aiChatServer.html">aiChatServer</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span></span>
 <span>    <span class="st">"chat"</span>,</span>
 <span>    model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>,</span>
 <span>    tools <span class="op">=</span> <span class="va">tools</span>,</span>

@@ -381,12 +381,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 </header><p>In <strong>aisdk</strong>, an <strong>Agent</strong> is a specialized AI worker. While a <code>ChatSession</code> holds conversation state, an <code>Agent</code> holds <strong>capability</strong>: a persona (system prompt), a set of tools, and optionally, a specialized library of skills.</p>
 <section id="the-agent-class" class="level2"><h2 class="anchored" data-anchor-id="the-agent-class">The Agent Class</h2>
-<p>Agents are implemented as R6 classes. You can create one using the <code>Agent$new()</code> constructor or the <code><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent()</a></code> factory function.</p>
+<p>Agents are implemented as R6 classes. You can create one using the <code>Agent$new()</code> constructor or the <code><a href="https://rdrr.io/pkg/aisdk/man/create_agent.html">create_agent()</a></code> factory function.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Create a specialized Research Agent</span></span>
-<span><span class="va">researcher</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span><span class="va">researcher</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_agent.html">create_agent</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Researcher"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Finds and summarizes information on specific topics"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are a professional researcher. Provide citations for your findings."</span></span>
@@ -397,7 +397,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="running-an-agent" class="level2"><h2 class="anchored" data-anchor-id="running-an-agent">Running an Agent</h2>
 <p>Use the <code>$run()</code> method to give the agent a task.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">researcher</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
 <span>  task <span class="op">=</span> <span class="st">"Summarize the latest trends in R package development for 2025."</span>,</span>
@@ -410,35 +410,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The <code>aisdk</code> package includes a library of pre-configured specialists. These are optimized for common data science tasks.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># A Coder agent with a built-in R execution sandbox</span></span>
-<span><span class="va">coder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.html">create_coder_agent</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">coder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_coder_agent.html">create_coder_agent</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A Visualizer agent optimized for ggplot2</span></span>
-<span><span class="va">visualizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_visualizer_agent.html">create_visualizer_agent</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">visualizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_visualizer_agent.html">create_visualizer_agent</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A Planner agent for breaking down complex objectives</span></span>
-<span><span class="va">planner</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_planner_agent.html">create_planner_agent</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span><span class="va">planner</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_planner_agent.html">create_planner_agent</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="agent-autonomy-and-safety" class="level2"><h2 class="anchored" data-anchor-id="agent-autonomy-and-safety">Agent Autonomy and Safety</h2>
 <p>When agents execute code dynamically (e.g., using the Coder agent’s sandbox), <strong>aisdk</strong> provides a sophisticated security model to keep your environment safe:</p>
 <ol type="1">
 <li>
-<strong>AST Static Analysis</strong>: Before any LLM-generated R code is executed, <code><a href="https://YuLab-SMU.github.io/aisdk/reference/check_ast_safety.html">check_ast_safety()</a></code> analyzes the Abstract Syntax Tree. It silently blocks forbidden functions (like <code><a href="https://rdrr.io/r/base/system.html">system()</a></code>) and flags potentially risky ones (like <code><a href="https://rdrr.io/r/base/unlink.html">unlink()</a></code>).</li>
+<strong>AST Static Analysis</strong>: Before any LLM-generated R code is executed, <code><a href="https://rdrr.io/pkg/aisdk/man/check_ast_safety.html">check_ast_safety()</a></code> analyzes the Abstract Syntax Tree. It silently blocks forbidden functions (like <code><a href="https://rdrr.io/r/base/system.html">system()</a></code>) and flags potentially risky ones (like <code><a href="https://rdrr.io/r/base/unlink.html">unlink()</a></code>).</li>
 <li>
 <strong>Variable Registry</strong>: Protect critical session variables from being shadowed, modified, or heavily copied by the agent. Use <code>sdk_protect_var("my_important_df", locked = TRUE, cost = "High")</code>.</li>
 <li>
-<strong>Human-in-the-Loop (HITL)</strong>: For “YELLOW” risk operations (like writing files or modifying the global environment), <code><a href="https://YuLab-SMU.github.io/aisdk/reference/request_authorization.html">request_authorization()</a></code> automatically pauses execution and prompts the user for explicit permission via the console before proceeding.</li>
+<strong>Human-in-the-Loop (HITL)</strong>: For “YELLOW” risk operations (like writing files or modifying the global environment), <code><a href="https://rdrr.io/pkg/aisdk/man/request_authorization.html">request_authorization()</a></code> automatically pauses execution and prompts the user for explicit permission via the console before proceeding.</li>
 </ol></section><section id="multi-agent-orchestration" class="level2"><h2 class="anchored" data-anchor-id="multi-agent-orchestration">Multi-Agent Orchestration</h2>
 <p>Agents can work together using an <code>AgentRegistry</code> and a <code>Flow</code>. A “Manager” agent can delegate tasks to “Worker” agents based on their descriptions.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># 1. Register specialists</span></span>
-<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent_registry.html">create_agent_registry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">coder</span>, <span class="va">visualizer</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_agent_registry.html">create_agent_registry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">coder</span>, <span class="va">visualizer</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Create a Flow with a shared session</span></span>
-<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://YuLab-SMU.github.io/aisdk/reference/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
-<span><span class="va">flow</span> <span class="op">&lt;-</span> <span class="va"><a href="https://YuLab-SMU.github.io/aisdk/reference/flow.html">Flow</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>session <span class="op">=</span> <span class="va">session</span>, registry <span class="op">=</span> <span class="va">registry</span><span class="op">)</span></span>
+<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<span><span class="va">flow</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/flow.html">Flow</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>session <span class="op">=</span> <span class="va">session</span>, registry <span class="op">=</span> <span class="va">registry</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Create a Manager agent</span></span>
-<span><span class="va">manager</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span><span class="va">manager</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_agent.html">create_agent</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Manager"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Orchestrates data analysis tasks"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are a project manager. Delegate tasks to Coder or Visualizer as needed."</span></span>
@@ -456,7 +456,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">coder_tool</span> <span class="op">&lt;-</span> <span class="va">coder</span><span class="op">$</span><span class="fu">as_tool</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"Write a function to calculate Fibonacci numbers."</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">coder_tool</span><span class="op">)</span></span>
