@@ -3,9 +3,9 @@ library(testthat)
 library(aisdk)
 
 # Load helper functions (for environment variable handling)
-helper_path = file.path(test_path("helper-env.R"))
+helper_path <- file.path(test_path("helper-env.R"))
 source(helper_path)
-       
+
 openai_model <- get_openai_model()
 openai_embedding_model <- get_openai_embedding_model()
 openai_base_url <- get_openai_base_url()
@@ -13,7 +13,7 @@ openai_base_url <- get_openai_base_url()
 test_that("create_openai() creates a provider with correct defaults", {
   # Use safe provider creation
   provider <- safe_create_provider(create_openai)
-  
+
   expect_s3_class(provider, "OpenAIProvider")
   expect_equal(provider$specification_version, "v1")
 })
@@ -21,7 +21,7 @@ test_that("create_openai() creates a provider with correct defaults", {
 test_that("OpenAI provider creates language model correctly", {
   provider <- safe_create_provider(create_openai)
   model <- provider$language_model(openai_model)
-  
+
   expect_s3_class(model, "OpenAILanguageModel")
   expect_equal(model$model_id, openai_model)
   expect_equal(model$provider, "openai")
@@ -31,7 +31,7 @@ test_that("OpenAI provider creates language model correctly", {
 test_that("OpenAI provider creates embedding model correctly", {
   provider <- safe_create_provider(create_openai)
   model <- provider$embedding_model(openai_embedding_model)
-  
+
   expect_s3_class(model, "OpenAIEmbeddingModel")
   expect_equal(model$model_id, openai_embedding_model)
   expect_equal(model$provider, "openai")
@@ -42,7 +42,7 @@ test_that("create_openai() accepts custom base_url", {
     base_url = openai_base_url
   )
   model <- provider$language_model(openai_model)
-  
+
   # Model should be created successfully
   expect_s3_class(model, "OpenAILanguageModel")
 })
@@ -52,7 +52,7 @@ test_that("create_openai() warns when API key is missing", {
   old_key <- Sys.getenv("OPENAI_API_KEY")
   Sys.setenv(OPENAI_API_KEY = "")
   on.exit(Sys.setenv(OPENAI_API_KEY = old_key))
-  
+
   expect_warning(
     create_openai(),
     "OpenAI API key not set"
@@ -63,21 +63,24 @@ test_that("create_openai() warns when API key is missing", {
 test_that("OpenAI provider can make real API calls", {
   skip_if_no_api_key("OpenAI")
   skip_on_cran()
-  
+
   provider <- create_openai()
   model <- provider$language_model(openai_model)
-  
-  # Make a simple API call
+
+  # Make a simple API call (use higher max_tokens for reasoning models like gpt-5-mini)
   result <- model$generate(
     messages = list(
       list(role = "user", content = "Say 'Hello, World!'")
     ),
-    max_tokens = 10
+    max_tokens = 200
   )
-  
-  # Check that we got a response
-  expect_true(!is.null(result$text))
-  expect_true(nchar(result$text) > 0)
+
+  # Check that we got a response (can be text or tool calls)
+  expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
+  # If it's just a text response, it should not be empty
+  if (is.null(result$tool_calls) || length(result$tool_calls) == 0) {
+    expect_true(nchar(result$text %||% "") > 0)
+  }
 })
 
 test_that("OpenAI provider handles tool calls", {
@@ -106,8 +109,8 @@ test_that("OpenAI provider handles tool calls", {
     max_tokens = 50
   )
 
-  # Check response
-  expect_true(!is.null(result$text))
+  # Check response (can be text or tool calls)
+  expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
 })
 
 # ============================================================================

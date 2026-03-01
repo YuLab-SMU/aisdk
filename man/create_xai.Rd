@@ -18,21 +18,18 @@ A XAIProvider object.
 }
 \description{
 Factory function to create an xAI provider.
-}
-\section{Supported Models}{
 
 xAI provides Grok models:
 \itemize{
-\item \strong{Grok}: "grok-beta", "grok-2-1212", "grok-4-1-fast-reasoning", etc.
+\item \strong{Grok}: "grok-3", "grok-4", "grok-beta", "grok-2-1212", etc.
 }
 }
-
 \examples{
 \donttest{
 if (interactive()) {
-xai <- create_xai()
-model <- xai$language_model("grok-4-1-fast-reasoning")
-result <- generate_text(model, "Explain quantum computing in one sentence.")
+    xai <- create_xai()
+    model <- xai$language_model("grok-beta")
+    result <- generate_text(model, "Explain quantum computing in one sentence.")
 }
 }
 }

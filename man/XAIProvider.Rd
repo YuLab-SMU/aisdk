@@ -59,7 +59,7 @@ Create a language model.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "grok-4-1-fast-reasoning").}
+\item{\code{model_id}}{The model ID (e.g., "grok-beta", "grok-2-1212").}
 }
 \if{html}{\out{</div>}}
 }

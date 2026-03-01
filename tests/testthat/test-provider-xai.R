@@ -53,9 +53,9 @@ test_that("xAI provider requires model_id if env not set", {
     Sys.setenv(XAI_MODEL = "")
     on.exit(Sys.setenv(XAI_MODEL = old_model))
 
-    # According to our implementation, XAI_MODEL defaults to "grok-4o"
+    # According to our implementation, XAI_MODEL defaults to "grok-beta"
     model <- provider$language_model()
-    expect_equal(model$model_id, "grok-4o")
+    expect_equal(model$model_id, "grok-beta")
 })
 
 test_that("create_xai() warns when API key is missing", {

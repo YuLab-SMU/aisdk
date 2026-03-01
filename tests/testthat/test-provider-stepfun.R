@@ -87,12 +87,12 @@ test_that("Stepfun provider can make real API calls", {
     model_id <- Sys.getenv("STEPFUN_MODEL", "step-1-8k")
     model <- provider$language_model(model_id)
 
-    # Make a simple API call
+    # Make a simple API call (use higher max_tokens for reasoning models like step-3.5-flash)
     result <- model$generate(
         messages = list(
             list(role = "user", content = "Say 'Hello, World!'")
         ),
-        max_tokens = 10
+        max_tokens = 200
     )
 
     # Check that we got a response

@@ -51,30 +51,32 @@ chat without tools.
 \examples{
 \donttest{
 if (interactive()) {
-# Start with default agent (intelligent terminal mode)
-console_chat("openai:gpt-4o")
+  # Start with default agent (intelligent terminal mode)
+  console_chat("openai:gpt-4o")
 
-# Simple chat mode without tools
-console_chat("openai:gpt-4o", agent = NULL)
+  # Simple chat mode without tools
+  console_chat("openai:gpt-4o", agent = NULL)
 
-# Start with an existing session
-chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
-console_chat(chat)
+  # Start with an existing session
+  chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
+  console_chat(chat)
 
-# Start with a custom agent
-agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
-console_chat("openai:gpt-4o", agent = agent)
+  # Start with a custom agent
+  agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+  console_chat("openai:gpt-4o", agent = agent)
 
-# Available commands in the chat:
-# /quit or /exit - End the chat
-# /save [path]   - Save session to file
-# /load [path]   - Load session from file
-# /model [id]    - Switch to a different model
-# /history       - Show conversation history
-# /stats         - Show token usage statistics
-# /clear         - Clear conversation history
-# /help          - Show available commands
-# /agent [on|off] - Toggle agent mode
+  # Available commands in the chat:
+  # /quit or /exit - End the chat
+  # /save [path]   - Save session to file
+  # /load [path]   - Load session from file
+  # /model [id]    - Switch to a different model
+  # /history       - Show conversation history
+  # /stats         - Show token usage statistics
+  # /clear         - Clear conversation history
+  # /stream [on|off] - Toggle streaming mode
+  # /local [on|off]- Toggle local execution mode (Global Environment)
+  # /help          - Show available commands
+  # /agent [on|off] - Toggle agent mode
 }
 }
 }

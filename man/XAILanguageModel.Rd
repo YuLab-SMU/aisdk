@@ -14,6 +14,7 @@ Inherits from OpenAILanguageModel as xAI provides An OpenAI-compatible API.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
+\item \href{#method-XAILanguageModel-parse_response}{\code{XAILanguageModel$parse_response()}}
 \item \href{#method-XAILanguageModel-clone}{\code{XAILanguageModel$clone()}}
 }
 }
@@ -32,10 +33,30 @@ Inherits from OpenAILanguageModel as xAI provides An OpenAI-compatible API.
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_config"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-get_config'><code>aisdk::OpenAILanguageModel$get_config()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_history_format"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-get_history_format'><code>aisdk::OpenAILanguageModel$get_history_format()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="initialize"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-initialize'><code>aisdk::OpenAILanguageModel$initialize()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="parse_response"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-parse_response'><code>aisdk::OpenAILanguageModel$parse_response()</code></a></span></li>
 </ul>
 </details>
 }}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-XAILanguageModel-parse_response"></a>}}
+\if{latex}{\out{\hypertarget{method-XAILanguageModel-parse_response}{}}}
+\subsection{Method \code{parse_response()}}{
+Parse the API response into a GenerateResult.
+Overrides parent to extract xAI-specific reasoning_content.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{XAILanguageModel$parse_response(response)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{response}}{The parsed API response.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateResult object.
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-XAILanguageModel-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-XAILanguageModel-clone}{}}}
