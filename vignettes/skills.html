@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>Function Reference – aisdk</title>
+<title>Skill System – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,8 +17,42 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
-
 
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
@@ -44,8 +75,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -71,12 +101,8 @@ ul.task-list li input[type="checkbox"] {
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script>
-
-
-<link rel="stylesheet" href="styles.css">
+}</script><link rel="stylesheet" href="styles.css">
 </head>
-
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -242,9 +268,7 @@ ul.task-list li input[type="checkbox"] {
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -256,7 +280,7 @@ ul.task-list li input[type="checkbox"] {
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
+<li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -264,8 +288,8 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
-        <li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
+<li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -306,40 +330,46 @@ ul.task-list li input[type="checkbox"] {
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-  </li>
+</li>
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
+<ul class="navbar-nav navbar-nav-scroll ms-auto">
+<li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-          </div> <!-- /navcollapse -->
+</div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+   
+  <ul>
+<li><a href="#the-3-level-disclosure-pattern" id="toc-the-3-level-disclosure-pattern" class="nav-link active" data-scroll-target="#the-3-level-disclosure-pattern">The 3-Level Disclosure Pattern</a></li>
+  <li>
+<a href="#skill-structure" id="toc-skill-structure" class="nav-link" data-scroll-target="#skill-structure">Skill Structure</a>
+  <ul class="collapse">
+<li><a href="#example-data_cleanerskill.md" id="toc-example-data_cleanerskill.md" class="nav-link" data-scroll-target="#example-data_cleanerskill.md">Example: <code>data_cleaner/SKILL.md</code></a></li>
+  </ul>
+</li>
+  <li><a href="#using-skills-with-agents" id="toc-using-skills-with-agents" class="nav-link" data-scroll-target="#using-skills-with-agents">Using Skills with Agents</a></li>
+  <li><a href="#manual-skill-management" id="toc-manual-skill-management" class="nav-link" data-scroll-target="#manual-skill-management">Manual Skill Management</a></li>
+  <li><a href="#skill-tools" id="toc-skill-tools" class="nav-link" data-scroll-target="#skill-tools">Skill Tools</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/skills.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Function Reference</h1>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
+<h1 class="title">Skill System</h1>
 </div>
 
 
@@ -353,15 +383,77 @@ ul.task-list li input[type="checkbox"] {
   
 
 
-</header>
+</header><p>The <strong>Skill System</strong> in <code>aisdk</code> implements a <strong>Progressive Disclosure</strong> pattern. This allows agents to access vast amounts of specialized knowledge and code without overwhelming the LLM’s context window.</p>
+<section id="the-3-level-disclosure-pattern" class="level2"><h2 class="anchored" data-anchor-id="the-3-level-disclosure-pattern">The 3-Level Disclosure Pattern</h2>
+<ol type="1">
+<li>
+<strong>Level 1 (Metadata)</strong>: Only the skill name and a brief description are loaded initially. This is injected into the character’s system prompt.</li>
+<li>
+<strong>Level 2 (Instructions)</strong>: If the agent decides a skill is relevant, it calls <code>load_skill()</code>. This returns the full <code>SKILL.md</code> content (detailed guidelines, examples, etc.).</li>
+<li>
+<strong>Level 3 (Implementation)</strong>: The agent can then browse and execute specific R scripts within the skill’s <code>scripts/</code> directory or read reference files in <code>assets/</code>.</li>
+</ol></section><section id="skill-structure" class="level2"><h2 class="anchored" data-anchor-id="skill-structure">Skill Structure</h2>
+<p>A skill is a directory (often stored in a global <code>skills/</code> folder) with the following structure:</p>
+<pre class="text"><code>my_skill/
+├── SKILL.md       # Required: Metadata (YAML) + Instructions (Markdown)
+├── scripts/       # Optional: R scripts for the agent to run
+│   └── analyze.R
+└── assets/        # Optional: Reference data, schemas, or templates
+    └── template.json</code></pre>
+<section id="example-data_cleanerskill.md" class="level3"><h3 class="anchored" data-anchor-id="example-data_cleanerskill.md">Example: <code>data_cleaner/SKILL.md</code>
+</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">name:</span><span class="co"> data_cleaner</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">description:</span><span class="co"> Specialized tools for cleaning and prehistoric R data frames.</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu"># Data Cleaning Guidelines</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Always check for NAs before summarizing.</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>Use <span class="in">`clean_names.R`</span> to normalize column headers.</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section></section><section id="using-skills-with-agents" class="level2"><h2 class="anchored" data-anchor-id="using-skills-with-agents">Using Skills with Agents</h2>
+<p>Agents can automatically load skills from a directory.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create an agent that 'auto-discovers' skills in a specific path</span></span>
+<span><span class="va">agent</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Analyst"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Data analyst with specialized skills"</span>,</span>
+<span>  skills <span class="op">=</span> <span class="st">"./my_project/skills"</span> <span class="co"># Path to your skills directory</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># When running, the agent will see 'data_cleaner' in its available tools list.</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">agent</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="st">"Clean the 'dirty_data' frame in the session."</span>, model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="manual-skill-management" class="level2"><h2 class="anchored" data-anchor-id="manual-skill-management">Manual Skill Management</h2>
+<p>You can also use a <code>SkillRegistry</code> for more fine-grained control.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># 1. Create a registry</span></span>
+<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_skill_registry.html">create_skill_registry</a></span><span class="op">(</span><span class="st">"./skills"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Add skills to a model interaction manually</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  prompt <span class="op">=</span> <span class="st">"Use the 'genomics' skill to identify markers."</span>,</span>
+<span>  skills <span class="op">=</span> <span class="va">registry</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="skill-tools" class="level2"><h2 class="anchored" data-anchor-id="skill-tools">Skill Tools</h2>
+<p>When an agent or <code>generate_text</code> is given a skill registry, the following tools are automatically injected:</p>
+<ul>
+<li>
+<code>load_skill(skill_name)</code>: Loads the Level 2 instructions.</li>
+<li>
+<code>list_skill_scripts(skill_name)</code>: Lists Level 3 scripts.</li>
+<li>
+<code>execute_skill_script(skill_name, script_name, ...)</code>: Runs an R script.</li>
+<li>
+<code>read_skill_resource(skill_name, resource_name)</code>: Reads an asset file.</li>
+</ul>
+<p>This layered approach ensures that the LLM only “pays” for the information it actually needs to solve the current task.</p>
 
 
-<p>Here you can document the main functions of aisdk.</p>
-
-
-
-</main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -778,5 +870,4 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/skills.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

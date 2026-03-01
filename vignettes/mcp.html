@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>Function Reference – aisdk</title>
+<title>Connectivity (MCP) – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,8 +17,42 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
-
 
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
@@ -44,8 +75,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -71,12 +101,8 @@ ul.task-list li input[type="checkbox"] {
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script>
-
-
-<link rel="stylesheet" href="styles.css">
+}</script><link rel="stylesheet" href="styles.css">
 </head>
-
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -242,9 +268,7 @@ ul.task-list li input[type="checkbox"] {
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -256,7 +280,7 @@ ul.task-list li input[type="checkbox"] {
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
+<li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -264,8 +288,8 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
-        <li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
+<li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -306,40 +330,53 @@ ul.task-list li input[type="checkbox"] {
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-  </li>
+</li>
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
+<ul class="navbar-nav navbar-nav-scroll ms-auto">
+<li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-          </div> <!-- /navcollapse -->
+</div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+   
+  <ul>
+<li><a href="#why-mcp" id="toc-why-mcp" class="nav-link active" data-scroll-target="#why-mcp">Why MCP?</a></li>
+  <li>
+<a href="#using-the-mcp-client" id="toc-using-the-mcp-client" class="nav-link" data-scroll-target="#using-the-mcp-client">Using the MCP Client</a>
+  <ul class="collapse">
+<li><a href="#connecting-to-a-server" id="toc-connecting-to-a-server" class="nav-link" data-scroll-target="#connecting-to-a-server">1. Connecting to a Server</a></li>
+  <li><a href="#discovering-tools" id="toc-discovering-tools" class="nav-link" data-scroll-target="#discovering-tools">2. Discovering Tools</a></li>
+  <li><a href="#integrating-with-aisdk-tools" id="toc-integrating-with-aisdk-tools" class="nav-link" data-scroll-target="#integrating-with-aisdk-tools">3. Integrating with aisdk Tools</a></li>
+  </ul>
+</li>
+  <li>
+<a href="#advanced-usage" id="toc-advanced-usage" class="nav-link" data-scroll-target="#advanced-usage">Advanced Usage</a>
+  <ul class="collapse">
+<li><a href="#resources-and-notifications" id="toc-resources-and-notifications" class="nav-link" data-scroll-target="#resources-and-notifications">Resources and Notifications</a></li>
+  <li><a href="#cleanup" id="toc-cleanup" class="nav-link" data-scroll-target="#cleanup">Cleanup</a></li>
+  </ul>
+</li>
+  <li><a href="#community-mcp-servers" id="toc-community-mcp-servers" class="nav-link" data-scroll-target="#community-mcp-servers">Community MCP Servers</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/mcp.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Function Reference</h1>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
+<h1 class="title">Connectivity (MCP)</h1>
 </div>
 
 
@@ -353,15 +390,67 @@ ul.task-list li input[type="checkbox"] {
   
 
 
-</header>
+</header><p>The <strong>Model Context Protocol (MCP)</strong> is an open standard that enables AI models to connect to external data sources and tools. <code>aisdk</code> provides a full-featured MCP client that can bridge any MCP server into your R-based agents.</p>
+<section id="why-mcp" class="level2"><h2 class="anchored" data-anchor-id="why-mcp">Why MCP?</h2>
+<p>Instead of writing custom R wrappers for every API, you can use existing MCP servers (available in Node.js, Python, and Go) to give your agents access to: - <strong>Filesystems</strong>: Local or cloud storage. - <strong>APIs</strong>: GitHub, Slack, Google Drive, etc. - <strong>Databases</strong>: Postgres, SQLite, MongoDB. - <strong>Search</strong>: Brave Search, Google Search.</p>
+</section><section id="using-the-mcp-client" class="level2"><h2 class="anchored" data-anchor-id="using-the-mcp-client">Using the MCP Client</h2>
+<p>The <code>McpClient</code> class manages the connection to an external MCP server process via <code>stdio</code>.</p>
+<section id="connecting-to-a-server" class="level3"><h3 class="anchored" data-anchor-id="connecting-to-a-server">1. Connecting to a Server</h3>
+<p>You can start a server process using <code><a href="https://YuLab-SMU.github.io/aisdk/reference/create_mcp_client.html">create_mcp_client()</a></code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Example: Connect to the SQLite MCP server</span></span>
+<span><span class="va">sqlite_client</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_mcp_client.html">create_mcp_client</a></span><span class="op">(</span></span>
+<span>  command <span class="op">=</span> <span class="st">"npx"</span>,</span>
+<span>  args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"-y"</span>, <span class="st">"@modelcontextprotocol/server-sqlite"</span>, <span class="st">"--db"</span>, <span class="st">"my_data.db"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Handshake is performed automatically. Check if alive:</span></span>
+<span><span class="va">sqlite_client</span><span class="op">$</span><span class="fu">is_alive</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="discovering-tools" class="level3"><h3 class="anchored" data-anchor-id="discovering-tools">2. Discovering Tools</h3>
+<p>Once connected, you can list the tools provided by the server.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">tools</span> <span class="op">&lt;-</span> <span class="va">sqlite_client</span><span class="op">$</span><span class="fu">list_tools</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># Each tool has a name, description, and JSON Schema input parameters.</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="integrating-with-aisdk-tools" class="level3"><h3 class="anchored" data-anchor-id="integrating-with-aisdk-tools">3. Integrating with aisdk Tools</h3>
+<p>To use these tools with <code>generate_text</code> or an <code>Agent</code>, you must convert them into SDK-compatible <code>Tool</code> objects using <code>$as_sdk_tools()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">sdk_tools</span> <span class="op">&lt;-</span> <span class="va">sqlite_client</span><span class="op">$</span><span class="fu">as_sdk_tools</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run a query using the MCP tools</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  prompt <span class="op">=</span> <span class="st">"Query the 'iris' table and tell me the average Sepal.Length."</span>,</span>
+<span>  tools <span class="op">=</span> <span class="va">sdk_tools</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section></section><section id="advanced-usage" class="level2"><h2 class="anchored" data-anchor-id="advanced-usage">Advanced Usage</h2>
+<section id="resources-and-notifications" class="level3"><h3 class="anchored" data-anchor-id="resources-and-notifications">Resources and Notifications</h3>
+<p>The <code>McpClient</code> also supports reading <strong>Resources</strong> (static data/docs) and sending <strong>Notifications</strong> to the server.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># List resources</span></span>
+<span><span class="va">resources</span> <span class="op">&lt;-</span> <span class="va">sqlite_client</span><span class="op">$</span><span class="fu">list_resources</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Read a resource URI</span></span>
+<span><span class="co"># data &lt;- sqlite_client$read_resource("sqlite://main/table/iris/schema")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="cleanup" class="level3"><h3 class="anchored" data-anchor-id="cleanup">Cleanup</h3>
+<p>Always close the client connection to terminate the server process.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">sqlite_client</span><span class="op">$</span><span class="fu">close</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section></section><section id="community-mcp-servers" class="level2"><h2 class="anchored" data-anchor-id="community-mcp-servers">Community MCP Servers</h2>
+<p>You can find hundreds of ready-to-use MCP servers in the <a href="https://mcphub.io">MCP Hub</a> or the official <a href="https://github.com/modelcontextprotocol/servers">MCP GitHub repository</a>.</p>
 
 
-<p>Here you can document the main functions of aisdk.</p>
-
-
-
-</main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -778,5 +867,4 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/mcp.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

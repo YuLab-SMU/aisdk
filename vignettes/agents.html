@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>Function Reference – aisdk</title>
+<title>Building Agents – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,8 +17,42 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
-
 
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
@@ -44,8 +75,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -71,12 +101,8 @@ ul.task-list li input[type="checkbox"] {
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script>
-
-
-<link rel="stylesheet" href="styles.css">
+}</script><link rel="stylesheet" href="styles.css">
 </head>
-
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -242,9 +268,7 @@ ul.task-list li input[type="checkbox"] {
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -256,7 +280,7 @@ ul.task-list li input[type="checkbox"] {
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
+<li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -264,8 +288,8 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
-        <li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
+<li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -306,40 +330,42 @@ ul.task-list li input[type="checkbox"] {
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-  </li>
+</li>
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
+<ul class="navbar-nav navbar-nav-scroll ms-auto">
+<li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-          </div> <!-- /navcollapse -->
+</div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+   
+  <ul>
+<li><a href="#the-agent-class" id="toc-the-agent-class" class="nav-link active" data-scroll-target="#the-agent-class">The Agent Class</a></li>
+  <li><a href="#running-an-agent" id="toc-running-an-agent" class="nav-link" data-scroll-target="#running-an-agent">Running an Agent</a></li>
+  <li><a href="#agent-library" id="toc-agent-library" class="nav-link" data-scroll-target="#agent-library">Agent Library</a></li>
+  <li><a href="#agent-autonomy-and-safety" id="toc-agent-autonomy-and-safety" class="nav-link" data-scroll-target="#agent-autonomy-and-safety">Agent Autonomy and Safety</a></li>
+  <li><a href="#multi-agent-orchestration" id="toc-multi-agent-orchestration" class="nav-link" data-scroll-target="#multi-agent-orchestration">Multi-Agent Orchestration</a></li>
+  <li><a href="#low-level-control" id="toc-low-level-control" class="nav-link" data-scroll-target="#low-level-control">Low-Level Control</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/agents.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Function Reference</h1>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
+<h1 class="title">Building Agents</h1>
 </div>
 
 
@@ -353,15 +379,93 @@ ul.task-list li input[type="checkbox"] {
   
 
 
-</header>
+</header><p>In <strong>aisdk</strong>, an <strong>Agent</strong> is a specialized AI worker. While a <code>ChatSession</code> holds conversation state, an <code>Agent</code> holds <strong>capability</strong>: a persona (system prompt), a set of tools, and optionally, a specialized library of skills.</p>
+<section id="the-agent-class" class="level2"><h2 class="anchored" data-anchor-id="the-agent-class">The Agent Class</h2>
+<p>Agents are implemented as R6 classes. You can create one using the <code>Agent$new()</code> constructor or the <code><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent()</a></code> factory function.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create a specialized Research Agent</span></span>
+<span><span class="va">researcher</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Researcher"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Finds and summarizes information on specific topics"</span>,</span>
+<span>  system_prompt <span class="op">=</span> <span class="st">"You are a professional researcher. Provide citations for your findings."</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span><span class="op">(</span><span class="va">researcher</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="running-an-agent" class="level2"><h2 class="anchored" data-anchor-id="running-an-agent">Running an Agent</h2>
+<p>Use the <code>$run()</code> method to give the agent a task.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">researcher</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
+<span>  task <span class="op">=</span> <span class="st">"Summarize the latest trends in R package development for 2025."</span>,</span>
+<span>  model <span class="op">=</span> <span class="va">model</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="agent-library" class="level2"><h2 class="anchored" data-anchor-id="agent-library">Agent Library</h2>
+<p>The <code>aisdk</code> package includes a library of pre-configured specialists. These are optimized for common data science tasks.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># A Coder agent with a built-in R execution sandbox</span></span>
+<span><span class="va">coder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_coder_agent.html">create_coder_agent</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># A Visualizer agent optimized for ggplot2</span></span>
+<span><span class="va">visualizer</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_visualizer_agent.html">create_visualizer_agent</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># A Planner agent for breaking down complex objectives</span></span>
+<span><span class="va">planner</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_planner_agent.html">create_planner_agent</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="agent-autonomy-and-safety" class="level2"><h2 class="anchored" data-anchor-id="agent-autonomy-and-safety">Agent Autonomy and Safety</h2>
+<p>When agents execute code dynamically (e.g., using the Coder agent’s sandbox), <strong>aisdk</strong> provides a sophisticated security model to keep your environment safe:</p>
+<ol type="1">
+<li>
+<strong>AST Static Analysis</strong>: Before any LLM-generated R code is executed, <code><a href="https://YuLab-SMU.github.io/aisdk/reference/check_ast_safety.html">check_ast_safety()</a></code> analyzes the Abstract Syntax Tree. It silently blocks forbidden functions (like <code><a href="https://rdrr.io/r/base/system.html">system()</a></code>) and flags potentially risky ones (like <code><a href="https://rdrr.io/r/base/unlink.html">unlink()</a></code>).</li>
+<li>
+<strong>Variable Registry</strong>: Protect critical session variables from being shadowed, modified, or heavily copied by the agent. Use <code>sdk_protect_var("my_important_df", locked = TRUE, cost = "High")</code>.</li>
+<li>
+<strong>Human-in-the-Loop (HITL)</strong>: For “YELLOW” risk operations (like writing files or modifying the global environment), <code><a href="https://YuLab-SMU.github.io/aisdk/reference/request_authorization.html">request_authorization()</a></code> automatically pauses execution and prompts the user for explicit permission via the console before proceeding.</li>
+</ol></section><section id="multi-agent-orchestration" class="level2"><h2 class="anchored" data-anchor-id="multi-agent-orchestration">Multi-Agent Orchestration</h2>
+<p>Agents can work together using an <code>AgentRegistry</code> and a <code>Flow</code>. A “Manager” agent can delegate tasks to “Worker” agents based on their descriptions.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># 1. Register specialists</span></span>
+<span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent_registry.html">create_agent_registry</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">coder</span>, <span class="va">visualizer</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Create a Flow with a shared session</span></span>
+<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://YuLab-SMU.github.io/aisdk/reference/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<span><span class="va">flow</span> <span class="op">&lt;-</span> <span class="va"><a href="https://YuLab-SMU.github.io/aisdk/reference/flow.html">Flow</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>session <span class="op">=</span> <span class="va">session</span>, registry <span class="op">=</span> <span class="va">registry</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Create a Manager agent</span></span>
+<span><span class="va">manager</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/create_agent.html">create_agent</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Manager"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Orchestrates data analysis tasks"</span>,</span>
+<span>  system_prompt <span class="op">=</span> <span class="st">"You are a project manager. Delegate tasks to Coder or Visualizer as needed."</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 4. Run the coordinated flow</span></span>
+<span><span class="co"># The Manager will automatically get tools like 'delegate_to_CoderAgent'</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">flow</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span></span>
+<span>  agent <span class="op">=</span> <span class="va">manager</span>,</span>
+<span>  task <span class="op">=</span> <span class="st">"Load the 'iris' dataset, calculate means by species, and plot the result."</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="low-level-control" class="level2"><h2 class="anchored" data-anchor-id="low-level-control">Low-Level Control</h2>
+<p>You can manually convert an agent into a tool that another agent (or <code>generate_text</code>) can call:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">coder_tool</span> <span class="op">&lt;-</span> <span class="va">coder</span><span class="op">$</span><span class="fu">as_tool</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://YuLab-SMU.github.io/aisdk/reference/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<span>  prompt <span class="op">=</span> <span class="st">"Write a function to calculate Fibonacci numbers."</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">coder_tool</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For more advanced agent behaviors, see the <a href="skills.html">Skills</a> vignette.</p>
 
 
-<p>Here you can document the main functions of aisdk.</p>
-
-
-
-</main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -778,5 +882,4 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/agents.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
