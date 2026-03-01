@@ -46,3 +46,8 @@ artifacts/
 
 # R Check temporary directories
 ..Rcheck/
+/doc/
+/Meta/
+
+/.quarto/
+**/*.quarto_ipynb
