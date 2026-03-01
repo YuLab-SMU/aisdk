@@ -191,6 +191,16 @@
             ]
         },
         {
+            "title": "Expanded Providers",
+            "purpose": "Document support for diverse providers including DeepSeek, Bailian, Stepfun, Volcengine, xAI, NVIDIA, and OpenRouter, as well as prompt-based fallback mechanisms for structured output",
+            "parent": "Provider System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
             "title": "Agent System",
             "purpose": "Document the Agent and ChatSession classes that enable autonomous AI entities and multi-agent coordination",
             "page_notes": [
@@ -232,6 +242,26 @@
         {
             "title": "Flow Orchestration",
             "purpose": "Document the Flow class, AgentRegistry for service discovery, hierarchical task delegation, and max_depth limiting",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Agent Safety & Autonomy",
+            "purpose": "Explain the security model for autonomous agents, including the Sandbox environment, AST-based static analysis, Variable Registry for protecting variables, and Human-in-the-Loop (HITL) authorization for state-mutating tools",
+            "parent": "Agent System",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Standard Agents & Library",
+            "purpose": "Introduce the standard library agents (stdlib_agents), agent registry, and evaluation framework for standardized agent operations",
             "parent": "Agent System",
             "page_notes": [
                 {
@@ -282,6 +312,54 @@
             "title": "Tool Execution",
             "purpose": "Explain execute_tool_calls, ReAct loop mechanics, tool result formatting, and execution environments",
             "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Advanced Tools & Capabilities",
+            "purpose": "Document specialized tool capabilities including Computer Use for UI interaction, and Project Memory/Artifacts for maintaining persistent context",
+            "parent": "Tools & Skills",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "MCP Integration",
+            "purpose": "Document the Model Context Protocol (MCP) implementation, including MCP Client/Server capabilities, Discovery APIs, and Server-Sent Events (SSE) based transport",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "MCP Client",
+            "purpose": "Explain how aisdk connects to external MCP servers to extend agent capabilities via remote tools, resources, and prompts",
+            "parent": "MCP Integration",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "MCP Server",
+            "purpose": "Document how to expose R functions and aisdk capabilities as an MCP server with Server-Sent Events",
+            "parent": "MCP Integration",
+            "page_notes": [
+                {
+                    "content": ""
+                }
+            ]
+        },
+        {
+            "title": "Telemetry & Diagnostics",
+            "purpose": "Document tracking API calls, generation telemetry, and diagnosing connection/provider issues",
             "page_notes": [
                 {
                     "content": ""
