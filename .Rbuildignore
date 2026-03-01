@@ -19,3 +19,8 @@
 ^_pkgdown\.yml$
 ^doc$
 ^Meta$
+^\.quarto
+^_quarto\.yml$
+^index\.qmd$
+^reference$
+^scripts$
