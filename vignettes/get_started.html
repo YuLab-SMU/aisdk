@@ -483,7 +483,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
 <span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"What's the weather like in Shanghai?"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span></span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span>,</span>
+<span>  max_steps <span class="op">=</span> <span class="fl">3</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
