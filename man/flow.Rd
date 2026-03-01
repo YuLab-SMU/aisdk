@@ -40,7 +40,7 @@ Initialize a new Flow.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Flow$new(
   session,
-  model,
+  model = NULL,
   registry = NULL,
   max_depth = 5,
   max_steps_per_agent = 10,
@@ -54,7 +54,7 @@ Initialize a new Flow.
 \describe{
 \item{\code{session}}{A ChatSession object.}
 
-\item{\code{model}}{The default model ID to use.}
+\item{\code{model}}{Optional default model ID to use. If NULL, inherits from session.}
 
 \item{\code{registry}}{Optional AgentRegistry for agent lookup.}
 

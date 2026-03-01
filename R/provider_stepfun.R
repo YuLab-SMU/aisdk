@@ -52,10 +52,14 @@ StepfunLanguageModel <- R6::R6Class(
         }
     ),
     public = list(
+        #' @description Build the payload for the Stepfun API.
+        #' @param params A list of parameters for the API call.
         build_payload = function(params) {
             params <- private$process_response_format(params)
             super$build_payload(params)
         },
+        #' @description Build the stream payload for the Stepfun API.
+        #' @param params A list of parameters for the API call.
         build_stream_payload = function(params) {
             params <- private$process_response_format(params)
             super$build_stream_payload(params)

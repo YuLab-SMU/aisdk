@@ -35,22 +35,22 @@ Factory function to create a new Agent object.
 \examples{
 \donttest{
 if (interactive()) {
-# Create a simple math agent
-math_agent <- create_agent(
-  name = "MathAgent",
-  description = "Performs arithmetic calculations",
-  system_prompt = "You are a math assistant. Return only numerical results."
-)
+  # Create a simple math agent
+  math_agent <- create_agent(
+    name = "MathAgent",
+    description = "Performs arithmetic calculations",
+    system_prompt = "You are a math assistant. Return only numerical results."
+  )
 
-# Run the agent
-result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
+  # Run the agent
+  result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
 
-# Create an agent with skills
-stock_agent <- create_agent(
-  name = "StockAnalyst",
-  description = "Stock analysis agent",
-  skills = "auto"
-)
+  # Create an agent with skills
+  stock_agent <- create_agent(
+    name = "StockAnalyst",
+    description = "Stock analysis agent",
+    skills = "auto"
+  )
 }
 }
 }

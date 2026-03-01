@@ -22,6 +22,7 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-stats}{\code{ChatSession$stats()}}
 \item \href{#method-ChatSession-save}{\code{ChatSession$save()}}
 \item \href{#method-ChatSession-as_list}{\code{ChatSession$as_list()}}
+\item \href{#method-ChatSession-restore}{\code{ChatSession$restore()}}
 \item \href{#method-ChatSession-restore_from_list}{\code{ChatSession$restore_from_list()}}
 \item \href{#method-ChatSession-print}{\code{ChatSession$print()}}
 \item \href{#method-ChatSession-get_memory}{\code{ChatSession$get_memory()}}
@@ -262,6 +263,25 @@ Export session state as a list (for serialization).
 
 \subsection{Returns}{
 A list containing session state.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-restore"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-restore}{}}}
+\subsection{Method \code{restore()}}{
+Restore session from a file.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$restore(path, format = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{path}}{File path (supports .rds or .json extension).}
+
+\item{\code{format}}{Optional format override: "rds" or "json". Auto-detected from path.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}

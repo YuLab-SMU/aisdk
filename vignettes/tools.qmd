@@ -76,7 +76,8 @@ model <- create_openai()$language_model("gpt-4o")
 result <- generate_text(
   model = model,
   prompt = "What is 123 multiplied by 456?",
-  tools = list(calc_tool)
+  tools = list(calc_tool),
+  max_steps = 3
 )
 
 cat(result$text)
@@ -112,7 +113,13 @@ state_tool <- tool(
 ### Tool Layers
 You can categorize tools into "layers" for better organization.
 ```{r}
-my_tool <- tool(..., layer = "data_analysis")
+my_tool <- tool(
+  name = "my_tool",
+  description = "Example tool",
+  parameters = z_object(),
+  execute = function(args) { "Result" },
+  layer = "data_analysis"
+)
 ```
 
 ### Read-Only vs. State-Mutating

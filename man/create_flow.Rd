@@ -6,7 +6,7 @@
 \usage{
 create_flow(
   session,
-  model,
+  model = NULL,
   registry = NULL,
   max_depth = 5,
   max_steps_per_agent = 10,
@@ -16,7 +16,7 @@ create_flow(
 \arguments{
 \item{session}{A ChatSession object.}
 
-\item{model}{The default model ID to use (e.g., "openai:gpt-4o").}
+\item{model}{Optional default model ID to use (e.g., "openai:gpt-4o").}
 
 \item{registry}{Optional AgentRegistry for agent lookup and delegation.}
 
@@ -35,23 +35,23 @@ Factory function to create a new Flow object for enhanced multi-agent orchestrat
 \examples{
 \donttest{
 if (interactive()) {
-# Create an enhanced multi-agent flow
-session <- create_chat_session()
-cleaner <- create_agent("Cleaner", "Cleans data")
-plotter <- create_agent("Plotter", "Creates plots")
-registry <- create_agent_registry(list(cleaner, plotter))
+  # Create an enhanced multi-agent flow
+  session <- create_chat_session()
+  cleaner <- create_agent("Cleaner", "Cleans data")
+  plotter <- create_agent("Plotter", "Creates plots")
+  registry <- create_agent_registry(list(cleaner, plotter))
 
-manager <- create_agent("Manager", "Coordinates data analysis")
+  manager <- create_agent("Manager", "Coordinates data analysis")
 
-flow <- create_flow(
-  session = session,
-  model = "openai:gpt-4o",
-  registry = registry,
-  enable_guardrails = TRUE
-)
+  flow <- create_flow(
+    session = session,
+    model = "openai:gpt-4o",
+    registry = registry,
+    enable_guardrails = TRUE
+  )
 
-# Run the manager with auto-delegation (unified delegate_task tool)
-result <- flow$run(manager, "Load data and create a visualization")
+  # Run the manager with auto-delegation (unified delegate_task tool)
+  result <- flow$run(manager, "Load data and create a visualization")
 }
 }
 }

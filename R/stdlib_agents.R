@@ -973,18 +973,24 @@ if (!exists("%||%")) {
 create_skill_architect_agent <- function(name = "SkillArchitect", registry = NULL, model = NULL) {
   # Initialize registry if not provided
   if (is.null(registry)) {
-    registry <- create_skill_registry(system.file("skills", package = "aisdk"))
-  }
+    # Check standard locations (same as Agent auto-discovery)
+    candidates <- c(
+      file.path(Sys.getenv("HOME"), "aisdk", "skills"),
+      file.path(getwd(), "aisdk", "skills"),
+      file.path(getwd(), "skills"),
+      file.path(getwd(), "inst", "skills"),
+      system.file("skills", package = "aisdk")
+    )
+    candidates <- unique(candidates[nzchar(candidates)])
+    skills_paths <- candidates[dir.exists(candidates)]
 
-  # Ensure the create_skill skill is available
-  if (is.null(registry$get_skill("create_skill"))) {
-    # If not found in package (e.g. during development), try local path
-    local_skills <- file.path("inst", "skills")
-    if (dir.exists(local_skills)) {
-      registry <- create_skill_registry(local_skills)
+    registry <- SkillRegistry$new()
+    for (p in skills_paths) {
+      registry$scan_skills(p)
     }
   }
 
+  # Ensure the create_skill skill is available
   if (is.null(registry$get_skill("create_skill"))) {
     rlang::abort("The 'create_skill' skill is required but not found in the registry.")
   }

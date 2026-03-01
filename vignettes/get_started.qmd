@@ -131,7 +131,8 @@ weather_tool <- tool(
 response <- generate_text(
   model = model,
   prompt = "What's the weather like in Shanghai?",
-  tools = list(weather_tool)
+  tools = list(weather_tool),
+  max_steps = 3
 )
 
 cat(response$text)

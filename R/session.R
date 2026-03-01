@@ -266,6 +266,25 @@ ChatSession <- R6::R6Class(
       )
     },
 
+    #' @description Restore session from a file.
+    #' @param path File path (supports .rds or .json extension).
+    #' @param format Optional format override: "rds" or "json". Auto-detected from path.
+    restore = function(path, format = NULL) {
+      if (is.null(format)) {
+        format <- if (grepl("\\.json$", path, ignore.case = TRUE)) "json" else "rds"
+      }
+
+      data <- if (format == "json") {
+        json_str <- paste(readLines(path, warn = FALSE), collapse = "\n")
+        jsonlite::fromJSON(json_str, simplifyVector = FALSE)
+      } else {
+        readRDS(path)
+      }
+
+      self$restore_from_list(data)
+      invisible(self)
+    },
+
     #' @description Restore session state from a list.
     #' @param data A list exported by as_list().
     restore_from_list = function(data) {
@@ -428,28 +447,28 @@ ChatSession <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Create a chat session
-#' chat <- create_chat_session(
-#'   model = "openai:gpt-4o",
-#'   system_prompt = "You are a helpful R programming assistant."
-#' )
+#'   # Create a chat session
+#'   chat <- create_chat_session(
+#'     model = "openai:gpt-4o",
+#'     system_prompt = "You are a helpful R programming assistant."
+#'   )
 #'
-#' # Create from an existing agent
-#' agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
-#' chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
+#'   # Create from an existing agent
+#'   agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+#'   chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
 #'
-#' # Send messages
-#' response <- chat$send("How do I read a CSV file?")
-#' print(response$text)
+#'   # Send messages
+#'   response <- chat$send("How do I read a CSV file?")
+#'   print(response$text)
 #'
-#' # Continue the conversation (history is maintained)
-#' response <- chat$send("What about Excel files?")
+#'   # Continue the conversation (history is maintained)
+#'   response <- chat$send("What about Excel files?")
 #'
-#' # Check stats
-#' print(chat$stats())
+#'   # Check stats
+#'   print(chat$stats())
 #'
-#' # Save session
-#' chat$save("my_session.rds")
+#'   # Save session
+#'   chat$save("my_session.rds")
 #' }
 #' }
 create_chat_session <- function(model = NULL,
@@ -480,11 +499,11 @@ create_chat_session <- function(model = NULL,
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Load a saved session
-#' chat <- load_chat_session("my_session.rds", tools = my_tools)
+#'   # Load a saved session
+#'   chat <- load_chat_session("my_session.rds", tools = my_tools)
 #'
-#' # Continue where you left off
-#' response <- chat$send("Let's continue our discussion")
+#'   # Continue where you left off
+#'   response <- chat$send("Let's continue our discussion")
 #' }
 #' }
 load_chat_session <- function(path, tools = NULL, hooks = NULL, registry = NULL) {

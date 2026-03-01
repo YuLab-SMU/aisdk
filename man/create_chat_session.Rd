@@ -35,28 +35,28 @@ Factory function to create a new ChatSession object.
 \examples{
 \donttest{
 if (interactive()) {
-# Create a chat session
-chat <- create_chat_session(
-  model = "openai:gpt-4o",
-  system_prompt = "You are a helpful R programming assistant."
-)
+  # Create a chat session
+  chat <- create_chat_session(
+    model = "openai:gpt-4o",
+    system_prompt = "You are a helpful R programming assistant."
+  )
 
-# Create from an existing agent
-agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
-chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
+  # Create from an existing agent
+  agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+  chat <- create_chat_session(model = "openai:gpt-4o", agent = agent)
 
-# Send messages
-response <- chat$send("How do I read a CSV file?")
-print(response$text)
+  # Send messages
+  response <- chat$send("How do I read a CSV file?")
+  print(response$text)
 
-# Continue the conversation (history is maintained)
-response <- chat$send("What about Excel files?")
+  # Continue the conversation (history is maintained)
+  response <- chat$send("What about Excel files?")
 
-# Check stats
-print(chat$stats())
+  # Check stats
+  print(chat$stats())
 
-# Save session
-chat$save("my_session.rds")
+  # Save session
+  chat$save("my_session.rds")
 }
 }
 }

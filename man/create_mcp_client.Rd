@@ -22,24 +22,24 @@ Convenience function to create and connect to an MCP server.
 \examples{
 \donttest{
 if (interactive()) {
-# Connect to GitHub MCP server
-client <- create_mcp_client(
-  "npx",
-  c("-y", "@modelcontextprotocol/server-github"),
-  env = c(GITHUB_PERSONAL_ACCESS_TOKEN = Sys.getenv("GITHUB_TOKEN"))
-)
+  # Connect to GitHub MCP server
+  client <- create_mcp_client(
+    "npx",
+    c("-y", "@modelcontextprotocol/server-github"),
+    env = c(GITHUB_PERSONAL_ACCESS_TOKEN = Sys.getenv("GITHUB_TOKEN"))
+  )
 
-# List available tools
-tools <- client$list_tools()
+  # List available tools
+  tools <- client$list_tools()
 
-# Use tools with generate_text
-result <- generate_text(
-  model = "openai:gpt-4o",
-  prompt = "List my GitHub repos",
-  tools = client$as_sdk_tools()
-)
+  # Use tools with generate_text
+  result <- generate_text(
+    model = "openai:gpt-4o",
+    prompt = "List my GitHub repos",
+    tools = client$as_sdk_tools()
+  )
 
-client$close()
+  client$close()
 }
 }
 }

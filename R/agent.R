@@ -18,7 +18,6 @@ NULL
 #' @export
 Agent <- R6::R6Class(
   "Agent",
-
   public = list(
     #' @field name Unique identifier for this agent.
     name = NULL,
@@ -62,58 +61,66 @@ Agent <- R6::R6Class(
       self$name <- name
       self$description <- description
       self$model <- model
-      
+
       # Handle skills
       skill_prompt <- NULL
       skill_tools <- list()
-      
+
       if (!is.null(skills)) {
         # Resolve skill paths
         if (identical(skills, "auto")) {
-           # Check standard locations
-           candidates <- c(
-             file.path(Sys.getenv("HOME"), "aisdk", "skills"),
-             file.path(getwd(), "aisdk", "skills"),
-             file.path(getwd(), "skills"),
-             file.path(getwd(), "inst", "skills")
-           )
-           skills <- candidates[dir.exists(candidates)]
-           if (length(skills) == 0) {
-             warning("skills='auto' specified but no skill directories found in standard locations.")
-           }
+          # Check standard locations
+          candidates <- c(
+            file.path(Sys.getenv("HOME"), "aisdk", "skills"),
+            file.path(getwd(), "aisdk", "skills"),
+            file.path(getwd(), "skills"),
+            file.path(getwd(), "inst", "skills"),
+            system.file("skills", package = "aisdk")
+          )
+          # Remove duplicates and empty strings
+          candidates <- unique(candidates[nzchar(candidates)])
+          skills <- candidates[dir.exists(candidates)]
+
+          if (length(skills) == 0 && identical(skills, "auto")) {
+            # Non-blocking: only warn if explicitly requested but not found
+            # warning("skills='auto' specified but no skill directories found.")
+          }
         }
-        
+
         # Load skills from paths
         if (length(skills) > 0) {
-           # Create a merged registry for all paths
-           registry <- SkillRegistry$new()
-           for (path in skills) {
-             tryCatch({
-               registry$scan_skills(path, recursive = TRUE)
-             }, error = function(e) {
-               warning(paste("Failed to scan skills at", path, ":", conditionMessage(e)))
-             })
-           }
-           
-           if (registry$count() > 0) {
-             # Generate prompt section
-             skill_prompt <- registry$generate_prompt_section()
-             
-             # Create tools
-             skill_tools <- create_skill_tools(registry)
-           }
+          # Create a merged registry for all paths
+          registry <- SkillRegistry$new()
+          for (path in skills) {
+            tryCatch(
+              {
+                registry$scan_skills(path, recursive = TRUE)
+              },
+              error = function(e) {
+                warning(paste("Failed to scan skills at", path, ":", conditionMessage(e)))
+              }
+            )
+          }
+
+          if (registry$count() > 0) {
+            # Generate prompt section
+            skill_prompt <- registry$generate_prompt_section()
+
+            # Create tools
+            skill_tools <- create_skill_tools(registry)
+          }
         }
       }
 
       # Combine system prompt
       if (!is.null(skill_prompt) && nzchar(skill_prompt)) {
         system_prompt <- if (is.null(system_prompt)) {
-          skill_prompt 
+          skill_prompt
         } else {
           paste(system_prompt, "\n\n", skill_prompt, sep = "")
         }
       }
-      
+
       self$system_prompt <- system_prompt
       self$tools <- c(tools %||% list(), skill_tools)
     },
@@ -288,7 +295,6 @@ Agent <- R6::R6Class(
       invisible(self)
     }
   ),
-
   private = list(
     # Build the effective system prompt with context injection.
     build_system_prompt = function(context = NULL, session = NULL) {
@@ -311,7 +317,7 @@ Agent <- R6::R6Class(
       # Add session environment summary if provided
       if (!is.null(session)) {
         session_info <- character(0)
-        
+
         # Summarize shared environment
         env_vars <- session$list_envir()
         if (length(env_vars) > 0) {
@@ -321,14 +327,14 @@ Agent <- R6::R6Class(
           }), collapse = "\n")
           session_info <- c(session_info, "Objects in shared environment:", env_summary)
         }
-        
+
         # Summarize shared memory
         mem_keys <- session$list_memory()
         if (length(mem_keys) > 0) {
-           # Filter out internal keys like 'agent_..._last_task' to reduce noise, if desired.
-           # For now, we list everything to be transparent.
-           mem_summary <- paste0("- ", mem_keys, collapse = "\n")
-           session_info <- c(session_info, "Keys in shared memory:", mem_summary)
+          # Filter out internal keys like 'agent_..._last_task' to reduce noise, if desired.
+          # For now, we list everything to be transparent.
+          mem_summary <- paste0("- ", mem_keys, collapse = "\n")
+          session_info <- c(session_info, "Keys in shared memory:", mem_summary)
         }
 
         if (length(session_info) > 0) {
@@ -357,29 +363,29 @@ Agent <- R6::R6Class(
 #' @param description A clear description of what this agent does.
 #' @param system_prompt Optional system prompt defining the agent's persona.
 #' @param tools Optional list of Tool objects the agent can use.
- #' @param skills Optional character vector of skill paths or "auto".
+#' @param skills Optional character vector of skill paths or "auto".
 #' @param model Optional default model ID for this agent.
 #' @return An Agent object.
 #' @export
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Create a simple math agent
-#' math_agent <- create_agent(
-#'   name = "MathAgent",
-#'   description = "Performs arithmetic calculations",
-#'   system_prompt = "You are a math assistant. Return only numerical results."
-#' )
+#'   # Create a simple math agent
+#'   math_agent <- create_agent(
+#'     name = "MathAgent",
+#'     description = "Performs arithmetic calculations",
+#'     system_prompt = "You are a math assistant. Return only numerical results."
+#'   )
 #'
-#' # Run the agent
-#' result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
-#' 
-#' # Create an agent with skills
-#' stock_agent <- create_agent(
-#'   name = "StockAnalyst",
-#'   description = "Stock analysis agent",
-#'   skills = "auto"
-#' )
+#'   # Run the agent
+#'   result <- math_agent$run("Calculate 2 + 2", model = "openai:gpt-4o")
+#'
+#'   # Create an agent with skills
+#'   stock_agent <- create_agent(
+#'     name = "StockAnalyst",
+#'     description = "Stock analysis agent",
+#'     skills = "auto"
+#'   )
 #' }
 #' }
 create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL, model = NULL) {

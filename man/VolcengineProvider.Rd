@@ -59,7 +59,7 @@ Create a language model.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "doubao-1-5-pro-256k-250115").}
+\item{\code{model_id}}{The model ID (e.g., "doubao-1-5-pro-256k-250115" or "gpt-4o").}
 }
 \if{html}{\out{</div>}}
 }

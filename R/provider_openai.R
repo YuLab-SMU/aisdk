@@ -26,6 +26,55 @@ OpenAILanguageModel <- R6::R6Class(
         h <- c(h, private$config$headers)
       }
       h
+    },
+
+    # Process response_format for OpenAI-compatible APIs
+    process_response_format = function(params) {
+      if (!is.null(params$response_format)) {
+        fmt <- params$response_format
+
+        # If it's a z_schema object, convert to OpenAI json_schema format
+        if (inherits(fmt, "z_schema")) {
+          # Use json_schema if supported, otherwise fallback to json_object + prompt injection
+          if (!isTRUE(private$config$disable_json_schema)) {
+            schema_list <- schema_to_list(fmt)
+            schema_name <- params$response_format_name %||% "output_schema"
+
+            params$response_format <- list(
+              type = "json_schema",
+              json_schema = list(
+                name = schema_name,
+                strict = TRUE,
+                schema = schema_list
+              )
+            )
+          } else {
+            # Fallback for providers that don't support native structured output
+            schema_json <- schema_to_json(fmt)
+            instruction <- paste(
+              "Return your output strictly as a JSON object adhering to this schema:\n",
+              schema_json
+            )
+
+            msgs <- params$messages
+            if (length(msgs) > 0 && msgs[[1]]$role == "system") {
+              msgs[[1]]$content <- paste(msgs[[1]]$content, "\n\n", instruction)
+            } else {
+              msgs <- c(list(list(role = "system", content = instruction)), msgs)
+            }
+            params$messages <- msgs
+            params$response_format <- list(type = "json_object")
+          }
+        } else if (is.character(fmt)) {
+          # Support string shorthands
+          if (fmt == "json_object") {
+            params$response_format <- list(type = "json_object")
+          } else if (fmt == "text") {
+            params$response_format <- list(type = "text")
+          }
+        }
+      }
+      params
     }
   ),
   public = list(
@@ -57,6 +106,7 @@ OpenAILanguageModel <- R6::R6Class(
     #' @param params A list of call options.
     #' @return A list with url, headers, and body.
     build_payload = function(params) {
+      params <- private$process_response_format(params)
       url <- paste0(private$config$base_url, "/chat/completions")
       headers <- private$get_headers()
 
@@ -160,6 +210,7 @@ OpenAILanguageModel <- R6::R6Class(
     #' @param params A list of call options.
     #' @return A list with url, headers, and body.
     build_stream_payload = function(params) {
+      params <- private$process_response_format(params)
       url <- paste0(private$config$base_url, "/chat/completions")
       headers <- private$get_headers()
 

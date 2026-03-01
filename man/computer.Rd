@@ -28,6 +28,7 @@ bash execution, and R code execution.
 \item \href{#method-Computer-execute_r_code}{\code{Computer$execute_r_code()}}
 \item \href{#method-Computer-get_log}{\code{Computer$get_log()}}
 \item \href{#method-Computer-clear_log}{\code{Computer$clear_log()}}
+\item \href{#method-Computer-check_bash_violation}{\code{Computer$check_bash_violation()}}
 \item \href{#method-Computer-clone}{\code{Computer$clone()}}
 }
 }
@@ -165,15 +166,34 @@ List of logged executions
 \if{latex}{\out{\hypertarget{method-Computer-clear_log}{}}}
 \subsection{Method \code{clear_log()}}{
 Clear execution log
-Log execution
-Resolve path (relative to working_dir or absolute)
-Check bash command for sandbox violations
-Check write path for sandbox violations
-Check R code for sandbox violations
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Computer$clear_log()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Computer-check_bash_violation"></a>}}
+\if{latex}{\out{\hypertarget{method-Computer-check_bash_violation}{}}}
+\subsection{Method \code{check_bash_violation()}}{
+Check bash command for sandbox violations
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Computer$check_bash_violation(command)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{command}}{The bash command string}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+NULL if safe, or a direct string describing the violation
+Log execution
+Resolve path (relative to working_dir or absolute)
+Check write path for sandbox violations
+Check R code for sandbox violations
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Computer-clone"></a>}}

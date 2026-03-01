@@ -17,9 +17,9 @@ knitr::opts_chunk$set(
 
 In many AI applications, you need the model to return data in a specific, machine-readable format (like JSON) rather than free-form text. **aisdk** provides robust support for structured outputs using JSON Schema.
 
-## Using `generate_text` with `response_format`
+## Using `generate_object` with `schema`
 
-The primary way to get structured data is to pass a `z_schema` to the `response_format` argument of `generate_text()`.
+The primary way to get structured data is to call `generate_object()` and pass a `z_schema` to the `schema` argument.
 
 ```{r}
 library(aisdk)
@@ -34,10 +34,10 @@ recipe_schema <- z_object(
 # 2. Request structured output
 model <- create_openai()$language_model("gpt-4o")
 
-result <- generate_text(
+result <- generate_object(
   model = model,
   prompt = "Give me a simple recipe for a classic Omelette.",
-  response_format = recipe_schema
+  schema = recipe_schema
 )
 
 # The result$object contains the parsed R list
@@ -57,10 +57,10 @@ gene_schema <- z_dataframe(
   p_value = z_number("Adjusted p-value")
 )
 
-result <- generate_text(
+result <- generate_object(
   model = model,
   prompt = "Extract gene expression data: BRCA1 (FC=2.5, p=0.01), TP53 (FC=-1.2, p=0.04).",
-  response_format = gene_schema
+  schema = gene_schema
 )
 
 # Convert to a tidy data frame
@@ -71,7 +71,7 @@ print(df)
 
 ## How it Works
 
-When you provide a `response_format`, **aisdk** intelligently determines the best way to interact with the LLM API:
+When you provide a `schema` to `generate_object()`, **aisdk** intelligently determines the best way to interact with the LLM API:
 1.  **Native Format Constraints**: For providers that support it (like OpenAI and Anthropic), it utilizes their native "JSON Mode" or strict "Structured Outputs" feature to guarantee the output matches the schema.
 2.  **Prompt Injection & Repair**: For providers that lack native JSON schema support (like Stepfun or some Volcengine models), `aisdk` gracefully falls back. It automatically appends the formalized JSON Schema into the system prompt, requests JSON output, and performs post-generation validation and automatic structural repair.
 

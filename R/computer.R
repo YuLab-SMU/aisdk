@@ -267,6 +267,30 @@ Computer <- R6::R6Class("Computer",
     clear_log = function() {
       self$execution_log <- list()
       invisible(self)
+    },
+
+    #' @description
+    #' Check bash command for sandbox violations
+    #' @param command The bash command string
+    #' @return NULL if safe, or a direct string describing the violation
+    check_bash_violation = function(command) {
+      # Strict mode: block dangerous commands
+      dangerous_patterns <- c(
+        "rm -rf /",
+        "dd if=",
+        "mkfs",
+        ":\\(\\)\\{\\s*:|:&\\s*\\};:", # Fork bomb (escaped for TRE)
+        "curl.*\\|.*bash", # Pipe to bash
+        "wget.*\\|.*bash"
+      )
+
+      for (pattern in dangerous_patterns) {
+        if (grepl(pattern, command, ignore.case = TRUE)) {
+          return(paste("Dangerous command pattern:", pattern))
+        }
+      }
+
+      NULL
     }
   ),
   private = list(
@@ -289,27 +313,6 @@ Computer <- R6::R6Class("Computer",
         # Relative path
         normalizePath(file.path(self$working_dir, path), mustWork = FALSE)
       }
-    },
-
-    #' Check bash command for sandbox violations
-    check_bash_violation = function(command) {
-      # Strict mode: block dangerous commands
-      dangerous_patterns <- c(
-        "rm -rf /",
-        "dd if=",
-        "mkfs",
-        ":(){ :|:& };:", # Fork bomb
-        "curl.*\\|.*bash", # Pipe to bash
-        "wget.*\\|.*bash"
-      )
-
-      for (pattern in dangerous_patterns) {
-        if (grepl(pattern, command, ignore.case = TRUE)) {
-          return(paste("Dangerous command pattern:", pattern))
-        }
-      }
-
-      NULL
     },
 
     #' Check write path for sandbox violations

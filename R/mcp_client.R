@@ -143,21 +143,17 @@ McpClient <- R6::R6Class(
       })
     }
   ),
-
   private = list(
     request_id = 0L,
-
     next_id = function() {
       private$request_id <- private$request_id + 1L
       private$request_id
     },
-
     ensure_alive = function() {
       if (!self$is_alive()) {
         stop("MCP server process is not running")
       }
     },
-
     perform_handshake = function() {
       # Send initialize request
       init_req <- mcp_initialize_request(
@@ -181,7 +177,6 @@ McpClient <- R6::R6Class(
 
       invisible(self)
     },
-
     send_request = function(request) {
       json_str <- paste0(mcp_serialize(request), "\n")
       self$process$write_input(json_str)
@@ -190,13 +185,11 @@ McpClient <- R6::R6Class(
       response_str <- private$read_response()
       mcp_deserialize(response_str)
     },
-
     send_notification = function(notification) {
       json_str <- paste0(mcp_serialize(notification), "\n")
       self$process$write_input(json_str)
     },
-
-    read_response = function(timeout_ms = 30000) {
+    read_response = function(timeout_ms = 60000) {
       # Read line from stdout
       start_time <- Sys.time()
       result <- ""
@@ -219,7 +212,6 @@ McpClient <- R6::R6Class(
         Sys.sleep(0.01)
       }
     },
-
     mcp_tool_to_sdk_tool = function(mcp_tool) {
       # Create a closure that calls back to this client
       client <- self
@@ -243,7 +235,6 @@ McpClient <- R6::R6Class(
         }
       )
     },
-
     schema_from_mcp = function(input_schema) {
       # Convert MCP input schema to SDK schema
       # MCP uses standard JSON Schema format
@@ -274,24 +265,24 @@ McpClient <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Connect to GitHub MCP server
-#' client <- create_mcp_client(
-#'   "npx",
-#'   c("-y", "@modelcontextprotocol/server-github"),
-#'   env = c(GITHUB_PERSONAL_ACCESS_TOKEN = Sys.getenv("GITHUB_TOKEN"))
-#' )
+#'   # Connect to GitHub MCP server
+#'   client <- create_mcp_client(
+#'     "npx",
+#'     c("-y", "@modelcontextprotocol/server-github"),
+#'     env = c(GITHUB_PERSONAL_ACCESS_TOKEN = Sys.getenv("GITHUB_TOKEN"))
+#'   )
 #'
-#' # List available tools
-#' tools <- client$list_tools()
+#'   # List available tools
+#'   tools <- client$list_tools()
 #'
-#' # Use tools with generate_text
-#' result <- generate_text(
-#'   model = "openai:gpt-4o",
-#'   prompt = "List my GitHub repos",
-#'   tools = client$as_sdk_tools()
-#' )
+#'   # Use tools with generate_text
+#'   result <- generate_text(
+#'     model = "openai:gpt-4o",
+#'     prompt = "List my GitHub repos",
+#'     tools = client$as_sdk_tools()
+#'   )
 #'
-#' client$close()
+#'   client$close()
 #' }
 #' }
 create_mcp_client <- function(command, args = character(), env = NULL) {

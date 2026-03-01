@@ -59,7 +59,7 @@ library(aisdk)
 agent <- create_agent(
   name = "Analyst",
   description = "Data analyst with specialized skills",
-  skills = "./my_project/skills" # Path to your skills directory
+  skills = system.file(package = "aisdk", "inst/skills") # Path to your skills directory
 )
 
 # When running, the agent will see 'data_cleaner' in its available tools list.

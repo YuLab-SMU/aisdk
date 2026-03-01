@@ -19,14 +19,14 @@ Flow <- R6::R6Class(
   public = list(
     #' @description Initialize a new Flow.
     #' @param session A ChatSession object.
-    #' @param model The default model ID to use.
+    #' @param model Optional default model ID to use. If NULL, inherits from session.
     #' @param registry Optional AgentRegistry for agent lookup.
     #' @param max_depth Maximum delegation depth. Default 5.
     #' @param max_steps_per_agent Maximum ReAct steps per agent. Default 10.
     #' @param max_context_tokens Maximum context tokens per delegation. Default 4000.
     #' @param enable_guardrails Enable safety guardrails. Default TRUE.
     initialize = function(session,
-                          model,
+                          model = NULL,
                           registry = NULL,
                           max_depth = 5,
                           max_steps_per_agent = 10,
@@ -37,7 +37,11 @@ Flow <- R6::R6Class(
       }
 
       private$.session <- session
-      private$.model <- model
+      private$.model <- model %||% session$get_model_id()
+
+      if (is.null(private$.model)) {
+        rlang::abort("model must be provided or configured in the session.")
+      }
       private$.registry <- registry
       private$.max_depth <- max_depth
       private$.max_steps <- max_steps_per_agent
@@ -572,7 +576,7 @@ Flow <- R6::R6Class(
 #' @description
 #' Factory function to create a new Flow object for enhanced multi-agent orchestration.
 #' @param session A ChatSession object.
-#' @param model The default model ID to use (e.g., "openai:gpt-4o").
+#' @param model Optional default model ID to use (e.g., "openai:gpt-4o").
 #' @param registry Optional AgentRegistry for agent lookup and delegation.
 #' @param max_depth Maximum delegation depth. Default 5.
 #' @param max_steps_per_agent Maximum ReAct steps per agent. Default 10.
@@ -582,27 +586,27 @@ Flow <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Create an enhanced multi-agent flow
-#' session <- create_chat_session()
-#' cleaner <- create_agent("Cleaner", "Cleans data")
-#' plotter <- create_agent("Plotter", "Creates plots")
-#' registry <- create_agent_registry(list(cleaner, plotter))
+#'   # Create an enhanced multi-agent flow
+#'   session <- create_chat_session()
+#'   cleaner <- create_agent("Cleaner", "Cleans data")
+#'   plotter <- create_agent("Plotter", "Creates plots")
+#'   registry <- create_agent_registry(list(cleaner, plotter))
 #'
-#' manager <- create_agent("Manager", "Coordinates data analysis")
+#'   manager <- create_agent("Manager", "Coordinates data analysis")
 #'
-#' flow <- create_flow(
-#'   session = session,
-#'   model = "openai:gpt-4o",
-#'   registry = registry,
-#'   enable_guardrails = TRUE
-#' )
+#'   flow <- create_flow(
+#'     session = session,
+#'     model = "openai:gpt-4o",
+#'     registry = registry,
+#'     enable_guardrails = TRUE
+#'   )
 #'
-#' # Run the manager with auto-delegation (unified delegate_task tool)
-#' result <- flow$run(manager, "Load data and create a visualization")
+#'   # Run the manager with auto-delegation (unified delegate_task tool)
+#'   result <- flow$run(manager, "Load data and create a visualization")
 #' }
 #' }
 create_flow <- function(session,
-                        model,
+                        model = NULL,
                         registry = NULL,
                         max_depth = 5,
                         max_steps_per_agent = 10,

@@ -14,6 +14,8 @@ Inherits from OpenAILanguageModel as Stepfun provides an OpenAI-compatible API.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
+\item \href{#method-StepfunLanguageModel-build_payload}{\code{StepfunLanguageModel$build_payload()}}
+\item \href{#method-StepfunLanguageModel-build_stream_payload}{\code{StepfunLanguageModel$build_stream_payload()}}
 \item \href{#method-StepfunLanguageModel-clone}{\code{StepfunLanguageModel$clone()}}
 }
 }
@@ -23,8 +25,6 @@ Inherits from OpenAILanguageModel as Stepfun provides an OpenAI-compatible API.
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-generate'><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-has_capability'><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-stream'><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_payload"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-build_payload'><code>aisdk::OpenAILanguageModel$build_payload()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_stream_payload"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-build_stream_payload'><code>aisdk::OpenAILanguageModel$build_stream_payload()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_generate"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-do_generate'><code>aisdk::OpenAILanguageModel$do_generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_stream"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-do_stream'><code>aisdk::OpenAILanguageModel$do_stream()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="execute_request"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-execute_request'><code>aisdk::OpenAILanguageModel$execute_request()</code></a></span></li>
@@ -36,6 +36,40 @@ Inherits from OpenAILanguageModel as Stepfun provides an OpenAI-compatible API.
 </ul>
 </details>
 }}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StepfunLanguageModel-build_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-StepfunLanguageModel-build_payload}{}}}
+\subsection{Method \code{build_payload()}}{
+Build the payload for the Stepfun API.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StepfunLanguageModel$build_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of parameters for the API call.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StepfunLanguageModel-build_stream_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-StepfunLanguageModel-build_stream_payload}{}}}
+\subsection{Method \code{build_stream_payload()}}{
+Build the stream payload for the Stepfun API.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StepfunLanguageModel$build_stream_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of parameters for the API call.}
+}
+\if{html}{\out{</div>}}
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StepfunLanguageModel-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-StepfunLanguageModel-clone}{}}}

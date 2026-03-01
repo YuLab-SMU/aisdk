@@ -65,13 +65,26 @@ VolcengineProvider <- R6::R6Class(
         },
 
         #' @description Create a language model.
-        #' @param model_id The model ID (e.g., "doubao-1-5-pro-256k-250115").
+        #' @param model_id The model ID (e.g., "doubao-1-5-pro-256k-250115" or "gpt-4o").
         #' @return A VolcengineLanguageModel object.
         language_model = function(model_id = NULL) {
             model_id <- model_id %||% Sys.getenv("ARK_MODEL")
             if (is.null(model_id) || model_id == "") {
                 rlang::abort("Model ID not provided and ARK_MODEL environment variable not set.")
             }
+
+            # Mapping for common model IDs to Volcengine/Ark equivalents
+            mapping <- list(
+                "gpt-4o" = "doubao-1-5-pro-256k-250115",
+                "gpt-4o-mini" = "doubao-1-5-lite-128k-250115",
+                "deepseek-chat" = "deepseek-v3",
+                "deepseek-reasoner" = "deepseek-r1"
+            )
+
+            if (model_id %in% names(mapping)) {
+                model_id <- mapping[[model_id]]
+            }
+
             VolcengineLanguageModel$new(model_id, private$config)
         }
     )
