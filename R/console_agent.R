@@ -21,9 +21,9 @@ NULL
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' tools <- create_console_tools()
-#' # Use with an agent or session
-#' session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
+#'     tools <- create_console_tools()
+#'     # Use with an agent or session
+#'     session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
 #' }
 #' }
 create_console_tools <- function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
@@ -35,6 +35,93 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 
     # Additional console-specific tools
     console_specific <- list(
+        # Interactive prompt: ask user questions mid-conversation
+        tool(
+            name = "ask_user",
+            description = paste(
+                "Ask the user a question interactively in the terminal.",
+                "Use this when you need user input, confirmation, or a choice between options.",
+                "For multiple-choice: provide 'choices' as an array of option strings.",
+                "For yes/no confirmation: omit 'choices' and set 'confirm' to true.",
+                "For free-text input: omit 'choices' and set 'confirm' to false (default).",
+                "Examples: choosing a package, confirming destructive operations, getting preferences."
+            ),
+            parameters = z_object(
+                question = z_string("The question to present to the user"),
+                choices = z_array(
+                    z_string("A choice option"),
+                    description = "List of options for numbered selection. Omit for yes/no or free-text."
+                ),
+                confirm = z_boolean("If true (and no choices), present a Yes/No prompt. Default: false.")
+            ),
+            execute = function(question, choices = NULL, confirm = FALSE) {
+                if (!interactive()) {
+                    return("Error: Cannot prompt user in non-interactive session.")
+                }
+
+                if (!is.null(choices) && length(choices) > 0) {
+                    selection <- console_menu(question, choices)
+                    if (is.null(selection)) return("User cancelled the selection.")
+                    return(paste0("User selected option ", selection, ": ", choices[[selection]]))
+                }
+
+                if (isTRUE(confirm)) {
+                    result <- console_confirm(question)
+                    if (is.null(result)) return("User cancelled.")
+                    return(if (result) "User confirmed: Yes" else "User declined: No")
+                }
+
+                response <- console_input(question)
+                if (is.null(response)) return("User provided no input.")
+                paste("User responded:", response)
+            },
+            layer = "llm"
+        ),
+
+        # Execute R code locally in Global Environment
+        tool(
+            name = "execute_r_code_local",
+            description = paste(
+                "Execute R code directly in the user's current LIVE R session (Global Environment).",
+                "Use this tool ONLY when you need to create, modify, or interact with variables in the user's workspace.",
+                "If local mode is not enabled, the user will be prompted to grant permission interactively."
+            ),
+            parameters = z_object(
+                code = z_string("The R code to execute in the user's global environment")
+            ),
+            execute = function(args) {
+                if (!isTRUE(args$.envir$.local_mode)) {
+                    if (interactive()) {
+                        confirmed <- console_confirm(
+                            "This operation requires local execution mode. Enable it now?"
+                        )
+                        if (isTRUE(confirmed)) {
+                            assign(".local_mode", TRUE, envir = args$.envir)
+                            cli::cli_alert_success("Local execution mode enabled.")
+                        } else {
+                            return("User declined to enable local execution mode. Operation cancelled.")
+                        }
+                    } else {
+                        return("Error: Local execution is disabled and cannot prompt in non-interactive session.")
+                    }
+                }
+
+                result <- tryCatch(
+                    {
+                        capture.output(eval(parse(text = args$code), envir = globalenv()))
+                    },
+                    error = function(e) {
+                        return(paste("Error:", conditionMessage(e)))
+                    }
+                )
+                if (length(result) == 0) {
+                    return("Execution complete. No text output.")
+                }
+                paste("Execution complete. Output:\n", paste(result, collapse = "\n"))
+            },
+            layer = "computer"
+        ),
+
         # List directory with details
         tool(
             name = "list_directory",
@@ -227,14 +314,14 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Create default console agent
-#' agent <- create_console_agent()
+#'     # Create default console agent
+#'     agent <- create_console_agent()
 #'
-#' # Create with custom working directory
-#' agent <- create_console_agent(working_dir = "~/projects/myapp")
+#'     # Create with custom working directory
+#'     agent <- create_console_agent(working_dir = "~/projects/myapp")
 #'
-#' # Use with console_chat
-#' console_chat("openai:gpt-4o", agent = agent)
+#'     # Use with console_chat
+#'     console_chat("openai:gpt-4o", agent = agent)
 #' }
 #' }
 create_console_agent <- function(working_dir = if (interactive()) getwd() else tempdir(),
@@ -292,23 +379,36 @@ build_console_system_prompt <- function(working_dir, sandbox_mode, language) {
 
 You have access to powerful tools to help users interact with their computer:
 
+- **ask_user**: Ask the user questions interactively (choices, confirmations, free-text)
 - **bash**: Execute any shell/terminal command
 - **read_file**: Read file contents
 - **write_file**: Create or modify files
-- **execute_r_code**: Run R code for data analysis and computation
+- **execute_r_code**: Run R code for data analysis and computation (Sandboxed)
+- **execute_r_code_local**: Run R code directly in the user's workspace (auto-prompts for permission)
 - **list_directory**: List files and directories with details
 - **find_files**: Search for files by pattern
 - **get_system_info**: Get system and R environment information
 - **get_environment**: Check environment variables
 
+## Interactive Prompts
+
+Use **ask_user** to get real-time feedback from the user during task execution:
+
+- **Multiple choice**: When there are several valid approaches (e.g., which plotting library, which file format)
+- **Confirmation**: Before destructive operations (delete, overwrite) or operations with side effects
+- **Free-text input**: When you need specific values (file paths, variable names, parameters)
+
+Prefer interactive prompts over generating text that asks the user to reply. This provides a much better UX.
+
 ## Guidelines
 
 1. **Understand intent**: Parse the user's natural language request carefully
 2. **Plan before acting**: For complex multi-step tasks, briefly explain your approach
-3. **Be informative**: Show relevant output and explain results clearly
-4. **Be safe**: Avoid destructive operations without explicit user confirmation
-5. **Be efficient**: Use the most appropriate tool for each task
-6. **Be helpful**: Suggest next steps or related commands when useful
+3. **Ask when uncertain**: Use ask_user for clarification instead of guessing
+4. **Be informative**: Show relevant output and explain results clearly
+5. **Be safe**: Confirm destructive operations via ask_user before proceeding
+6. **Be efficient**: Use the most appropriate tool for each task
+7. **Be helpful**: Suggest next steps or related commands when useful
 
 ## Language
 

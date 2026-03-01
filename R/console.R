@@ -32,30 +32,32 @@ NULL
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Start with default agent (intelligent terminal mode)
-#' console_chat("openai:gpt-4o")
+#'   # Start with default agent (intelligent terminal mode)
+#'   console_chat("openai:gpt-4o")
 #'
-#' # Simple chat mode without tools
-#' console_chat("openai:gpt-4o", agent = NULL)
+#'   # Simple chat mode without tools
+#'   console_chat("openai:gpt-4o", agent = NULL)
 #'
-#' # Start with an existing session
-#' chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
-#' console_chat(chat)
+#'   # Start with an existing session
+#'   chat <- create_chat_session("anthropic:claude-3-5-sonnet-latest")
+#'   console_chat(chat)
 #'
-#' # Start with a custom agent
-#' agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
-#' console_chat("openai:gpt-4o", agent = agent)
+#'   # Start with a custom agent
+#'   agent <- create_agent("MathAgent", "Does math", system_prompt = "You are a math wizard.")
+#'   console_chat("openai:gpt-4o", agent = agent)
 #'
-#' # Available commands in the chat:
-#' # /quit or /exit - End the chat
-#' # /save [path]   - Save session to file
-#' # /load [path]   - Load session from file
-#' # /model [id]    - Switch to a different model
-#' # /history       - Show conversation history
-#' # /stats         - Show token usage statistics
-#' # /clear         - Clear conversation history
-#' # /help          - Show available commands
-#' # /agent [on|off] - Toggle agent mode
+#'   # Available commands in the chat:
+#'   # /quit or /exit - End the chat
+#'   # /save [path]   - Save session to file
+#'   # /load [path]   - Load session from file
+#'   # /model [id]    - Switch to a different model
+#'   # /history       - Show conversation history
+#'   # /stats         - Show token usage statistics
+#'   # /clear         - Clear conversation history
+#'   # /stream [on|off] - Toggle streaming mode
+#'   # /local [on|off]- Toggle local execution mode (Global Environment)
+#'   # /help          - Show available commands
+#'   # /agent [on|off] - Toggle agent mode
 #' }
 #' }
 console_chat <- function(session = NULL,
@@ -87,8 +89,39 @@ console_chat <- function(session = NULL,
 
   # Create or use existing session
   if (is.null(session)) {
-    cli::cli_alert_warning("No model specified. Use /model <id> to set a model.")
-    session <- ChatSession$new()
+    cli::cli_alert_warning("No model specified.")
+    model_id <- console_input(
+      "Enter model ID (e.g., openai:gpt-4o), or press Enter to skip"
+    )
+    if (!is.null(model_id) && nzchar(model_id)) {
+      session <- tryCatch(
+        create_chat_session(
+          model = model_id,
+          system_prompt = system_prompt,
+          tools = tools,
+          hooks = hooks,
+          agent = agent
+        ),
+        error = function(e) {
+          cli::cli_alert_danger("Failed to set model: {conditionMessage(e)}")
+          cli::cli_alert_info("Use {.code /model <id>} to set a model later.")
+          create_chat_session(
+            system_prompt = system_prompt,
+            tools = tools,
+            hooks = hooks,
+            agent = agent
+          )
+        }
+      )
+    } else {
+      cli::cli_alert_info("Use {.code /model <id>} to set a model later.")
+      session <- create_chat_session(
+        system_prompt = system_prompt,
+        tools = tools,
+        hooks = hooks,
+        agent = agent
+      )
+    }
   } else if (is.character(session)) {
     session <- create_chat_session(
       model = session,
@@ -239,6 +272,7 @@ handle_command <- function(input, session, stream) {
         "{.code /stats} - Show token usage statistics",
         "{.code /clear} - Clear conversation history",
         "{.code /stream [on|off]} - Toggle streaming mode",
+        "{.code /local [on|off]} - Toggle local execution mode",
         "{.code /help} - Show this help message"
       ))
     },
@@ -351,6 +385,23 @@ handle_command <- function(input, session, stream) {
         }
       }
     },
+    "/local" = {
+      if (length(args) == 0) {
+        mode_status <- if (isTRUE(session$get_envir()$.local_mode)) "on" else "off"
+        cli::cli_text("Local execution: {.val {mode_status}}")
+      } else {
+        arg <- tolower(args[1])
+        if (arg %in% c("on", "true", "1", "yes")) {
+          assign(".local_mode", TRUE, envir = session$get_envir())
+          cli::cli_alert_success("Local execution mode enabled. The agent can now modify your workspace.")
+        } else if (arg %in% c("off", "false", "0", "no")) {
+          assign(".local_mode", FALSE, envir = session$get_envir())
+          cli::cli_alert_success("Local execution mode disabled.")
+        } else {
+          cli::cli_alert_danger("Usage: {.code /local [on|off]}")
+        }
+      }
+    },
 
     # Unknown command
     {
@@ -360,6 +411,97 @@ handle_command <- function(input, session, stream) {
   )
 
   result
+}
+
+# ── Interactive Prompt Utilities ──────────────────────────────────────────────
+
+#' @title Console Interactive Menu
+#' @description
+#' Present a numbered list of choices and return the user's selection.
+#' Styled with cli to match the console chat interface. Similar to
+#' \code{utils::menu()} but with cli formatting.
+#'
+#' @param title The question or prompt to display.
+#' @param choices Character vector of options to present.
+#' @return The index of the selected choice (integer), or \code{NULL} if
+#'   cancelled (user enters 'q' or empty input).
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'   selection <- console_menu("Which database?", c("PostgreSQL", "SQLite", "DuckDB"))
+#' }
+#' }
+console_menu <- function(title, choices) {
+  if (!interactive()) return(NULL)
+  cli::cli_text("")
+  cli::cli_alert_info(title)
+  for (i in seq_along(choices)) {
+    cli::cli_text("  {i}: {choices[[i]]}")
+  }
+  cli::cli_text("")
+  repeat {
+    response <- readline("Selection: ")
+    response <- trimws(response)
+    if (!nzchar(response) || tolower(response) == "q") return(NULL)
+    num <- suppressWarnings(as.integer(response))
+    if (!is.na(num) && num >= 1 && num <= length(choices)) {
+      return(num)
+    }
+    cli::cli_alert_warning("Enter a number between 1 and {length(choices)}, or press Enter to cancel.")
+  }
+}
+
+#' @title Console Confirmation Prompt
+#' @description
+#' Ask a yes/no question with numbered choices. Returns \code{TRUE} for yes,
+#' \code{FALSE} for no, or \code{NULL} if cancelled.
+#'
+#' @param question The question to display.
+#' @return \code{TRUE} if user selects Yes, \code{FALSE} for No, \code{NULL}
+#'   if cancelled.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'   if (isTRUE(console_confirm("Overwrite existing file?"))) {
+#'     message("Overwriting...")
+#'   }
+#' }
+#' }
+console_confirm <- function(question) {
+  if (!interactive()) return(NULL)
+  selection <- console_menu(question, c("Yes", "No"))
+  if (is.null(selection)) return(NULL)
+  selection == 1L
+}
+
+#' @title Console Text Input
+#' @description
+#' Prompt the user for free-text input with optional default value.
+#'
+#' @param prompt The prompt message to display.
+#' @param default Optional default value shown in brackets. Returned if user
+#'   presses Enter without typing.
+#' @return The user's input string, \code{default} if empty input and default
+#'   is set, or \code{NULL} if empty input with no default.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'   name <- console_input("Project name", default = "my-project")
+#'   api_key <- console_input("API key")
+#' }
+#' }
+console_input <- function(prompt, default = NULL) {
+  if (!interactive()) return(default)
+  hint <- if (!is.null(default)) paste0(" [", default, "]") else ""
+  cli::cli_text("")
+  response <- readline(paste0("  ", prompt, hint, ": "))
+  response <- trimws(response)
+  if (!nzchar(response) && !is.null(default)) return(default)
+  if (!nzchar(response)) return(NULL)
+  response
 }
 
 # Null-coalescing operator
