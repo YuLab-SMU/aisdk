@@ -5,7 +5,7 @@ Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre")
 Description: A production-grade AI SDK for R featuring a layered architecture
     (Specification, Utilities, Providers, Core), middleware support, robust
     error handling with exponential backoff, support for multiple AI model
-    providers (OpenAI, Anthropic, etc.), local SLM inference, distributed MCP
+    providers ('OpenAI', 'Anthropic', etc.), local SLM inference, distributed 'MCP'
     ecosystem, multi-agent orchestration, progressive knowledge loading through
     skills, and a global skill store for sharing AI capabilities.
 License: MIT + file LICENSE
