@@ -1,8 +1,10 @@
 Package: aisdk
 Title: AI SDK for R - Unified Interface for AI Model Providers
 Version: 1.0.0
-Authors@R: 
-    person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
+Authors@R: c(
+    person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre")),
+    person(, role = "ctb")
+  )
 Description: A production-grade AI SDK for R featuring a layered architecture
     (Specification, Utilities, Providers, Core), middleware support, robust
     error handling with exponential backoff, support for multiple AI model
