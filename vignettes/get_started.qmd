@@ -138,6 +138,26 @@ response <- generate_text(
 cat(response$text)
 ```
 
+### 7. Interactive Console Chat
+
+For a more interactive experience, **aisdk** provides a built-in REPL (Read-Eval-Print Loop) called `console_chat()`. This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.
+
+```{r}
+# Start an interactive chat with an intelligent agent (default)
+# console_chat("openai:gpt-4o")
+
+# Start a simple chat without agent tools
+# console_chat("openai:gpt-4o", agent = NULL)
+```
+
+While in the console, you can use slash commands to manage the session:
+
+* `/help`: Show all available commands.
+* `/model <id>`: Switch the model on the fly.
+* `/save [path]` / `/load <path>`: Persist and restore sessions.
+* `/clear`: Reset the conversation history.
+* `/quit`: Exit the interactive session.
+
 ## Next Steps
 
 Explore the following vignettes for more advanced features:
