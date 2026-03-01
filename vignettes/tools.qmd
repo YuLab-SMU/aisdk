@@ -1,0 +1,139 @@
+---
+title: "Using Tools"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using Tools}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+Tools allow AI models to perform actions like fetching real-time data, interacting with the filesystem, or executing complex calculations in R. In **aisdk**, tools are first-class objects that bridge the gap between LLM function calling and R functions.
+
+## Defining Tools
+
+A tool consists of a `name`, a `description` (for the LLM), a `parameters` schema, and an `execute` function.
+
+### The Schema DSL
+
+**aisdk** provides a Zod-like DSL for defining JSON Schema structure in R. This ensures the LLM provides valid arguments and enables automatic documentation generation.
+
+| Helper | JSON Type | R Type |
+|--------|-----------|--------|
+| `z_string()` | `string` | `character` |
+| `z_number()` | `number` | `numeric` |
+| `z_integer()` | `integer` | `integer` |
+| `z_boolean()` | `boolean` | `logical` |
+| `z_enum()` | `string` | `character` (subset) |
+| `z_object()` | `object` | `list` |
+| `z_array()` | `array` | `list` |
+| `z_dataframe()`| `array` | `list` of `objects` |
+
+### Example: A Scientific Calculator Tool
+
+```{r}
+library(aisdk)
+
+calc_tool <- tool(
+  name = "calculate",
+  description = "Perform a mathematical calculation on two numbers",
+  parameters = z_object(
+    a = z_number("The first number"),
+    b = z_number("The second number"),
+    operation = z_enum(c("add", "subtract", "multiply", "divide"), "The operator")
+  ),
+  execute = function(args) {
+    a <- args$a
+    b <- args$b
+    op <- args$operation
+
+    switch(op,
+      add = a + b,
+      subtract = a - b,
+      multiply = a * b,
+      divide = if (b != 0) a / b else "Error: Division by zero"
+    )
+  }
+)
+```
+
+## Using Tools
+
+You can use tools with `generate_text()` or with an `Agent`.
+
+### With `generate_text()`
+
+```{r}
+model <- create_openai()$language_model("gpt-4o")
+
+result <- generate_text(
+  model = model,
+  prompt = "What is 123 multiplied by 456?",
+  tools = list(calc_tool)
+)
+
+cat(result$text)
+# > "The result of 123 multiplied by 456 is 56088."
+```
+
+## The Execution Environment
+
+Inside the `execute` function, you can access the current session environment via `args$.envir`. This allows tools to share state (like data frames or models) across multiple steps.
+
+```{r}
+state_tool <- tool(
+  name = "save_state",
+  description = "Save a value to the session environment",
+  parameters = z_object(
+    key = z_string("Variable name"),
+    value = z_any("Value to save")
+  ),
+  execute = function(args) {
+    # .envir is automatically injected by the SDK
+    env <- args$.envir
+    if (!is.null(env)) {
+      env[[args$key]] <- args$value
+      return(paste("Saved", args$key, "to session."))
+    }
+    "Error: No session environment found."
+  }
+)
+```
+
+## Advanced Patterns
+
+### Tool Layers
+You can categorize tools into "layers" for better organization.
+```{r}
+my_tool <- tool(..., layer = "data_analysis")
+```
+
+### Read-Only vs. State-Mutating
+
+When building autonomous agents, it is a best practice to strictly separate tools by their side effects:
+
+- **Read-Only**: Tools that fetch data (e.g., `read_file`, `query_database`). These can typically be executed automatically.
+- **State-Mutating**: Tools that change the environment or external systems (e.g., `write_file`, `execute_query`). 
+
+You can use the `aisdk` **Permission Hooks** and **Human-in-the-Loop (HITL)** system to automatically pause execution and require explicit user approval whenever an agent attempts to call a state-mutating tool.
+
+### Automatic Repair
+**aisdk** includes built-in mechanisms to repair small JSON errors in tool arguments and fuzzy-match tool names if the LLM makes a minor typo.
+
+### Computer Abstraction
+The `create_computer_tools()` function provides a standardized set of tools for filesystem and bash operations, complete with safety sandboxing.
+
+```{r}
+computer_tools <- create_computer_tools(working_dir = getwd())
+# Includes: bash, read_file, write_file, execute_r_code
+```
+
+For more details on computer tools, see the [Computer Abstraction](computer_abstraction.html) vignette.
+

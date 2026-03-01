@@ -1,0 +1,98 @@
+---
+title: "Structured Outputs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Structured Outputs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+In many AI applications, you need the model to return data in a specific, machine-readable format (like JSON) rather than free-form text. **aisdk** provides robust support for structured outputs using JSON Schema.
+
+## Using `generate_text` with `response_format`
+
+The primary way to get structured data is to pass a `z_schema` to the `response_format` argument of `generate_text()`.
+
+```{r}
+library(aisdk)
+
+# 1. Define your data structure
+recipe_schema <- z_object(
+  name = z_string("Name of the dish"),
+  ingredients = z_array(z_string(), "List of ingredients"),
+  prep_time_mins = z_integer("Preparation time in minutes")
+)
+
+# 2. Request structured output
+model <- create_openai()$language_model("gpt-4o")
+
+result <- generate_text(
+  model = model,
+  prompt = "Give me a simple recipe for a classic Omelette.",
+  response_format = recipe_schema
+)
+
+# The result$object contains the parsed R list
+print(result$object$name)
+print(result$object$ingredients)
+```
+
+## Extracting Tabular Data
+
+The `z_dataframe()` helper is specifically designed for extracting lists of objects that can be easily converted into an R `data.frame`.
+
+```{r}
+# Define a schema for a list of genes
+gene_schema <- z_dataframe(
+  gene_symbol = z_string("Standard gene symbol"),
+  fold_change = z_number("Log2 fold change value"),
+  p_value = z_number("Adjusted p-value")
+)
+
+result <- generate_text(
+  model = model,
+  prompt = "Extract gene expression data: BRCA1 (FC=2.5, p=0.01), TP53 (FC=-1.2, p=0.04).",
+  response_format = gene_schema
+)
+
+# Convert to a tidy data frame
+library(dplyr)
+df <- bind_rows(result$object)
+print(df)
+```
+
+## How it Works
+
+When you provide a `response_format`, **aisdk** intelligently determines the best way to interact with the LLM API:
+1.  **Native Format Constraints**: For providers that support it (like OpenAI and Anthropic), it utilizes their native "JSON Mode" or strict "Structured Outputs" feature to guarantee the output matches the schema.
+2.  **Prompt Injection & Repair**: For providers that lack native JSON schema support (like Stepfun or some Volcengine models), `aisdk` gracefully falls back. It automatically appends the formalized JSON Schema into the system prompt, requests JSON output, and performs post-generation validation and automatic structural repair.
+
+## Nested Structures
+
+The Schema DSL supports arbitrary nesting, allowing you to model complex hierarchical data.
+
+```{r}
+report_schema <- z_object(
+  metadata = z_object(
+    author = z_string(),
+    timestamp = z_string()
+  ),
+  sections = z_array(
+    z_object(
+      title = z_string(),
+      content = z_string(),
+      word_count = z_integer()
+    )
+  )
+)
+```
+
+For a detailed list of all available schema helpers, see the [Tools](tools.html) vignette.

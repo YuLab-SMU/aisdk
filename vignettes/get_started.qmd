@@ -1,0 +1,148 @@
+---
+title: "Get Started with aisdk"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Get Started with aisdk}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+    eval: false
+---
+
+**aisdk** is a production-grade AI SDK for R, providing a unified interface for multiple AI model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.). It features a layered architecture, robust error handling, and advanced capabilities like multi-agent orchestration and a distributed MCP (Model Context Protocol) ecosystem.
+
+## Installation
+
+You can install the development version from GitHub:
+
+```{r}
+# install.packages("devtools")
+devtools::install_github("YuLab-SMU/aisdk")
+```
+
+## Basic Usage
+
+### 1. Configuration
+
+Load the library and set your API keys as environment variables. We recommend using an `.Renviron` file for persistence.
+
+```{r}
+library(aisdk)
+
+# Set API keys (Example)
+# Sys.setenv(OPENAI_API_KEY = "sk-...")
+# Sys.setenv(ANTHROPIC_API_KEY = "sk-ant-...")
+```
+
+### 2. Creating a Model
+
+Create a model instance using provider factory functions.
+
+```{r}
+# Create an OpenAI model
+model <- create_openai()$language_model("gpt-4o")
+
+# Create an Anthropic / Gemini model
+# model <- create_anthropic()$language_model("claude-3-5-sonnet-20241022")
+# model <- create_gemini()$language_model("gemini-1.5-pro")
+
+# Create models from other supported providers (DeepSeek, Volcengine, Stepfun, etc.)
+# model <- create_deepseek()$language_model("deepseek-chat")
+# model <- create_volcengine()$language_model("your-endpoint-id")
+# model <- create_stepfun()$language_model("step-1-8k")
+```
+
+### 3. Generating Text
+
+Use `generate_text()` for simple request-response interactions.
+
+```{r}
+# Simple prompt
+response <- generate_text(
+  model = model,
+  prompt = "What are the advantages of using R6 classes in R?"
+)
+
+cat(response$text)
+
+# Using a system prompt for behavior control
+response <- generate_text(
+  model = model,
+  system = "You are a helpful R programming expert.",
+  prompt = "Explain the difference between `lapply` and `sapply`."
+)
+```
+
+### 4. Streaming Responses
+
+For real-time output, use `stream_text()` with a callback.
+
+```{r}
+stream_text(
+  model = model,
+  prompt = "Write a short poem about data science.",
+  callback = function(chunk, done) {
+    if (!done) cat(chunk)
+  }
+)
+```
+
+### 5. Managing State with ChatSession
+
+For stateful conversations, use `ChatSession`. It automatically manages history and provides a higher-level API.
+
+```{r}
+# Initialize a session
+session <- ChatSession$new(model = model)
+
+# First message
+res1 <- session$send("Hi, I'm analyzing gene expression data.")
+cat(res1$text)
+
+# Second message (context is preserved)
+res2 <- session$send("What R packages would you recommend for normalization?")
+cat(res2$text)
+
+# Check history
+# session$history()
+```
+
+### 6. Tools and Function Calling
+
+**aisdk** makes it easy to give LLMs access to R functions.
+
+```{r}
+# Define a tool using the schema DSL
+weather_tool <- tool(
+  name = "get_weather",
+  description = "Get current weather for a city",
+  parameters = z_object(
+    city = z_string("The city name, e.g., Beijing")
+  ),
+  execute = function(args) {
+    paste("The weather in", args$city, "is sunny, 25°C.")
+  }
+)
+
+# Use the tool
+response <- generate_text(
+  model = model,
+  prompt = "What's the weather like in Shanghai?",
+  tools = list(weather_tool)
+)
+
+cat(response$text)
+```
+
+## Next Steps
+
+Explore the following vignettes for more advanced features:
+
+- [Agents](agents.html): Build specialized AI workers and multi-agent systems.
+- [Tools](tools.html): Deep dive into the Tool system and Schema DSL.
+- [Sessions](sessions.html): Advanced session management and persistence.
+- [MCP](mcp.html): Connect to external tools via the Model Context Protocol.
+- [Skills](skills.html): Progressive knowledge loading for agents.

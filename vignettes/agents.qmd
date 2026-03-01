@@ -1,0 +1,116 @@
+---
+title: "Building Agents"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Building Agents}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+In **aisdk**, an **Agent** is a specialized AI worker. While a `ChatSession` holds conversation state, an `Agent` holds **capability**: a persona (system prompt), a set of tools, and optionally, a specialized library of skills.
+
+## The Agent Class
+
+Agents are implemented as R6 classes. You can create one using the `Agent$new()` constructor or the `create_agent()` factory function.
+
+```{r}
+library(aisdk)
+
+# Create a specialized Research Agent
+researcher <- create_agent(
+  name = "Researcher",
+  description = "Finds and summarizes information on specific topics",
+  system_prompt = "You are a professional researcher. Provide citations for your findings."
+)
+
+print(researcher)
+```
+
+## Running an Agent
+
+Use the `$run()` method to give the agent a task.
+
+```{r}
+model <- create_openai()$language_model("gpt-4o")
+
+result <- researcher$run(
+  task = "Summarize the latest trends in R package development for 2025.",
+  model = model
+)
+
+cat(result$text)
+```
+
+## Agent Library
+
+The `aisdk` package includes a library of pre-configured specialists. These are optimized for common data science tasks.
+
+```{r}
+# A Coder agent with a built-in R execution sandbox
+coder <- create_coder_agent()
+
+# A Visualizer agent optimized for ggplot2
+visualizer <- create_visualizer_agent()
+
+# A Planner agent for breaking down complex objectives
+planner <- create_planner_agent()
+```
+
+## Agent Autonomy and Safety
+
+When agents execute code dynamically (e.g., using the Coder agent's sandbox), **aisdk** provides a sophisticated security model to keep your environment safe:
+
+1. **AST Static Analysis**: Before any LLM-generated R code is executed, `check_ast_safety()` analyzes the Abstract Syntax Tree. It silently blocks forbidden functions (like `system()`) and flags potentially risky ones (like `unlink()`).
+2. **Variable Registry**: Protect critical session variables from being shadowed, modified, or heavily copied by the agent. Use `sdk_protect_var("my_important_df", locked = TRUE, cost = "High")`.
+3. **Human-in-the-Loop (HITL)**: For "YELLOW" risk operations (like writing files or modifying the global environment), `request_authorization()` automatically pauses execution and prompts the user for explicit permission via the console before proceeding.
+
+## Multi-Agent Orchestration
+
+Agents can work together using an `AgentRegistry` and a `Flow`. A "Manager" agent can delegate tasks to "Worker" agents based on their descriptions.
+
+```{r}
+# 1. Register specialists
+registry <- create_agent_registry(list(coder, visualizer))
+
+# 2. Create a Flow with a shared session
+session <- ChatSession$new(model = model)
+flow <- Flow$new(session = session, registry = registry)
+
+# 3. Create a Manager agent
+manager <- create_agent(
+  name = "Manager",
+  description = "Orchestrates data analysis tasks",
+  system_prompt = "You are a project manager. Delegate tasks to Coder or Visualizer as needed."
+)
+
+# 4. Run the coordinated flow
+# The Manager will automatically get tools like 'delegate_to_CoderAgent'
+result <- flow$run(
+  agent = manager,
+  task = "Load the 'iris' dataset, calculate means by species, and plot the result."
+)
+```
+
+## Low-Level Control
+
+You can manually convert an agent into a tool that another agent (or `generate_text`) can call:
+
+```{r}
+coder_tool <- coder$as_tool()
+
+response <- generate_text(
+  model = model,
+  prompt = "Write a function to calculate Fibonacci numbers.",
+  tools = list(coder_tool)
+)
+```
+
+For more advanced agent behaviors, see the [Skills](skills.html) vignette.

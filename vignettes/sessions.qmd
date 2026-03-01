@@ -1,0 +1,108 @@
+---
+title: "Chat Sessions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Chat Sessions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+A `ChatSession` is the central object for managing stateful conversations. It handles message history, tool execution state, model switching, and serialization.
+
+## Creating a Session
+
+You can create a session directly or through an agent.
+
+```{r}
+library(aisdk)
+
+model <- create_openai()$language_model("gpt-4o")
+
+# Option 1: Direct creation
+session <- ChatSession$new(
+  model = model,
+  system_prompt = "You are a helpful R expert."
+)
+
+# Option 2: From an agent (inherits agent's tools and persona)
+# coder <- create_coder_agent()
+# session <- coder$create_session(model = model)
+```
+
+## Basic Interaction
+
+Use `$send()` for standard requests and `$send_stream()` for streaming responses.
+
+```{r}
+# Send a message
+response <- session$send("How do I use R6 classes?")
+cat(response$text)
+
+# The session automatically remembers the history
+response2 <- session$send("Can you give me a code example?")
+cat(response2$text)
+```
+
+## Model Switching
+
+You can switch the underlying model at any point. The conversation history remains intact.
+
+```{r}
+# Switch to a different model mid-session
+session$switch_model("anthropic:claude-3-5-sonnet-20241022")
+
+# Continue the conversation with the new model
+session$send("Now rewrite that example using S4.")
+```
+
+## State Management
+
+Sessions provide a shared environment and a "memory" list, which are essential for multi-agent systems where agents need to share data.
+
+### Shared Environment (`.envir`)
+This is a real R environment where agents can store and retrieve data frames, models, and other objects.
+```{r}
+env <- session$get_envir()
+env$data <- iris
+
+# Agents with tool access can now see 'data'
+```
+
+### Shared Memory
+A simple key-value store for metadata or state flags.
+```{r}
+session$set_memory("current_status", "processing_data")
+status <- session$get_memory("current_status")
+```
+
+## Persistence
+
+Sessions can be saved to disk as RDS or JSON files and restored later.
+
+```{r}
+# Save session state
+session$save("my_analysis.json")
+
+# Restore session in a new process
+new_session <- ChatSession$new(model = model)
+new_session$restore("my_analysis.json")
+```
+
+## Console Chat
+
+For a quick interactive REPL experience in the R console, use `console_chat()`.
+
+```{r}
+# Starts an interactive chat loop in the console
+# console_chat(model = "openai:gpt-4o")
+```
+
+For more details on how agents interact with sessions, see the [Agents](agents.html) vignette.

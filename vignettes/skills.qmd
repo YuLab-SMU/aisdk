@@ -1,0 +1,95 @@
+---
+title: "Skill System"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Skill System}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+The **Skill System** in `aisdk` implements a **Progressive Disclosure** pattern. This allows agents to access vast amounts of specialized knowledge and code without overwhelming the LLM's context window.
+
+## The 3-Level Disclosure Pattern
+
+1.  **Level 1 (Metadata)**: Only the skill name and a brief description are loaded initially. This is injected into the character's system prompt.
+2.  **Level 2 (Instructions)**: If the agent decides a skill is relevant, it calls `load_skill()`. This returns the full `SKILL.md` content (detailed guidelines, examples, etc.).
+3.  **Level 3 (Implementation)**: The agent can then browse and execute specific R scripts within the skill's `scripts/` directory or read reference files in `assets/`.
+
+## Skill Structure
+
+A skill is a directory (often stored in a global `skills/` folder) with the following structure:
+
+```text
+my_skill/
+├── SKILL.md       # Required: Metadata (YAML) + Instructions (Markdown)
+├── scripts/       # Optional: R scripts for the agent to run
+│   └── analyze.R
+└── assets/        # Optional: Reference data, schemas, or templates
+    └── template.json
+```
+
+### Example: `data_cleaner/SKILL.md`
+
+```markdown
+---
+name: data_cleaner
+description: Specialized tools for cleaning and prehistoric R data frames.
+---
+# Data Cleaning Guidelines
+- Always check for NAs before summarizing.
+- Use `clean_names.R` to normalize column headers.
+```
+
+## Using Skills with Agents
+
+Agents can automatically load skills from a directory.
+
+```{r}
+library(aisdk)
+
+# Create an agent that 'auto-discovers' skills in a specific path
+agent <- create_agent(
+  name = "Analyst",
+  description = "Data analyst with specialized skills",
+  skills = "./my_project/skills" # Path to your skills directory
+)
+
+# When running, the agent will see 'data_cleaner' in its available tools list.
+model <- create_openai()$language_model("gpt-4o")
+result <- agent$run("Clean the 'dirty_data' frame in the session.", model = model)
+```
+
+## Manual Skill Management
+
+You can also use a `SkillRegistry` for more fine-grained control.
+
+```{r}
+# 1. Create a registry
+registry <- create_skill_registry("./skills")
+
+# 2. Add skills to a model interaction manually
+response <- generate_text(
+  model = model,
+  prompt = "Use the 'genomics' skill to identify markers.",
+  skills = registry
+)
+```
+
+## Skill Tools
+
+When an agent or `generate_text` is given a skill registry, the following tools are automatically injected:
+
+- `load_skill(skill_name)`: Loads the Level 2 instructions.
+- `list_skill_scripts(skill_name)`: Lists Level 3 scripts.
+- `execute_skill_script(skill_name, script_name, ...)`: Runs an R script.
+- `read_skill_resource(skill_name, resource_name)`: Reads an asset file.
+
+This layered approach ensures that the LLM only "pays" for the information it actually needs to solve the current task.

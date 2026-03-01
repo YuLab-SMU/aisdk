@@ -1,0 +1,98 @@
+---
+title: "Connectivity (MCP)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Connectivity (MCP)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+The **Model Context Protocol (MCP)** is an open standard that enables AI models to connect to external data sources and tools. `aisdk` provides a full-featured MCP client that can bridge any MCP server into your R-based agents.
+
+## Why MCP?
+
+Instead of writing custom R wrappers for every API, you can use existing MCP servers (available in Node.js, Python, and Go) to give your agents access to:
+- **Filesystems**: Local or cloud storage.
+- **APIs**: GitHub, Slack, Google Drive, etc.
+- **Databases**: Postgres, SQLite, MongoDB.
+- **Search**: Brave Search, Google Search.
+
+## Using the MCP Client
+
+The `McpClient` class manages the connection to an external MCP server process via `stdio`.
+
+### 1. Connecting to a Server
+
+You can start a server process using `create_mcp_client()`.
+
+```{r}
+library(aisdk)
+
+# Example: Connect to the SQLite MCP server
+sqlite_client <- create_mcp_client(
+  command = "npx",
+  args = c("-y", "@modelcontextprotocol/server-sqlite", "--db", "my_data.db")
+)
+
+# Handshake is performed automatically. Check if alive:
+sqlite_client$is_alive()
+```
+
+### 2. Discovering Tools
+
+Once connected, you can list the tools provided by the server.
+
+```{r}
+tools <- sqlite_client$list_tools()
+# Each tool has a name, description, and JSON Schema input parameters.
+```
+
+### 3. Integrating with aisdk Tools
+
+To use these tools with `generate_text` or an `Agent`, you must convert them into SDK-compatible `Tool` objects using `$as_sdk_tools()`.
+
+```{r}
+sdk_tools <- sqlite_client$as_sdk_tools()
+
+model <- create_openai()$language_model("gpt-4o")
+
+# Run a query using the MCP tools
+response <- generate_text(
+  model = model,
+  prompt = "Query the 'iris' table and tell me the average Sepal.Length.",
+  tools = sdk_tools
+)
+
+cat(response$text)
+```
+
+## Advanced Usage
+
+### Resources and Notifications
+The `McpClient` also supports reading **Resources** (static data/docs) and sending **Notifications** to the server.
+
+```{r}
+# List resources
+resources <- sqlite_client$list_resources()
+
+# Read a resource URI
+# data <- sqlite_client$read_resource("sqlite://main/table/iris/schema")
+```
+
+### Cleanup
+Always close the client connection to terminate the server process.
+
+```{r}
+sqlite_client$close()
+```
+
+## Community MCP Servers
+You can find hundreds of ready-to-use MCP servers in the [MCP Hub](https://mcphub.io) or the official [MCP GitHub repository](https://github.com/modelcontextprotocol/servers).

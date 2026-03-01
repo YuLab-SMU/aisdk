@@ -1,0 +1,69 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - index.qmd
+    - reference/
+    - vignettes/
+
+website:
+  title: "aisdk"
+  site-url: "https://YuLab-SMU.github.io/aisdk/"
+  description: "A production-grade AI SDK for R, providing a unified interface for multiple AI model providers, advanced multi-agent orchestration, and MCP integration."
+  repo-url: https://github.com/YuLab-SMU/aisdk
+  repo-actions: [edit, issue]
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - text: Articles
+        menu:
+          - href: vignettes/get_started.qmd
+            text: "Get Started"
+          - href: vignettes/agents.qmd
+            text: "Building Agents"
+          - href: vignettes/tools.qmd
+            text: "Using Tools"
+          - href: vignettes/sessions.qmd
+            text: "Chat Sessions"
+          - href: vignettes/structured_outputs.qmd
+            text: "Structured Outputs"
+          - href: vignettes/mcp.qmd
+            text: "Connectivity (MCP)"
+          - href: vignettes/skills.qmd
+            text: "Skill System"
+          - href: vignettes/computer_abstraction.qmd
+            text: "Computer Abstraction Layer"
+          - href: vignettes/integrations.qmd
+            text: "Shiny Integration"
+          - href: vignettes/enterprise.qmd
+            text: "Enterprise Operations"
+      - href: reference/index.qmd
+        text: Reference
+    right:
+      - icon: github
+        href: https://github.com/YuLab-SMU/aisdk
+        aria-label: GitHub
+
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    code-link: true
+    highlight-style: arrow
+
+execute:
+  eval: false
+  echo: true
+  warning: false
+
+knitr:
+  opts_chunk: 
+    collapse: true
+    comment: "#>"
+
