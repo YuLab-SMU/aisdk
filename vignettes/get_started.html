@@ -365,6 +365,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#streaming-responses" id="toc-streaming-responses" class="nav-link" data-scroll-target="#streaming-responses">4. Streaming Responses</a></li>
   <li><a href="#managing-state-with-chatsession" id="toc-managing-state-with-chatsession" class="nav-link" data-scroll-target="#managing-state-with-chatsession">5. Managing State with ChatSession</a></li>
   <li><a href="#tools-and-function-calling" id="toc-tools-and-function-calling" class="nav-link" data-scroll-target="#tools-and-function-calling">6. Tools and Function Calling</a></li>
+  <li><a href="#interactive-console-chat" id="toc-interactive-console-chat" class="nav-link" data-scroll-target="#interactive-console-chat">7. Interactive Console Chat</a></li>
   </ul>
 </li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next Steps</a></li>
@@ -489,7 +490,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-</section></section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
+</section><section id="interactive-console-chat" class="level3"><h3 class="anchored" data-anchor-id="interactive-console-chat">7. Interactive Console Chat</h3>
+<p>For a more interactive experience, <strong>aisdk</strong> provides a built-in REPL (Read-Eval-Print Loop) called <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>. This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Start an interactive chat with an intelligent agent (default)</span></span>
+<span><span class="co"># console_chat("openai:gpt-4o")</span></span>
+<span></span>
+<span><span class="co"># Start a simple chat without agent tools</span></span>
+<span><span class="co"># console_chat("openai:gpt-4o", agent = NULL)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>While in the console, you can use slash commands to manage the session:</p>
+<ul>
+<li>
+<code>/help</code>: Show all available commands.</li>
+<li>
+<code>/model &lt;id&gt;</code>: Switch the model on the fly.</li>
+<li>
+<code>/save [path]</code> / <code>/load &lt;path&gt;</code>: Persist and restore sessions.</li>
+<li>
+<code>/clear</code>: Reset the conversation history.</li>
+<li>
+<code>/quit</code>: Exit the interactive session.</li>
+</ul></section></section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
 <p>Explore the following vignettes for more advanced features:</p>
 <ul>
 <li>
