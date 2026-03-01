@@ -36,6 +36,7 @@ tryCatch({
   devtools::check(
     document = FALSE,
     cran = TRUE,
+    build_args = "--no-build-vignettes",
     args = c("--no-manual", "--no-vignettes", "--no-build-vignettes")
   )
   message("=> Check completed successfully.")

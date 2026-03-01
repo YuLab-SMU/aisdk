@@ -24,3 +24,5 @@
 ^index\.qmd$
 ^reference$
 ^scripts$
+^dev_docs$
+^vignettes$

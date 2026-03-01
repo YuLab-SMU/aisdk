@@ -30,6 +30,7 @@ src-x64/
 # Vignettes
 vignettes/*.html
 vignettes/*.pdf
+vignettes/.quarto/
 
 # Package files
 inst/doc

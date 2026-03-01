@@ -1,10 +1,7 @@
 Package: aisdk
 Title: AI SDK for R - Unified Interface for AI Model Providers
 Version: 1.0.0
-Authors@R: c(
-    person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre")),
-    person(, role = "ctb")
-  )
+Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
 Description: A production-grade AI SDK for R featuring a layered architecture
     (Specification, Utilities, Providers, Core), middleware support, robust
     error handling with exponential backoff, support for multiple AI model
@@ -15,7 +12,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-VignetteBuilder: knitr
 Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
         digest, parallel, stats, tools, utils, base64enc, curl
 Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,

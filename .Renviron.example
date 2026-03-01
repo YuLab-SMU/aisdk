@@ -1,5 +1,5 @@
 # ============================================
-# AISDK Project Environment Variables Template
+# AISDK Project Environment Variables Template (.Renviron)
 # ============================================
 # Copy this file to .Renviron and fill in your actual API keys
 # NEVER commit .Renviron to version control
@@ -9,35 +9,60 @@
 # Then copy the contents below into the file
 #
 # After editing .Renviron, restart your R session for changes to take effect
-# Or run: reload_env() to reload without restarting (requires loading helper-env.R)
 # ============================================
 
-# OpenAI API Key (for testing OpenAI provider)
-# Get your key from: https://platform.openai.com/api-keys
-OPENAI_API_KEY=
+# --- OpenAI ---
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4o"
+OPENAI_BASE_URL="https://api.openai.com/v1"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
 
-# OpenAI Model Name (for testing)
-# Common models: gpt-4o, gpt-4o-mini, gpt-3.5-turbo
-# Default: gpt-4o-mini
-OPENAI_MODEL=
+# --- Anthropic ---
+ANTHROPIC_API_KEY=""
+ANTHROPIC_MODEL="claude-3-5-sonnet-latest"
+ANTHROPIC_BASE_URL="https://api.anthropic.com"
 
-# OpenAI Embedding Model Name (for testing embedding)
-# Common models: text-embedding-3-small, text-embedding-3-large
-# Default: text-embedding-3-small
-OPENAI_EMBEDDING_MODEL=
+# --- Google Gemini ---
+GEMINI_API_KEY=""
+GEMINI_MODEL="gemini-1.5-pro"
 
-# Anthropic API Key (for testing Anthropic provider)
-# Get your key from: https://console.anthropic.com/
-ANTHROPIC_API_KEY=
+# --- DeepSeek ---
+DEEPSEEK_API_KEY=""
+DEEPSEEK_MODEL="deepseek-chat"
+DEEPSEEK_BASE_URL="https://api.deepseek.com"
 
-# Anthropic Model Name (for testing)
-# Common models: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022
-# Default: claude-sonnet-4-20250514
-ANTHROPIC_MODEL=
+# --- Stepfun (阶跃星辰) ---
+STEPFUN_API_KEY=""
+STEPFUN_MODEL="step-1-8k"
 
-# Optional: Custom API endpoints (uncomment if needed)
-# OPENAI_BASE_URL=https://api.openai.com/v1
-# ANTHROPIC_BASE_URL=https://api.anthropic.com
+# --- Volcengine Ark (火山引擎/火山方舟) ---
+ARK_API_KEY=""
+ARK_MODEL="" # Your endpoint ID
+ARK_BASE_URL="https://ark.cn-beijing.volces.com/api/v3"
 
-# Optional: Test mode settings
+# --- Alibaba Cloud Bailian (阿里云百炼/DashScope) ---
+DASHSCOPE_API_KEY=""
+DASHSCOPE_MODEL="qwen-plus"
+DASHSCOPE_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+# --- NVIDIA (NIM) ---
+NVIDIA_API_KEY=""
+NVIDIA_MODEL="meta/llama-3.1-405b-instruct"
+
+# --- xAI (Grok) ---
+XAI_API_KEY=""
+XAI_MODEL="grok-2-1212"
+XAI_BASE_URL="https://api.x.ai/v1"
+
+# --- OpenRouter ---
+OPENROUTER_API_KEY=""
+OPENROUTER_MODEL="anthropic/claude-3.5-sonnet"
+
+# --- Custom Provider Example ---
+# CUSTOM_PROVIDER_NAME="my-proxy"
+# CUSTOM_PROVIDER_BASE_URL="https://my-proxy.com/v1"
+# CUSTOM_PROVIDER_API_KEY="sk-..."
+# CUSTOM_PROVIDER_FORMAT="chat_completions" # chat_completions, responses, anthropic_messages
+
+# Optional: Enable/disable API tests
 # ENABLE_API_TESTS=TRUE
