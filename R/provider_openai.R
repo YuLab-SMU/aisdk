@@ -85,7 +85,7 @@ OpenAILanguageModel <- R6::R6Class(
     initialize = function(model_id, config, capabilities = list()) {
       # Auto-detect reasoning model capability if not explicitly set
       if (is.null(capabilities$is_reasoning_model)) {
-        capabilities$is_reasoning_model <- grepl("^o[0-9]", model_id, ignore.case = TRUE)
+        capabilities$is_reasoning_model <- grepl("^o[0-9]|^gpt-5", model_id, ignore.case = TRUE)
       }
       super$initialize(
         provider = config$provider_name %||% "openai",
@@ -188,7 +188,7 @@ OpenAILanguageModel <- R6::R6Class(
       }
 
       GenerateResult$new(
-        text = choice$message$content,
+        text = choice$message$content %||% "",
         usage = response$usage,
         finish_reason = choice$finish_reason,
         raw_response = response,
@@ -1106,8 +1106,8 @@ OpenAIProvider <- R6::R6Class(
 
       if (api_format == "auto") {
         # Reasoning models use Responses API
-        # Pattern matches: o1, o3, o1-mini, o3-mini, o1-preview, etc.
-        is_reasoning_model <- grepl("^o[0-9]", model_id, ignore.case = TRUE)
+        # Pattern matches: o1, o3, o1-mini, o3-mini, o1-preview, gpt-5, gpt-5-mini, etc.
+        is_reasoning_model <- grepl("^o[0-9]|^gpt-5", model_id, ignore.case = TRUE)
 
         if (is_reasoning_model) {
           api_format <- "responses"

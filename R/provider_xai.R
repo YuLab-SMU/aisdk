@@ -15,8 +15,21 @@ XAILanguageModel <- R6::R6Class(
     "XAILanguageModel",
     inherit = OpenAILanguageModel,
     public = list(
-        # Currently XAI uses the standard OpenAI response format, so we can inherit directly.
-        # We override just to provide a dedicated Class for xAI models.
+        #' @description Parse the API response into a GenerateResult.
+        #' Overrides parent to extract xAI-specific reasoning_content.
+        #' @param response The parsed API response.
+        #' @return A GenerateResult object.
+        parse_response = function(response) {
+            # Use parent's parsing for standard fields
+            result <- super$parse_response(response)
+
+            # Extract reasoning content (Grok reasoning models)
+            if (!is.null(response$choices[[1]]$message$reasoning_content)) {
+                result$reasoning <- response$choices[[1]]$message$reasoning_content
+            }
+
+            result
+        }
     )
 )
 
@@ -50,12 +63,12 @@ XAIProvider <- R6::R6Class(
         },
 
         #' @description Create a language model.
-        #' @param model_id The model ID (e.g., "grok-4-1-fast-reasoning").
+        #' @param model_id The model ID (e.g., "grok-beta", "grok-2-1212").
         #' @return A XAILanguageModel object.
         language_model = function(model_id = NULL) {
             model_id <- model_id %||% Sys.getenv("XAI_MODEL", unset = "")
             if (is.null(model_id) || model_id == "") {
-                model_id <- "grok-4o"
+                model_id <- "grok-beta"
             }
             XAILanguageModel$new(model_id, private$config)
         }
@@ -66,10 +79,9 @@ XAIProvider <- R6::R6Class(
 #' @description
 #' Factory function to create an xAI provider.
 #'
-#' @section Supported Models:
 #' xAI provides Grok models:
 #' \itemize{
-#'   \item \strong{Grok}: "grok-beta", "grok-2-1212", "grok-4-1-fast-reasoning", etc.
+#'   \item \strong{Grok}: "grok-3", "grok-4", "grok-beta", "grok-2-1212", etc.
 #' }
 #'
 #' @param api_key xAI API key. Defaults to XAI_API_KEY env var.
@@ -80,9 +92,9 @@ XAIProvider <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' xai <- create_xai()
-#' model <- xai$language_model("grok-4-1-fast-reasoning")
-#' result <- generate_text(model, "Explain quantum computing in one sentence.")
+#'     xai <- create_xai()
+#'     model <- xai$language_model("grok-beta")
+#'     result <- generate_text(model, "Explain quantum computing in one sentence.")
 #' }
 #' }
 create_xai <- function(api_key = NULL,

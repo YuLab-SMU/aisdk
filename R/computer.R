@@ -267,12 +267,10 @@ Computer <- R6::R6Class("Computer",
     clear_log = function() {
       self$execution_log <- list()
       invisible(self)
-    },
-
-    #' @description
+    }
+  ),
+  private = list(
     #' Check bash command for sandbox violations
-    #' @param command The bash command string
-    #' @return NULL if safe, or a direct string describing the violation
     check_bash_violation = function(command) {
       # Strict mode: block dangerous commands
       dangerous_patterns <- c(
@@ -291,9 +289,8 @@ Computer <- R6::R6Class("Computer",
       }
 
       NULL
-    }
-  ),
-  private = list(
+    },
+
     #' Log execution
     log_execution = function(operation, details) {
       entry <- list(

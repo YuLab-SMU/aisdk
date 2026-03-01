@@ -146,10 +146,21 @@ AnthropicLanguageModel <- R6::R6Class(
 
       body$messages <- formatted$messages
 
-      # Optional parameters
-      if (!is.null(params$temperature)) {
+      # Force temperature = 1.0 for thinking models (Anthropic requirement)
+      # Thinking can be enabled via explicit parameter or detected by model name (for proxies)
+      is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
+
+      if (is_thinking) {
+        if (!is.null(params$temperature) && params$temperature != 1.0) {
+          if (interactive()) {
+            cli::cli_alert_info("Anthropic thinking models require temperature = 1.0. Overriding {params$temperature}.")
+          }
+        }
+        body$temperature <- 1.0
+      } else if (!is.null(params$temperature)) {
         body$temperature <- params$temperature
       }
+
       if (!is.null(params$top_p)) {
         body$top_p <- params$top_p
       }
@@ -239,7 +250,10 @@ AnthropicLanguageModel <- R6::R6Class(
       body$messages <- formatted$messages
 
       # Optional parameters
-      if (!is.null(params$temperature)) {
+      is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
+      if (is_thinking) {
+        body$temperature <- 1.0
+      } else if (!is.null(params$temperature)) {
         body$temperature <- params$temperature
       }
 
