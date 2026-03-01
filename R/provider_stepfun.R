@@ -14,9 +14,52 @@ NULL
 StepfunLanguageModel <- R6::R6Class(
     "StepfunLanguageModel",
     inherit = OpenAILanguageModel,
+    private = list(
+        # Override to fix response_format for Stepfun API limits
+        process_response_format = function(params) {
+            if (!is.null(params$response_format)) {
+                # If it's a schema (has type / properties) or explicitly set to json_schema,
+                # Stepfun doesn't support structured outputs (json_schema). It only supports json_object.
+                # So we must downgrade it to list(type = "json_object") and inject the schema into the prompt.
+                orig_format <- params$response_format
+
+                # Convert the schema to character string for the prompt
+                schema_json <- tryCatch(
+                    if (is.character(orig_format)) orig_format else jsonlite::toJSON(orig_format, auto_unbox = TRUE),
+                    error = function(e) "{}"
+                )
+
+                instruction <- paste(
+                    "You must return your output strictly in valid JSON format.",
+                    "The JSON must adhere to the following schema:\n",
+                    schema_json
+                )
+
+                # Inject into the first system message, or add a new one
+                msgs <- params$messages
+                if (length(msgs) > 0 && msgs[[1]]$role == "system") {
+                    msgs[[1]]$content <- paste(msgs[[1]]$content, "\n\n", instruction)
+                } else {
+                    msgs <- c(list(list(role = "system", content = instruction)), msgs)
+                }
+                params$messages <- msgs
+
+                # Stepfun API only accepts type="text" or type="json_object", and sometimes neither
+                # It evaluates purely based on prompt injection, so we strip it.
+                params$response_format <- NULL
+            }
+            params
+        }
+    ),
     public = list(
-        # Currently Stepfun uses the standard OpenAI response format, so we can inherit directly.
-        # We override just to provide a dedicated Class for Stepfun models.
+        build_payload = function(params) {
+            params <- private$process_response_format(params)
+            super$build_payload(params)
+        },
+        build_stream_payload = function(params) {
+            params <- private$process_response_format(params)
+            super$build_stream_payload(params)
+        }
     )
 )
 
