@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Shiny Integration – aisdk</title>
+<title>Models and Providers – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -359,20 +359,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
    
   <ul>
-<li><a href="#the-ai-chat-ui" id="toc-the-ai-chat-ui" class="nav-link active" data-scroll-target="#the-ai-chat-ui">The AI Chat UI</a></li>
+<li><a href="#supported-providers" id="toc-supported-providers" class="nav-link active" data-scroll-target="#supported-providers">Supported Providers</a></li>
+  <li><a href="#environment-configuration" id="toc-environment-configuration" class="nav-link" data-scroll-target="#environment-configuration">Environment Configuration</a></li>
+  <li><a href="#basic-instantiation" id="toc-basic-instantiation" class="nav-link" data-scroll-target="#basic-instantiation">Basic Instantiation</a></li>
+  <li><a href="#gemini-google-search-grounding" id="toc-gemini-google-search-grounding" class="nav-link" data-scroll-target="#gemini-google-search-grounding">Gemini Google Search Grounding</a></li>
   <li>
-<a href="#ai-controlled-apps-the-copilot-pattern" id="toc-ai-controlled-apps-the-copilot-pattern" class="nav-link" data-scroll-target="#ai-controlled-apps-the-copilot-pattern">AI-Controlled Apps (The Copilot Pattern)</a>
+<a href="#aihubmix-and-advanced-native-compatibility" id="toc-aihubmix-and-advanced-native-compatibility" class="nav-link" data-scroll-target="#aihubmix-and-advanced-native-compatibility">AIHubMix and Advanced Native Compatibility</a>
   <ul class="collapse">
-<li><a href="#define-reactive-values" id="toc-define-reactive-values" class="nav-link" data-scroll-target="#define-reactive-values">1. Define Reactive Values</a></li>
-  <li><a href="#create-reactive-tools" id="toc-create-reactive-tools" class="nav-link" data-scroll-target="#create-reactive-tools">2. Create Reactive Tools</a></li>
-  <li><a href="#initialize-server-with-tools" id="toc-initialize-server-with-tools" class="nav-link" data-scroll-target="#initialize-server-with-tools">3. Initialize Server with Tools</a></li>
+<li><a href="#native-wrappers" id="toc-native-wrappers" class="nav-link" data-scroll-target="#native-wrappers">Native Wrappers</a></li>
   </ul>
 </li>
-  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/integrations.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+  <li><a href="#custom-providers" id="toc-custom-providers" class="nav-link" data-scroll-target="#custom-providers">Custom Providers</a></li>
+  <li><a href="#provider-registry" id="toc-provider-registry" class="nav-link" data-scroll-target="#provider-registry">Provider Registry</a></li>
+  <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next Steps</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
-<h1 class="title">Shiny Integration</h1>
+<h1 class="title">Models and Providers</h1>
 </div>
 
 
@@ -386,62 +390,120 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
 
 
-</header><p><strong>aisdk</strong> provides seamless integration with Shiny, allowing you to build AI-powered applications where the AI can control the UI and interact with reactive input/output.</p>
-<section id="the-ai-chat-ui" class="level2"><h2 class="anchored" data-anchor-id="the-ai-chat-ui">The AI Chat UI</h2>
-<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI()</a></code> and <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer()</a></code> to add a chat interface.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/">shiny</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+</header><p><strong>aisdk</strong> offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities (such as caching, structured outputs, or routing).</p>
+<section id="supported-providers" class="level2"><h2 class="anchored" data-anchor-id="supported-providers">Supported Providers</h2>
+<p>Built-in natively supported providers include:</p>
+<ul>
+<li>
+<strong>OpenAI</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai()</a></code>): Supports standard completion and the Responses API (e.g., <code>o1</code>, <code>o3-mini</code>).</li>
+<li>
+<strong>Anthropic</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic()</a></code>): Supports Claude models and advanced Prompt Caching.</li>
+<li>
+<strong>Gemini</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_gemini.html">create_gemini()</a></code>): Supports Google’s generative endpoints.</li>
+<li>
+<strong>DeepSeek</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_deepseek.html">create_deepseek()</a></code>): Supports DeepSeek’s chat models.</li>
+<li>
+<strong>AIHubMix</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_aihubmix.html">create_aihubmix()</a></code>): The unified proxy handling dozens of models.</li>
+<li>
+<strong>xAI</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_xai.html">create_xai()</a></code>): Supports Grok and other xAI models.</li>
+<li>
+<strong>Volcengine</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_volcengine.html">create_volcengine()</a></code>): Supports ByteDance’s Doubao models.</li>
+<li>
+<strong>Stepfun</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_stepfun.html">create_stepfun()</a></code>): Supports Stepfun’s chat models.</li>
+<li>
+<strong>Bailian</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_bailian.html">create_bailian()</a></code>): Supports Alibaba Cloud’s DashScope models (e.g., Qwen).</li>
+<li>
+<strong>OpenRouter</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_openrouter.html">create_openrouter()</a></code>): A universal API routing to various LLM providers.</li>
+<li>
+<strong>Nvidia</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_nvidia.html">create_nvidia()</a></code>): Supports Nvidia NIM APIs.</li>
+</ul></section><section id="environment-configuration" class="level2"><h2 class="anchored" data-anchor-id="environment-configuration">Environment Configuration</h2>
+<p>Before using a provider, ensure your API keys and base URLs are set up. <code>aisdk</code> looks for global <code>.Renviron</code> variables named by provider:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html">fluidPage</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI</a></span><span class="op">(</span><span class="st">"chat"</span><span class="op">)</span></span>
+<span><span class="co"># Example .Renviron configuration</span></span>
+<span><span class="co"># OPENAI_API_KEY="sk-..."</span></span>
+<span><span class="co"># ANTHROPIC_API_KEY="sk-ant-..."</span></span>
+<span><span class="co"># AIHUBMIX_API_KEY="sk-mix-..."</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="basic-instantiation" class="level2"><h2 class="anchored" data-anchor-id="basic-instantiation">Basic Instantiation</h2>
+<p>At the core of <code>aisdk</code>, you initialize a <strong>Provider</strong> factory and request a <strong>Language Model</strong>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Create an Anthropic provider and fetch the Claude 3.5 Sonnet model</span></span>
+<span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"claude-3-5-sonnet-20241022"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate text seamlessly</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, prompt <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="gemini-google-search-grounding" class="level2"><h2 class="anchored" data-anchor-id="gemini-google-search-grounding">Gemini Google Search Grounding</h2>
+<p>When using the Gemini provider (<code>create_gemini</code>), you can easily enable Google Search grounding to give your model access to real-time information. You only need to pass a specific tool structure compatible with Google’s API.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_gemini.html">create_gemini</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gemini-3-flash-preview"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generate text with Google Search enabled</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">model</span>, </span>
+<span>  prompt <span class="op">=</span> <span class="st">"Who won the euro 2024?"</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>google_search <span class="op">=</span> <span class="fu">empty_named_list</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="co"># Or list(google_search = list())</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For older Gemini models (like Gemini 1.5 Pro), you might need to use the <code>google_search_retrieval</code> tool instead:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">tools</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>google_search_retrieval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
+<span>    dynamicRetrievalConfig <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
+<span>        mode <span class="op">=</span> <span class="st">"MODE_DYNAMIC"</span>, </span>
+<span>        dynamicThreshold <span class="op">=</span> <span class="fl">0.3</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="aihubmix-and-advanced-native-compatibility" class="level2"><h2 class="anchored" data-anchor-id="aihubmix-and-advanced-native-compatibility">AIHubMix and Advanced Native Compatibility</h2>
+<p>While standard proxy endpoints often funnel everything through an OpenAI-compatible interface, resulting in the loss of vendor-specific capabilities, the <strong>AIHubMix</strong> integration uniquely bridges the gap using native compatibility layers.</p>
+<section id="native-wrappers" class="level3"><h3 class="anchored" data-anchor-id="native-wrappers">Native Wrappers</h3>
+<p>You can expose underlying configurations explicitly via <code>create_aihubmix_anthropic</code> and <code>create_aihubmix_gemini</code>, which route through AIHubMix while maintaining the native expected format for Claude caching or Gemini schemas.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># AIHubMix Native Anthropic format (maintains Anthropic prompt caching features)</span></span>
+<span><span class="va">aihubmix_claude</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_aihubmix_anthropic.html">create_aihubmix_anthropic</a></span><span class="op">(</span>extended_caching <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">claude_model</span> <span class="op">&lt;-</span> <span class="va">aihubmix_claude</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"claude-3-5-sonnet-20241022"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Generating using Claude's native system cache routing</span></span>
+<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="va">claude_model</span>,</span>
+<span>  prompt <span class="op">=</span> <span class="st">"Summarize the history of Ancient Rome."</span>,</span>
+<span>  system <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
+<span>    type <span class="op">=</span> <span class="st">"text"</span>, </span>
+<span>    text <span class="op">=</span> <span class="st">"You are an expert historian."</span>, </span>
+<span>    cache_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"ephemeral"</span><span class="op">)</span> <span class="co"># Cache this context for subsequent runs</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section></section><section id="custom-providers" class="level2"><h2 class="anchored" data-anchor-id="custom-providers">Custom Providers</h2>
+<p>What if you need to connect to an internal enterprise gateway or a provider not natively listed? You don’t need to write a new class from scratch. You can dynamically instantiate a custom provider using <code><a href="https://rdrr.io/pkg/aisdk/man/create_custom_provider.html">create_custom_provider()</a></code>.</p>
+<p>You just provide the credentials and specify the underlying <code>api_format</code> (e.g., <code>chat_completions</code>, <code>anthropic_messages</code>, or <code>responses</code>).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Creating a proprietary gateway provider compatible with OpenAI Chat Completions</span></span>
+<span><span class="va">custom_provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_custom_provider.html">create_custom_provider</a></span><span class="op">(</span></span>
+<span>  provider_name <span class="op">=</span> <span class="st">"internal_enterprise_gateway"</span>,</span>
+<span>  base_url <span class="op">=</span> <span class="st">"https://internal-gateway.corp.com/v1"</span>,</span>
+<span>  api_key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html">Sys.getenv</a></span><span class="op">(</span><span class="st">"CORP_API_KEY"</span><span class="op">)</span>,</span>
+<span>  api_format <span class="op">=</span> <span class="st">"chat_completions"</span>,</span>
+<span>  use_max_completion_tokens <span class="op">=</span> <span class="cn">TRUE</span> <span class="co"># Optionally force capabilities</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span><span class="st">"chat"</span>, model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
+<span><span class="co"># Use it identically to official endpoints</span></span>
+<span><span class="va">gateway_model</span> <span class="op">&lt;-</span> <span class="va">custom_provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"corp-secure-llm"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="provider-registry" class="level2"><h2 class="anchored" data-anchor-id="provider-registry">Provider Registry</h2>
+<p>If you use multiple providers or models frequently across a project, <code>aisdk</code> maintains a <code>ProviderRegistry</code> object. This simplifies accessing providers programmatically:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/get_default_registry.html">get_default_registry</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="ai-controlled-apps-the-copilot-pattern" class="level2"><h2 class="anchored" data-anchor-id="ai-controlled-apps-the-copilot-pattern">AI-Controlled Apps (The Copilot Pattern)</h2>
-<p>You can give the AI tools to modify <code>reactiveValues</code>, effectively letting it control your app.</p>
-<section id="define-reactive-values" class="level3"><h3 class="anchored" data-anchor-id="define-reactive-values">1. Define Reactive Values</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">rv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactiveValues.html">reactiveValues</a></span><span class="op">(</span></span>
-<span>  plot_color <span class="op">=</span> <span class="st">"blue"</span>,</span>
-<span>  title <span class="op">=</span> <span class="st">"My Plot"</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="create-reactive-tools" class="level3"><h3 class="anchored" data-anchor-id="create-reactive-tools">2. Create Reactive Tools</h3>
-<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool()</a></code> to define tools that can read/write these values.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">change_color</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"change_color"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Change the plot color"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">rv</span>, <span class="va">session</span>, <span class="va">color</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">rv</span><span class="op">$</span><span class="va">plot_color</span> <span class="op">&lt;-</span> <span class="va">color</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"Changed color to"</span>, <span class="va">color</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="initialize-server-with-tools" class="level3"><h3 class="anchored" data-anchor-id="initialize-server-with-tools">3. Initialize Server with Tools</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># ... rv definition ...</span></span>
-<span>  </span>
-<span>  <span class="co"># Wrap tools with current session context</span></span>
-<span>  <span class="va">tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/wrap_reactive_tools.html">wrap_reactive_tools</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">change_color</span><span class="op">)</span>, <span class="va">rv</span>, <span class="va">session</span><span class="op">)</span></span>
-<span>  </span>
-<span>  <span class="co"># Provide context so AI "sees" the current state</span></span>
-<span>  <span class="va">get_context</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactive.html">reactive</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>current_color <span class="op">=</span> <span class="va">rv</span><span class="op">$</span><span class="va">plot_color</span><span class="op">)</span></span>
-<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="co"># Register providers once at startup</span></span>
+<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"openai"</span>, <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"claude"</span>, <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"corp"</span>, <span class="va">custom_provider</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span></span>
-<span>    <span class="st">"chat"</span>,</span>
-<span>    model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>,</span>
-<span>    tools <span class="op">=</span> <span class="va">tools</span>,</span>
-<span>    context <span class="op">=</span> <span class="va">get_context</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Now the user can say “Change the plot to red”, and the AI will execute the tool, updating the Shiny app instantly.</p>
+<span><span class="co"># Fetch models across your app seamlessly</span></span>
+<span><span class="va">model1</span> <span class="op">&lt;-</span> <span class="va">registry</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
+<span><span class="va">model2</span> <span class="op">&lt;-</span> <span class="va">registry</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"corp:corp-secure-llm"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
+<p>Now that you’ve mastered providers, you can use them actively across the entire SDK. - Learn how to structure AI data output in <a href="structured_outputs.html">Structured Outputs</a>. - Inject tools dynamically into providers natively using <a href="tools.html">Tools</a>.</p>
 
 
-</section></section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -858,4 +920,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/integrations.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
