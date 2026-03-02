@@ -142,20 +142,37 @@ GeminiLanguageModel <- R6::R6Class(
 
             # Tools
             if (!is.null(params$tools) && length(params$tools) > 0) {
-                function_declarations <- lapply(params$tools, function(t) {
+                function_declarations <- list()
+                other_tools <- list()
+
+                for (t in params$tools) {
                     if (inherits(t, "Tool")) {
                         # Get openai format as it's JSON Schema compliant
                         api_fmt <- t$to_api_format("openai")
-                        list(
+                        function_declarations <- c(function_declarations, list(list(
                             name = api_fmt$`function`$name,
                             description = api_fmt$`function`$description,
                             parameters = api_fmt$`function`$parameters
-                        )
+                        )))
+                    } else if (is.list(t) && !is.null(names(t))) {
+                        # Pass through special tool objects like list(google_search = list())
+                        other_tools <- c(other_tools, list(t))
                     } else {
-                        t
+                        function_declarations <- c(function_declarations, list(t))
                     }
-                })
-                body$tools <- list(list(functionDeclarations = function_declarations))
+                }
+
+                body_tools <- list()
+                if (length(function_declarations) > 0) {
+                    body_tools <- c(body_tools, list(list(functionDeclarations = function_declarations)))
+                }
+                if (length(other_tools) > 0) {
+                    body_tools <- c(body_tools, other_tools)
+                }
+
+                if (length(body_tools) > 0) {
+                    body$tools <- body_tools
+                }
             }
 
             # Remove NULLs
