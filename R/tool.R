@@ -38,7 +38,9 @@ parse_tool_arguments <- function(args, tool_name = "unknown") {
   # Case 1: Already a list - ensure it's named for proper JSON serialization
 
   if (is.list(args)) {
-    if (length(args) == 0) return(empty_args())
+    if (length(args) == 0) {
+      return(empty_args())
+    }
     return(args)
   }
 
@@ -58,16 +60,16 @@ parse_tool_arguments <- function(args, tool_name = "unknown") {
   # Case 4a: Empty or known empty representations
   # Handle various ways models might represent "no arguments"
   empty_patterns <- c(
-    "",           # Empty string
-    "{}",         # Empty JSON object
-    "{ }",        # Empty JSON object with space
-    "null",       # JSON null
-    "NULL",       # R-style NULL
-    "undefined",  # JavaScript undefined
-    "{",          # Incomplete JSON (some models like glm-4)
-    "}",          # Just closing brace
-    "[]",         # Empty array (some models)
-    "[ ]"         # Empty array with space
+    "", # Empty string
+    "{}", # Empty JSON object
+    "{ }", # Empty JSON object with space
+    "null", # JSON null
+    "NULL", # R-style NULL
+    "undefined", # JavaScript undefined
+    "{", # Incomplete JSON (some models like glm-4)
+    "}", # Just closing brace
+    "[]", # Empty array (some models)
+    "[ ]" # Empty array with space
   )
 
   if (args_str %in% empty_patterns) {
@@ -87,23 +89,26 @@ parse_tool_arguments <- function(args, tool_name = "unknown") {
         jsonlite::fromJSON(fixed_args, simplifyVector = FALSE),
         error = function(e2) {
           # Fallback 2: Try JavaScript object literal evaluation (like Opencode)
-          tryCatch({
-            # This handles cases like {key: "value"} without quotes on keys
-            # Convert to valid JSON first
-            js_to_json <- gsub("([{,])\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:", '\\1"\\2":', args_str)
-            js_to_json <- fix_json(js_to_json)
-            jsonlite::fromJSON(js_to_json, simplifyVector = FALSE)
-          }, error = function(e3) {
-            # Log warning but don't fail
-            debug_log("parse_tool_arguments", list(
-              tool = tool_name,
-              raw = substr(args_str, 1, 100),
-              repaired = substr(repaired_args, 1, 100),
-              error = conditionMessage(e)
-            ))
-            # Return empty named list as fallback
-            empty_args()
-          })
+          tryCatch(
+            {
+              # This handles cases like {key: "value"} without quotes on keys
+              # Convert to valid JSON first
+              js_to_json <- gsub("([{,])\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:", '\\1"\\2":', args_str)
+              js_to_json <- fix_json(js_to_json)
+              jsonlite::fromJSON(js_to_json, simplifyVector = FALSE)
+            },
+            error = function(e3) {
+              # Log warning but don't fail
+              debug_log("parse_tool_arguments", list(
+                tool = tool_name,
+                raw = substr(args_str, 1, 100),
+                repaired = substr(repaired_args, 1, 100),
+                error = conditionMessage(e)
+              ))
+              # Return empty named list as fallback
+              empty_args()
+            }
+          )
         }
       )
     }
@@ -147,11 +152,21 @@ repair_json_string <- function(json_str) {
 
   # Empty or very short strings
 
-  if (nchar(s) == 0) return("{}")
-  if (s == "{") return("{}")
-  if (s == "}") return("{}")
-  if (s == "[") return("[]")
-  if (s == "]") return("[]")
+  if (nchar(s) == 0) {
+    return("{}")
+  }
+  if (s == "{") {
+    return("{}")
+  }
+  if (s == "}") {
+    return("{}")
+  }
+  if (s == "[") {
+    return("[]")
+  }
+  if (s == "]") {
+    return("[]")
+  }
 
   # Replace single quotes with double quotes (common LLM mistake)
   # But be careful not to replace apostrophes in strings
@@ -180,7 +195,7 @@ repair_json_string <- function(json_str) {
   # Handle unquoted keys (some models do this)
   # This is a simple heuristic, not perfect
   # e.g., {key: "value"} -> {"key": "value"}
-  s <- gsub('([{,])\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:', '\\1"\\2":', s)
+  s <- gsub("([{,])\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:", '\\1"\\2":', s)
 
   # Handle truncated string values (missing closing quote)
   # Count quotes - if odd number, add one at the end before closing brace
@@ -212,11 +227,11 @@ repair_json_string <- function(json_str) {
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # If LLM calls "GetWeather" but tool is "get_weather"
-#' repaired <- repair_tool_call(
-#'   list(name = "GetWeather", arguments = list(city = "Tokyo")),
-#'   tools = list(get_weather_tool)
-#' )
+#'   # If LLM calls "GetWeather" but tool is "get_weather"
+#'   repaired <- repair_tool_call(
+#'     list(name = "GetWeather", arguments = list(city = "Tokyo")),
+#'     tools = list(get_weather_tool)
+#'   )
 #' }
 #' }
 repair_tool_call <- function(tool_call, tools, error_message = NULL) {
@@ -290,7 +305,9 @@ repair_tool_call <- function(tool_call, tools, error_message = NULL) {
 #' @return Snake case version of the string.
 #' @keywords internal
 to_snake_case <- function(x) {
-  if (!is.character(x) || length(x) != 1) return(x)
+  if (!is.character(x) || length(x) != 1) {
+    return(x)
+  }
   # Insert underscore before uppercase letters, then lowercase
   s <- gsub("([a-z])([A-Z])", "\\1_\\2", x)
   tolower(s)
@@ -304,7 +321,9 @@ to_snake_case <- function(x) {
 #' @return The closest match, or NULL if none within max_distance.
 #' @keywords internal
 find_closest_match <- function(target, candidates, max_distance = 3) {
-  if (length(candidates) == 0) return(NULL)
+  if (length(candidates) == 0) {
+    return(NULL)
+  }
 
   target_lower <- tolower(target)
   candidates_lower <- tolower(candidates)
@@ -395,13 +414,17 @@ Tool <- R6::R6Class(
     #' @field layer Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).
     layer = "llm",
 
+    #' @field meta Optional metadata for the tool (e.g., caching configuration).
+    meta = NULL,
+
     #' @description Initialize a Tool.
     #' @param name Unique tool name (used by LLM to call the tool).
     #' @param description Description of the tool's purpose.
     #' @param parameters A z_object schema defining expected parameters.
     #' @param execute An R function that implements the tool logic.
     #' @param layer Tool layer: "llm" or "computer" (default: "llm").
-    initialize = function(name, description, parameters, execute, layer = "llm") {
+    #' @param meta Optional metadata list (e.g., cache_control).
+    initialize = function(name, description, parameters, execute, layer = "llm", meta = NULL) {
       if (!is.character(name) || length(name) != 1 || nchar(name) == 0) {
         rlang::abort("Tool name must be a non-empty string")
       }
@@ -422,16 +445,17 @@ Tool <- R6::R6Class(
       self$description <- description
       self$parameters <- parameters
       self$layer <- layer
+      self$meta <- meta
       private$.execute <- execute
     },
-    
+
     #' @description Convert tool to API format.
     #' @param provider Provider name ("openai" or "anthropic"). Default "openai".
     #' @return A list in the format expected by the API.
     to_api_format = function(provider = "openai") {
       # Convert schema to plain list for JSON serialization
       params_list <- schema_to_list(self$parameters)
-      
+
       if (provider == "anthropic") {
         # Anthropic format
         list(
@@ -451,7 +475,7 @@ Tool <- R6::R6Class(
         )
       }
     },
-    
+
     #' @description Execute the tool with given arguments.
     #' @param args A list or named list of arguments.
     #' @param envir Optional environment in which to evaluate the tool function.
@@ -469,7 +493,7 @@ Tool <- R6::R6Class(
 
       private$.execute(args)
     },
-    
+
     #' @description Print method for Tool.
     print = function() {
       cat("<Tool>\n")
@@ -480,7 +504,6 @@ Tool <- R6::R6Class(
       invisible(self)
     }
   ),
-  
   private = list(
     .execute = NULL
   )
@@ -491,9 +514,13 @@ Tool <- R6::R6Class(
 # ============================================================================
 
 looks_like_raw_schema <- function(x) {
-  if (!is.list(x) || is.null(names(x))) return(FALSE)
-  schema_keys <- c("type", "properties", "required", "additionalProperties", "items", "enum",
-                   "oneOf", "anyOf", "allOf")
+  if (!is.list(x) || is.null(names(x))) {
+    return(FALSE)
+  }
+  schema_keys <- c(
+    "type", "properties", "required", "additionalProperties", "items", "enum",
+    "oneOf", "anyOf", "allOf"
+  )
   has_schema_key <- any(names(x) %in% schema_keys)
   has_non_schema <- any(!names(x) %in% schema_keys)
   has_z_schema_values <- any(vapply(x, inherits, logical(1), "z_schema"))
@@ -501,7 +528,9 @@ looks_like_raw_schema <- function(x) {
 }
 
 infer_tool_schema_from_execute <- function(execute) {
-  if (!is.function(execute)) return(NULL)
+  if (!is.function(execute)) {
+    return(NULL)
+  }
   fmls <- formals(execute)
   fml_names <- names(fmls) %||% character(0)
 
@@ -528,16 +557,22 @@ infer_tool_schema_from_execute <- function(execute) {
 }
 
 coerce_tool_parameters <- function(parameters, execute = NULL) {
-  if (inherits(parameters, "z_schema")) return(parameters)
+  if (inherits(parameters, "z_schema")) {
+    return(parameters)
+  }
 
   if (is.null(parameters)) {
     inferred <- infer_tool_schema_from_execute(execute)
-    if (!is.null(inferred)) return(inferred)
+    if (!is.null(inferred)) {
+      return(inferred)
+    }
     return(z_any_object(description = "Free-form arguments"))
   }
 
   if (is.character(parameters)) {
-    if (length(parameters) == 0) return(z_empty_object())
+    if (length(parameters) == 0) {
+      return(z_empty_object())
+    }
     if (!is.null(names(parameters)) && any(nzchar(names(parameters)))) {
       prop_names <- names(parameters)
       prop_desc <- as.list(parameters)
@@ -554,7 +589,9 @@ coerce_tool_parameters <- function(parameters, execute = NULL) {
     if (looks_like_raw_schema(parameters)) {
       rlang::abort("Tool parameters must be a z_schema object (use z_object())")
     }
-    if (length(parameters) == 0) return(z_empty_object())
+    if (length(parameters) == 0) {
+      return(z_empty_object())
+    }
     if (is.null(names(parameters)) || any(names(parameters) == "")) {
       rlang::abort("Tool parameters as list must be a named list")
     }
@@ -584,7 +621,9 @@ coerce_tool_parameters <- function(parameters, execute = NULL) {
 }
 
 normalize_tool_execute <- function(execute) {
-  if (!is.function(execute)) return(execute)
+  if (!is.function(execute)) {
+    return(execute)
+  }
   fmls <- formals(execute)
   fml_names <- names(fmls) %||% character(0)
 
@@ -634,35 +673,36 @@ normalize_tool_execute <- function(execute) {
 #'   List-style functions receive a single list argument containing parameters.
 #' @param layer Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).
 #'   Default is "llm". Computer layer tools are not loaded into context but executed via bash.
+#' @param meta Optional metadata associated with the tool (e.g., `list(cache_control = list(type = "ephemeral"))`).
 #' @return A Tool object.
 #' @rdname tool_factory
 #' @export
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Define a weather tool
-#' get_weather <- tool(
-#'   name = "get_weather",
-#'   description = "Get the current weather for a location",
-#'   parameters = z_object(
-#'     location = z_string(description = "The city name, e.g., 'Beijing'"),
-#'     unit = z_enum(c("celsius", "fahrenheit"), description = "Temperature unit")
-#'   ),
-#'   execute = function(args) {
-#'     # In real usage, call a weather API here
-#'     paste("Weather in", args$location, "is 22 degrees", args$unit)
-#'   }
-#' )
+#'   # Define a weather tool
+#'   get_weather <- tool(
+#'     name = "get_weather",
+#'     description = "Get the current weather for a location",
+#'     parameters = z_object(
+#'       location = z_string(description = "The city name, e.g., 'Beijing'"),
+#'       unit = z_enum(c("celsius", "fahrenheit"), description = "Temperature unit")
+#'     ),
+#'     execute = function(args) {
+#'       # In real usage, call a weather API here
+#'       paste("Weather in", args$location, "is 22 degrees", args$unit)
+#'     }
+#'   )
 #'
-#' # Use with generate_text
-#' result <- generate_text(
-#'   model = "openai:gpt-4o",
-#'   prompt = "What's the weather in Tokyo?",
-#'   tools = list(get_weather)
-#' )
+#'   # Use with generate_text
+#'   result <- generate_text(
+#'     model = "openai:gpt-4o",
+#'     prompt = "What's the weather in Tokyo?",
+#'     tools = list(get_weather)
+#'   )
 #' }
 #' }
-tool <- function(name, description, parameters = NULL, execute = NULL, layer = "llm") {
+tool <- function(name, description, parameters = NULL, execute = NULL, layer = "llm", meta = NULL) {
   if (is.function(parameters) && is.null(execute)) {
     execute <- parameters
     parameters <- NULL
@@ -674,7 +714,8 @@ tool <- function(name, description, parameters = NULL, execute = NULL, layer = "
     description = description,
     parameters = parameters,
     execute = execute,
-    layer = layer
+    layer = layer,
+    meta = meta
   )
 }
 
@@ -697,7 +738,7 @@ tool_result_message <- function(tool_call_id, result, is_error = FALSE) {
   if (!is.character(result)) {
     result <- safe_to_json(result, auto_unbox = TRUE)
   }
-  
+
   list(
     role = "tool",
     tool_call_id = tool_call_id,
@@ -796,62 +837,65 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
     }
 
     # Execute the tool with error handling (including hook errors)
-    result_list <- tryCatch({
-      # Trigger tool start hook (may throw if approval denied)
-      if (!is.null(hooks)) {
-        hooks$trigger_tool_start(tool_obj, tc$arguments)
-      }
-
-      result <- tool_obj$run(tc$arguments, envir = envir)
-
-      # Convert result to string if needed
-      if (!is.character(result)) {
-        result <- safe_to_json(result, auto_unbox = TRUE)
-      }
-
-      # Auto-recovery for skill script errors (soft failures)
-      if (tc$name == "execute_skill_script" && is_skill_script_error(result)) {
-        recovered <- try_recover_skill_tool_call(tc, tools, envir)
-        if (!is.null(recovered)) {
-          result <- recovered$result
-        } else {
-          return(list(
-            id = tc$id,
-            name = tc$name,
-            result = result,
-            is_error = TRUE
-          ))
+    result_list <- tryCatch(
+      {
+        # Trigger tool start hook (may throw if approval denied)
+        if (!is.null(hooks)) {
+          hooks$trigger_tool_start(tool_obj, tc$arguments)
         }
-      }
 
-      # Trigger tool end hook only on success
-      if (!is.null(hooks)) {
-        hooks$trigger_tool_end(tool_obj, result)
-      }
+        result <- tool_obj$run(tc$arguments, envir = envir)
 
-      list(
-        id = tc$id,
-        name = tc$name,
-        result = result,
-        is_error = FALSE
-      )
-    }, error = function(e) {
-      if (isTRUE(debug_enabled)) {
-        err_payload <- list(
+        # Convert result to string if needed
+        if (!is.character(result)) {
+          result <- safe_to_json(result, auto_unbox = TRUE)
+        }
+
+        # Auto-recovery for skill script errors (soft failures)
+        if (tc$name == "execute_skill_script" && is_skill_script_error(result)) {
+          recovered <- try_recover_skill_tool_call(tc, tools, envir)
+          if (!is.null(recovered)) {
+            result <- recovered$result
+          } else {
+            return(list(
+              id = tc$id,
+              name = tc$name,
+              result = result,
+              is_error = TRUE
+            ))
+          }
+        }
+
+        # Trigger tool end hook only on success
+        if (!is.null(hooks)) {
+          hooks$trigger_tool_end(tool_obj, result)
+        }
+
+        list(
           id = tc$id,
           name = tc$name,
-          error = conditionMessage(e),
-          arguments = tc$arguments
+          result = result,
+          is_error = FALSE
         )
-        message("aisdk debug: tool_error=", safe_to_json(err_payload, auto_unbox = TRUE))
+      },
+      error = function(e) {
+        if (isTRUE(debug_enabled)) {
+          err_payload <- list(
+            id = tc$id,
+            name = tc$name,
+            error = conditionMessage(e),
+            arguments = tc$arguments
+          )
+          message("aisdk debug: tool_error=", safe_to_json(err_payload, auto_unbox = TRUE))
+        }
+        list(
+          id = tc$id,
+          name = tc$name,
+          result = paste0("Error executing tool '", tc$name, "': ", conditionMessage(e)),
+          is_error = TRUE
+        )
       }
-      list(
-        id = tc$id,
-        name = tc$name,
-        result = paste0("Error executing tool '", tc$name, "': ", conditionMessage(e)),
-        is_error = TRUE
-      )
-    })
+    )
 
     result_list
   })
@@ -864,7 +908,9 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
 # ============================================================================
 
 is_skill_script_error <- function(result) {
-  if (!is.character(result)) return(FALSE)
+  if (!is.character(result)) {
+    return(FALSE)
+  }
   grepl("^Script execution error:", result) ||
     grepl("^Error executing tool", result) ||
     grepl("^Error:", result) ||
@@ -873,7 +919,9 @@ is_skill_script_error <- function(result) {
 
 try_recover_skill_tool_call <- function(tool_call, tools, envir = NULL) {
   tool_obj <- find_tool(tools, "execute_skill_script")
-  if (is.null(tool_obj)) return(NULL)
+  if (is.null(tool_obj)) {
+    return(NULL)
+  }
 
   parsed <- parse_tool_arguments(tool_call$arguments, tool_name = "execute_skill_script")
   variants <- build_skill_arg_variants(parsed)
@@ -911,16 +959,21 @@ try_recover_skill_tool_call <- function(tool_call, tools, envir = NULL) {
 }
 
 run_tool_safely <- function(tool_obj, args, envir = NULL) {
-  tryCatch({
-    result <- tool_obj$run(args, envir = envir)
-    if (!is.character(result)) {
-      result <- safe_to_json(result, auto_unbox = TRUE)
+  tryCatch(
+    {
+      result <- tool_obj$run(args, envir = envir)
+      if (!is.character(result)) {
+        result <- safe_to_json(result, auto_unbox = TRUE)
+      }
+      list(result = result, is_error = FALSE)
+    },
+    error = function(e) {
+      list(
+        result = paste0("Error executing tool '", tool_obj$name, "': ", conditionMessage(e)),
+        is_error = TRUE
+      )
     }
-    list(result = result, is_error = FALSE)
-  }, error = function(e) {
-    list(result = paste0("Error executing tool '", tool_obj$name, "': ", conditionMessage(e)),
-         is_error = TRUE)
-  })
+  )
 }
 
 build_skill_arg_variants <- function(parsed_args) {
@@ -981,8 +1034,12 @@ build_skill_fallback_code <- function(parsed_args) {
   if (!is.list(script_args)) script_args <- list()
 
   sanitize_name <- function(x, fallback = NULL) {
-    if (is.null(x) || !nzchar(x)) return(fallback)
-    if (!grepl("^[A-Za-z0-9_.]+$", x)) return(fallback)
+    if (is.null(x) || !nzchar(x)) {
+      return(fallback)
+    }
+    if (!grepl("^[A-Za-z0-9_.]+$", x)) {
+      return(fallback)
+    }
     x
   }
 
