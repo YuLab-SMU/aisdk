@@ -1,0 +1,60 @@
+---
+title: "Anthropic Provider"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Anthropic Provider}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The Anthropic provider (`create_anthropic()`) provides access to the Claude family of models (Claude 3.5 Sonnet, Claude 3 Opus, etc.).
+
+## Configuration
+
+Set your API key in your `.Renviron`:
+```bash
+ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+## Basic Usage
+
+```r
+library(aisdk)
+provider <- create_anthropic()
+model <- provider$language_model("claude-3-5-sonnet-20241022")
+
+response <- generate_text(model, "How do I build a wooden boat?")
+cat(response$text)
+```
+
+## Prompt Caching
+
+Anthropic supports **Prompt Caching** to reduce latency and costs for long contexts. In `aisdk`, you can control this using the `cache_control` field in messages or tools.
+
+### Caching the System Prompt
+```r
+response <- generate_text(
+  model = model,
+  prompt = "Summarize the history of Ancient Rome.",
+  system = list(
+    type = "text", 
+    text = "You are an expert historian with deep knowledge of Rome.", 
+    cache_control = list(type = "ephemeral") # Cache this context
+  )
+)
+```
+
+### Tool Caching
+You can also cache tool definitions if you have many of them:
+
+```r
+weather_tool <- Tool$new(
+  name = "get_weather",
+  description = "Get weather",
+  parameters = z_object(location = z_string()),
+  execute = function(args) "sunny",
+  meta = list(cache_control = list(type = "ephemeral"))
+)
+```
+
+For more details on caching strategies, refer to the [Anthropic API Documentation](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching).

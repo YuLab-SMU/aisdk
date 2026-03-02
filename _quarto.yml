@@ -20,8 +20,22 @@ website:
         menu:
           - href: vignettes/get_started.qmd
             text: "Get Started"
-          - href: vignettes/providers.qmd
-            text: "Models and Providers"
+          - text: "Models and Providers"
+            menu:
+              - href: vignettes/providers.qmd
+                text: "Overview"
+              - href: vignettes/providers-openai.qmd
+                text: "OpenAI"
+              - href: vignettes/providers-anthropic.qmd
+                text: "Anthropic"
+              - href: vignettes/providers-gemini.qmd
+                text: "Gemini"
+              - href: vignettes/providers-aihubmix.qmd
+                text: "AIHubMix"
+              - href: vignettes/providers-custom.qmd
+                text: "Custom Providers"
+              - href: vignettes/providers-others.qmd
+                text: "Other Providers"
           - href: vignettes/agents.qmd
             text: "Building Agents"
           - href: vignettes/tools.qmd

@@ -1,0 +1,48 @@
+---
+title: "AIHubMix Provider"
+format: html
+vignette: >
+  %\VignetteIndexEntry{AIHubMix Provider}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+**AIHubMix** is a powerful unified proxy that provides access to dozens of model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.) via a single API key and optimized routing.
+
+## Native Compatibility Wrappers
+
+While most proxies use a standard OpenAI-compatible interface, this often loses vendor-specific features like Anthropic's prompt caching or Gemini's search grounding. `aisdk` provides specialized wrappers that maintain these features even when routing through AIHubMix.
+
+### AIHubMix Anthropic
+Maintains Claude-specific headers and payload formats (including caching).
+
+```r
+library(aisdk)
+# Uses ANTHROPIC_API_KEY but routes to https://aihubmix.com/v1
+provider <- create_aihubmix_anthropic() 
+model <- provider$language_model("claude-3-5-sonnet-latest")
+```
+
+### AIHubMix Gemini
+Maintains Gemini-specific tool formats and schemas.
+
+```r
+provider <- create_aihubmix_gemini()
+model <- provider$language_model("gemini-1.5-pro")
+```
+
+## Standard Usage
+
+For general models, use the standard creator:
+
+```r
+provider <- create_aihubmix()
+model <- provider$language_model("deepseek-v3")
+```
+
+## Configuration
+
+Set your API key:
+```bash
+AIHUBMIX_API_KEY="sk-mix-..."
+```

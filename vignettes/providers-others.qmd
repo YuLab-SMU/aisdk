@@ -1,0 +1,59 @@
+---
+title: "Other Providers"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Other Providers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`aisdk` natively supports several other high-performance providers. Most of these follow the OpenAI-compatible standard but are optimized for their respective backends.
+
+## DeepSeek
+Optimized for DeepSeek's chat models.
+```r
+provider <- create_deepseek()
+model <- provider$language_model("deepseek-chat")
+```
+
+## xAI
+Supports Grok models.
+```r
+provider <- create_xai()
+model <- provider$language_model("grok-2")
+```
+
+## Volcengine (Doubao)
+Supports ByteDance's Doubao models. Requires `VOLCENGINE_API_KEY` and usually a model endpoint ID.
+```r
+provider <- create_volcengine()
+model <- provider$language_model("ep-...")
+```
+
+## Stepfun
+Supports Stepfun's models.
+```r
+provider <- create_stepfun()
+model <- provider$language_model("step-1-8k")
+```
+
+## Bailian (Qwen)
+Supports Alibaba Cloud's DashScope models (e.g., Qwen).
+```r
+provider <- create_bailian()
+model <- provider$language_model("qwen-max")
+```
+
+## OpenRouter
+A universal API routing to hundreds of models.
+```r
+provider <- create_openrouter()
+model <- provider$language_model("meta-llama/llama-3.1-405b")
+```
+
+## Nvidia
+Supports Nvidia NIM APIs.
+```r
+provider <- create_nvidia()
+model <- provider$language_model("meta/llama-3.1-405b-instruct")
+```

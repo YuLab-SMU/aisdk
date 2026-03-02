@@ -1,0 +1,43 @@
+---
+title: "Custom Providers"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Custom Providers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+If you need to connect to an internal enterprise gateway, a local LLM (like Ollama), or a provider not natively listed in `aisdk`, you can use **Custom Providers**.
+
+## `create_custom_provider()`
+
+You can dynamically instantiate a custom provider by specifying its base URL, API key, and expected format.
+
+```r
+library(aisdk)
+
+# Example: Connecting to a local Ollama instance
+ollama_provider <- create_custom_provider(
+  provider_name = "ollama",
+  base_url = "http://localhost:11434/v1",
+  api_key = "ollama", # Usually ignored for local
+  api_format = "chat_completions" # OpenAI compatible
+)
+
+model <- ollama_provider$language_model("llama3")
+response <- generate_text(model, "Hello local model!")
+```
+
+## API Formats
+
+The `api_format` parameter determines how the SDK constructs payloads. Supported formats:
+
+*   `chat_completions`: OpenAI standard (compatible with most proxies, Ollama, vLLM).
+*   `anthropic_messages`: Native Anthropic format.
+*   `responses`: Google/Gemini native format.
+
+## Configuration Options
+
+*   `use_max_completion_tokens`: For newer OpenAI-compatible reasoning models.
+*   `enable_caching`: For providers that support caching headers.
+*   `base_url`: The full endpoint URL (usually ending in `/v1` or similar).

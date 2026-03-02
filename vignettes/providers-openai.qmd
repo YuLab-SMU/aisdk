@@ -1,0 +1,51 @@
+---
+title: "OpenAI Provider"
+format: html
+vignette: >
+  %\VignetteIndexEntry{OpenAI Provider}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The OpenAI provider (`create_openai()`) supports the full suite of OpenAI models, including standard GPT-4o, GPT-3.5 Turbo, and the newer reasoning models like `o1` and `o3-mini`.
+
+## Configuration
+
+Set your API key in your `.Renviron`:
+```bash
+OPENAI_API_KEY="sk-..."
+```
+
+## Usage
+
+```r
+library(aisdk)
+provider <- create_openai()
+model <- provider$language_model("gpt-4o")
+
+response <- generate_text(model, "Explain quantum entanglement in one sentence.")
+cat(response$text)
+```
+
+## Advanced Features
+
+### Reasoning Models (o1, o3-mini)
+The SDK supports the `o1` and `o3-mini` models. Note that some parameters like `temperature` or `max_tokens` (replaced by `max_completion_tokens`) behave differently for these models.
+
+```r
+model <- provider$language_model("o3-mini")
+response <- generate_text(model, "Solve this complex puzzle...")
+```
+
+### JSON Mode
+You can force JSON output using `response_format`:
+
+```r
+response <- generate_text(
+  model, 
+  "Return a list of 3 fruits in JSON.",
+  response_format = list(type = "json_object")
+)
+```
+
+For a cleaner experience, see the [Structured Outputs](structured_outputs.html) vignette.

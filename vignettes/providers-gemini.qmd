@@ -1,0 +1,55 @@
+---
+title: "Gemini Provider"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Gemini Provider}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The Gemini provider (`create_gemini()`) supports Google's generative models, known for their large context windows and native multimodal capabilities.
+
+## Configuration
+
+Set your API key in your `.Renviron`:
+```bash
+GEMINI_API_KEY="AIza..."
+```
+
+## Google Search Grounding
+
+One of Gemini's unique features is native **Google Search grounding**. This allows the model to search the web to answer queries.
+
+```r
+library(aisdk)
+provider <- create_gemini()
+model <- provider$language_model("gemini-2.0-flash")
+
+# Enable Google Search
+response <- generate_text(
+  model = model, 
+  prompt = "What are the latest results for the 2024 US Election?",
+  tools = list(
+    list(google_search = list()) # Built-in tool
+  )
+)
+```
+
+## Advanced Tool Options
+
+Gemini supports specific tool types like `google_search_retrieval` for more fine-grained control over when the model uses search:
+
+```r
+tools = list(
+  list(google_search_retrieval = list(
+    dynamicRetrievalConfig = list(
+      mode = "MODE_DYNAMIC", 
+      dynamicThreshold = 0.3
+    )
+  ))
+)
+```
+
+## Multimodal Input
+
+Gemini is natively multimodal. The SDK supports passing image data to Gemini models (see the [Multimodal](multimodal.html) vignette for details).
