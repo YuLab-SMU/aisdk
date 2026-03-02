@@ -4,7 +4,14 @@
 \alias{tool}
 \title{Create a Tool}
 \usage{
-tool(name, description, parameters = NULL, execute = NULL, layer = "llm")
+tool(
+  name,
+  description,
+  parameters = NULL,
+  execute = NULL,
+  layer = "llm",
+  meta = NULL
+)
 }
 \arguments{
 \item{name}{Unique tool name (used by LLM to call the tool).}
@@ -22,6 +29,8 @@ List-style functions receive a single list argument containing parameters.}
 
 \item{layer}{Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).
 Default is "llm". Computer layer tools are not loaded into context but executed via bash.}
+
+\item{meta}{Optional metadata associated with the tool (e.g., \code{list(cache_control = list(type = "ephemeral"))}).}
 }
 \value{
 A Tool object.
@@ -33,26 +42,26 @@ to define tools for LLM function calling.
 \examples{
 \donttest{
 if (interactive()) {
-# Define a weather tool
-get_weather <- tool(
-  name = "get_weather",
-  description = "Get the current weather for a location",
-  parameters = z_object(
-    location = z_string(description = "The city name, e.g., 'Beijing'"),
-    unit = z_enum(c("celsius", "fahrenheit"), description = "Temperature unit")
-  ),
-  execute = function(args) {
-    # In real usage, call a weather API here
-    paste("Weather in", args$location, "is 22 degrees", args$unit)
-  }
-)
+  # Define a weather tool
+  get_weather <- tool(
+    name = "get_weather",
+    description = "Get the current weather for a location",
+    parameters = z_object(
+      location = z_string(description = "The city name, e.g., 'Beijing'"),
+      unit = z_enum(c("celsius", "fahrenheit"), description = "Temperature unit")
+    ),
+    execute = function(args) {
+      # In real usage, call a weather API here
+      paste("Weather in", args$location, "is 22 degrees", args$unit)
+    }
+  )
 
-# Use with generate_text
-result <- generate_text(
-  model = "openai:gpt-4o",
-  prompt = "What's the weather in Tokyo?",
-  tools = list(get_weather)
-)
+  # Use with generate_text
+  result <- generate_text(
+    model = "openai:gpt-4o",
+    prompt = "What's the weather in Tokyo?",
+    tools = list(get_weather)
+  )
 }
 }
 }

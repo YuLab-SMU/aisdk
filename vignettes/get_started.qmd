@@ -162,6 +162,7 @@ While in the console, you can use slash commands to manage the session:
 
 Explore the following vignettes for more advanced features:
 
+- [Providers](providers.html): Configure models, connect via Custom Providers, and use AIHubMix advanced compatibility wrappers.
 - [Agents](agents.html): Build specialized AI workers and multi-agent systems.
 - [Tools](tools.html): Deep dive into the Tool system and Schema DSL.
 - [Sessions](sessions.html): Advanced session management and persistence.

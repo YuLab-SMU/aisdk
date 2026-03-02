@@ -1,0 +1,158 @@
+---
+title: "Models and Providers"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Models and Providers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+    eval: false
+---
+
+**aisdk** offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities (such as caching, structured outputs, or routing).
+
+## Supported Providers
+
+Built-in natively supported providers include:
+
+*   **OpenAI** (`create_openai()`): Supports standard completion and the Responses API (e.g., `o1`, `o3-mini`).
+*   **Anthropic** (`create_anthropic()`): Supports Claude models and advanced Prompt Caching.
+*   **Gemini** (`create_gemini()`): Supports Google's generative endpoints.
+*   **DeepSeek** (`create_deepseek()`): Supports DeepSeek's chat models.
+*   **AIHubMix** (`create_aihubmix()`): The unified proxy handling dozens of models.
+*   **xAI** (`create_xai()`): Supports Grok and other xAI models.
+*   **Volcengine** (`create_volcengine()`): Supports ByteDance's Doubao models.
+*   **Stepfun** (`create_stepfun()`): Supports Stepfun's chat models.
+*   **Bailian** (`create_bailian()`): Supports Alibaba Cloud's DashScope models (e.g., Qwen).
+*   **OpenRouter** (`create_openrouter()`): A universal API routing to various LLM providers.
+*   **Nvidia** (`create_nvidia()`): Supports Nvidia NIM APIs.
+
+## Environment Configuration
+
+Before using a provider, ensure your API keys and base URLs are set up. `aisdk` looks for global `.Renviron` variables named by provider:
+
+```r
+library(aisdk)
+
+# Example .Renviron configuration
+# OPENAI_API_KEY="sk-..."
+# ANTHROPIC_API_KEY="sk-ant-..."
+# AIHUBMIX_API_KEY="sk-mix-..."
+```
+
+## Basic Instantiation
+
+At the core of `aisdk`, you initialize a **Provider** factory and request a **Language Model**.
+
+```r
+# Create an Anthropic provider and fetch the Claude 3.5 Sonnet model
+provider <- create_anthropic()
+model <- provider$language_model("claude-3-5-sonnet-20241022")
+
+# Generate text seamlessly
+response <- generate_text(model, prompt = "What is the capital of France?")
+cat(response$text)
+```
+
+## Gemini Google Search Grounding
+
+When using the Gemini provider (`create_gemini`), you can easily enable Google Search grounding to give your model access to real-time information. You only need to pass a specific tool structure compatible with Google's API.
+
+```r
+provider <- create_gemini()
+model <- provider$language_model("gemini-3-flash-preview")
+
+# Generate text with Google Search enabled
+response <- generate_text(
+  model = model, 
+  prompt = "Who won the euro 2024?",
+  tools = list(
+    list(google_search = empty_named_list()) # Or list(google_search = list())
+  )
+)
+```
+
+For older Gemini models (like Gemini 1.5 Pro), you might need to use the `google_search_retrieval` tool instead:
+
+```r
+tools = list(
+  list(google_search_retrieval = list(
+    dynamicRetrievalConfig = list(
+        mode = "MODE_DYNAMIC", 
+        dynamicThreshold = 0.3
+    )
+  ))
+)
+```
+
+## AIHubMix and Advanced Native Compatibility
+
+While standard proxy endpoints often funnel everything through an OpenAI-compatible interface, resulting in the loss of vendor-specific capabilities, the **AIHubMix** integration uniquely bridges the gap using native compatibility layers.
+
+### Native Wrappers
+
+You can expose underlying configurations explicitly via `create_aihubmix_anthropic` and `create_aihubmix_gemini`, which route through AIHubMix while maintaining the native expected format for Claude caching or Gemini schemas.
+
+```r
+# AIHubMix Native Anthropic format (maintains Anthropic prompt caching features)
+aihubmix_claude <- create_aihubmix_anthropic(extended_caching = TRUE)
+claude_model <- aihubmix_claude$language_model("claude-3-5-sonnet-20241022")
+
+# Generating using Claude's native system cache routing
+response <- generate_text(
+  model = claude_model,
+  prompt = "Summarize the history of Ancient Rome.",
+  system = list(
+    type = "text", 
+    text = "You are an expert historian.", 
+    cache_control = list(type = "ephemeral") # Cache this context for subsequent runs
+  )
+)
+```
+
+## Custom Providers
+
+What if you need to connect to an internal enterprise gateway or a provider not natively listed?
+You don't need to write a new class from scratch. You can dynamically instantiate a custom provider using `create_custom_provider()`.
+
+You just provide the credentials and specify the underlying `api_format` (e.g., `chat_completions`, `anthropic_messages`, or `responses`).
+
+```r
+# Creating a proprietary gateway provider compatible with OpenAI Chat Completions
+custom_provider <- create_custom_provider(
+  provider_name = "internal_enterprise_gateway",
+  base_url = "https://internal-gateway.corp.com/v1",
+  api_key = Sys.getenv("CORP_API_KEY"),
+  api_format = "chat_completions",
+  use_max_completion_tokens = TRUE # Optionally force capabilities
+)
+
+# Use it identically to official endpoints
+gateway_model <- custom_provider$language_model("corp-secure-llm")
+```
+
+## Provider Registry
+
+If you use multiple providers or models frequently across a project, `aisdk` maintains a `ProviderRegistry` object. This simplifies accessing providers programmatically:
+
+```r
+registry <- get_default_registry()
+
+# Register providers once at startup
+registry$register("openai", create_openai())
+registry$register("claude", create_anthropic())
+registry$register("corp", custom_provider)
+
+# Fetch models across your app seamlessly
+model1 <- registry$language_model("openai:gpt-4o")
+model2 <- registry$language_model("corp:corp-secure-llm")
+```
+
+## Next Steps
+
+Now that you've mastered providers, you can use them actively across the entire SDK.
+- Learn how to structure AI data output in [Structured Outputs](structured_outputs.html).
+- Inject tools dynamically into providers natively using [Tools](tools.html).

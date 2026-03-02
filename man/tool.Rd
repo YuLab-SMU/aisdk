@@ -17,6 +17,8 @@ A Tool connects an LLM's tool call request to an R function.
 \item{\code{parameters}}{A z_object schema defining the tool's parameters.}
 
 \item{\code{layer}}{Tool layer: "llm" (loaded into context) or "computer" (executed via bash/filesystem).}
+
+\item{\code{meta}}{Optional metadata for the tool (e.g., caching configuration).}
 }
 \if{html}{\out{</div>}}
 }
@@ -36,7 +38,7 @@ A Tool connects an LLM's tool call request to an R function.
 \subsection{Method \code{new()}}{
 Initialize a Tool.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Tool$new(name, description, parameters, execute, layer = "llm")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Tool$new(name, description, parameters, execute, layer = "llm", meta = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -51,6 +53,8 @@ Initialize a Tool.
 \item{\code{execute}}{An R function that implements the tool logic.}
 
 \item{\code{layer}}{Tool layer: "llm" or "computer" (default: "llm").}
+
+\item{\code{meta}}{Optional metadata list (e.g., cache_control).}
 }
 \if{html}{\out{</div>}}
 }

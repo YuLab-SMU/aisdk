@@ -53,6 +53,42 @@ response <- stream_text(model, "Explain the concept of 'tidy evaluation' in R.")
 render_text(response)
 ```
 
+### Advanced Options (AIHubMix Native Interfaces)
+
+AIHubMix provides compatibility layers that let you use Anthropic and Gemini models with their native API structures, unlocking features like **Claude Prompt Caching** or **Gemini structured outputs**. 
+`aisdk` makes this easy with dedicated factory wrappers:
+
+``` r
+library(aisdk)
+
+# Use Claude models with the Anthropic REST format (unlocks caching)
+aihubmix_claude <- create_aihubmix_anthropic(extended_caching = TRUE)
+claude_model <- aihubmix_claude$language_model("claude-3-5-sonnet-20241022")
+
+# Use Gemini models with the Gemini REST format
+aihubmix_gemini <- create_aihubmix_gemini()
+gemini_model <- aihubmix_gemini$language_model("gemini-2.5-flash")
+```
+
+### Custom Providers
+
+If you need to connect to a provider not natively supported by `aisdk`, but which offers an API compatible with OpenAI or Anthropic formats, you can use `create_custom_provider()` to dynamically generate a provider at runtime:
+
+```r
+library(aisdk)
+
+# Create a custom provider compatible with OpenAI's chat completions
+custom_provider <- create_custom_provider(
+  provider_name = "my_custom_proxy",
+  base_url = "https://my-custom-proxy.com/v1",
+  api_key = Sys.getenv("CUSTOM_API_KEY"),
+  api_format = "chat_completions" # Also supports "anthropic_messages" or "responses"
+)
+
+# Use it just like any other provider
+custom_model <- custom_provider$language_model("my-custom-model-id")
+```
+
 ### Building an Agent
 
 Create an agent with tools to solve tasks:

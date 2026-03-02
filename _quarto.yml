@@ -20,6 +20,8 @@ website:
         menu:
           - href: vignettes/get_started.qmd
             text: "Get Started"
+          - href: vignettes/providers.qmd
+            text: "Models and Providers"
           - href: vignettes/agents.qmd
             text: "Building Agents"
           - href: vignettes/tools.qmd
