@@ -152,3 +152,36 @@ test_that("AiHubMix text generation works (online)", {
     expect_true(grepl("PONG", result$text, ignore.case = TRUE))
     expect_false(is.null(result$usage))
 })
+
+# ============================================================================
+# AiHubMix Anthropic & Gemini API Tests
+# ============================================================================
+
+test_that("create_aihubmix_anthropic() initializes correctly", {
+    provider <- safe_create_provider(
+        create_aihubmix_anthropic,
+        extended_caching = TRUE
+    )
+
+    expect_s3_class(provider, "AnthropicProvider")
+    model <- provider$language_model("claude-3-5-sonnet-20241022")
+    config <- model$get_config()
+
+    expect_equal(config$base_url, "https://aihubmix.com/v1")
+    expect_equal(config$provider_name, "aihubmix")
+    expect_true(config$enable_caching)
+    # The header should contain the caching beta string
+    headers <- environment(model$do_generate)$private$get_headers()
+    expect_equal(headers$`anthropic-beta`, "extended-cache-ttl-2025-04-11")
+})
+
+test_that("create_aihubmix_gemini() initializes correctly", {
+    provider <- safe_create_provider(create_aihubmix_gemini)
+
+    expect_s3_class(provider, "GeminiProvider")
+    model <- provider$language_model("gemini-2.5-flash")
+    config <- model$get_config()
+
+    expect_equal(config$base_url, "https://aihubmix.com/gemini/v1beta/models")
+    expect_equal(config$provider_name, "aihubmix")
+})

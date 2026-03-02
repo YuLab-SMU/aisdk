@@ -9,9 +9,24 @@
 #'
 #' @param provider Provider name for the message
 #' @export
+#' Skip test if offline
+#'
+#' @export
+skip_if_offline <- function() {
+  if (!curl::has_internet()) {
+    testthat::skip("Offline: curl::has_internet() is FALSE. Skipping internet-dependent test.")
+  }
+}
+
+#' Skip test if API tests are not enabled
+#'
+#' @param provider Provider name for the message
+#' @export
 skip_if_no_api_key <- function(provider = "API") {
   # Standardize provider name
   provider_key <- tolower(provider)
+
+  skip_if_offline()
 
   # has_api_key is now in R/utils_env.R
   if (!aisdk::has_api_key(provider_key)) {
