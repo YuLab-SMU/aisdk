@@ -21,14 +21,20 @@ AnthropicLanguageModel <- R6::R6Class(
         `anthropic-version` = private$config$api_version
       )
 
-      # Add beta header for prompt caching if enabled
-      if (!is.null(private$config$enable_caching) && private$config$enable_caching) {
-        h$`anthropic-beta` <- "prompt-caching-2024-07-31"
+      # Merge custom headers first so we can check if they override defaults
+      if (!is.null(private$config$headers)) {
+        for (name in names(private$config$headers)) {
+          h[[name]] <- private$config$headers[[name]]
+        }
       }
 
-      if (!is.null(private$config$headers)) {
-        h <- c(h, private$config$headers)
+      # Add beta header for prompt caching if enabled, unless already specified
+      if (!is.null(private$config$enable_caching) && private$config$enable_caching) {
+        if (is.null(h$`anthropic-beta`)) {
+          h$`anthropic-beta` <- "prompt-caching-2024-07-31"
+        }
       }
+
       h
     },
 
@@ -172,7 +178,11 @@ AnthropicLanguageModel <- R6::R6Class(
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- lapply(params$tools, function(t) {
           if (inherits(t, "Tool")) {
-            t$to_api_format("anthropic")
+            tool_api_fmt <- t$to_api_format("anthropic")
+            if (!is.null(t$meta) && !is.null(t$meta$cache_control)) {
+              tool_api_fmt$cache_control <- t$meta$cache_control
+            }
+            tool_api_fmt
           } else {
             t # Assume already in correct format
           }
@@ -261,7 +271,11 @@ AnthropicLanguageModel <- R6::R6Class(
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- lapply(params$tools, function(t) {
           if (inherits(t, "Tool")) {
-            t$to_api_format("anthropic")
+            tool_api_fmt <- t$to_api_format("anthropic")
+            if (!is.null(t$meta) && !is.null(t$meta$cache_control)) {
+              tool_api_fmt$cache_control <- t$meta$cache_control
+            }
+            tool_api_fmt
           } else {
             t # Assume already in correct format
           }

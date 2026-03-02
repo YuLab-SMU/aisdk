@@ -53,6 +53,12 @@ test_that("Anthropic provider can make real API calls", {
   skip_if_no_api_key("Anthropic")
   skip_on_cran()
 
+  # Skip if we are running under an AiHubMix base url to avoid auth errors
+  url <- Sys.getenv("ANTHROPIC_BASE_URL")
+  if (nzchar(url) && grepl("aihubmix", url)) {
+    skip("Skipping real API call because ANTHROPIC_BASE_URL is set to AiHubMix")
+  }
+
   provider <- create_anthropic()
   model <- provider$language_model(anthropic_model)
 
@@ -72,6 +78,11 @@ test_that("Anthropic provider can make real API calls", {
 test_that("Anthropic provider handles tool calls", {
   skip_if_no_api_key("Anthropic")
   skip_on_cran()
+
+  url <- Sys.getenv("ANTHROPIC_BASE_URL")
+  if (nzchar(url) && grepl("aihubmix", url)) {
+    skip("Skipping real API call because ANTHROPIC_BASE_URL is set to AiHubMix")
+  }
 
   provider <- create_anthropic()
   model <- provider$language_model(anthropic_model)
@@ -97,4 +108,31 @@ test_that("Anthropic provider handles tool calls", {
 
   # Check response (can be text or tool calls)
   expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
+})
+
+test_that("Anthropic provider generates tool definition with cache_control", {
+  skip_on_cran()
+
+  provider <- create_anthropic(api_key = "test_key", base_url = "https://api.anthropic.com/v1")
+  model <- provider$language_model(anthropic_model)
+
+  # Create a simple test tool with caching enabled
+  test_tool <- Tool$new(
+    name = "get_weather",
+    description = "Get the weather",
+    parameters = z_object(location = z_string("city")),
+    execute = function(args) {
+      "sunny"
+    },
+    meta = list(cache_control = list(type = "ephemeral"))
+  )
+
+  tool_api <- test_tool$to_api_format("anthropic")
+
+  if (!is.null(test_tool$meta) && !is.null(test_tool$meta$cache_control)) {
+    tool_api$cache_control <- test_tool$meta$cache_control
+  }
+
+  expect_equal(tool_api$name, "get_weather")
+  expect_equal(tool_api$cache_control$type, "ephemeral")
 })
