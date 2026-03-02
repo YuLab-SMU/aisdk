@@ -157,3 +157,79 @@ create_aihubmix <- function(api_key = NULL,
         headers = headers
     )
 }
+
+#' @title Create AiHubMix Provider (Anthropic API Format)
+#' @description
+#' Factory function to create an AiHubMix provider using the Anthropic-compatible API.
+#' This allows you to use AiHubMix Claude models with the native Anthropic API format,
+#' unlocking advanced features like Prompt Caching.
+#'
+#' @details
+#' AiHubMix provides an Anthropic-compatible endpoint at `https://aihubmix.com/v1`.
+#' This convenience function wraps `create_anthropic()` with AiHubMix-specific defaults.
+#'
+#' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
+#' @param extended_caching Logical. If TRUE, enables the 1-hour beta cache for Claude.
+#' @param headers Optional additional headers.
+#' @return An AnthropicProvider object configured for AiHubMix.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'     # Use AiHubMix via Anthropic API format (unlocks caching)
+#'     aihubmix_claude <- create_aihubmix_anthropic()
+#'     model <- aihubmix_claude$language_model("claude-3-5-sonnet-20241022")
+#'     result <- generate_text(model, "Hello Claude!")
+#' }
+#' }
+create_aihubmix_anthropic <- function(api_key = NULL,
+                                      extended_caching = FALSE,
+                                      headers = NULL) {
+    h <- headers %||% list()
+    if (isTRUE(extended_caching)) {
+        h$`anthropic-beta` <- "extended-cache-ttl-2025-04-11"
+    }
+
+    provider <- create_anthropic(
+        api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
+        base_url = "https://aihubmix.com/v1",
+        name = "aihubmix",
+        headers = h
+    )
+    # Enable caching automatically if using this native wrapper
+    # since it's the primary reason to use it.
+    provider$enable_caching(TRUE)
+    provider
+}
+
+#' @title Create AiHubMix Provider (Gemini API Format)
+#' @description
+#' Factory function to create an AiHubMix provider using the Gemini-compatible API.
+#' This allows you to use Gemini models with the native Gemini API structure.
+#'
+#' @details
+#' AiHubMix provides a Gemini-compatible endpoint at `https://aihubmix.com/gemini/v1beta/models`.
+#' This convenience function wraps `create_gemini()` with AiHubMix-specific defaults.
+#'
+#' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
+#' @param headers Optional additional headers.
+#' @return A GeminiProvider object configured for AiHubMix.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'     # Use AiHubMix via Gemini API format
+#'     aihubmix_gemini <- create_aihubmix_gemini()
+#'     model <- aihubmix_gemini$language_model("gemini-2.5-flash")
+#'     result <- generate_text(model, "Hello Gemini!")
+#' }
+#' }
+create_aihubmix_gemini <- function(api_key = NULL,
+                                   headers = NULL) {
+    create_gemini(
+        api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
+        base_url = "https://aihubmix.com/gemini/v1beta/models",
+        name = "aihubmix",
+        headers = headers
+    )
+}
