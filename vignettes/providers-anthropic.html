@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Using Tools – aisdk</title>
+
+
+<title>Anthropic Provider – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -54,6 +57,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }
 </style>
 
+
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
@@ -75,7 +79,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -101,8 +106,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script><link rel="stylesheet" href="styles.css">
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
 </head>
+
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -268,7 +277,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -280,7 +291,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-<li class="nav-item">
+  <li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -288,8 +299,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
-<li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
+        <li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -361,59 +372,52 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-</li>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-<ul class="navbar-nav navbar-nav-scroll ms-auto">
-<li class="nav-item compact">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-</div> <!-- /navcollapse -->
+          </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
    
   <ul>
-<li>
-<a href="#defining-tools" id="toc-defining-tools" class="nav-link active" data-scroll-target="#defining-tools">Defining Tools</a>
+  <li><a href="#configuration" id="toc-configuration" class="nav-link active" data-scroll-target="#configuration">Configuration</a></li>
+  <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic Usage</a></li>
+  <li><a href="#prompt-caching" id="toc-prompt-caching" class="nav-link" data-scroll-target="#prompt-caching">Prompt Caching</a>
   <ul class="collapse">
-<li><a href="#the-schema-dsl" id="toc-the-schema-dsl" class="nav-link" data-scroll-target="#the-schema-dsl">The Schema DSL</a></li>
-  <li><a href="#example-a-scientific-calculator-tool" id="toc-example-a-scientific-calculator-tool" class="nav-link" data-scroll-target="#example-a-scientific-calculator-tool">Example: A Scientific Calculator Tool</a></li>
+  <li><a href="#caching-the-system-prompt" id="toc-caching-the-system-prompt" class="nav-link" data-scroll-target="#caching-the-system-prompt">Caching the System Prompt</a></li>
+  <li><a href="#tool-caching" id="toc-tool-caching" class="nav-link" data-scroll-target="#tool-caching">Tool Caching</a></li>
+  </ul></li>
   </ul>
-</li>
-  <li>
-<a href="#using-tools" id="toc-using-tools" class="nav-link" data-scroll-target="#using-tools">Using Tools</a>
-  <ul class="collapse">
-<li><a href="#with-generate_text" id="toc-with-generate_text" class="nav-link" data-scroll-target="#with-generate_text">With <code>generate_text()</code></a></li>
-  </ul>
-</li>
-  <li><a href="#the-execution-environment" id="toc-the-execution-environment" class="nav-link" data-scroll-target="#the-execution-environment">The Execution Environment</a></li>
-  <li>
-<a href="#advanced-patterns" id="toc-advanced-patterns" class="nav-link" data-scroll-target="#advanced-patterns">Advanced Patterns</a>
-  <ul class="collapse">
-<li><a href="#tool-layers" id="toc-tool-layers" class="nav-link" data-scroll-target="#tool-layers">Tool Layers</a></li>
-  <li><a href="#read-only-vs.-state-mutating" id="toc-read-only-vs.-state-mutating" class="nav-link" data-scroll-target="#read-only-vs.-state-mutating">Read-Only vs.&nbsp;State-Mutating</a></li>
-  <li><a href="#automatic-repair" id="toc-automatic-repair" class="nav-link" data-scroll-target="#automatic-repair">Automatic Repair</a></li>
-  <li><a href="#computer-abstraction" id="toc-computer-abstraction" class="nav-link" data-scroll-target="#computer-abstraction">Computer Abstraction</a></li>
-  </ul>
-</li>
-  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/tools.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers-anthropic.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
-<h1 class="title">Using Tools</h1>
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Anthropic Provider</h1>
 </div>
 
 
@@ -427,159 +431,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
 
 
-</header><p>Tools allow AI models to perform actions like fetching real-time data, interacting with the filesystem, or executing complex calculations in R. In <strong>aisdk</strong>, tools are first-class objects that bridge the gap between LLM function calling and R functions.</p>
-<section id="defining-tools" class="level2"><h2 class="anchored" data-anchor-id="defining-tools">Defining Tools</h2>
-<p>A tool consists of a <code>name</code>, a <code>description</code> (for the LLM), a <code>parameters</code> schema, and an <code>execute</code> function.</p>
-<section id="the-schema-dsl" class="level3"><h3 class="anchored" data-anchor-id="the-schema-dsl">The Schema DSL</h3>
-<p><strong>aisdk</strong> provides a Zod-like DSL for defining JSON Schema structure in R. This ensures the LLM provides valid arguments and enables automatic documentation generation.</p>
-<table class="caption-top table">
-<thead><tr class="header">
-<th>Helper</th>
-<th>JSON Type</th>
-<th>R Type</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string()</a></code></td>
-<td><code>string</code></td>
-<td><code>character</code></td>
-</tr>
-<tr class="even">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number()</a></code></td>
-<td><code>number</code></td>
-<td><code>numeric</code></td>
-</tr>
-<tr class="odd">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_integer.html">z_integer()</a></code></td>
-<td><code>integer</code></td>
-<td><code>integer</code></td>
-</tr>
-<tr class="even">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_boolean.html">z_boolean()</a></code></td>
-<td><code>boolean</code></td>
-<td><code>logical</code></td>
-</tr>
-<tr class="odd">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_enum.html">z_enum()</a></code></td>
-<td><code>string</code></td>
-<td>
-<code>character</code> (subset)</td>
-</tr>
-<tr class="even">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object()</a></code></td>
-<td><code>object</code></td>
-<td><code>list</code></td>
-</tr>
-<tr class="odd">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_array.html">z_array()</a></code></td>
-<td><code>array</code></td>
-<td><code>list</code></td>
-</tr>
-<tr class="even">
-<td><code><a href="https://rdrr.io/pkg/aisdk/man/z_dataframe.html">z_dataframe()</a></code></td>
-<td><code>array</code></td>
-<td>
-<code>list</code> of <code>objects</code>
-</td>
-</tr>
-</tbody>
-</table></section><section id="example-a-scientific-calculator-tool" class="level3"><h3 class="anchored" data-anchor-id="example-a-scientific-calculator-tool">Example: A Scientific Calculator Tool</h3>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">calc_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"calculate"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Perform a mathematical calculation on two numbers"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The first number"</span><span class="op">)</span>,</span>
-<span>    b <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The second number"</span><span class="op">)</span>,</span>
-<span>    operation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_enum.html">z_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"add"</span>, <span class="st">"subtract"</span>, <span class="st">"multiply"</span>, <span class="st">"divide"</span><span class="op">)</span>, <span class="st">"The operator"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">a</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span></span>
-<span>    <span class="va">b</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">b</span></span>
-<span>    <span class="va">op</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">operation</span></span>
-<span></span>
-<span>    <span class="kw"><a href="https://rdrr.io/r/base/switch.html">switch</a></span><span class="op">(</span><span class="va">op</span>,</span>
-<span>      add <span class="op">=</span> <span class="va">a</span> <span class="op">+</span> <span class="va">b</span>,</span>
-<span>      subtract <span class="op">=</span> <span class="va">a</span> <span class="op">-</span> <span class="va">b</span>,</span>
-<span>      multiply <span class="op">=</span> <span class="va">a</span> <span class="op">*</span> <span class="va">b</span>,</span>
-<span>      divide <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="va">b</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">a</span> <span class="op">/</span> <span class="va">b</span> <span class="kw">else</span> <span class="st">"Error: Division by zero"</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section></section><section id="using-tools" class="level2"><h2 class="anchored" data-anchor-id="using-tools">Using Tools</h2>
-<p>You can use tools with <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code> or with an <code>Agent</code>.</p>
-<section id="with-generate_text" class="level3"><h3 class="anchored" data-anchor-id="with-generate_text">With <code>generate_text()</code>
-</h3>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
-<span>  prompt <span class="op">=</span> <span class="st">"What is 123 multiplied by 456?"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">calc_tool</span><span class="op">)</span>,</span>
-<span>  max_steps <span class="op">=</span> <span class="fl">3</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span>
-<span><span class="co"># &gt; "The result of 123 multiplied by 456 is 56088."</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section></section><section id="the-execution-environment" class="level2"><h2 class="anchored" data-anchor-id="the-execution-environment">The Execution Environment</h2>
-<p>Inside the <code>execute</code> function, you can access the current session environment via <code>args$.envir</code>. This allows tools to share state (like data frames or models) across multiple steps.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">state_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"save_state"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Save a value to the session environment"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"Variable name"</span><span class="op">)</span>,</span>
-<span>    value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_any.html">z_any</a></span><span class="op">(</span><span class="st">"Value to save"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># .envir is automatically injected by the SDK</span></span>
-<span>    <span class="va">env</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">.envir</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html">is.null</a></span><span class="op">(</span><span class="va">env</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>      <span class="va">env</span><span class="op">[[</span><span class="va">args</span><span class="op">$</span><span class="va">key</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">args</span><span class="op">$</span><span class="va">value</span></span>
-<span>      <span class="kw"><a href="https://rdrr.io/r/base/function.html">return</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"Saved"</span>, <span class="va">args</span><span class="op">$</span><span class="va">key</span>, <span class="st">"to session."</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">}</span></span>
-<span>    <span class="st">"Error: No session environment found."</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="advanced-patterns" class="level2"><h2 class="anchored" data-anchor-id="advanced-patterns">Advanced Patterns</h2>
-<section id="tool-layers" class="level3"><h3 class="anchored" data-anchor-id="tool-layers">Tool Layers</h3>
-<p>You can categorize tools into “layers” for better organization.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">my_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"my_tool"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Example tool"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span> <span class="st">"Result"</span> <span class="op">}</span>,</span>
-<span>  layer <span class="op">=</span> <span class="st">"data_analysis"</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="read-only-vs.-state-mutating" class="level3"><h3 class="anchored" data-anchor-id="read-only-vs.-state-mutating">Read-Only vs.&nbsp;State-Mutating</h3>
-<p>When building autonomous agents, it is a best practice to strictly separate tools by their side effects:</p>
-<ul>
-<li>
-<strong>Read-Only</strong>: Tools that fetch data (e.g., <code>read_file</code>, <code>query_database</code>). These can typically be executed automatically.</li>
-<li>
-<strong>State-Mutating</strong>: Tools that change the environment or external systems (e.g., <code>write_file</code>, <code>execute_query</code>).</li>
-</ul>
-<p>You can use the <code>aisdk</code> <strong>Permission Hooks</strong> and <strong>Human-in-the-Loop (HITL)</strong> system to automatically pause execution and require explicit user approval whenever an agent attempts to call a state-mutating tool.</p>
-</section><section id="automatic-repair" class="level3"><h3 class="anchored" data-anchor-id="automatic-repair">Automatic Repair</h3>
-<p><strong>aisdk</strong> includes built-in mechanisms to repair small JSON errors in tool arguments and fuzzy-match tool names if the LLM makes a minor typo.</p>
-</section><section id="computer-abstraction" class="level3"><h3 class="anchored" data-anchor-id="computer-abstraction">Computer Abstraction</h3>
-<p>The <code><a href="https://rdrr.io/pkg/aisdk/man/create_computer_tools.html">create_computer_tools()</a></code> function provides a standardized set of tools for filesystem and bash operations, complete with safety sandboxing.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">computer_tools</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_computer_tools.html">create_computer_tools</a></span><span class="op">(</span>working_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html">getwd</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># Includes: bash, read_file, write_file, execute_r_code</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>For more details on computer tools, see the <a href="computer_abstraction.html">Computer Abstraction</a> vignette.</p>
+</header>
 
 
-</section></section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+<p>The Anthropic provider (<code>create_anthropic()</code>) provides access to the Claude family of models (Claude 3.5 Sonnet, Claude 3 Opus, etc.).</p>
+<section id="configuration" class="level2">
+<h2 class="anchored" data-anchor-id="configuration">Configuration</h2>
+<p>Set your API key in your <code>.Renviron</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">ANTHROPIC_API_KEY</span><span class="op">=</span><span class="st">"sk-ant-..."</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="basic-usage" class="level2">
+<h2 class="anchored" data-anchor-id="basic-usage">Basic Usage</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_anthropic</span>()</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"claude-3-5-sonnet-20241022"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> <span class="fu">generate_text</span>(model, <span class="st">"How do I build a wooden boat?"</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(response<span class="sc">$</span>text)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="prompt-caching" class="level2">
+<h2 class="anchored" data-anchor-id="prompt-caching">Prompt Caching</h2>
+<p>Anthropic supports <strong>Prompt Caching</strong> to reduce latency and costs for long contexts. In <code>aisdk</code>, you can control this using the <code>cache_control</code> field in messages or tools.</p>
+<section id="caching-the-system-prompt" class="level3">
+<h3 class="anchored" data-anchor-id="caching-the-system-prompt">Caching the System Prompt</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> <span class="fu">generate_text</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> model,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Summarize the history of Ancient Rome."</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">system =</span> <span class="fu">list</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">type =</span> <span class="st">"text"</span>, </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">text =</span> <span class="st">"You are an expert historian with deep knowledge of Rome."</span>, </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">cache_control =</span> <span class="fu">list</span>(<span class="at">type =</span> <span class="st">"ephemeral"</span>) <span class="co"># Cache this context</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="tool-caching" class="level3">
+<h3 class="anchored" data-anchor-id="tool-caching">Tool Caching</h3>
+<p>You can also cache tool definitions if you have many of them:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>weather_tool <span class="ot">&lt;-</span> Tool<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"get_weather"</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">description =</span> <span class="st">"Get weather"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">parameters =</span> <span class="fu">z_object</span>(<span class="at">location =</span> <span class="fu">z_string</span>()),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">execute =</span> <span class="cf">function</span>(args) <span class="st">"sunny"</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">meta =</span> <span class="fu">list</span>(<span class="at">cache_control =</span> <span class="fu">list</span>(<span class="at">type =</span> <span class="st">"ephemeral"</span>))</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For more details on caching strategies, refer to the <a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching">Anthropic API Documentation</a>.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -996,4 +898,5 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/tools.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers-anthropic.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>

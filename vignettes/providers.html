@@ -293,10 +293,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Models and Providers</li>
         <li>
     <a class="dropdown-item" href="../vignettes/providers.html">
- <span class="dropdown-text">Models and Providers</span></a>
+ <span class="dropdown-text">Overview</span></a>
   </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-openai.html">
+ <span class="dropdown-text">OpenAI</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-anthropic.html">
+ <span class="dropdown-text">Anthropic</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-gemini.html">
+ <span class="dropdown-text">Gemini</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-aihubmix.html">
+ <span class="dropdown-text">AIHubMix</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-custom.html">
+ <span class="dropdown-text">Custom Providers</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/providers-others.html">
+ <span class="dropdown-text">Other Providers</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
         <li>
     <a class="dropdown-item" href="../vignettes/agents.html">
  <span class="dropdown-text">Building Agents</span></a>
@@ -359,17 +386,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
    
   <ul>
-<li><a href="#supported-providers" id="toc-supported-providers" class="nav-link active" data-scroll-target="#supported-providers">Supported Providers</a></li>
-  <li><a href="#environment-configuration" id="toc-environment-configuration" class="nav-link" data-scroll-target="#environment-configuration">Environment Configuration</a></li>
-  <li><a href="#basic-instantiation" id="toc-basic-instantiation" class="nav-link" data-scroll-target="#basic-instantiation">Basic Instantiation</a></li>
-  <li><a href="#gemini-google-search-grounding" id="toc-gemini-google-search-grounding" class="nav-link" data-scroll-target="#gemini-google-search-grounding">Gemini Google Search Grounding</a></li>
+<li><a href="#philosophy" id="toc-philosophy" class="nav-link active" data-scroll-target="#philosophy">Philosophy</a></li>
   <li>
-<a href="#aihubmix-and-advanced-native-compatibility" id="toc-aihubmix-and-advanced-native-compatibility" class="nav-link" data-scroll-target="#aihubmix-and-advanced-native-compatibility">AIHubMix and Advanced Native Compatibility</a>
+<a href="#ecosystem-overview" id="toc-ecosystem-overview" class="nav-link" data-scroll-target="#ecosystem-overview">Ecosystem Overview</a>
   <ul class="collapse">
-<li><a href="#native-wrappers" id="toc-native-wrappers" class="nav-link" data-scroll-target="#native-wrappers">Native Wrappers</a></li>
+<li><a href="#major-native-providers" id="toc-major-native-providers" class="nav-link" data-scroll-target="#major-native-providers">Major Native Providers</a></li>
+  <li><a href="#aggregators-and-proxies" id="toc-aggregators-and-proxies" class="nav-link" data-scroll-target="#aggregators-and-proxies">Aggregators and Proxies</a></li>
+  <li><a href="#specialized-regional-providers" id="toc-specialized-regional-providers" class="nav-link" data-scroll-target="#specialized-regional-providers">Specialized &amp; Regional Providers</a></li>
+  <li><a href="#custom-connections" id="toc-custom-connections" class="nav-link" data-scroll-target="#custom-connections">Custom Connections</a></li>
   </ul>
 </li>
-  <li><a href="#custom-providers" id="toc-custom-providers" class="nav-link" data-scroll-target="#custom-providers">Custom Providers</a></li>
+  <li><a href="#environment-configuration" id="toc-environment-configuration" class="nav-link" data-scroll-target="#environment-configuration">Environment Configuration</a></li>
   <li><a href="#provider-registry" id="toc-provider-registry" class="nav-link" data-scroll-target="#provider-registry">Provider Registry</a></li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next Steps</a></li>
   </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -390,117 +417,79 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
 
 
-</header><p><strong>aisdk</strong> offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities (such as caching, structured outputs, or routing).</p>
-<section id="supported-providers" class="level2"><h2 class="anchored" data-anchor-id="supported-providers">Supported Providers</h2>
-<p>Built-in natively supported providers include:</p>
+</header><p><strong>aisdk</strong> offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities.</p>
+<section id="philosophy" class="level2"><h2 class="anchored" data-anchor-id="philosophy">Philosophy</h2>
+<p>The SDK is built on the principle of <strong>Native Capability Retention</strong>. While we provide a unified interface, we ensure that provider-specific features (like Anthropic’s caching or Gemini’s search) are not lost when using proxies or specialized creators.</p>
+</section><section id="ecosystem-overview" class="level2"><h2 class="anchored" data-anchor-id="ecosystem-overview">Ecosystem Overview</h2>
+<p>We categorize providers into several groups. Explore the detailed documentation for each:</p>
+<section id="major-native-providers" class="level3"><h3 class="anchored" data-anchor-id="major-native-providers">Major Native Providers</h3>
+<p>These providers have deep, native integrations within the SDK:</p>
 <ul>
 <li>
-<strong>OpenAI</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai()</a></code>): Supports standard completion and the Responses API (e.g., <code>o1</code>, <code>o3-mini</code>).</li>
+<a href="providers-openai.html"><strong>OpenAI</strong></a>: The industry standard, supporting GPT-4o and reasoning models (<code>o1</code>/<code>o3</code>).</li>
 <li>
-<strong>Anthropic</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic()</a></code>): Supports Claude models and advanced Prompt Caching.</li>
+<a href="providers-anthropic.html"><strong>Anthropic</strong></a>: Claude models with advanced prompt caching support.</li>
 <li>
-<strong>Gemini</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_gemini.html">create_gemini()</a></code>): Supports Google’s generative endpoints.</li>
+<a href="providers-gemini.html"><strong>Gemini</strong></a>: high-context Google models with native Google Search grounding.</li>
+</ul></section><section id="aggregators-and-proxies" class="level3"><h3 class="anchored" data-anchor-id="aggregators-and-proxies">Aggregators and Proxies</h3>
+<p>Unified endpoints that route to multiple backends:</p>
+<ul>
 <li>
-<strong>DeepSeek</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_deepseek.html">create_deepseek()</a></code>): Supports DeepSeek’s chat models.</li>
+<a href="providers-aihubmix.html"><strong>AIHubMix</strong></a>: A specialized proxy with native compatibility wrappers for Claude and Gemini.</li>
 <li>
-<strong>AIHubMix</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_aihubmix.html">create_aihubmix()</a></code>): The unified proxy handling dozens of models.</li>
+<a href="providers-others.html#openrouter"><strong>OpenRouter</strong></a>: Access to open and closed models via a single API.</li>
+</ul></section><section id="specialized-regional-providers" class="level3"><h3 class="anchored" data-anchor-id="specialized-regional-providers">Specialized &amp; Regional Providers</h3>
+<p>Optimized connectors for high-performance backends:</p>
+<ul>
 <li>
-<strong>xAI</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_xai.html">create_xai()</a></code>): Supports Grok and other xAI models.</li>
+<a href="providers-others.html#deepseek"><strong>DeepSeek</strong></a>, <a href="providers-others.html#xai"><strong>xAI</strong></a>, <a href="providers-others.html#volcengine"><strong>Volcengine</strong></a>, <a href="providers-others.html#stepfun"><strong>Stepfun</strong></a>, <a href="providers-others.html#bailian"><strong>Bailian</strong></a>, <a href="providers-others.html#nvidia"><strong>Nvidia</strong></a>.</li>
+</ul></section><section id="custom-connections" class="level3"><h3 class="anchored" data-anchor-id="custom-connections">Custom Connections</h3>
+<ul>
 <li>
-<strong>Volcengine</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_volcengine.html">create_volcengine()</a></code>): Supports ByteDance’s Doubao models.</li>
-<li>
-<strong>Stepfun</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_stepfun.html">create_stepfun()</a></code>): Supports Stepfun’s chat models.</li>
-<li>
-<strong>Bailian</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_bailian.html">create_bailian()</a></code>): Supports Alibaba Cloud’s DashScope models (e.g., Qwen).</li>
-<li>
-<strong>OpenRouter</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_openrouter.html">create_openrouter()</a></code>): A universal API routing to various LLM providers.</li>
-<li>
-<strong>Nvidia</strong> (<code><a href="https://rdrr.io/pkg/aisdk/man/create_nvidia.html">create_nvidia()</a></code>): Supports Nvidia NIM APIs.</li>
-</ul></section><section id="environment-configuration" class="level2"><h2 class="anchored" data-anchor-id="environment-configuration">Environment Configuration</h2>
-<p>Before using a provider, ensure your API keys and base URLs are set up. <code>aisdk</code> looks for global <code>.Renviron</code> variables named by provider:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<a href="providers-custom.html"><strong>Custom Providers</strong></a>: Connect to internal gateways, local LLMs (Ollama), or any OpenAI-compatible API.</li>
+</ul></section></section><section id="environment-configuration" class="level2"><h2 class="anchored" data-anchor-id="environment-configuration">Environment Configuration</h2>
+<p>Before using a provider, ensure your API keys are set up in your <code>.Renviron</code>. The SDK automatically looks for these variables:</p>
+<table class="caption-top table">
+<thead><tr class="header">
+<th style="text-align: left;">Provider</th>
+<th style="text-align: left;">Environment Variable</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">OpenAI</td>
+<td style="text-align: left;"><code>OPENAI_API_KEY</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Anthropic</td>
+<td style="text-align: left;"><code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Gemini</td>
+<td style="text-align: left;"><code>GEMINI_API_KEY</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">AIHubMix</td>
+<td style="text-align: left;"><code>AIHUBMIX_API_KEY</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DeepSeek</td>
+<td style="text-align: left;"><code>DEEPSEEK_API_KEY</code></td>
+</tr>
+</tbody>
+</table></section><section id="provider-registry" class="level2"><h2 class="anchored" data-anchor-id="provider-registry">Provider Registry</h2>
+<p>If you use multiple providers, you can use the <code>ProviderRegistry</code> to manage them:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu">get_default_registry</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"openai"</span>, <span class="fu">create_openai</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"claude"</span>, <span class="fu">create_anthropic</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Example .Renviron configuration</span></span>
-<span><span class="co"># OPENAI_API_KEY="sk-..."</span></span>
-<span><span class="co"># ANTHROPIC_API_KEY="sk-ant-..."</span></span>
-<span><span class="co"># AIHUBMIX_API_KEY="sk-mix-..."</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="basic-instantiation" class="level2"><h2 class="anchored" data-anchor-id="basic-instantiation">Basic Instantiation</h2>
-<p>At the core of <code>aisdk</code>, you initialize a <strong>Provider</strong> factory and request a <strong>Language Model</strong>.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Create an Anthropic provider and fetch the Claude 3.5 Sonnet model</span></span>
-<span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"claude-3-5-sonnet-20241022"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Generate text seamlessly</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span><span class="va">model</span>, prompt <span class="op">=</span> <span class="st">"What is the capital of France?"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="gemini-google-search-grounding" class="level2"><h2 class="anchored" data-anchor-id="gemini-google-search-grounding">Gemini Google Search Grounding</h2>
-<p>When using the Gemini provider (<code>create_gemini</code>), you can easily enable Google Search grounding to give your model access to real-time information. You only need to pass a specific tool structure compatible with Google’s API.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_gemini.html">create_gemini</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gemini-3-flash-preview"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Generate text with Google Search enabled</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>, </span>
-<span>  prompt <span class="op">=</span> <span class="st">"Who won the euro 2024?"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>google_search <span class="op">=</span> <span class="fu">empty_named_list</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="co"># Or list(google_search = list())</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>For older Gemini models (like Gemini 1.5 Pro), you might need to use the <code>google_search_retrieval</code> tool instead:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">tools</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>google_search_retrieval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
-<span>    dynamicRetrievalConfig <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
-<span>        mode <span class="op">=</span> <span class="st">"MODE_DYNAMIC"</span>, </span>
-<span>        dynamicThreshold <span class="op">=</span> <span class="fl">0.3</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="aihubmix-and-advanced-native-compatibility" class="level2"><h2 class="anchored" data-anchor-id="aihubmix-and-advanced-native-compatibility">AIHubMix and Advanced Native Compatibility</h2>
-<p>While standard proxy endpoints often funnel everything through an OpenAI-compatible interface, resulting in the loss of vendor-specific capabilities, the <strong>AIHubMix</strong> integration uniquely bridges the gap using native compatibility layers.</p>
-<section id="native-wrappers" class="level3"><h3 class="anchored" data-anchor-id="native-wrappers">Native Wrappers</h3>
-<p>You can expose underlying configurations explicitly via <code>create_aihubmix_anthropic</code> and <code>create_aihubmix_gemini</code>, which route through AIHubMix while maintaining the native expected format for Claude caching or Gemini schemas.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># AIHubMix Native Anthropic format (maintains Anthropic prompt caching features)</span></span>
-<span><span class="va">aihubmix_claude</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_aihubmix_anthropic.html">create_aihubmix_anthropic</a></span><span class="op">(</span>extended_caching <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">claude_model</span> <span class="op">&lt;-</span> <span class="va">aihubmix_claude</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"claude-3-5-sonnet-20241022"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Generating using Claude's native system cache routing</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">claude_model</span>,</span>
-<span>  prompt <span class="op">=</span> <span class="st">"Summarize the history of Ancient Rome."</span>,</span>
-<span>  system <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span></span>
-<span>    type <span class="op">=</span> <span class="st">"text"</span>, </span>
-<span>    text <span class="op">=</span> <span class="st">"You are an expert historian."</span>, </span>
-<span>    cache_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"ephemeral"</span><span class="op">)</span> <span class="co"># Cache this context for subsequent runs</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section></section><section id="custom-providers" class="level2"><h2 class="anchored" data-anchor-id="custom-providers">Custom Providers</h2>
-<p>What if you need to connect to an internal enterprise gateway or a provider not natively listed? You don’t need to write a new class from scratch. You can dynamically instantiate a custom provider using <code><a href="https://rdrr.io/pkg/aisdk/man/create_custom_provider.html">create_custom_provider()</a></code>.</p>
-<p>You just provide the credentials and specify the underlying <code>api_format</code> (e.g., <code>chat_completions</code>, <code>anthropic_messages</code>, or <code>responses</code>).</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Creating a proprietary gateway provider compatible with OpenAI Chat Completions</span></span>
-<span><span class="va">custom_provider</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_custom_provider.html">create_custom_provider</a></span><span class="op">(</span></span>
-<span>  provider_name <span class="op">=</span> <span class="st">"internal_enterprise_gateway"</span>,</span>
-<span>  base_url <span class="op">=</span> <span class="st">"https://internal-gateway.corp.com/v1"</span>,</span>
-<span>  api_key <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html">Sys.getenv</a></span><span class="op">(</span><span class="st">"CORP_API_KEY"</span><span class="op">)</span>,</span>
-<span>  api_format <span class="op">=</span> <span class="st">"chat_completions"</span>,</span>
-<span>  use_max_completion_tokens <span class="op">=</span> <span class="cn">TRUE</span> <span class="co"># Optionally force capabilities</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Use it identically to official endpoints</span></span>
-<span><span class="va">gateway_model</span> <span class="op">&lt;-</span> <span class="va">custom_provider</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"corp-secure-llm"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section><section id="provider-registry" class="level2"><h2 class="anchored" data-anchor-id="provider-registry">Provider Registry</h2>
-<p>If you use multiple providers or models frequently across a project, <code>aisdk</code> maintains a <code>ProviderRegistry</code> object. This simplifies accessing providers programmatically:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">registry</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/get_default_registry.html">get_default_registry</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Register providers once at startup</span></span>
-<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"openai"</span>, <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"claude"</span>, <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_anthropic.html">create_anthropic</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">registry</span><span class="op">$</span><span class="fu">register</span><span class="op">(</span><span class="st">"corp"</span>, <span class="va">custom_provider</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Fetch models across your app seamlessly</span></span>
-<span><span class="va">model1</span> <span class="op">&lt;-</span> <span class="va">registry</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
-<span><span class="va">model2</span> <span class="op">&lt;-</span> <span class="va">registry</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"corp:corp-secure-llm"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span><span class="co"># Access models via provider:model syntax</span></span>
+<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="va">registry</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
-<p>Now that you’ve mastered providers, you can use them actively across the entire SDK. - Learn how to structure AI data output in <a href="structured_outputs.html">Structured Outputs</a>. - Inject tools dynamically into providers natively using <a href="tools.html">Tools</a>.</p>
+<ul>
+<li>Learn about <a href="structured_outputs.html">Structured Outputs</a>.</li>
+<li>Explore the <a href="agents.html">Agent System</a>.</li>
+<li>Build tools with the <a href="tools.html">Tool DSL</a>.</li>
+</ul>
 
 
 </section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">

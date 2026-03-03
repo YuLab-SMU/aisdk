@@ -49,6 +49,62 @@
     "text": "Low-Level Control\nYou can manually convert an agent into a tool that another agent (or generate_text) can call:\n\ncoder_tool &lt;- coder$as_tool()\n\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"Write a function to calculate Fibonacci numbers.\",\n  tools = list(coder_tool)\n)\n\nFor more advanced agent behaviors, see the Skills vignette."
   },
   {
+    "objectID": "vignettes/providers-others.html",
+    "href": "vignettes/providers-others.html",
+    "title": "Other Providers",
+    "section": "",
+    "text": "aisdk natively supports several other high-performance providers. Most of these follow the OpenAI-compatible standard but are optimized for their respective backends."
+  },
+  {
+    "objectID": "vignettes/providers-others.html#deepseek",
+    "href": "vignettes/providers-others.html#deepseek",
+    "title": "Other Providers",
+    "section": "DeepSeek",
+    "text": "DeepSeek\nOptimized for DeepSeek’s chat models.\nprovider &lt;- create_deepseek()\nmodel &lt;- provider$language_model(\"deepseek-chat\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#xai",
+    "href": "vignettes/providers-others.html#xai",
+    "title": "Other Providers",
+    "section": "xAI",
+    "text": "xAI\nSupports Grok models.\nprovider &lt;- create_xai()\nmodel &lt;- provider$language_model(\"grok-2\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#volcengine-doubao",
+    "href": "vignettes/providers-others.html#volcengine-doubao",
+    "title": "Other Providers",
+    "section": "Volcengine (Doubao)",
+    "text": "Volcengine (Doubao)\nSupports ByteDance’s Doubao models. Requires VOLCENGINE_API_KEY and usually a model endpoint ID.\nprovider &lt;- create_volcengine()\nmodel &lt;- provider$language_model(\"ep-...\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#stepfun",
+    "href": "vignettes/providers-others.html#stepfun",
+    "title": "Other Providers",
+    "section": "Stepfun",
+    "text": "Stepfun\nSupports Stepfun’s models.\nprovider &lt;- create_stepfun()\nmodel &lt;- provider$language_model(\"step-1-8k\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#bailian-qwen",
+    "href": "vignettes/providers-others.html#bailian-qwen",
+    "title": "Other Providers",
+    "section": "Bailian (Qwen)",
+    "text": "Bailian (Qwen)\nSupports Alibaba Cloud’s DashScope models (e.g., Qwen).\nprovider &lt;- create_bailian()\nmodel &lt;- provider$language_model(\"qwen-max\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#openrouter",
+    "href": "vignettes/providers-others.html#openrouter",
+    "title": "Other Providers",
+    "section": "OpenRouter",
+    "text": "OpenRouter\nA universal API routing to hundreds of models.\nprovider &lt;- create_openrouter()\nmodel &lt;- provider$language_model(\"meta-llama/llama-3.1-405b\")"
+  },
+  {
+    "objectID": "vignettes/providers-others.html#nvidia",
+    "href": "vignettes/providers-others.html#nvidia",
+    "title": "Other Providers",
+    "section": "Nvidia",
+    "text": "Nvidia\nSupports Nvidia NIM APIs.\nprovider &lt;- create_nvidia()\nmodel &lt;- provider$language_model(\"meta/llama-3.1-405b-instruct\")"
+  },
+  {
     "objectID": "vignettes/tools.html",
     "href": "vignettes/tools.html",
     "title": "Using Tools",
@@ -140,6 +196,209 @@
     "text": "Community MCP Servers\nYou can find hundreds of ready-to-use MCP servers in the MCP Hub or the official MCP GitHub repository."
   },
   {
+    "objectID": "vignettes/providers-anthropic.html",
+    "href": "vignettes/providers-anthropic.html",
+    "title": "Anthropic Provider",
+    "section": "",
+    "text": "The Anthropic provider (create_anthropic()) provides access to the Claude family of models (Claude 3.5 Sonnet, Claude 3 Opus, etc.)."
+  },
+  {
+    "objectID": "vignettes/providers-anthropic.html#configuration",
+    "href": "vignettes/providers-anthropic.html#configuration",
+    "title": "Anthropic Provider",
+    "section": "Configuration",
+    "text": "Configuration\nSet your API key in your .Renviron:\nANTHROPIC_API_KEY=\"sk-ant-...\""
+  },
+  {
+    "objectID": "vignettes/providers-anthropic.html#basic-usage",
+    "href": "vignettes/providers-anthropic.html#basic-usage",
+    "title": "Anthropic Provider",
+    "section": "Basic Usage",
+    "text": "Basic Usage\nlibrary(aisdk)\nprovider &lt;- create_anthropic()\nmodel &lt;- provider$language_model(\"claude-3-5-sonnet-20241022\")\n\nresponse &lt;- generate_text(model, \"How do I build a wooden boat?\")\ncat(response$text)"
+  },
+  {
+    "objectID": "vignettes/providers-anthropic.html#prompt-caching",
+    "href": "vignettes/providers-anthropic.html#prompt-caching",
+    "title": "Anthropic Provider",
+    "section": "Prompt Caching",
+    "text": "Prompt Caching\nAnthropic supports Prompt Caching to reduce latency and costs for long contexts. In aisdk, you can control this using the cache_control field in messages or tools.\n\nCaching the System Prompt\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"Summarize the history of Ancient Rome.\",\n  system = list(\n    type = \"text\", \n    text = \"You are an expert historian with deep knowledge of Rome.\", \n    cache_control = list(type = \"ephemeral\") # Cache this context\n  )\n)\n\n\nTool Caching\nYou can also cache tool definitions if you have many of them:\nweather_tool &lt;- Tool$new(\n  name = \"get_weather\",\n  description = \"Get weather\",\n  parameters = z_object(location = z_string()),\n  execute = function(args) \"sunny\",\n  meta = list(cache_control = list(type = \"ephemeral\"))\n)\nFor more details on caching strategies, refer to the Anthropic API Documentation."
+  },
+  {
+    "objectID": "vignettes/providers-custom.html",
+    "href": "vignettes/providers-custom.html",
+    "title": "Custom Providers",
+    "section": "",
+    "text": "If you need to connect to an internal enterprise gateway, a local LLM (like Ollama), or a provider not natively listed in aisdk, you can use Custom Providers."
+  },
+  {
+    "objectID": "vignettes/providers-custom.html#create_custom_provider",
+    "href": "vignettes/providers-custom.html#create_custom_provider",
+    "title": "Custom Providers",
+    "section": "create_custom_provider()",
+    "text": "create_custom_provider()\nYou can dynamically instantiate a custom provider by specifying its base URL, API key, and expected format.\nlibrary(aisdk)\n\n# Example: Connecting to a local Ollama instance\nollama_provider &lt;- create_custom_provider(\n  provider_name = \"ollama\",\n  base_url = \"http://localhost:11434/v1\",\n  api_key = \"ollama\", # Usually ignored for local\n  api_format = \"chat_completions\" # OpenAI compatible\n)\n\nmodel &lt;- ollama_provider$language_model(\"llama3\")\nresponse &lt;- generate_text(model, \"Hello local model!\")"
+  },
+  {
+    "objectID": "vignettes/providers-custom.html#api-formats",
+    "href": "vignettes/providers-custom.html#api-formats",
+    "title": "Custom Providers",
+    "section": "API Formats",
+    "text": "API Formats\nThe api_format parameter determines how the SDK constructs payloads. Supported formats:\n\nchat_completions: OpenAI standard (compatible with most proxies, Ollama, vLLM).\nanthropic_messages: Native Anthropic format.\nresponses: Google/Gemini native format."
+  },
+  {
+    "objectID": "vignettes/providers-custom.html#configuration-options",
+    "href": "vignettes/providers-custom.html#configuration-options",
+    "title": "Custom Providers",
+    "section": "Configuration Options",
+    "text": "Configuration Options\n\nuse_max_completion_tokens: For newer OpenAI-compatible reasoning models.\nenable_caching: For providers that support caching headers.\nbase_url: The full endpoint URL (usually ending in /v1 or similar)."
+  },
+  {
+    "objectID": "vignettes/providers-gemini.html",
+    "href": "vignettes/providers-gemini.html",
+    "title": "Gemini Provider",
+    "section": "",
+    "text": "The Gemini provider (create_gemini()) supports Google’s generative models, known for their large context windows and native multimodal capabilities."
+  },
+  {
+    "objectID": "vignettes/providers-gemini.html#configuration",
+    "href": "vignettes/providers-gemini.html#configuration",
+    "title": "Gemini Provider",
+    "section": "Configuration",
+    "text": "Configuration\nSet your API key in your .Renviron:\nGEMINI_API_KEY=\"AIza...\""
+  },
+  {
+    "objectID": "vignettes/providers-gemini.html#google-search-grounding",
+    "href": "vignettes/providers-gemini.html#google-search-grounding",
+    "title": "Gemini Provider",
+    "section": "Google Search Grounding",
+    "text": "Google Search Grounding\nOne of Gemini’s unique features is native Google Search grounding. This allows the model to search the web to answer queries.\nlibrary(aisdk)\nprovider &lt;- create_gemini()\nmodel &lt;- provider$language_model(\"gemini-2.0-flash\")\n\n# Enable Google Search\nresponse &lt;- generate_text(\n  model = model, \n  prompt = \"What are the latest results for the 2024 US Election?\",\n  tools = list(\n    list(google_search = list()) # Built-in tool\n  )\n)"
+  },
+  {
+    "objectID": "vignettes/providers-gemini.html#advanced-tool-options",
+    "href": "vignettes/providers-gemini.html#advanced-tool-options",
+    "title": "Gemini Provider",
+    "section": "Advanced Tool Options",
+    "text": "Advanced Tool Options\nGemini supports specific tool types like google_search_retrieval for more fine-grained control over when the model uses search:\ntools = list(\n  list(google_search_retrieval = list(\n    dynamicRetrievalConfig = list(\n      mode = \"MODE_DYNAMIC\", \n      dynamicThreshold = 0.3\n    )\n  ))\n)"
+  },
+  {
+    "objectID": "vignettes/providers-gemini.html#multimodal-input",
+    "href": "vignettes/providers-gemini.html#multimodal-input",
+    "title": "Gemini Provider",
+    "section": "Multimodal Input",
+    "text": "Multimodal Input\nGemini is natively multimodal. The SDK supports passing image data to Gemini models (see the Multimodal vignette for details)."
+  },
+  {
+    "objectID": "vignettes/get_started.html",
+    "href": "vignettes/get_started.html",
+    "title": "Get Started with aisdk",
+    "section": "",
+    "text": "aisdk is a production-grade AI SDK for R, providing a unified interface for multiple AI model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.). It features a layered architecture, robust error handling, and advanced capabilities like multi-agent orchestration and a distributed MCP (Model Context Protocol) ecosystem."
+  },
+  {
+    "objectID": "vignettes/get_started.html#installation",
+    "href": "vignettes/get_started.html#installation",
+    "title": "Get Started with aisdk",
+    "section": "Installation",
+    "text": "Installation\nYou can install the development version from GitHub:\n\n# install.packages(\"devtools\")\ndevtools::install_github(\"YuLab-SMU/aisdk\")"
+  },
+  {
+    "objectID": "vignettes/get_started.html#basic-usage",
+    "href": "vignettes/get_started.html#basic-usage",
+    "title": "Get Started with aisdk",
+    "section": "Basic Usage",
+    "text": "Basic Usage\n1. Configuration\nLoad the library and set your API keys as environment variables. We recommend using an .Renviron file for persistence.\n\nlibrary(aisdk)\n\n# Set API keys (Example)\n# Sys.setenv(OPENAI_API_KEY = \"sk-...\")\n# Sys.setenv(ANTHROPIC_API_KEY = \"sk-ant-...\")\n\n2. Creating a Model\nCreate a model instance using provider factory functions.\n\n# Create an OpenAI model\nmodel &lt;- create_openai()$language_model(\"gpt-4o\")\n\n# Create an Anthropic / Gemini model\n# model &lt;- create_anthropic()$language_model(\"claude-3-5-sonnet-20241022\")\n# model &lt;- create_gemini()$language_model(\"gemini-1.5-pro\")\n\n# Create models from other supported providers (DeepSeek, Volcengine, Stepfun, etc.)\n# model &lt;- create_deepseek()$language_model(\"deepseek-chat\")\n# model &lt;- create_volcengine()$language_model(\"your-endpoint-id\")\n# model &lt;- create_stepfun()$language_model(\"step-1-8k\")\n\n3. Generating Text\nUse generate_text() for simple request-response interactions.\n\n# Simple prompt\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"What are the advantages of using R6 classes in R?\"\n)\n\ncat(response$text)\n\n# Using a system prompt for behavior control\nresponse &lt;- generate_text(\n  model = model,\n  system = \"You are a helpful R programming expert.\",\n  prompt = \"Explain the difference between `lapply` and `sapply`.\"\n)\n\n4. Streaming Responses\nFor real-time output, use stream_text() with a callback.\n\nstream_text(\n  model = model,\n  prompt = \"Write a short poem about data science.\",\n  callback = function(chunk, done) {\n    if (!done) cat(chunk)\n  }\n)\n\n5. Managing State with ChatSession\nFor stateful conversations, use ChatSession. It automatically manages history and provides a higher-level API.\n\n# Initialize a session\nsession &lt;- ChatSession$new(model = model)\n\n# First message\nres1 &lt;- session$send(\"Hi, I'm analyzing gene expression data.\")\ncat(res1$text)\n\n# Second message (context is preserved)\nres2 &lt;- session$send(\"What R packages would you recommend for normalization?\")\ncat(res2$text)\n\n# Check history\n# session$history()\n\n6. Tools and Function Calling\naisdk makes it easy to give LLMs access to R functions.\n\n# Define a tool using the schema DSL\nweather_tool &lt;- tool(\n  name = \"get_weather\",\n  description = \"Get current weather for a city\",\n  parameters = z_object(\n    city = z_string(\"The city name, e.g., Beijing\")\n  ),\n  execute = function(args) {\n    paste(\"The weather in\", args$city, \"is sunny, 25°C.\")\n  }\n)\n\n# Use the tool\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"What's the weather like in Shanghai?\",\n  tools = list(weather_tool),\n  max_steps = 3\n)\n\ncat(response$text)\n\n7. Interactive Console Chat\nFor a more interactive experience, aisdk provides a built-in REPL (Read-Eval-Print Loop) called console_chat(). This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.\n\n# Start an interactive chat with an intelligent agent (default)\n# console_chat(\"openai:gpt-4o\")\n\n# Start a simple chat without agent tools\n# console_chat(\"openai:gpt-4o\", agent = NULL)\n\nWhile in the console, you can use slash commands to manage the session:\n\n\n/help: Show all available commands.\n\n/model &lt;id&gt;: Switch the model on the fly.\n\n/save [path] / /load &lt;path&gt;: Persist and restore sessions.\n\n/clear: Reset the conversation history.\n\n/quit: Exit the interactive session."
+  },
+  {
+    "objectID": "vignettes/get_started.html#next-steps",
+    "href": "vignettes/get_started.html#next-steps",
+    "title": "Get Started with aisdk",
+    "section": "Next Steps",
+    "text": "Next Steps\nExplore the following vignettes for more advanced features:\n\n\nProviders: Configure models, connect via Custom Providers, and use AIHubMix advanced compatibility wrappers.\n\nAgents: Build specialized AI workers and multi-agent systems.\n\nTools: Deep dive into the Tool system and Schema DSL.\n\nSessions: Advanced session management and persistence.\n\nMCP: Connect to external tools via the Model Context Protocol.\n\nSkills: Progressive knowledge loading for agents."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "aisdk: The Production-Grade AI SDK for R",
+    "section": "",
+    "text": "The aisdk package provides a unified, production-ready interface for interacting with Large Language Models (LLMs) in R. It abstracts away provider-specific API details while offering advanced features like robust structured outputs, tool calling, memory management, and multi-agent orchestration.\n\nInstallation\n# Install from GitHub\n# install.packages(\"devtools\")\ndevtools::install_github(\"YuLab-SMU/aisdk\")\nFor more details on getting started, please check out the Get Started article."
+  },
+  {
+    "objectID": "reference/index.html",
+    "href": "reference/index.html",
+    "title": "Function Reference",
+    "section": "",
+    "text": "Here you can document the main functions of aisdk."
+  },
+  {
+    "objectID": "vignettes/providers-aihubmix.html",
+    "href": "vignettes/providers-aihubmix.html",
+    "title": "AIHubMix Provider",
+    "section": "",
+    "text": "AIHubMix is a powerful unified proxy that provides access to dozens of model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.) via a single API key and optimized routing."
+  },
+  {
+    "objectID": "vignettes/providers-aihubmix.html#native-compatibility-wrappers",
+    "href": "vignettes/providers-aihubmix.html#native-compatibility-wrappers",
+    "title": "AIHubMix Provider",
+    "section": "Native Compatibility Wrappers",
+    "text": "Native Compatibility Wrappers\nWhile most proxies use a standard OpenAI-compatible interface, this often loses vendor-specific features like Anthropic’s prompt caching or Gemini’s search grounding. aisdk provides specialized wrappers that maintain these features even when routing through AIHubMix.\n\nAIHubMix Anthropic\nMaintains Claude-specific headers and payload formats (including caching).\nlibrary(aisdk)\n# Uses ANTHROPIC_API_KEY but routes to https://aihubmix.com/v1\nprovider &lt;- create_aihubmix_anthropic() \nmodel &lt;- provider$language_model(\"claude-3-5-sonnet-latest\")\n\n\nAIHubMix Gemini\nMaintains Gemini-specific tool formats and schemas.\nprovider &lt;- create_aihubmix_gemini()\nmodel &lt;- provider$language_model(\"gemini-1.5-pro\")"
+  },
+  {
+    "objectID": "vignettes/providers-aihubmix.html#standard-usage",
+    "href": "vignettes/providers-aihubmix.html#standard-usage",
+    "title": "AIHubMix Provider",
+    "section": "Standard Usage",
+    "text": "Standard Usage\nFor general models, use the standard creator:\nprovider &lt;- create_aihubmix()\nmodel &lt;- provider$language_model(\"deepseek-v3\")"
+  },
+  {
+    "objectID": "vignettes/providers-aihubmix.html#configuration",
+    "href": "vignettes/providers-aihubmix.html#configuration",
+    "title": "AIHubMix Provider",
+    "section": "Configuration",
+    "text": "Configuration\nSet your API key:\nAIHUBMIX_API_KEY=\"sk-mix-...\""
+  },
+  {
+    "objectID": "vignettes/providers.html",
+    "href": "vignettes/providers.html",
+    "title": "Models and Providers",
+    "section": "",
+    "text": "aisdk offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities."
+  },
+  {
+    "objectID": "vignettes/providers.html#philosophy",
+    "href": "vignettes/providers.html#philosophy",
+    "title": "Models and Providers",
+    "section": "Philosophy",
+    "text": "Philosophy\nThe SDK is built on the principle of Native Capability Retention. While we provide a unified interface, we ensure that provider-specific features (like Anthropic’s caching or Gemini’s search) are not lost when using proxies or specialized creators."
+  },
+  {
+    "objectID": "vignettes/providers.html#ecosystem-overview",
+    "href": "vignettes/providers.html#ecosystem-overview",
+    "title": "Models and Providers",
+    "section": "Ecosystem Overview",
+    "text": "Ecosystem Overview\nWe categorize providers into several groups. Explore the detailed documentation for each:\nMajor Native Providers\nThese providers have deep, native integrations within the SDK:\n\n\nOpenAI: The industry standard, supporting GPT-4o and reasoning models (o1/o3).\n\nAnthropic: Claude models with advanced prompt caching support.\n\nGemini: high-context Google models with native Google Search grounding.\nAggregators and Proxies\nUnified endpoints that route to multiple backends:\n\n\nAIHubMix: A specialized proxy with native compatibility wrappers for Claude and Gemini.\n\nOpenRouter: Access to open and closed models via a single API.\nSpecialized & Regional Providers\nOptimized connectors for high-performance backends:\n\n\nDeepSeek, xAI, Volcengine, Stepfun, Bailian, Nvidia.\nCustom Connections\n\n\nCustom Providers: Connect to internal gateways, local LLMs (Ollama), or any OpenAI-compatible API."
+  },
+  {
+    "objectID": "vignettes/providers.html#environment-configuration",
+    "href": "vignettes/providers.html#environment-configuration",
+    "title": "Models and Providers",
+    "section": "Environment Configuration",
+    "text": "Environment Configuration\nBefore using a provider, ensure your API keys are set up in your .Renviron. The SDK automatically looks for these variables:\n\n\nProvider\nEnvironment Variable\n\n\n\nOpenAI\nOPENAI_API_KEY\n\n\nAnthropic\nANTHROPIC_API_KEY\n\n\nGemini\nGEMINI_API_KEY\n\n\nAIHubMix\nAIHUBMIX_API_KEY\n\n\nDeepSeek\nDEEPSEEK_API_KEY"
+  },
+  {
+    "objectID": "vignettes/providers.html#provider-registry",
+    "href": "vignettes/providers.html#provider-registry",
+    "title": "Models and Providers",
+    "section": "Provider Registry",
+    "text": "Provider Registry\nIf you use multiple providers, you can use the ProviderRegistry to manage them:\nregistry &lt;- get_default_registry()\nregistry$register(\"openai\", create_openai())\nregistry$register(\"claude\", create_anthropic())\n\n# Access models via provider:model syntax\nmodel &lt;- registry$language_model(\"openai:gpt-4o\")"
+  },
+  {
+    "objectID": "vignettes/providers.html#next-steps",
+    "href": "vignettes/providers.html#next-steps",
+    "title": "Models and Providers",
+    "section": "Next Steps",
+    "text": "Next Steps\n\nLearn about Structured Outputs.\nExplore the Agent System.\nBuild tools with the Tool DSL."
+  },
+  {
     "objectID": "vignettes/computer_abstraction.html",
     "href": "vignettes/computer_abstraction.html",
     "title": "Computer Abstraction Layer",
@@ -222,111 +481,6 @@
     "title": "Computer Abstraction Layer",
     "section": "Changelog",
     "text": "Changelog\n\n\nVersion 1.0.0: Initial release of computer abstraction layer\nInspired by production systems: Claude Code, Manus, Amp Code\nFollows 2026 agent design patterns from industry research"
-  },
-  {
-    "objectID": "vignettes/get_started.html",
-    "href": "vignettes/get_started.html",
-    "title": "Get Started with aisdk",
-    "section": "",
-    "text": "aisdk is a production-grade AI SDK for R, providing a unified interface for multiple AI model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.). It features a layered architecture, robust error handling, and advanced capabilities like multi-agent orchestration and a distributed MCP (Model Context Protocol) ecosystem."
-  },
-  {
-    "objectID": "vignettes/get_started.html#installation",
-    "href": "vignettes/get_started.html#installation",
-    "title": "Get Started with aisdk",
-    "section": "Installation",
-    "text": "Installation\nYou can install the development version from GitHub:\n\n# install.packages(\"devtools\")\ndevtools::install_github(\"YuLab-SMU/aisdk\")"
-  },
-  {
-    "objectID": "vignettes/get_started.html#basic-usage",
-    "href": "vignettes/get_started.html#basic-usage",
-    "title": "Get Started with aisdk",
-    "section": "Basic Usage",
-    "text": "Basic Usage\n1. Configuration\nLoad the library and set your API keys as environment variables. We recommend using an .Renviron file for persistence.\n\nlibrary(aisdk)\n\n# Set API keys (Example)\n# Sys.setenv(OPENAI_API_KEY = \"sk-...\")\n# Sys.setenv(ANTHROPIC_API_KEY = \"sk-ant-...\")\n\n2. Creating a Model\nCreate a model instance using provider factory functions.\n\n# Create an OpenAI model\nmodel &lt;- create_openai()$language_model(\"gpt-4o\")\n\n# Create an Anthropic / Gemini model\n# model &lt;- create_anthropic()$language_model(\"claude-3-5-sonnet-20241022\")\n# model &lt;- create_gemini()$language_model(\"gemini-1.5-pro\")\n\n# Create models from other supported providers (DeepSeek, Volcengine, Stepfun, etc.)\n# model &lt;- create_deepseek()$language_model(\"deepseek-chat\")\n# model &lt;- create_volcengine()$language_model(\"your-endpoint-id\")\n# model &lt;- create_stepfun()$language_model(\"step-1-8k\")\n\n3. Generating Text\nUse generate_text() for simple request-response interactions.\n\n# Simple prompt\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"What are the advantages of using R6 classes in R?\"\n)\n\ncat(response$text)\n\n# Using a system prompt for behavior control\nresponse &lt;- generate_text(\n  model = model,\n  system = \"You are a helpful R programming expert.\",\n  prompt = \"Explain the difference between `lapply` and `sapply`.\"\n)\n\n4. Streaming Responses\nFor real-time output, use stream_text() with a callback.\n\nstream_text(\n  model = model,\n  prompt = \"Write a short poem about data science.\",\n  callback = function(chunk, done) {\n    if (!done) cat(chunk)\n  }\n)\n\n5. Managing State with ChatSession\nFor stateful conversations, use ChatSession. It automatically manages history and provides a higher-level API.\n\n# Initialize a session\nsession &lt;- ChatSession$new(model = model)\n\n# First message\nres1 &lt;- session$send(\"Hi, I'm analyzing gene expression data.\")\ncat(res1$text)\n\n# Second message (context is preserved)\nres2 &lt;- session$send(\"What R packages would you recommend for normalization?\")\ncat(res2$text)\n\n# Check history\n# session$history()\n\n6. Tools and Function Calling\naisdk makes it easy to give LLMs access to R functions.\n\n# Define a tool using the schema DSL\nweather_tool &lt;- tool(\n  name = \"get_weather\",\n  description = \"Get current weather for a city\",\n  parameters = z_object(\n    city = z_string(\"The city name, e.g., Beijing\")\n  ),\n  execute = function(args) {\n    paste(\"The weather in\", args$city, \"is sunny, 25°C.\")\n  }\n)\n\n# Use the tool\nresponse &lt;- generate_text(\n  model = model,\n  prompt = \"What's the weather like in Shanghai?\",\n  tools = list(weather_tool),\n  max_steps = 3\n)\n\ncat(response$text)\n\n7. Interactive Console Chat\nFor a more interactive experience, aisdk provides a built-in REPL (Read-Eval-Print Loop) called console_chat(). This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.\n\n# Start an interactive chat with an intelligent agent (default)\n# console_chat(\"openai:gpt-4o\")\n\n# Start a simple chat without agent tools\n# console_chat(\"openai:gpt-4o\", agent = NULL)\n\nWhile in the console, you can use slash commands to manage the session:\n\n\n/help: Show all available commands.\n\n/model &lt;id&gt;: Switch the model on the fly.\n\n/save [path] / /load &lt;path&gt;: Persist and restore sessions.\n\n/clear: Reset the conversation history.\n\n/quit: Exit the interactive session."
-  },
-  {
-    "objectID": "vignettes/get_started.html#next-steps",
-    "href": "vignettes/get_started.html#next-steps",
-    "title": "Get Started with aisdk",
-    "section": "Next Steps",
-    "text": "Next Steps\nExplore the following vignettes for more advanced features:\n\n\nProviders: Configure models, connect via Custom Providers, and use AIHubMix advanced compatibility wrappers.\n\nAgents: Build specialized AI workers and multi-agent systems.\n\nTools: Deep dive into the Tool system and Schema DSL.\n\nSessions: Advanced session management and persistence.\n\nMCP: Connect to external tools via the Model Context Protocol.\n\nSkills: Progressive knowledge loading for agents."
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "aisdk: The Production-Grade AI SDK for R",
-    "section": "",
-    "text": "The aisdk package provides a unified, production-ready interface for interacting with Large Language Models (LLMs) in R. It abstracts away provider-specific API details while offering advanced features like robust structured outputs, tool calling, memory management, and multi-agent orchestration.\n\nInstallation\n# Install from GitHub\n# install.packages(\"devtools\")\ndevtools::install_github(\"YuLab-SMU/aisdk\")\nFor more details on getting started, please check out the Get Started article."
-  },
-  {
-    "objectID": "reference/index.html",
-    "href": "reference/index.html",
-    "title": "Function Reference",
-    "section": "",
-    "text": "Here you can document the main functions of aisdk."
-  },
-  {
-    "objectID": "vignettes/providers.html",
-    "href": "vignettes/providers.html",
-    "title": "Models and Providers",
-    "section": "",
-    "text": "aisdk offers a sophisticated, unified API for seamless interaction across multiple AI providers and models. Rather than depending on a single LLM vendor, the SDK exposes an abstraction layer that allows you to easily plug and play providers while respecting their unique native capabilities (such as caching, structured outputs, or routing)."
-  },
-  {
-    "objectID": "vignettes/providers.html#supported-providers",
-    "href": "vignettes/providers.html#supported-providers",
-    "title": "Models and Providers",
-    "section": "Supported Providers",
-    "text": "Supported Providers\nBuilt-in natively supported providers include:\n\n\nOpenAI (create_openai()): Supports standard completion and the Responses API (e.g., o1, o3-mini).\n\nAnthropic (create_anthropic()): Supports Claude models and advanced Prompt Caching.\n\nGemini (create_gemini()): Supports Google’s generative endpoints.\n\nDeepSeek (create_deepseek()): Supports DeepSeek’s chat models.\n\nAIHubMix (create_aihubmix()): The unified proxy handling dozens of models.\n\nxAI (create_xai()): Supports Grok and other xAI models.\n\nVolcengine (create_volcengine()): Supports ByteDance’s Doubao models.\n\nStepfun (create_stepfun()): Supports Stepfun’s chat models.\n\nBailian (create_bailian()): Supports Alibaba Cloud’s DashScope models (e.g., Qwen).\n\nOpenRouter (create_openrouter()): A universal API routing to various LLM providers.\n\nNvidia (create_nvidia()): Supports Nvidia NIM APIs."
-  },
-  {
-    "objectID": "vignettes/providers.html#environment-configuration",
-    "href": "vignettes/providers.html#environment-configuration",
-    "title": "Models and Providers",
-    "section": "Environment Configuration",
-    "text": "Environment Configuration\nBefore using a provider, ensure your API keys and base URLs are set up. aisdk looks for global .Renviron variables named by provider:\nlibrary(aisdk)\n\n# Example .Renviron configuration\n# OPENAI_API_KEY=\"sk-...\"\n# ANTHROPIC_API_KEY=\"sk-ant-...\"\n# AIHUBMIX_API_KEY=\"sk-mix-...\""
-  },
-  {
-    "objectID": "vignettes/providers.html#basic-instantiation",
-    "href": "vignettes/providers.html#basic-instantiation",
-    "title": "Models and Providers",
-    "section": "Basic Instantiation",
-    "text": "Basic Instantiation\nAt the core of aisdk, you initialize a Provider factory and request a Language Model.\n# Create an Anthropic provider and fetch the Claude 3.5 Sonnet model\nprovider &lt;- create_anthropic()\nmodel &lt;- provider$language_model(\"claude-3-5-sonnet-20241022\")\n\n# Generate text seamlessly\nresponse &lt;- generate_text(model, prompt = \"What is the capital of France?\")\ncat(response$text)"
-  },
-  {
-    "objectID": "vignettes/providers.html#gemini-google-search-grounding",
-    "href": "vignettes/providers.html#gemini-google-search-grounding",
-    "title": "Models and Providers",
-    "section": "Gemini Google Search Grounding",
-    "text": "Gemini Google Search Grounding\nWhen using the Gemini provider (create_gemini), you can easily enable Google Search grounding to give your model access to real-time information. You only need to pass a specific tool structure compatible with Google’s API.\nprovider &lt;- create_gemini()\nmodel &lt;- provider$language_model(\"gemini-3-flash-preview\")\n\n# Generate text with Google Search enabled\nresponse &lt;- generate_text(\n  model = model, \n  prompt = \"Who won the euro 2024?\",\n  tools = list(\n    list(google_search = empty_named_list()) # Or list(google_search = list())\n  )\n)\nFor older Gemini models (like Gemini 1.5 Pro), you might need to use the google_search_retrieval tool instead:\ntools = list(\n  list(google_search_retrieval = list(\n    dynamicRetrievalConfig = list(\n        mode = \"MODE_DYNAMIC\", \n        dynamicThreshold = 0.3\n    )\n  ))\n)"
-  },
-  {
-    "objectID": "vignettes/providers.html#aihubmix-and-advanced-native-compatibility",
-    "href": "vignettes/providers.html#aihubmix-and-advanced-native-compatibility",
-    "title": "Models and Providers",
-    "section": "AIHubMix and Advanced Native Compatibility",
-    "text": "AIHubMix and Advanced Native Compatibility\nWhile standard proxy endpoints often funnel everything through an OpenAI-compatible interface, resulting in the loss of vendor-specific capabilities, the AIHubMix integration uniquely bridges the gap using native compatibility layers.\nNative Wrappers\nYou can expose underlying configurations explicitly via create_aihubmix_anthropic and create_aihubmix_gemini, which route through AIHubMix while maintaining the native expected format for Claude caching or Gemini schemas.\n# AIHubMix Native Anthropic format (maintains Anthropic prompt caching features)\naihubmix_claude &lt;- create_aihubmix_anthropic(extended_caching = TRUE)\nclaude_model &lt;- aihubmix_claude$language_model(\"claude-3-5-sonnet-20241022\")\n\n# Generating using Claude's native system cache routing\nresponse &lt;- generate_text(\n  model = claude_model,\n  prompt = \"Summarize the history of Ancient Rome.\",\n  system = list(\n    type = \"text\", \n    text = \"You are an expert historian.\", \n    cache_control = list(type = \"ephemeral\") # Cache this context for subsequent runs\n  )\n)"
-  },
-  {
-    "objectID": "vignettes/providers.html#custom-providers",
-    "href": "vignettes/providers.html#custom-providers",
-    "title": "Models and Providers",
-    "section": "Custom Providers",
-    "text": "Custom Providers\nWhat if you need to connect to an internal enterprise gateway or a provider not natively listed? You don’t need to write a new class from scratch. You can dynamically instantiate a custom provider using create_custom_provider().\nYou just provide the credentials and specify the underlying api_format (e.g., chat_completions, anthropic_messages, or responses).\n# Creating a proprietary gateway provider compatible with OpenAI Chat Completions\ncustom_provider &lt;- create_custom_provider(\n  provider_name = \"internal_enterprise_gateway\",\n  base_url = \"https://internal-gateway.corp.com/v1\",\n  api_key = Sys.getenv(\"CORP_API_KEY\"),\n  api_format = \"chat_completions\",\n  use_max_completion_tokens = TRUE # Optionally force capabilities\n)\n\n# Use it identically to official endpoints\ngateway_model &lt;- custom_provider$language_model(\"corp-secure-llm\")"
-  },
-  {
-    "objectID": "vignettes/providers.html#provider-registry",
-    "href": "vignettes/providers.html#provider-registry",
-    "title": "Models and Providers",
-    "section": "Provider Registry",
-    "text": "Provider Registry\nIf you use multiple providers or models frequently across a project, aisdk maintains a ProviderRegistry object. This simplifies accessing providers programmatically:\nregistry &lt;- get_default_registry()\n\n# Register providers once at startup\nregistry$register(\"openai\", create_openai())\nregistry$register(\"claude\", create_anthropic())\nregistry$register(\"corp\", custom_provider)\n\n# Fetch models across your app seamlessly\nmodel1 &lt;- registry$language_model(\"openai:gpt-4o\")\nmodel2 &lt;- registry$language_model(\"corp:corp-secure-llm\")"
-  },
-  {
-    "objectID": "vignettes/providers.html#next-steps",
-    "href": "vignettes/providers.html#next-steps",
-    "title": "Models and Providers",
-    "section": "Next Steps",
-    "text": "Next Steps\nNow that you’ve mastered providers, you can use them actively across the entire SDK. - Learn how to structure AI data output in Structured Outputs. - Inject tools dynamically into providers natively using Tools."
   },
   {
     "objectID": "vignettes/sessions.html",
@@ -446,6 +600,34 @@
     "title": "Skill System",
     "section": "Skill Tools",
     "text": "Skill Tools\nWhen an agent or generate_text is given a skill registry, the following tools are automatically injected:\n\n\nload_skill(skill_name): Loads the Level 2 instructions.\n\nlist_skill_scripts(skill_name): Lists Level 3 scripts.\n\nexecute_skill_script(skill_name, script_name, ...): Runs an R script.\n\nread_skill_resource(skill_name, resource_name): Reads an asset file.\n\nThis layered approach ensures that the LLM only “pays” for the information it actually needs to solve the current task."
+  },
+  {
+    "objectID": "vignettes/providers-openai.html",
+    "href": "vignettes/providers-openai.html",
+    "title": "OpenAI Provider",
+    "section": "",
+    "text": "The OpenAI provider (create_openai()) supports the full suite of OpenAI models, including standard GPT-4o, GPT-3.5 Turbo, and the newer reasoning models like o1 and o3-mini."
+  },
+  {
+    "objectID": "vignettes/providers-openai.html#configuration",
+    "href": "vignettes/providers-openai.html#configuration",
+    "title": "OpenAI Provider",
+    "section": "Configuration",
+    "text": "Configuration\nSet your API key in your .Renviron:\nOPENAI_API_KEY=\"sk-...\""
+  },
+  {
+    "objectID": "vignettes/providers-openai.html#usage",
+    "href": "vignettes/providers-openai.html#usage",
+    "title": "OpenAI Provider",
+    "section": "Usage",
+    "text": "Usage\nlibrary(aisdk)\nprovider &lt;- create_openai()\nmodel &lt;- provider$language_model(\"gpt-4o\")\n\nresponse &lt;- generate_text(model, \"Explain quantum entanglement in one sentence.\")\ncat(response$text)"
+  },
+  {
+    "objectID": "vignettes/providers-openai.html#advanced-features",
+    "href": "vignettes/providers-openai.html#advanced-features",
+    "title": "OpenAI Provider",
+    "section": "Advanced Features",
+    "text": "Advanced Features\n\nReasoning Models (o1, o3-mini)\nThe SDK supports the o1 and o3-mini models. Note that some parameters like temperature or max_tokens (replaced by max_completion_tokens) behave differently for these models.\nmodel &lt;- provider$language_model(\"o3-mini\")\nresponse &lt;- generate_text(model, \"Solve this complex puzzle...\")\n\n\nJSON Mode\nYou can force JSON output using response_format:\nresponse &lt;- generate_text(\n  model, \n  \"Return a list of 3 fruits in JSON.\",\n  response_format = list(type = \"json_object\")\n)\nFor a cleaner experience, see the Structured Outputs vignette."
   },
   {
     "objectID": "vignettes/structured_outputs.html",
