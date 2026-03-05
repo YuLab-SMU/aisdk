@@ -128,6 +128,7 @@ get_default_registry <- function() {
         if (exists("create_deepseek", mode = "function")) reg$register("deepseek", function() suppressWarnings(create_deepseek()))
         if (exists("create_xai", mode = "function")) reg$register("xai", function() suppressWarnings(create_xai()))
         if (exists("create_volcengine", mode = "function")) reg$register("volcengine", function() suppressWarnings(create_volcengine()))
+        if (exists("create_nvidia", mode = "function")) reg$register("nvidia", function() suppressWarnings(create_nvidia()))
         if (exists("create_stepfun", mode = "function")) reg$register("stepfun", function() suppressWarnings(create_stepfun()))
         if (exists("create_bailian", mode = "function")) reg$register("bailian", function() suppressWarnings(create_bailian()))
         if (exists("create_openrouter", mode = "function")) reg$register("openrouter", function() suppressWarnings(create_openrouter()))
