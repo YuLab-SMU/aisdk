@@ -26,3 +26,4 @@
 ^scripts$
 ^dev_docs$
 ^vignettes$
+^assets$
