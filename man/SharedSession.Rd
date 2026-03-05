@@ -48,6 +48,7 @@ Extends ChatSession with:
 <ul>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="append_message"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-append_message'><code>aisdk::ChatSession$append_message()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="as_list"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-as_list'><code>aisdk::ChatSession$as_list()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="checkpoint"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-checkpoint'><code>aisdk::ChatSession$checkpoint()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="clear_history"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-clear_history'><code>aisdk::ChatSession$clear_history()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="clear_memory"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-clear_memory'><code>aisdk::ChatSession$clear_memory()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="eval_in_session"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-eval_in_session'><code>aisdk::ChatSession$eval_in_session()</code></a></span></li>
@@ -59,6 +60,7 @@ Extends ChatSession with:
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="list_envir"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-list_envir'><code>aisdk::ChatSession$list_envir()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="list_memory"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-list_memory'><code>aisdk::ChatSession$list_memory()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="restore"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-restore'><code>aisdk::ChatSession$restore()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="restore_checkpoint"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-restore_checkpoint'><code>aisdk::ChatSession$restore_checkpoint()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="restore_from_list"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-restore_from_list'><code>aisdk::ChatSession$restore_from_list()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="save"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-save'><code>aisdk::ChatSession$save()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ChatSession" data-id="send"><a href='../../aisdk/html/ChatSession.html#method-ChatSession-send'><code>aisdk::ChatSession$send()</code></a></span></li>

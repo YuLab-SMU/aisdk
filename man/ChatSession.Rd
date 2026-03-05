@@ -32,6 +32,8 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_envir}{\code{ChatSession$get_envir()}}
 \item \href{#method-ChatSession-eval_in_session}{\code{ChatSession$eval_in_session()}}
 \item \href{#method-ChatSession-list_envir}{\code{ChatSession$list_envir()}}
+\item \href{#method-ChatSession-checkpoint}{\code{ChatSession$checkpoint()}}
+\item \href{#method-ChatSession-restore_checkpoint}{\code{ChatSession$restore_checkpoint()}}
 \item \href{#method-ChatSession-clone}{\code{ChatSession$clone()}}
 }
 }
@@ -437,6 +439,46 @@ List objects in the session environment.
 
 \subsection{Returns}{
 Character vector of object names.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-checkpoint"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-checkpoint}{}}}
+\subsection{Method \code{checkpoint()}}{
+Save a memory snapshot to a file (checkpoint for Mission resume).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$checkpoint(path = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{path}}{File path (.rds). If NULL, uses a temp file and returns the path.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible file path.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-restore_checkpoint"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-restore_checkpoint}{}}}
+\subsection{Method \code{restore_checkpoint()}}{
+Restore memory and history from a checkpoint file.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$restore_checkpoint(path)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{path}}{File path to a checkpoint created by checkpoint().}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
 }
 }
 \if{html}{\out{<hr>}}

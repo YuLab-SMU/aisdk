@@ -384,6 +384,34 @@ ChatSession <- R6::R6Class(
     #' @return Character vector of object names.
     list_envir = function() {
       ls(private$.envir)
+    },
+
+    #' @description Save a memory snapshot to a file (checkpoint for Mission resume).
+    #' @param path File path (.rds). If NULL, uses a temp file and returns the path.
+    #' @return Invisible file path.
+    checkpoint = function(path = NULL) {
+      if (is.null(path)) {
+        path <- tempfile(pattern = "session_checkpoint_", fileext = ".rds")
+      }
+      saveRDS(list(
+        model_id      = self$get_model_id(),
+        system_prompt = private$.system_prompt,
+        memory        = private$.memory,
+        history       = private$.history,
+        stats         = private$.stats
+      ), path)
+      invisible(path)
+    },
+
+    #' @description Restore memory and history from a checkpoint file.
+    #' @param path File path to a checkpoint created by checkpoint().
+    #' @return Invisible self for chaining.
+    restore_checkpoint = function(path) {
+      data <- readRDS(path)
+      if (!is.null(data$memory))  private$.memory  <- data$memory
+      if (!is.null(data$history)) private$.history <- data$history
+      if (!is.null(data$stats))   private$.stats   <- data$stats
+      invisible(self)
     }
   ),
   private = list(
