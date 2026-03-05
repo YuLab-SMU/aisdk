@@ -8,6 +8,8 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/YuLab-SMU/aisdk)
 <!-- badges: end -->
 
+<img src="assets/aisdk_infographic.png" width="100%" alt="aisdk infographic" />
+
 **aisdk** is a production-grade framework for building AI-powered applications in R. It provides a unified interface for multiple model providers (OpenAI, Anthropic), a powerful agentic system, and seamless integration with the R ecosystem (Shiny, RMarkdown, Quarto).
 
 ## Features
