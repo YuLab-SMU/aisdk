@@ -1,0 +1,297 @@
+---
+title: "2024 Q4 电商销售分析报告"
+subtitle: "AI 辅助数据分析工作流演示"
+author: "数据分析团队"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+    highlight-style: github
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+# 注册 AI 引擎 —— 只需一次
+library(aisdk)
+register_ai_engine()
+
+# 设定本报告使用的默认模型
+options(aisdk.default_model = "openai:gpt-5-mini")
+```
+
+## 背景
+
+本报告模拟一家中型电商平台 Q4（2024年10月—12月）的销售数据，
+展示如何用 `{ai}` 代码块驱动完整的分析工作流：
+
+- 数据加载 → AI 生成清洗代码 → AI 解读统计摘要 → AI 绘图 → AI 撰写洞察
+
+> 每个 `{ai}` 块共享同一个 `session = "sales"`，因此 AI 拥有完整对话上下文，
+> 可以像真实分析师一样持续跟进。
+
+---
+
+## 1. 原始数据
+
+```{r load-data}
+# 模拟 Q4 订单数据（实际项目中从数据库或 CSV 读取）
+set.seed(42)
+n <- 2000
+
+orders <- data.frame(
+  order_id   = sprintf("ORD-%05d", 1:n),
+  date       = as.Date("2024-10-01") + sample(0:91, n, replace = TRUE),
+  category   = sample(c("3C数码", "服装", "食品", "家居", "美妆"),
+                      n, replace = TRUE, prob = c(0.25, 0.30, 0.15, 0.20, 0.10)),
+  province   = sample(c("广东", "浙江", "北京", "上海", "四川", "湖北"),
+                      n, replace = TRUE, prob = c(0.22, 0.18, 0.15, 0.15, 0.15, 0.15)),
+  revenue    = round(abs(rnorm(n, mean = 350, sd = 220)), 2),
+  units      = sample(1:5, n, replace = TRUE),
+  is_return  = sample(c(FALSE, TRUE), n, replace = TRUE, prob = c(0.92, 0.08)),
+  channel    = sample(c("APP", "小程序", "PC网页"), n, replace = TRUE, prob = c(0.55, 0.30, 0.15))
+)
+
+# 注入退货时收入为负的规则
+orders$revenue[orders$is_return] <- -abs(orders$revenue[orders$is_return]) * 0.8
+
+cat("数据维度:", nrow(orders), "行 ×", ncol(orders), "列\n")
+head(orders, 5)
+```
+
+---
+
+## 2. 数据清洗
+
+> **AI 任务**：检查 `orders` 的数据质量，生成清洗代码。
+
+```{ai session="sales", echo=TRUE, max_retries=3}
+请检查 orders 数据框的数据质量，重点关注：
+1. 是否有缺失值
+2. revenue 分布是否合理（退货订单应为负值）
+3. date 字段是否覆盖完整的 Q4 区间
+
+生成一段完整的 R 清洗代码，产出一个干净的 orders_clean 数据框，
+并打印出清洗前后的行数对比。
+```
+
+---
+
+## 3. 描述性统计
+
+```{r compute-stats}
+# 基于清洗后数据计算关键指标（AI 在上一块已创建 orders_clean）
+library(dplyr)
+
+# 月度汇总
+monthly <- orders_clean |>
+  mutate(month = format(date, "%Y-%m")) |>
+  group_by(month) |>
+  summarise(
+    gmv        = sum(revenue[!is_return]),
+    returns    = abs(sum(revenue[is_return])),
+    net_rev    = gmv - returns,
+    orders_cnt = n(),
+    .groups    = "drop"
+  )
+
+# 品类汇总
+by_cat <- orders_clean |>
+  filter(!is_return) |>
+  group_by(category) |>
+  summarise(
+    gmv      = sum(revenue),
+    orders   = n(),
+    avg_price = mean(revenue),
+    .groups  = "drop"
+  ) |>
+  arrange(desc(gmv))
+
+# 渠道汇总
+by_channel <- orders_clean |>
+  filter(!is_return) |>
+  group_by(channel) |>
+  summarise(gmv = sum(revenue), orders = n(), .groups = "drop")
+```
+
+> **AI 任务**：解读上面三张汇总表，给出业务洞察。
+
+```{ai session="sales", echo=FALSE}
+我已经准备好了三个汇总数据框：monthly、by_cat、by_channel。
+
+请分别解读它们，用简洁的中文要点（bullet points）给出：
+- Q4 整体收入走势
+- 最强和最弱品类对比
+- 各渠道的差异化表现
+
+不需要生成代码，只要文字洞察，100字以内每块。
+```
+
+---
+
+## 4. 可视化
+
+### 4.1 月度净收入趋势
+
+> **AI 任务**：用 `monthly` 画趋势图。
+
+```{ai session="sales", echo=TRUE, eval=TRUE, max_retries=3}
+请用 monthly 数据，使用 ggplot2 绘制一张月度净收入（net_rev）柱状图：
+- X 轴为月份，Y 轴为净收入（万元，除以 10000）
+- 在柱顶标注数值，保留一位小数
+- 颜色方案：#2196F3，背景简洁（theme_minimal）
+- 添加标题"Q4 月度净收入"和副标题"单位：万元"
+```
+
+### 4.2 品类 GMV 占比
+
+> **AI 任务**：用 `by_cat` 画饼图或环形图。
+
+```{ai session="sales", echo=TRUE, eval=TRUE}
+请用 by_cat 数据绘制一张品类 GMV 占比的环形图（donut chart）：
+- 用 ggplot2 实现，geom_col + coord_polar
+- 显示每个品类的名称和百分比
+- 使用 RColorBrewer 的 Set2 配色
+- 无图例，在扇区内直接标注文字
+- 标题"Q4 品类 GMV 占比"
+```
+
+### 4.3 省份热力分析
+
+```{r province-stats}
+# 省份维度汇总（提供给 AI 使用）
+by_province <- orders_clean |>
+  filter(!is_return) |>
+  group_by(province) |>
+  summarise(
+    gmv      = sum(revenue),
+    orders   = n(),
+    avg_rev  = mean(revenue),
+    .groups  = "drop"
+  ) |>
+  arrange(desc(gmv))
+```
+
+> **AI 任务**：用 `by_province` 画气泡图，X=订单量，Y=客单价，气泡大小=GMV。
+
+```{ai session="sales", echo=TRUE, eval=TRUE, max_retries=3}
+请用 by_province 数据制作一张散点气泡图：
+- X 轴：orders（订单量）
+- Y 轴：avg_rev（平均客单价，单位元）
+- 气泡大小：gmv（GMV）
+- 气泡颜色：#E91E63，透明度 0.7
+- 每个气泡旁标注省份名
+- theme_light，添加标题"各省订单量 vs 客单价（气泡大小=GMV）"
+```
+
+---
+
+## 5. 异常检测
+
+```{r daily-data}
+# 日维度数据，用于异常检测
+daily <- orders_clean |>
+  filter(!is_return) |>
+  group_by(date) |>
+  summarise(
+    gmv    = sum(revenue),
+    orders = n(),
+    .groups = "drop"
+  ) |>
+  arrange(date)
+```
+
+> **AI 任务**：对 `daily` 进行异常检测，标记销售额突出的日期。
+
+```{ai session="sales", echo=TRUE, eval=TRUE}
+请对 daily 数据做简单的统计异常检测：
+1. 计算 gmv 的均值和标准差
+2. 将超过 均值 + 1.5*SD 的日期标记为"高峰日"，低于 均值 - 1.5*SD 的标记为"低谷日"
+3. 绘制折线图（date vs gmv），正常日用灰色线，高峰日用红色点，低谷日用蓝色点
+4. 在图上标注高峰日期（用 ggrepel::geom_label_repel，如果没有就用 geom_text）
+5. 同时 print 出异常日期的汇总表
+
+使用 ggplot2，theme_minimal，标题"日 GMV 走势与异常检测"
+```
+
+---
+
+## 6. 退货深度分析
+
+```{r return-data}
+# 退货维度分析
+return_analysis <- orders_clean |>
+  group_by(category, channel) |>
+  summarise(
+    total     = n(),
+    returns   = sum(is_return),
+    return_rate = mean(is_return),
+    .groups   = "drop"
+  )
+```
+
+> **AI 任务**：用热力图展示各品类×渠道的退货率，并解读高风险组合。
+
+```{ai session="sales", echo=TRUE, eval=TRUE}
+请用 return_analysis 数据绘制一张退货率热力图：
+- X 轴：channel，Y 轴：category
+- 填充颜色：退货率（return_rate），用 scale_fill_gradient2，低=绿，高=红，中=白
+- 在每个格子里标注百分比（如 "8.3%"）
+- theme_minimal，标题"品类 × 渠道 退货率热力图"
+
+绘图完成后，用 2-3 句话指出退货率最高的品类+渠道组合，给出可能原因。
+```
+
+---
+
+## 7. 执行摘要
+
+> **AI 任务**：综合所有分析，自动生成执行摘要。
+
+```{ai session="sales", echo=FALSE}
+你已经完成了对这份 Q4 电商销售数据的全面分析，包括：
+月度趋势、品类表现、省份分布、异常检测和退货分析。
+
+请以"执行摘要"的格式（Executive Summary）撰写一段报告结语，要求：
+1. 不超过 250 字
+2. 包含 3 个核心发现（量化数据支撑）
+3. 给出 2 个具体的业务建议
+4. 语气专业，适合向管理层汇报
+
+用中文，Markdown 格式输出。
+```
+
+---
+
+## 附：分析工作流说明
+
+```{r workflow-diagram, echo=FALSE}
+# 打印本文档的 AI 引擎使用统计
+session <- get_ai_session("sales")
+if (!is.null(session)) {
+  hist_len <- length(session$get_history())
+  cat(sprintf(
+    "本报告共发起 %d 轮 AI 对话，所有上下文在 session='sales' 中共享传递。\n",
+    hist_len
+  ))
+}
+```
+
+::: {.callout-note}
+**关键设计模式**
+
+1. **数据先行，AI 后解读**：先用 `{r}` 块计算出干净的汇总表（`monthly`、`by_cat` 等），再让 `{ai}` 块引用这些变量——引擎自动检测变量名并传入结构摘要，AI 就能写出精准代码。
+
+2. **单一 session 贯穿全文**：所有 `{ai}` 块共享 `session="sales"`，AI 记得前面做了什么，不需要反复重交代背景。
+
+3. **echo/eval 灵活控制**：
+   - 纯解读文字：`echo=false`（不显示 prompt）
+   - 生成可复用代码：`echo=true, eval=true`（展示代码 + 运行结果）
+
+4. **人机协作**：人负责数据管道（加载、清洗骨架、维度设计），AI 负责代码生成和文字解读，各司其职。
+:::

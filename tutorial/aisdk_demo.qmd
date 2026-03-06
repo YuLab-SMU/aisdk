@@ -1,0 +1,568 @@
+---
+title: "aisdk Complete Demo"
+format: html
+execute:
+  eval: false
+  echo: true
+---
+
+# aisdk 完整演示
+
+本文档演示 **aisdk** 的核心功能，从基础文本生成到多智能体编排，再到 Quarto 文档的 AI 引擎集成。
+
+## 安装与配置
+
+```{r setup}
+# 安装 aisdk
+# pak::pkg_install("anthropics/aisdk")
+
+library(aisdk)
+
+# 设置 API 密钥（也可在 ~/.Renviron 中设置）
+# Sys.setenv(OPENAI_API_KEY = "sk-...")
+# Sys.setenv(ANTHROPIC_API_KEY = "sk-ant-...")
+```
+
+---
+
+## 第一部分：基础文本生成
+
+### 1.1 简单问答
+
+```{r basic-text}
+result <- generate_text(
+  model = "openai:gpt-4o-mini",
+  prompt = "用一句话解释什么是向量数据库"
+)
+
+cat(result$text)
+```
+
+### 1.2 使用 Anthropic Claude
+
+```{r anthropic}
+result <- generate_text(
+  model = "anthropic:claude-sonnet-4-6",
+  prompt = "写一首关于 R 语言的俳句"
+)
+
+cat(result$text)
+```
+
+### 1.3 流式输出
+
+```{r streaming}
+stream_text(
+  model = "openai:gpt-4o-mini",
+  prompt = "列举 5 个机器学习的常用算法，并简要说明各自的用途",
+  on_chunk = function(chunk) cat(chunk$text)
+)
+```
+
+---
+
+## 第二部分：工具调用（Tool Use）
+
+### 2.1 定义工具
+
+```{r tools-define}
+# 获取天气工具（模拟）
+get_weather <- create_tool(
+  name = "get_weather",
+  description = "获取指定城市的当前天气",
+  parameters = list(
+    city = list(type = "string", description = "城市名称"),
+    unit = list(
+      type = "string",
+      enum = c("celsius", "fahrenheit"),
+      description = "温度单位"
+    )
+  ),
+  execute = function(city, unit = "celsius") {
+    # 实际应用中这里会调用真实天气 API
+    list(
+      city = city,
+      temperature = if (unit == "celsius") 22 else 72,
+      unit = unit,
+      condition = "晴天",
+      humidity = "60%"
+    )
+  }
+)
+
+# 计算器工具
+calculator <- create_tool(
+  name = "calculator",
+  description = "执行数学计算",
+  parameters = list(
+    expression = list(type = "string", description = "要计算的数学表达式")
+  ),
+  execute = function(expression) {
+    result <- eval(parse(text = expression))
+    list(expression = expression, result = result)
+  }
+)
+```
+
+### 2.2 带工具的对话
+
+```{r tools-use}
+result <- generate_text(
+  model = "openai:gpt-4o",
+  prompt = "北京今天天气怎么样？另外帮我计算 (123 + 456) * 7 的结果",
+  tools = list(get_weather, calculator)
+)
+
+cat(result$text)
+cat("\n\n工具调用次数:", length(result$tool_calls))
+```
+
+---
+
+## 第三部分：智能体（Agent）
+
+### 3.1 创建基础 Agent
+
+```{r agent-basic}
+# 数据分析 Agent
+analyst <- create_agent(
+  name = "DataAnalyst",
+  description = "专业的数据分析师，擅长统计分析和数据可视化",
+  model = "openai:gpt-4o-mini",
+  system_prompt = "你是一位专业的数据分析师。当用户提供数据时，
+  你会进行深入分析，提供统计洞察，并给出可操作的建议。
+  回答要简洁、专业、有数据支撑。",
+  tools = list(calculator)
+)
+
+result <- analyst$run("分析一下：某电商平台月销售额分别为 [120, 135, 98, 150, 180, 162] 万元，
+请计算平均值、增长趋势，并给出建议")
+
+cat(result$text)
+```
+
+### 3.2 带 Computer 工具的 Agent（代码执行）
+
+```{r agent-computer}
+# 创建 Computer 工具（文件读写、代码执行）
+computer_tools <- create_computer_tools(
+  working_dir = tempdir(),
+  sandbox_mode = "permissive"
+)
+
+coder <- create_agent(
+  name = "RCoder",
+  description = "R 语言编程专家",
+  model = "anthropic:claude-sonnet-4-6",
+  system_prompt = "你是一位 R 语言专家。你可以编写、执行 R 代码来解决问题。
+  优先使用 tidyverse 生态系统。",
+  tools = computer_tools
+)
+
+result <- coder$run(
+  "创建一个示例数据框，包含 10 名学生的姓名、数学成绩和英语成绩，
+  然后计算每位学生的平均分并排名"
+)
+
+cat(result$text)
+```
+
+---
+
+## 第四部分：会话管理（ChatSession）
+
+### 4.1 多轮对话
+
+```{r session-multi-turn}
+session <- create_agent(
+  name = "Assistant",
+  model = "openai:gpt-4o-mini",
+  system_prompt = "你是一位友好的 R 语言学习助手"
+)$create_session()
+
+# 第一轮
+r1 <- session$send("什么是 R 语言中的向量？")
+cat("回答 1:", r1$text, "\n\n")
+
+# 第二轮（保持上下文）
+r2 <- session$send("给我一个创建向量的例子")
+cat("回答 2:", r2$text, "\n\n")
+
+# 第三轮
+r3 <- session$send("如何对这个向量进行排序？")
+cat("回答 3:", r3$text)
+```
+
+### 4.2 检查点（Checkpoint）
+
+```{r session-checkpoint}
+session <- create_agent(
+  name = "ResearchAssistant",
+  model = "openai:gpt-4o"
+)$create_session()
+
+session$send("我正在研究 ggplot2 的图层系统")
+session$send("重点关注 geom_point 和 geom_line 的区别")
+
+# 保存检查点
+session$checkpoint("research_phase")
+
+session$send("现在我想了解 aes() 映射的工作原理")
+
+# 查看历史长度
+cat("当前对话轮数:", length(session$get_history()), "\n")
+
+# 恢复到检查点
+session$restore_checkpoint("research_phase")
+cat("恢复后对话轮数:", length(session$get_history()), "\n")
+```
+
+---
+
+## 第五部分：多智能体团队（Team）
+
+### 5.1 创建专家团队
+
+```{r team-create}
+# 定义各专家 Agent
+statistician <- create_agent(
+  name = "Statistician",
+  description = "统计学专家，负责数据分析和统计建模",
+  model = "openai:gpt-4o",
+  system_prompt = "你是一位统计学专家，擅长描述性统计、假设检验和回归分析。"
+)
+
+visualizer <- create_agent(
+  name = "Visualizer",
+  description = "数据可视化专家，负责创建图表和视觉呈现",
+  model = "openai:gpt-4o",
+  system_prompt = "你是一位数据可视化专家，擅长使用 ggplot2 创建清晰美观的图表。
+  你会提供完整的、可直接运行的 R 代码。"
+)
+
+writer <- create_agent(
+  name = "ReportWriter",
+  description = "报告撰写专家，负责将分析结果整合成清晰的报告",
+  model = "openai:gpt-4o",
+  system_prompt = "你是一位专业的数据报告撰写者，能够将技术分析转化为
+  清晰易懂的业务报告。"
+)
+
+# 组建团队
+data_team <- create_team(
+  name = "DataAnalysisTeam",
+  agents = list(statistician, visualizer, writer),
+  model = "openai:gpt-4o"  # Manager 使用的模型
+)
+```
+
+### 5.2 团队协作执行任务
+
+```{r team-run}
+result <- data_team$run(
+  "分析 mtcars 数据集：
+  1. 统计各变量的基本统计量
+  2. 设计一个展示 mpg 与 hp 关系的散点图（提供 ggplot2 代码）
+  3. 撰写一段 200 字以内的分析摘要"
+)
+
+cat(result$text)
+```
+
+---
+
+## 第六部分：Flow（结构化工作流）
+
+### 6.1 顺序工作流
+
+```{r flow-sequential}
+# 创建处理步骤
+preprocess <- create_agent(
+  name = "Preprocessor",
+  description = "数据预处理，清洗和标准化数据",
+  model = "openai:gpt-4o-mini",
+  system_prompt = "你负责数据预处理。接收原始数据描述，输出清洗后的数据方案。"
+)
+
+analyzer <- create_agent(
+  name = "Analyzer",
+  description = "核心分析，执行统计和模式识别",
+  model = "openai:gpt-4o",
+  system_prompt = "你负责核心数据分析。基于预处理的数据，执行深度分析。"
+)
+
+# 创建 Flow
+analysis_flow <- create_flow(
+  name = "AnalysisPipeline",
+  steps = list(preprocess, analyzer),
+  model = "openai:gpt-4o"
+)
+
+result <- analysis_flow$run(
+  "原始数据：销售记录包含日期、产品ID、销售额，
+  其中有 5% 的缺失值和一些异常值（负数销售额）"
+)
+
+cat(result$text)
+```
+
+---
+
+## 第七部分：Skills（技能系统）
+
+### 7.1 初始化新技能
+
+```{r skills-init}
+# 创建技能目录
+skills_dir <- file.path(tempdir(), "my_skills")
+dir.create(skills_dir, recursive = TRUE, showWarnings = FALSE)
+
+# 初始化技能
+init_skill("data_viz", path = skills_dir)
+
+# 查看生成的结构
+list.files(file.path(skills_dir, "data_viz"), recursive = TRUE)
+```
+
+### 7.2 使用技能注册表
+
+```{r skills-registry}
+# 创建技能注册表（使用包内置技能）
+registry <- create_skill_registry(
+  system.file("skills", package = "aisdk")
+)
+
+# 列出可用技能
+skills <- registry$list_skills()
+cat("可用技能:", paste(sapply(skills, `[[`, "name"), collapse = ", "), "\n")
+
+# 创建带技能的 Agent
+skill_tools <- create_skill_tools(registry)
+
+skilled_agent <- create_agent(
+  name = "SkilledAssistant",
+  model = "openai:gpt-4o",
+  system_prompt = "你是一位多才多艺的助手，可以动态加载专业技能来完成任务。",
+  tools = skill_tools
+)
+
+result <- skilled_agent$run("帮我创建一个漂亮的 ggplot2 散点图")
+cat(result$text)
+```
+
+---
+
+## 第八部分：AI Knitr 引擎
+
+注册 AI 引擎后，在 Quarto/RMarkdown 中使用 `{ai}` 代码块：
+
+```{r register-engine}
+# 注册 AI 引擎（在文档开始时执行一次）
+register_ai_engine()
+
+# 设置默认模型
+options(aisdk.default_model = "openai:gpt-4o-mini")
+```
+
+使用 `{ai}` 块：
+
+````markdown
+```{r setup-data}
+my_data <- data.frame(
+  month = month.abb[1:6],
+  sales = c(120, 135, 98, 150, 180, 162)
+)
+```
+
+```{ai model="openai:gpt-4o", session="analysis"}
+使用 my_data 数据，创建一个展示月度销售趋势的 ggplot2 折线图，
+包含数据点标记，使用蓝色主题，添加适当的标题和轴标签。
+```
+
+```{ai session="analysis"}
+现在将图表的 Y 轴改为从 0 开始，并添加一条平均值参考线（红色虚线）。
+```
+````
+
+---
+
+## 第九部分：MCP（模型上下文协议）
+
+### 9.1 创建 MCP 服务器
+
+```{r mcp-server}
+# 定义要暴露的工具
+my_tools <- list(
+  create_tool(
+    name = "get_data",
+    description = "从数据库获取数据",
+    parameters = list(
+      table = list(type = "string"),
+      limit = list(type = "integer")
+    ),
+    execute = function(table, limit = 10) {
+      # 模拟数据库查询
+      data.frame(id = 1:limit, value = rnorm(limit))
+    }
+  )
+)
+
+# 创建 stdio 传输的 MCP 服务器
+server <- create_mcp_server(
+  name = "MyDataServer",
+  tools = my_tools,
+  transport = "stdio"
+)
+
+# 启动服务器（通常在独立进程中运行）
+# server$start()
+```
+
+### 9.2 连接 MCP 客户端
+
+```{r mcp-client}
+# 连接到外部 MCP 服务器
+# client <- create_mcp_client(
+#   transport = "stdio",
+#   command = "Rscript",
+#   args = c("path/to/server.R")
+# )
+
+# 获取远程工具
+# remote_tools <- client$get_tools()
+
+# 在 Agent 中使用远程工具
+# agent <- create_agent(
+#   name = "DataAgent",
+#   model = "openai:gpt-4o",
+#   tools = remote_tools
+# )
+```
+
+---
+
+## 第十部分：Mission（任务编排系统）
+
+### 10.1 创建复杂任务
+
+```{r mission-create}
+# 定义任务步骤
+steps <- list(
+  create_step(
+    id = "collect",
+    description = "收集和整理原始数据",
+    executor = create_agent(
+      name = "Collector",
+      model = "openai:gpt-4o-mini",
+      system_prompt = "你负责数据收集和初步整理。"
+    ),
+    max_retries = 2
+  ),
+  create_step(
+    id = "analyze",
+    description = "深度分析数据，发现模式和洞察",
+    executor = create_agent(
+      name = "Analyst",
+      model = "openai:gpt-4o",
+      system_prompt = "你负责深度数据分析。"
+    ),
+    depends_on = "collect",  # 依赖收集步骤
+    max_retries = 3
+  ),
+  create_step(
+    id = "report",
+    description = "撰写最终分析报告",
+    executor = create_agent(
+      name = "Reporter",
+      model = "openai:gpt-4o",
+      system_prompt = "你负责撰写清晰的分析报告。"
+    ),
+    depends_on = "analyze"  # 依赖分析步骤
+  )
+)
+```
+
+### 10.2 配置 Mission Hooks
+
+```{r mission-hooks}
+hooks <- create_mission_hooks(
+  on_mission_start = function(mission) {
+    cat("[Mission] 开始:", mission$goal, "\n")
+  },
+  on_step_start = function(step) {
+    cat("[Step] 开始:", step$id, "-", step$description, "\n")
+  },
+  on_step_done = function(step, result) {
+    cat("[Step] 完成:", step$id, "\n")
+  },
+  on_step_failed = function(step, error) {
+    cat("[Step] 失败:", step$id, "错误:", conditionMessage(error), "\n")
+  },
+  on_mission_done = function(mission, result) {
+    cat("[Mission] 完成! 状态:", mission$status, "\n")
+  }
+)
+```
+
+### 10.3 执行 Mission
+
+```{r mission-run}
+mission <- create_mission(
+  goal = "对中国 2024 年新能源汽车市场进行全面分析，
+          包括市场规模、主要玩家、增长趋势和未来预测",
+  steps = steps,
+  model = "openai:gpt-4o",
+  hooks = hooks,
+  auto_plan = FALSE  # 使用预定义步骤
+)
+
+# 同步执行
+result <- mission$run()
+cat("\n最终结果:\n", result$text)
+```
+
+### 10.4 自动规划 Mission
+
+```{r mission-auto-plan}
+# 让 Mission 自动分解任务为步骤
+auto_mission <- create_mission(
+  goal = "研究 tidyverse 生态系统中 5 个最重要的包，
+          为每个包创建简短的使用教程，最后汇总成一份学习指南",
+  model = "openai:gpt-4o",
+  executor = create_agent(
+    name = "TidyverseExpert",
+    model = "openai:gpt-4o",
+    system_prompt = "你是 tidyverse 专家，可以详细解释和演示各个包的用法。"
+  ),
+  auto_plan = TRUE  # 自动规划步骤
+)
+
+# 异步执行（使用 callr 后台进程）
+# bg_process <- auto_mission$run_async()
+# result <- bg_process$get_result()
+
+# 同步执行
+result <- auto_mission$run()
+cat(result$text)
+```
+
+---
+
+## 总结
+
+| 功能 | 函数/类 | 适用场景 |
+|------|---------|---------|
+| 文本生成 | `generate_text()` | 单次 LLM 调用 |
+| 流式输出 | `stream_text()` | 实时响应 |
+| 工具调用 | `create_tool()` | 让 AI 执行函数 |
+| 智能体 | `create_agent()` | 有工具的自主 AI |
+| 会话 | `create_session()` | 多轮对话 |
+| 团队 | `create_team()` | 多 Agent 协作 |
+| 工作流 | `create_flow()` | 顺序任务管道 |
+| 技能 | `create_skill_registry()` | 动态知识加载 |
+| MCP | `create_mcp_server/client()` | 跨进程工具共享 |
+| 任务 | `create_mission()` | 复杂多步骤任务 |
+
+```{r session-info}
+sessionInfo()
+```

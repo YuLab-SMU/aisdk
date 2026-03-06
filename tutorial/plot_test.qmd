@@ -1,0 +1,28 @@
+---
+title: "AI Engine Plot Test"
+format: html
+---
+
+```{r setup, include=FALSE}
+library(aisdk)
+register_ai_engine()
+options(aisdk.default_model = "openai:gpt-4o-mini")
+```
+
+## Test 1: Simple Plot
+
+```{r}
+# Create test data
+x <- 1:10
+y <- x^2
+```
+
+```{ai echo=TRUE, eval=TRUE}
+Use ggplot2 to create a simple scatter plot of x vs y with a blue line connecting the points.
+```
+
+## Test 2: Base R Plot
+
+```{ai echo=TRUE, eval=TRUE}
+Create a base R plot: plot(x, y, type="b", col="red", main="Base R Plot Test")
+```

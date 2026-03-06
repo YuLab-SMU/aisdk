@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.27">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="数据分析团队">
+<meta name="dcterms.date" content="2026-03-06">
+
+<title>2024 Q4 电商销售分析报告</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="sales_analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="sales_analysis_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="sales_analysis_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="sales_analysis_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="sales_analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="sales_analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="sales_analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="sales_analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="sales_analysis_files/libs/quarto-html/quarto-syntax-highlighting-8b4baf804e461d9b72633f0de59a0cac.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="sales_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="sales_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="sales_analysis_files/libs/bootstrap/bootstrap-8c4b283fe68d871141289ba1f5d31ced.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#背景" id="toc-背景" class="nav-link active" data-scroll-target="#背景">背景</a></li>
+  <li><a href="#原始数据" id="toc-原始数据" class="nav-link" data-scroll-target="#原始数据">1. 原始数据</a></li>
+  <li><a href="#数据清洗" id="toc-数据清洗" class="nav-link" data-scroll-target="#数据清洗">2. 数据清洗</a></li>
+  <li><a href="#描述性统计" id="toc-描述性统计" class="nav-link" data-scroll-target="#描述性统计">3. 描述性统计</a></li>
+  <li><a href="#可视化" id="toc-可视化" class="nav-link" data-scroll-target="#可视化">4. 可视化</a>
+  <ul class="collapse">
+  <li><a href="#月度净收入趋势" id="toc-月度净收入趋势" class="nav-link" data-scroll-target="#月度净收入趋势">4.1 月度净收入趋势</a></li>
+  <li><a href="#品类-gmv-占比" id="toc-品类-gmv-占比" class="nav-link" data-scroll-target="#品类-gmv-占比">4.2 品类 GMV 占比</a></li>
+  <li><a href="#省份热力分析" id="toc-省份热力分析" class="nav-link" data-scroll-target="#省份热力分析">4.3 省份热力分析</a></li>
+  </ul></li>
+  <li><a href="#异常检测" id="toc-异常检测" class="nav-link" data-scroll-target="#异常检测">5. 异常检测</a></li>
+  <li><a href="#退货深度分析" id="toc-退货深度分析" class="nav-link" data-scroll-target="#退货深度分析">6. 退货深度分析</a></li>
+  <li><a href="#执行摘要" id="toc-执行摘要" class="nav-link" data-scroll-target="#执行摘要">7. 执行摘要</a></li>
+  <li><a href="#附分析工作流说明" id="toc-附分析工作流说明" class="nav-link" data-scroll-target="#附分析工作流说明">附：分析工作流说明</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">2024 Q4 电商销售分析报告</h1>
+<p class="subtitle lead">AI 辅助数据分析工作流演示</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>数据分析团队 </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">March 6, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="背景" class="level2">
+<h2 class="anchored" data-anchor-id="背景">背景</h2>
+<p>本报告模拟一家中型电商平台 Q4（2024年10月—12月）的销售数据， 展示如何用 <code>{ai}</code> 代码块驱动完整的分析工作流：</p>
+<ul>
+<li>数据加载 → AI 生成清洗代码 → AI 解读统计摘要 → AI 绘图 → AI 撰写洞察</li>
+</ul>
+<blockquote class="blockquote">
+<p>每个 <code>{ai}</code> 块共享同一个 <code>session = "sales"</code>，因此 AI 拥有完整对话上下文， 可以像真实分析师一样持续跟进。</p>
+</blockquote>
+<hr>
+</section>
+<section id="原始数据" class="level2">
+<h2 class="anchored" data-anchor-id="原始数据">1. 原始数据</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 模拟 Q4 订单数据（实际项目中从数据库或 CSV 读取）</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">2000</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>orders <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">order_id   =</span> <span class="fu">sprintf</span>(<span class="st">"ORD-%05d"</span>, <span class="dv">1</span><span class="sc">:</span>n),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">date       =</span> <span class="fu">as.Date</span>(<span class="st">"2024-10-01"</span>) <span class="sc">+</span> <span class="fu">sample</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">91</span>, n, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">category   =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">"3C数码"</span>, <span class="st">"服装"</span>, <span class="st">"食品"</span>, <span class="st">"家居"</span>, <span class="st">"美妆"</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>                      n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.30</span>, <span class="fl">0.15</span>, <span class="fl">0.20</span>, <span class="fl">0.10</span>)),</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">province   =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">"广东"</span>, <span class="st">"浙江"</span>, <span class="st">"北京"</span>, <span class="st">"上海"</span>, <span class="st">"四川"</span>, <span class="st">"湖北"</span>),</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>                      n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.22</span>, <span class="fl">0.18</span>, <span class="fl">0.15</span>, <span class="fl">0.15</span>, <span class="fl">0.15</span>, <span class="fl">0.15</span>)),</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">revenue    =</span> <span class="fu">round</span>(<span class="fu">abs</span>(<span class="fu">rnorm</span>(n, <span class="at">mean =</span> <span class="dv">350</span>, <span class="at">sd =</span> <span class="dv">220</span>)), <span class="dv">2</span>),</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">units      =</span> <span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, n, <span class="at">replace =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">is_return  =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="cn">FALSE</span>, <span class="cn">TRUE</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.92</span>, <span class="fl">0.08</span>)),</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">channel    =</span> <span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">"APP"</span>, <span class="st">"小程序"</span>, <span class="st">"PC网页"</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>, <span class="at">prob =</span> <span class="fu">c</span>(<span class="fl">0.55</span>, <span class="fl">0.30</span>, <span class="fl">0.15</span>))</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># 注入退货时收入为负的规则</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>orders<span class="sc">$</span>revenue[orders<span class="sc">$</span>is_return] <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fu">abs</span>(orders<span class="sc">$</span>revenue[orders<span class="sc">$</span>is_return]) <span class="sc">*</span> <span class="fl">0.8</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"数据维度:"</span>, <span class="fu">nrow</span>(orders), <span class="st">"行 ×"</span>, <span class="fu">ncol</span>(orders), <span class="st">"列</span><span class="sc">\n</span><span class="st">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>数据维度: 2000 行 × 8 列</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(orders, <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>   order_id       date category province revenue units is_return channel
+1 ORD-00001 2024-11-18     家居     广东  393.44     2     FALSE     APP
+2 ORD-00002 2024-12-04     服装     四川  243.84     3     FALSE     APP
+3 ORD-00003 2024-10-25   3C数码     广东  516.59     3     FALSE  小程序
+4 ORD-00004 2024-12-13     食品     北京  543.63     5     FALSE     APP
+5 ORD-00005 2024-10-18   3C数码     上海  222.79     1     FALSE  小程序</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="数据清洗" class="level2">
+<h2 class="anchored" data-anchor-id="数据清洗">2. 数据清洗</h2>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：检查 <code>orders</code> 的数据质量，生成清洗代码。</p>
+</blockquote>
+<div class="cell" data-session="sales" data-max_retries="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>请检查 orders 数据框的数据质量，重点关注：</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> 是否有缺失值</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> revenue 分布是否合理（退货订单应为负值）</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="fl">3.</span> date 字段是否覆盖完整的 Q4 区间</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>生成一段完整的 R 清洗代码，产出一个干净的 orders_clean 数据框，</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>并打印出清洗前后的行数对比。</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# Required libraries
+library(dplyr)
+library(lubridate)
+
+# Start cleaning/checking pipeline
+# Assumes `orders` exists in the environment
+
+# 1. Basic counts
+rows_before &lt;- nrow(orders)
+cat("清洗前行数 (rows before):", rows_before, "\n\n")
+
+# 2. 缺失值检查（包括空字符串）
+na_counts &lt;- sapply(orders, function(col) {
+  if (is.character(col)) {
+    sum(is.na(col) | trimws(col) == "")
+  } else {
+    sum(is.na(col))
+  }
+})
+cat("每列缺失/空值计数:\n")
+print(na_counts)
+cat("\n")
+
+# 3. 确保 date 是 Date 类型，尝试多种格式解析（保留原始 NA）
+orders &lt;- orders |&gt;
+  mutate(
+    date = case_when(
+      inherits(date, "Date") ~ date,
+      TRUE ~ {
+        # 先尝试常见 ISO 格式 ymd，再 fallback 到通用解析
+        parsed &lt;- suppressWarnings(ymd(as.character(date)))
+        parsed[is.na(parsed)] &lt;- as.Date(suppressWarnings(parse_date_time(as.character(date),
+                                                                          orders = c("Y-m-d", "Y/m/d", "m/d/Y", "d/m/Y", "Ymd", "ymd HMS")))[is.na(parsed)])
+        parsed
+      }
+    )
+  )
+
+# 报告 date 范围
+date_min &lt;- min(orders$date, na.rm = TRUE)
+date_max &lt;- max(orders$date, na.rm = TRUE)
+cat("date 范围: ", as.character(date_min), " 至 ", as.character(date_max), "\n\n")
+
+# 4. 检查每个年份的 Q4 (10-01 至 12-31) 覆盖情况（按年份）
+years_present &lt;- sort(unique(year(orders$date[!is.na(orders$date)])))
+if (length(years_present) == 0) {
+  cat("警告: 数据中没有有效的 date 值，可以跳出后续 Q4 覆盖检查。\n\n")
+} else {
+  cat("按年份检查 Q4(10-01 ~ 12-31) 覆盖情况:\n")
+  for (yr in years_present) {
+    q4_seq &lt;- seq(as.Date(paste0(yr, "-10-01")), as.Date(paste0(yr, "-12-31")), by = "day")
+    present_dates &lt;- unique(orders$date[year(orders$date) == yr])
+    if (length(present_dates) == 0) {
+      coverage_pct &lt;- 0
+      missing_dates &lt;- q4_seq
+    } else {
+      missing_dates &lt;- setdiff(q4_seq, present_dates)
+      coverage_pct &lt;- 100 * (1 - length(missing_dates) / length(q4_seq))
+    }
+    cat(sprintf(" %d 年: Q4 天数 = %d, 覆盖天数 = %d, 覆盖率 = %.1f%%\n",
+                yr, length(q4_seq), length(q4_seq) - length(missing_dates), coverage_pct))
+    if (length(missing_dates) &gt; 0) {
+      cat("   缺失的 Q4 日期示例 (最多显示 5): ", paste(head(as.character(missing_dates), 5), collapse = ", "), "\n")
+    }
+  }
+  cat("\n")
+}
+
+# 5. revenue 分布与退货标志一致性检查
+cat("revenue 基本统计（整个数据集）:\n")
+print(summary(orders$revenue))
+cat("\n按 is_return 分组的 revenue 统计:\n")
+revenue_by_return &lt;- orders |&gt;
+  mutate(is_return = ifelse(is.na(is_return), NA, as.logical(is_return))) |&gt;
+  group_by(is_return) |&gt;
+  summarise(
+    n = n(),
+    min = min(revenue, na.rm = TRUE),
+    q1 = quantile(revenue, 0.25, na.rm = TRUE),
+    median = median(revenue, na.rm = TRUE),
+    mean = mean(revenue, na.rm = TRUE),
+    q3 = quantile(revenue, 0.75, na.rm = TRUE),
+    max = max(revenue, na.rm = TRUE),
+    .groups = "drop"
+  )
+print(revenue_by_return)
+cat("\n")
+
+# 找出不符合约定的行（退货应为负，非退货应为正或零）
+bad_returns &lt;- orders |&gt;
+  filter(!is.na(is_return) &amp; is_return == TRUE &amp; !is.na(revenue) &amp; revenue &gt;= 0)
+bad_sales &lt;- orders |&gt;
+  filter(!is.na(is_return) &amp; is_return == FALSE &amp; !is.na(revenue) &amp; revenue &lt; 0)
+cat("退货标记为 TRUE 但 revenue &gt;= 0 的行数:", nrow(bad_returns), "\n")
+if (nrow(bad_returns) &gt; 0) {
+  cat("示例 (最多 5 行):\n")
+  print(head(bad_returns, 5))
+}
+cat("退货标记为 FALSE 但 revenue &lt; 0 的行数:", nrow(bad_sales), "\n")
+if (nrow(bad_sales) &gt; 0) {
+  cat("示例 (最多 5 行):\n")
+  print(head(bad_sales, 5))
+}
+cat("\n")
+
+# 6. 开始清洗：
+#  - 修正 revenue 符号： is_return == TRUE -&gt; revenue = -abs(revenue)
+#                       is_return == FALSE -&gt; revenue = abs(revenue)
+#  - units 取绝对值（负数单位很可能是输入错误）
+#  - 删除关键字段缺失的行（order_id, date, revenue, units, is_return）
+#  - 删除重复 order_id（保留第一条）
+orders_fixed &lt;- orders |&gt;
+  mutate(
+    # 修正 revenue 符号（保留 NA）
+    revenue = case_when(
+      is.na(revenue) ~ NA_real_,
+      is.na(is_return) ~ revenue, # 如果 is_return 本身缺失，先不改 revenue (后面会被视为关键缺失并删除)
+      is_return ~ -abs(as.numeric(revenue)),
+      !is_return ~ abs(as.numeric(revenue))
+    ),
+    # units 取绝对值（保留 NA）
+    units = ifelse(is.na(units), NA_integer_, as.integer(abs(units)))
+  )
+
+# 记录因关键字段缺失被删除的数量
+before_drop_missing &lt;- nrow(orders_fixed)
+orders_nonmissing &lt;- orders_fixed |&gt;
+  filter(
+    !is.na(order_id) &amp; trimws(as.character(order_id)) != "",
+    !is.na(date),
+    !is.na(revenue),
+    !is.na(units),
+    !is.na(is_return)
+  )
+dropped_missing &lt;- before_drop_missing - nrow(orders_nonmissing)
+
+# 删除重复 order_id（保留出现顺序的第一条）
+orders_nodup &lt;- orders_nonmissing |&gt;
+  arrange(order_id, date) |&gt;
+  distinct(order_id, .keep_all = TRUE)
+dups_removed &lt;- nrow(orders_nonmissing) - nrow(orders_nodup)
+
+# 最终的清洁数据框
+orders_clean &lt;- orders_nodup
+
+# 7. 输出清洗结果摘要
+rows_after &lt;- nrow(orders_clean)
+cat("清洗后行数 (rows after):", rows_after, "\n")
+cat("共删除行数:", rows_before - rows_after, "(其中因缺失关键字段删除:", dropped_missing,
+    ", 因重复 order_id 删除:", dups_removed, ")\n\n")
+
+cat("orders_clean 变量已创建，可直接使用。\n")
+cat("清洗后 revenue 按 is_return 的简单统计（供核验）:\n")
+print(
+  orders_clean |&gt;
+    group_by(is_return) |&gt;
+    summarise(n = n(), min = min(revenue), median = median(revenue), mean = mean(revenue), max = max(revenue), .groups = "drop")
+)
+
+# 显示前几行作为检查
+cat("\norders_clean 示例 (前 6 行):\n")
+print(head(orders_clean, 6))
+```
+
+```
+Message: 
+Attaching package: 'dplyr'
+
+
+Message: The following objects are masked from 'package:stats':
+
+    filter, lag
+
+
+Message: The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+
+Message: 
+Attaching package: 'lubridate'
+
+
+Message: The following objects are masked from 'package:base':
+
+    date, intersect, setdiff, union
+
+
+清洗前行数 (rows before): 2000 
+
+
+每列缺失/空值计数:
+
+ order_id      date  category  province   revenue     units is_return   channel 
+        0         0         0         0         0         0         0         0 
+
+
+
+date 范围:  2024-10-01  至  2024-12-31 
+
+
+按年份检查 Q4(10-01 ~ 12-31) 覆盖情况:
+ 2024 年: Q4 天数 = 92, 覆盖天数 = 92, 覆盖率 = 100.0%
+
+
+revenue 基本统计（整个数据集）:
+
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ -741.7   155.3   333.1   309.9   479.3  1183.4 
+
+
+按 is_return 分组的 revenue 统计:
+
+# A tibble: 2 × 8
+  is_return     n     min    q1 median  mean    q3    max
+  &lt;lgl&gt;     &lt;int&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
+1 FALSE      1861    0.24  203.   352.  356.  492. 1183. 
+2 TRUE        139 -742.   -381.  -274. -301. -195.  -23.2
+
+
+
+退货标记为 TRUE 但 revenue &gt;= 0 的行数: 0 
+
+退货标记为 FALSE 但 revenue &lt; 0 的行数: 0 
+
+
+
+清洗后行数 (rows after): 2000 
+
+共删除行数: 0 (其中因缺失关键字段删除: 0 , 因重复 order_id 删除: 0 )
+
+
+orders_clean 变量已创建，可直接使用。
+
+清洗后 revenue 按 is_return 的简单统计（供核验）:
+
+# A tibble: 2 × 6
+  is_return     n     min median  mean    max
+  &lt;lgl&gt;     &lt;int&gt;   &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
+1 FALSE      1861    0.24   352.  356. 1183. 
+2 TRUE        139 -742.    -274. -301.  -23.2
+
+
+orders_clean 示例 (前 6 行):
+
+   order_id       date category province  revenue units is_return channel
+1 ORD-00001 2024-11-18     家居     广东  393.440     2     FALSE     APP
+2 ORD-00002 2024-12-04     服装     四川  243.840     3     FALSE     APP
+3 ORD-00003 2024-10-25   3C数码     广东  516.590     3     FALSE  小程序
+4 ORD-00004 2024-12-13     食品     北京  543.630     5     FALSE     APP
+5 ORD-00005 2024-10-18   3C数码     上海  222.790     1     FALSE  小程序
+6 ORD-00006 2024-11-18     食品     广东 -233.376     5      TRUE  小程序
+
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="描述性统计" class="level2">
+<h2 class="anchored" data-anchor-id="描述性统计">3. 描述性统计</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 基于清洗后数据计算关键指标（AI 在上一块已创建 orders_clean）</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 月度汇总</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>monthly <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">format</span>(date, <span class="st">"%Y-%m"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(month) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">gmv        =</span> <span class="fu">sum</span>(revenue[<span class="sc">!</span>is_return]),</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">returns    =</span> <span class="fu">abs</span>(<span class="fu">sum</span>(revenue[is_return])),</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">net_rev    =</span> gmv <span class="sc">-</span> returns,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">orders_cnt =</span> <span class="fu">n</span>(),</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups    =</span> <span class="st">"drop"</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 品类汇总</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>by_cat <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>is_return) <span class="sc">|&gt;</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(category) <span class="sc">|&gt;</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">gmv      =</span> <span class="fu">sum</span>(revenue),</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">orders   =</span> <span class="fu">n</span>(),</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_price =</span> <span class="fu">mean</span>(revenue),</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups  =</span> <span class="st">"drop"</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(gmv))</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a><span class="co"># 渠道汇总</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>by_channel <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>is_return) <span class="sc">|&gt;</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(channel) <span class="sc">|&gt;</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">gmv =</span> <span class="fu">sum</span>(revenue), <span class="at">orders =</span> <span class="fu">n</span>(), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：解读上面三张汇总表，给出业务洞察。</p>
+</blockquote>
+<div class="cell" data-session="sales">
+<div class="cell-output cell-output-stdout">
+<pre><code>```
+— Q4 整体收入走势 —
+
+Q4 净收入趋势：2024-10：204,262.1 / 204,795.2 / 210,752.9 → 2024-11：204,262.1 / 204,795.2 / 210,752.9 → 2024-12：204,262.1 / 204,795.2 / 210,752.9。总体平稳，12月较前两月略有回升。 
+
+
+— 最强和最弱品类对比 —
+
+品类对比：最强 服装 GMV 1.854e+05（订单 543，客单 342）；最弱 美妆 GMV 7.078e+04（订单 205，客单 345）。最强以订单量驱动，客单相近。 
+
+
+— 各渠道的差异化表现 —
+
+渠道表现：APP 为主力（GMV 最大、订单最多）；PC网页 客单最高（约 375），但订单较少；其他渠道处于中间水平。 
+
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="可视化" class="level2">
+<h2 class="anchored" data-anchor-id="可视化">4. 可视化</h2>
+<section id="月度净收入趋势" class="level3">
+<h3 class="anchored" data-anchor-id="月度净收入趋势">4.1 月度净收入趋势</h3>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：用 <code>monthly</code> 画趋势图。</p>
+</blockquote>
+<div class="cell" data-session="sales" data-max_retries="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>请用 monthly 数据，使用 ggplot2 绘制一张月度净收入（net_rev）柱状图：</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>- X 轴为月份，Y 轴为净收入（万元，除以 <span class="dv">10000</span>）</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>- 在柱顶标注数值，保留一位小数</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>- 颜色方案：#<span class="dv">2196</span>F3，背景简洁（theme_minimal）</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>- 添加标题"Q4 月度净收入"和副标题"单位：万元"</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# 绘图所需库
+library(ggplot2)
+
+# 检查数据存在
+if (!exists("monthly")) stop("对象 'monthly' 不存在，请先加载数据框 monthly。")
+
+# 准备数据：转换为按原始顺序的因子，计算净收入（万元）
+monthly_plot &lt;- monthly
+monthly_plot$month &lt;- factor(as.character(monthly_plot$month), levels = unique(as.character(monthly_plot$month)))
+monthly_plot$net_rev_w &lt;- monthly_plot$net_rev / 10000
+
+# 计算 ymax 用于为标签留出空间
+ymax &lt;- max(monthly_plot$net_rev_w, na.rm = TRUE)
+
+# 绘图
+p &lt;- ggplot(monthly_plot, aes(x = month, y = net_rev_w)) +
+  geom_col(fill = "#2196F3", width = 0.6) +
+  geom_text(aes(label = sprintf("%.1f", net_rev_w)), vjust = -0.3, size = 4) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  labs(
+    title = "Q4 月度净收入",
+    subtitle = "单位：万元",
+    x = "月份",
+    y = "净收入（万元）"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# 打印图形
+print(p)
+```</code></pre>
+</div>
+</div>
+</section>
+<section id="品类-gmv-占比" class="level3">
+<h3 class="anchored" data-anchor-id="品类-gmv-占比">4.2 品类 GMV 占比</h3>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：用 <code>by_cat</code> 画饼图或环形图。</p>
+</blockquote>
+<div class="cell" data-session="sales">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>请用 by_cat 数据绘制一张品类 GMV 占比的环形图（donut chart）：</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>- 用 ggplot2 实现，geom_col + coord_polar</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>- 显示每个品类的名称和百分比</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>- 使用 RColorBrewer 的 Set2 配色</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>- 无图例，在扇区内直接标注文字</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>- 标题"Q4 品类 GMV 占比"</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# 绘图所需库
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(RColorBrewer)
+
+# 确保数据存在
+if (!exists("by_cat")) stop("对象 'by_cat' 不存在，请先加载数据框 by_cat。")
+
+# 准备数据：按 GMV 降序，计算占比与标签
+by_cat_plot &lt;- by_cat |&gt;
+  arrange(desc(gmv)) |&gt;
+  mutate(
+    category = factor(category, levels = unique(category)),
+    pct = gmv / sum(gmv),
+    label = paste0(category, "\n", percent(pct, accuracy = 0.1))
+  )
+
+# 绘制环形图（donut）
+p &lt;- ggplot(by_cat_plot, aes(x = 2, y = gmv, fill = category)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  xlim(0.5, 2.5) +                                   # 留出中间空白形成环形
+  geom_text(aes(label = label),                      # 在扇区内标注品类与百分比
+            position = position_stack(vjust = 0.5),
+            size = 4) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  ) +
+  ggtitle("Q4 品类 GMV 占比")
+
+# 显示图形
+print(p)
+```</code></pre>
+</div>
+</div>
+</section>
+<section id="省份热力分析" class="level3">
+<h3 class="anchored" data-anchor-id="省份热力分析">4.3 省份热力分析</h3>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 省份维度汇总（提供给 AI 使用）</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>by_province <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>is_return) <span class="sc">|&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(province) <span class="sc">|&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">gmv      =</span> <span class="fu">sum</span>(revenue),</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">orders   =</span> <span class="fu">n</span>(),</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">avg_rev  =</span> <span class="fu">mean</span>(revenue),</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups  =</span> <span class="st">"drop"</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(gmv))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：用 <code>by_province</code> 画气泡图，X=订单量，Y=客单价，气泡大小=GMV。</p>
+</blockquote>
+<div class="cell" data-session="sales" data-max_retries="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>请用 by_province 数据制作一张散点气泡图：</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>- X 轴：orders（订单量）</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>- Y 轴：avg_rev（平均客单价，单位元）</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>- 气泡大小：gmv（GMV）</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>- 气泡颜色：#E91E63，透明度 <span class="fl">0.7</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>- 每个气泡旁标注省份名</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>- theme_light，添加标题"各省订单量 vs 客单价（气泡大小=GMV）"</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# 所需库
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# 检查数据存在
+if (!exists("by_province")) stop("请先在环境中加载数据框 `by_province`。")
+
+# 准备数据（确保列类型正确）
+plot_df &lt;- by_province |&gt;
+  mutate(
+    province = as.character(province),
+    gmv = as.numeric(gmv),
+    orders = as.numeric(orders),
+    avg_rev = as.numeric(avg_rev)
+  )
+
+# 绘图
+ggplot(plot_df, aes(x = orders, y = avg_rev, size = gmv)) +
+  geom_point(color = "#E91E63", alpha = 0.7) +
+  geom_text(aes(label = province), 
+            nudge_x = 0.6, nudge_y = 0, 
+            hjust = 0, size = 3) +
+  scale_size_area(max_size = 25, guide = "legend", labels = comma) +
+  scale_x_continuous(expand = expansion(mult = c(0.05, 0.25))) +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.10))) +
+  labs(
+    title = "各省订单量 vs 客单价（气泡大小=GMV）",
+    x = "订单量",
+    y = "平均客单价（元）",
+    size = "GMV"
+  ) +
+  theme_light() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "right"
+  )
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="异常检测" class="level2">
+<h2 class="anchored" data-anchor-id="异常检测">5. 异常检测</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 日维度数据，用于异常检测</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>daily <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>is_return) <span class="sc">|&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(date) <span class="sc">|&gt;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">gmv    =</span> <span class="fu">sum</span>(revenue),</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">orders =</span> <span class="fu">n</span>(),</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(date)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：对 <code>daily</code> 进行异常检测，标记销售额突出的日期。</p>
+</blockquote>
+<div class="cell" data-session="sales">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>请对 daily 数据做简单的统计异常检测：</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fl">1.</span> 计算 gmv 的均值和标准差</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fl">2.</span> 将超过 均值 + <span class="fl">1.5</span>*SD 的日期标记为"高峰日"，低于 均值 - <span class="fl">1.5</span>*SD 的标记为"低谷日"</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="fl">3.</span> 绘制折线图（date vs gmv），正常日用灰色线，高峰日用红色点，低谷日用蓝色点</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fl">4.</span> 在图上标注高峰日期（用 ggrepel::geom_label_repel，如果没有就用 geom_text）</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fl">5.</span> 同时 <span class="kw">print</span> 出异常日期的汇总表</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>使用 ggplot2，theme_minimal，标题"日 GMV 走势与异常检测"</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# 所需包
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# 检查数据存在
+if (!exists("daily")) stop("请先在环境中加载数据框 `daily`。")
+
+# 确保 date 为 Date 类型
+daily &lt;- daily |&gt;
+  mutate(date = as.Date(date))
+
+# 1. 计算均值和标准差
+gmv_mean &lt;- mean(daily$gmv, na.rm = TRUE)
+gmv_sd   &lt;- sd(daily$gmv, na.rm = TRUE)
+
+# 2. 标记高峰/低谷/正常日
+high_th &lt;- gmv_mean + 1.5 * gmv_sd
+low_th  &lt;- gmv_mean - 1.5 * gmv_sd
+
+daily_flagged &lt;- daily |&gt;
+  mutate(
+    type = case_when(
+      is.na(gmv) ~ NA_character_,
+      gmv &gt; high_th ~ "peak",
+      gmv &lt; low_th ~ "trough",
+      TRUE ~ "normal"
+    )
+  )
+
+# 5. 输出统计与异常汇总表
+cat(sprintf("GMV 均值 = %.2f，标准差 = %.2f，阈值：高峰 &gt; %.2f，低谷 &lt; %.2f\n\n",
+            gmv_mean, gmv_sd, high_th, low_th))
+
+anomalies &lt;- daily_flagged |&gt;
+  filter(type %in% c("peak", "trough")) |&gt;
+  arrange(desc(type), date)
+
+if (nrow(anomalies) == 0) {
+  cat("未检测到高峰日或低谷日。\n\n")
+} else {
+  cat("异常日期汇总（type, date, gmv）：\n")
+  print(as.data.frame(anomalies))
+  cat("\n")
+}
+
+# 3 &amp; 4. 绘图：折线图 + 不同颜色标注 + 在高峰日标注日期（优先使用 ggrepel）
+p_base &lt;- ggplot(daily_flagged, aes(x = date, y = gmv)) +
+  geom_line(color = "grey60", size = 0.6) +
+  geom_point(data = daily_flagged |&gt;
+               filter(type == "normal"),
+             aes(x = date, y = gmv),
+             color = "grey60", size = 1.2) +
+  geom_point(data = daily_flagged |&gt;
+               filter(type == "peak"),
+             aes(x = date, y = gmv),
+             color = "red", size = 2.5) +
+  geom_point(data = daily_flagged |&gt;
+               filter(type == "trough"),
+             aes(x = date, y = gmv),
+             color = "blue", size = 2.5) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "日 GMV 走势与异常检测",
+    x = "日期",
+    y = "GMV"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+# 尝试使用 ggrepel 标注高峰日，否则退回 geom_text
+if (requireNamespace("ggrepel", quietly = TRUE)) {
+  p &lt;- p_base +
+    ggrepel::geom_label_repel(
+      data = daily_flagged |&gt;
+        filter(type == "peak"),
+      aes(label = format(date, "%Y-%m-%d")),
+      nudge_y = 0.03 * (max(daily_flagged$gmv, na.rm = TRUE) - min(daily_flagged$gmv, na.rm = TRUE)),
+      size = 3,
+      segment.size = 0.2
+    )
+} else {
+  p &lt;- p_base +
+    geom_text(
+      data = daily_flagged |&gt;
+        filter(type == "peak"),
+      aes(label = format(date, "%Y-%m-%d")),
+      vjust = -0.8,
+      size = 3,
+      check_overlap = TRUE
+    )
+  message("未检测到包 'ggrepel'，已使用 geom_text 作为回退标注。若需更好布局，请安装 ggrepel。")
+}
+
+# 打印图形
+print(p)
+```
+
+```
+GMV 均值 = 7191.80，标准差 = 1916.76，阈值：高峰 &gt; 10066.94，低谷 &lt; 4316.66
+
+
+异常日期汇总（type, date, gmv）：
+         date      gmv orders   type
+1  2024-11-09  4302.30     14 trough
+2  2024-12-07  4011.24     14 trough
+3  2024-12-08  4096.02     16 trough
+4  2024-12-25  4311.64     11 trough
+5  2024-10-12 11928.24     33   peak
+6  2024-10-20 10975.98     30   peak
+7  2024-10-23 10189.11     26   peak
+8  2024-11-02 10284.88     27   peak
+9  2024-11-11 12854.81     29   peak
+10 2024-11-12 10220.28     28   peak
+11 2024-12-09 10675.17     24   peak
+12 2024-12-30 11328.74     30   peak
+
+
+Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="退货深度分析" class="level2">
+<h2 class="anchored" data-anchor-id="退货深度分析">6. 退货深度分析</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 退货维度分析</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>return_analysis <span class="ot">&lt;-</span> orders_clean <span class="sc">|&gt;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(category, channel) <span class="sc">|&gt;</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">total     =</span> <span class="fu">n</span>(),</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">returns   =</span> <span class="fu">sum</span>(is_return),</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">return_rate =</span> <span class="fu">mean</span>(is_return),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups   =</span> <span class="st">"drop"</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：用热力图展示各品类×渠道的退货率，并解读高风险组合。</p>
+</blockquote>
+<div class="cell" data-session="sales">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode ai code-with-copy"><code class="sourceCode postscript"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>请用 return_analysis 数据绘制一张退货率热力图：</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>- X 轴：channel，Y 轴：category</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>- 填充颜色：退货率（return_rate），用 scale_fill_gradient2，低=绿，高=红，中=白</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>- 在每个格子里标注百分比（如 "<span class="fl">8.3</span><span class="co">%"）</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>- theme_minimal，标题"品类 × 渠道 退货率热力图"</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>绘图完成后，用 <span class="dv">2-3</span> 句话指出退货率最高的品类+渠道组合，给出可能原因。</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>```r
+# 所需库
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# 检查数据存在
+if (!exists("return_analysis")) stop("请先在环境中加载数据框 `return_analysis`。")
+
+# 准备数据：确保 category 与 channel 顺序（按出现顺序），并生成标签
+plot_df &lt;- return_analysis |&gt;
+  mutate(
+    category = factor(as.character(category), levels = unique(as.character(category))),
+    channel = factor(as.character(channel), levels = unique(as.character(channel))),
+    pct_label = scales::percent(return_rate, accuracy = 0.1)
+  )
+
+# 计算中点用于 scale_fill_gradient2（用中位数作为中性值）
+midpoint &lt;- median(plot_df$return_rate, na.rm = TRUE)
+
+# 绘图：热力图
+p &lt;- ggplot(plot_df, aes(x = channel, y = category, fill = return_rate)) +
+  geom_tile(color = "grey90", width = 0.95, height = 0.95) +
+  geom_text(aes(label = pct_label), color = "black", size = 3.5) +
+  scale_fill_gradient2(
+    low = "green",
+    mid = "white",
+    high = "red",
+    midpoint = midpoint,
+    labels = scales::percent_format(accuracy = 0.1),
+    name = "退货率"
+  ) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(
+    title = "品类 × 渠道 退货率热力图",
+    x = "渠道",
+    y = "品类"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(angle = 0, vjust = 0.5),
+    panel.grid = element_blank()
+  )
+
+# 打印图形
+print(p)
+
+# 找出退货率最高的组合并输出 2-3 句简要说明
+max_rate &lt;- max(plot_df$return_rate, na.rm = TRUE)
+top_rows &lt;- plot_df |&gt;
+  filter(return_rate == max_rate)
+
+# 构建说明文本（简洁 2-3 句）
+top_desc &lt;- top_rows |&gt;
+  mutate(desc = paste0(category, "（", channel, "）: ", pct_label)) |&gt;
+  pull(desc) |&gt;
+  paste(collapse = "；")
+
+message_lines &lt;- c(
+  paste0("退货率最高的组合为：", top_desc, "。"),
+  "可能原因：该品类在该渠道存在质量/描述不一致或客户期待差异，或该渠道的售后与物流体验较弱，导致退货率偏高。"
+)
+
+cat(paste(message_lines, collapse = "\n"), "\n")
+```
+
+```
+退货率最高的组合为：服装（小程序）: 10.9%。
+可能原因：该品类在该渠道存在质量/描述不一致或客户期待差异，或该渠道的售后与物流体验较弱，导致退货率偏高。 
+
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="执行摘要" class="level2">
+<h2 class="anchored" data-anchor-id="执行摘要">7. 执行摘要</h2>
+<blockquote class="blockquote">
+<p><strong>AI 任务</strong>：综合所有分析，自动生成执行摘要。</p>
+</blockquote>
+<div class="cell" data-session="sales">
+<div class="cell-output cell-output-stdout">
+<pre><code>```
+## 执行摘要
+
+核心发现：
+1. Q4 净收入合计约619,810元，12月较11月增长约2.9%，呈小幅回升。
+2. 品类集中：服装 GMV 185,445元，占比约28%；美妆最弱，GMV 70,778元，占比约10.7%。
+3. 退货率风险：3C数码在 APP 渠道退货率约9.3%，显著偏高，影响净收入与客户体验。
+
+建议：
+1. 对服装在库存与营销上继续投入以放大优势；对美妆实施定向促销与上新/优化陈列以提升渗透率。
+2. 针对 3C数码-APP 展开退货原因排查（商品描述/质检/物流），优化售后与质检流程以降低退货率。
+
+```</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="附分析工作流说明" class="level2">
+<h2 class="anchored" data-anchor-id="附分析工作流说明">附：分析工作流说明</h2>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>本报告共发起 16 轮 AI 对话，所有上下文在 session='sales' 中共享传递。</code></pre>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>关键设计模式</strong></p>
+<ol type="1">
+<li><p><strong>数据先行，AI 后解读</strong>：先用 <code>{r}</code> 块计算出干净的汇总表（<code>monthly</code>、<code>by_cat</code> 等），再让 <code>{ai}</code> 块引用这些变量——引擎自动检测变量名并传入结构摘要，AI 就能写出精准代码。</p></li>
+<li><p><strong>单一 session 贯穿全文</strong>：所有 <code>{ai}</code> 块共享 <code>session="sales"</code>，AI 记得前面做了什么，不需要反复重交代背景。</p></li>
+<li><p><strong>echo/eval 灵活控制</strong>：</p>
+<ul>
+<li>纯解读文字：<code>echo=false</code>（不显示 prompt）</li>
+<li>生成可复用代码：<code>echo=true, eval=true</code>（展示代码 + 运行结果）</li>
+</ul></li>
+<li><p><strong>人机协作</strong>：人负责数据管道（加载、清洗骨架、维度设计），AI 负责代码生成和文字解读，各司其职。</p></li>
+</ol>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,40 @@
+---
+title: "Test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(aisdk)
+library(evaluate)
+
+# Mock eng_ai: skip LLM call, directly execute ggplot code
+mock_ai_response <- function(options) {
+  envir <- knitr::knit_global()
+  code <- 'library(ggplot2); ggplot(mtcars, aes(wt, mpg)) + geom_point() + ggtitle("Test")'
+  aisdk:::execute_code_safely(code, envir)
+}
+```
+
+```{r test-plot, results='asis'}
+# Simulate what eng_ai does for eval=TRUE with a ggplot
+envir <- environment()
+code <- 'library(ggplot2); print(ggplot(mtcars, aes(wt, mpg)) + geom_point())'
+
+ev <- evaluate::evaluate(code, envir = envir, new_device = FALSE)
+cat("Types returned by evaluate:\n")
+for (x in ev) cat(" -", paste(class(x), collapse=","), "\n")
+
+plots <- Filter(function(x) inherits(x, "recordedplot"), ev)
+cat("Number of recordedplots:", length(plots), "\n")
+
+if (length(plots) > 0) {
+  opts <- knitr::opts_current$get()
+  cat("opts label:", opts$label, "\n")
+  cat("opts dev:", opts$dev, "\n")
+  result <- tryCatch(
+    knitr:::sew.recordedplot(plots[[1]], opts),
+    error = function(e) paste("sew ERROR:", e$message)
+  )
+  cat("sew result:", result, "\n")
+}
+```
