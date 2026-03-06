@@ -28,3 +28,6 @@
 ^vignettes$
 ^assets$
 ^intro$
+^tutorial$
+^intro\.zip$
+^.*_files$

@@ -118,9 +118,13 @@ eng_ai <- function(options) {
           session$send(retry_prompt)
         },
         error = function(e) {
-          break
+          NULL
         }
       )
+
+      if (is.null(response)) {
+        break
+      }
 
       new_response <- response$text %||% ""
       new_explanation <- remove_r_code_blocks(new_response)
