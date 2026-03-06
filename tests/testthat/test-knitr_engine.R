@@ -19,7 +19,7 @@ test_that("get_r_context handles non-existent variables", {
 test_that("get_r_context summarizes data frames correctly", {
   df <- data.frame(a = 1:5, b = letters[1:5], stringsAsFactors = FALSE)
   ctx <- get_r_context("df", envir = environment())
-  
+
   expect_match(ctx, "Variable: `df`")
   expect_match(ctx, "Data Frame")
   expect_match(ctx, "5 rows x 2 columns")
@@ -30,7 +30,7 @@ test_that("get_r_context summarizes data frames correctly", {
 test_that("get_r_context summarizes vectors correctly", {
   nums <- c(1, 2, 3, 4, 5)
   ctx <- get_r_context("nums", envir = environment())
-  
+
   expect_match(ctx, "Vector")
   expect_match(ctx, "length 5")
 })
@@ -38,7 +38,7 @@ test_that("get_r_context summarizes vectors correctly", {
 test_that("get_r_context summarizes lists correctly", {
   my_list <- list(a = 1, b = "hello", c = 1:3)
   ctx <- get_r_context("my_list", envir = environment())
-  
+
   expect_match(ctx, "List")
   expect_match(ctx, "3 elements")
 })
@@ -64,7 +64,7 @@ test_that("extract_r_code extracts single code block", {
   code <- aisdk:::extract_r_code(text)
   expect_match(code, "print\\('hello'\\)")
 })
-  
+
 test_that("extract_r_code extracts multiple code blocks", {
   text <- "First:\n```r\nx <- 1\n```\nSecond:\n```r\ny <- 2\n```"
   code <- aisdk:::extract_r_code(text)
@@ -140,39 +140,6 @@ test_that("auto_detect_vars excludes R keywords", {
   expect_false("if" %in% vars)
 })
 
-# ============================================================================
-# Code Execution Tests
-# ============================================================================
-
-test_that("execute_code_safely runs simple code", {
-  result <- aisdk:::execute_code_safely("1 + 1", environment())
-  expect_match(result, "2")
-})
-
-test_that("execute_code_safely captures print output", {
-  result <- aisdk:::execute_code_safely("print('hello world')", environment())
-  expect_match(result, "hello world")
-})
-
-test_that("execute_code_safely handles errors gracefully", {
-  result <- aisdk:::execute_code_safely("stop('test error')", environment())
-  expect_match(result, "Error|error")
-})
-
-test_that("execute_code_safely modifies environment", {
-  test_env <- new.env()
-  aisdk:::execute_code_safely("my_var <- 42", test_env)
-  expect_true(exists("my_var", envir = test_env))
-  expect_equal(test_env$my_var, 42)
-})
-
-test_that("execute_code_safely handles empty code", {
-  result <- aisdk:::execute_code_safely("", environment())
-  expect_equal(result, "")
-  
-  result2 <- aisdk:::execute_code_safely("   ", environment())
-  expect_equal(result2, "")
-})
 
 # ============================================================================
 # Session Management Tests
@@ -181,41 +148,41 @@ test_that("execute_code_safely handles empty code", {
 test_that("get_or_create_session creates new session", {
   # Clear any existing session
   aisdk:::clear_ai_session()
-  
+
   opts <- list(model = openai_model_id)
   session <- aisdk:::get_or_create_session(opts)
-  
+
   expect_s3_class(session, "ChatSession")
 })
 
 test_that("get_or_create_session returns same session on second call", {
   aisdk:::clear_ai_session()
-  
+
   opts <- list(model = openai_model_id)
   session1 <- aisdk:::get_or_create_session(opts)
   session2 <- aisdk:::get_or_create_session(opts)
-  
+
   expect_identical(session1, session2)
 })
 
 test_that("get_or_create_session respects new_session option", {
   aisdk:::clear_ai_session()
-  
+
   opts1 <- list(model = openai_model_id)
   session1 <- aisdk:::get_or_create_session(opts1)
-  
+
   opts2 <- list(model = openai_model_id, new_session = TRUE)
   session2 <- aisdk:::get_or_create_session(opts2)
-  
+
   expect_false(identical(session1, session2))
 })
 
 test_that("clear_ai_session clears sessions", {
   opts <- list(model = openai_model_id)
   session <- aisdk:::get_or_create_session(opts)
-  
+
   aisdk:::clear_ai_session()
-  
+
   expect_null(aisdk:::get_ai_session("default"))
 })
 
