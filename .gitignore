@@ -44,9 +44,15 @@ docs/
 .claude/
 artifacts/
 
-
+/intro/
 /doc/
 /Meta/
+
+# Transient R plots and archives
+Rplots.pdf
+Rplots*.pdf
+*.zip
+*.tar.gz
 
 /.quarto/
 **/*.quarto_ipynb
