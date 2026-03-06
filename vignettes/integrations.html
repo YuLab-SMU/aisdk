@@ -395,6 +395,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#initialize-server-with-tools" id="toc-initialize-server-with-tools" class="nav-link" data-scroll-target="#initialize-server-with-tools">3. Initialize Server with Tools</a></li>
   </ul>
 </li>
+  <li>
+<a href="#rmarkdown-and-quarto-integration" id="toc-rmarkdown-and-quarto-integration" class="nav-link" data-scroll-target="#rmarkdown-and-quarto-integration">RMarkdown and Quarto Integration</a>
+  <ul class="collapse">
+<li><a href="#register-the-ai-engine" id="toc-register-the-ai-engine" class="nav-link" data-scroll-target="#register-the-ai-engine">1. Register the AI Engine</a></li>
+  <li><a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">2. Basic Usage</a></li>
+  <li><a href="#chunk-options" id="toc-chunk-options" class="nav-link" data-scroll-target="#chunk-options">3. Chunk Options</a></li>
+  </ul>
+</li>
   </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/integrations.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
@@ -466,9 +474,61 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Now the user can say “Change the plot to red”, and the AI will execute the tool, updating the Shiny app instantly.</p>
+</section></section><section id="rmarkdown-and-quarto-integration" class="level2"><h2 class="anchored" data-anchor-id="rmarkdown-and-quarto-integration">RMarkdown and Quarto Integration</h2>
+<p><strong>aisdk</strong> also includes a custom knitr engine <a href="https://github.com/urniaz/ai">ai</a> that allows you to use LLMs to generate and execute R code directly within RMarkdown or Quarto documents.</p>
+<section id="register-the-ai-engine" class="level3"><h3 class="anchored" data-anchor-id="register-the-ai-engine">1. Register the AI Engine</h3>
+<p>Before using <a href="https://github.com/urniaz/ai">ai</a> chunks in your document, you need to register the engine. It’s recommended to do this in an initial setup chunk.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/register_ai_engine.html">register_ai_engine</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="basic-usage" class="level3"><h3 class="anchored" data-anchor-id="basic-usage">2. Basic Usage</h3>
+<p>Once registered, you can use <a href="https://github.com/urniaz/ai">ai</a> as the chunk language. You simply provide instructions or prompts within the chunk.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="in">Create a scatter plot of mpg vs wt from the mtcars dataset, </span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="in">colored by the number of cylinders (cyl). Make it look nice using ggplot2.</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Behind the scenes, the engine will: 1. Send your prompt to the LLM. 2. Extract the R code the LLM generates. 3. Automatically execute the code (if <code>eval = TRUE</code>) in the document’s environment. 4. Output the LLM’s explanation, the generated code (if <code>echo = TRUE</code>), and the code’s output (plots, tables, console text).</p>
+</section><section id="chunk-options" class="level3"><h3 class="anchored" data-anchor-id="chunk-options">3. Chunk Options</h3>
+<p>The <a href="https://github.com/urniaz/ai">ai</a> engine supports several custom chunk options:</p>
+<ul>
+<li>
+<strong><code>model</code></strong>: Specifies the LLM to use (e.g., <code>model = "anthropic:claude-3-5-sonnet-20241022"</code>). Defaults to the value of <code>getOption("aisdk.default_model")</code>.</li>
+<li>
+<strong><code>session</code></strong>: A character string naming the chat session. The engine maintains session history across multiple <a href="https://github.com/urniaz/ai">ai</a> chunks within the same document, allowing you to ask follow-up questions. Defaults to <code>"default"</code>.</li>
+<li>
+<strong><code>new_session</code></strong>: If <code>TRUE</code>, clears the previous history for the specified session and starts fresh.</li>
+<li>
+<strong><code>system</code></strong>: Custom system prompt instructions for the LLM.</li>
+<li>
+<strong><code>context</code></strong>: Controls how data is passed from your R environment to the LLM.</li>
+</ul>
+<section id="context-auto-detection" class="level4"><h4 class="anchored" data-anchor-id="context-auto-detection">Context Auto-Detection</h4>
+<p>The most powerful feature of the <a href="https://github.com/urniaz/ai">ai</a> engine is <strong>context</strong>. If your prompt mentions variables that exist in the knitr environment, the engine will automatically detect them and send summaries of their structure/data to the LLM.</p>
+<p>For example, if you load a dataset in a previous <code>{r}</code> chunk:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.r .cell-code}</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>my_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">category =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>), <span class="at">value =</span> <span class="fu">rnorm</span>(<span class="dv">4</span>))</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="in">Calculate the mean of 'value' grouped by 'category' in my_data using dplyr.</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The engine will see <code>my_data</code> in your prompt, find it in the environment, and send its schema to the LLM so it writes accurate code.</p>
+<p>You can manually control this with the <code>context</code> chunk option: - <code>context = "my_data"</code>: Explicitly include only <code>my_data</code>. - <code>context = c("data1", "data2")</code>: Include multiple specific objects. - <code>context = FALSE</code>: Disable context passing entirely.</p>
 
 
-</section></section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+</section></section></section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
