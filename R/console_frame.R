@@ -61,13 +61,9 @@ render_console_frame <- function(frame,
       return(invisible(NULL))
     }
 
-    if (!has_cli) {
-      cat(paste0(lines, "\n"), sep = "")
-      return(invisible(NULL))
-    }
-
     for (line in lines) {
-      cli::cli_text(color_fn(line))
+      rendered <- if (has_cli) color_fn(line) else line
+      cat(rendered, "\n", sep = "")
     }
     invisible(NULL)
   }
@@ -84,21 +80,17 @@ render_console_frame <- function(frame,
   }
 
   if (should_render_section("timeline") && length(frame$timeline$lines %||% character(0))) {
-    if (!has_cli) {
-      cat("timeline\n", sep = "")
-      cat(paste0("  - ", frame$timeline$lines, "\n"), sep = "")
-    } else {
-      cli::cli_text(cli::col_grey("timeline"))
-      for (line in frame$timeline$lines) {
-        cli::cli_text(cli::col_grey(paste0("  \u00b7 ", line)))
-      }
+    header <- if (has_cli) cli::col_grey("timeline") else "timeline"
+    cat(header, "\n", sep = "")
+    prefix <- if (has_cli) "  \u00b7 " else "  - "
+    for (line in frame$timeline$lines) {
+      rendered <- if (has_cli) cli::col_grey(paste0(prefix, line)) else paste0(prefix, line)
+      cat(rendered, "\n", sep = "")
     }
   }
 
   if (should_render_section("overlay") && length(frame$overlay$lines %||% character(0))) {
-    if (has_cli) {
-      cli::cli_text("")
-    }
+    cat("\n")
     render_section(frame$overlay$lines, if (has_cli) cli::col_yellow else identity)
   }
 
