@@ -225,11 +225,44 @@ Computer <- R6::R6Class("Computer",
           callr::r(
             function(code_str, wd) {
               setwd(wd)
-              eval(parse(text = code_str), envir = globalenv())
+              messages <- character(0)
+              warnings <- character(0)
+              value <- NULL
+              visible <- FALSE
+
+              output <- utils::capture.output(
+                withCallingHandlers(
+                  {
+                    evaluated <- withVisible(eval(parse(text = code_str), envir = globalenv()))
+                    value <- evaluated$value
+                    visible <- isTRUE(evaluated$visible)
+                    if (isTRUE(evaluated$visible)) {
+                      print(evaluated$value)
+                    }
+                  },
+                  message = function(m) {
+                    messages <<- c(messages, trimws(conditionMessage(m)))
+                    invokeRestart("muffleMessage")
+                  },
+                  warning = function(w) {
+                    warnings <<- c(warnings, trimws(conditionMessage(w)))
+                    invokeRestart("muffleWarning")
+                  }
+                ),
+                type = "output"
+              )
+
+              list(
+                result = value,
+                visible = visible,
+                output = output,
+                messages = messages,
+                warnings = warnings
+              )
             },
             args = list(code_str = code, wd = self$working_dir),
             timeout = timeout_ms / 1000,
-            show = capture_output,
+            show = FALSE,
             error = "stack"
           )
         },
@@ -247,10 +280,26 @@ Computer <- R6::R6Class("Computer",
       if (is.list(result) && !is.null(result$error)) {
         result
       } else {
+        output_lines <- if (isTRUE(capture_output)) {
+          c(
+            if (!is.null(result$output)) result$output else character(0),
+            if (length(result$messages)) paste0("Message: ", result$messages) else character(0),
+            if (length(result$warnings)) paste0("Warning: ", result$warnings) else character(0)
+          )
+        } else {
+          character(0)
+        }
+
+        if (!length(output_lines)) {
+          output_lines <- "(Code executed successfully with no printed output)"
+        }
+
         list(
-          result = result,
-          output = capture.output(print(result)),
-          error = FALSE
+          result = result$result,
+          output = output_lines,
+          error = FALSE,
+          messages = result$messages %||% character(0),
+          warnings = result$warnings %||% character(0)
         )
       }
     },
@@ -443,7 +492,11 @@ create_computer_tools <- function(computer = NULL, working_dir = if (interactive
         if (result$error) {
           paste("Error:", result$message)
         } else {
-          paste("Result:", paste(result$output, collapse = "\n"))
+          structure(
+            paste("Result:", paste(result$output, collapse = "\n")),
+            aisdk_messages = result$messages %||% character(0),
+            aisdk_warnings = result$warnings %||% character(0)
+          )
         }
       },
       layer = "computer"

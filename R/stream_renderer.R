@@ -93,9 +93,9 @@ create_stream_renderer <- function() {
     utils::flush.console()
   }
 
-  render_tool_result <- function(name, result, success = TRUE) {
+  render_tool_result <- function(name, result, success = TRUE, raw_result = result) {
     state$current_tool <- NULL
-    cli_tool_result(name, result, success)
+    cli_tool_result(name, result, success, raw_result = raw_result)
     utils::flush.console()
   }
 

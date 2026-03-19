@@ -136,7 +136,7 @@ Invisible NULL (output is via callback).
 \subsection{Method \code{append_message()}}{
 Append a message to the history.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ChatSession$append_message(role, content)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$append_message(role, content, reasoning = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -145,6 +145,8 @@ Append a message to the history.
 \item{\code{role}}{Message role: "user", "assistant", "system", or "tool".}
 
 \item{\code{content}}{Message content.}
+
+\item{\code{reasoning}}{Optional reasoning text to attach to the message.}
 }
 \if{html}{\out{</div>}}
 }

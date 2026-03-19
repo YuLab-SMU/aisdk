@@ -10,9 +10,11 @@ console_chat(
   tools = NULL,
   hooks = NULL,
   stream = TRUE,
+  verbose = FALSE,
   agent = "auto",
   working_dir = if (interactive()) getwd() else tempdir(),
-  sandbox_mode = "permissive"
+  sandbox_mode = "permissive",
+  show_thinking = verbose
 )
 }
 \arguments{
@@ -26,6 +28,9 @@ console_chat(
 
 \item{stream}{Whether to use streaming output. Default TRUE.}
 
+\item{verbose}{Logical. If \code{TRUE}, show detailed tool calls, tool results, and
+thinking output. Defaults to \code{FALSE} for a cleaner console UI.}
+
 \item{agent}{Agent configuration. Options:
 \itemize{
 \item \code{"auto"} (default): Use the built-in console agent with terminal tools
@@ -36,6 +41,9 @@ console_chat(
 \item{working_dir}{Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.}
 
 \item{sandbox_mode}{Sandbox mode for the console agent: "strict", "permissive" (default), or "none".}
+
+\item{show_thinking}{Logical. Whether to show model thinking blocks when the
+provider exposes them. Defaults to \code{verbose}.}
 }
 \value{
 The ChatSession object (invisibly) when chat ends.
@@ -43,6 +51,20 @@ The ChatSession object (invisibly) when chat ends.
 \description{
 Launch an interactive chat session in the R console. Supports streaming
 output, slash commands, and colorful display using the cli package.
+
+The console UI has three presentation modes:
+\itemize{
+\item \code{clean}: compact default output with a stable status bar
+\item \code{inspect}: keeps the compact transcript but adds a per-turn tool timeline
+and an overlay-backed inspector
+\item \code{debug}: shows detailed tool logs and thinking output for troubleshooting
+}
+
+In agent mode, \code{console_chat()} can execute shell and R tools, summarize tool
+progress inline, and open an inspector overlay for the latest turn or a
+specific tool. The current implementation uses a shared frame builder for the
+status bar, tool timeline, and overlay surfaces, while preserving an
+append-only terminal fallback.
 
 By default, the console operates in agent mode with tools for bash execution,
 file operations, R code execution, and more. Set \code{agent = NULL} for simple
@@ -53,6 +75,9 @@ chat without tools.
 if (interactive()) {
   # Start with default agent (intelligent terminal mode)
   console_chat("openai:gpt-4o")
+
+  # Start in debug mode with full tool logs
+  console_chat("openai:gpt-4o", verbose = TRUE)
 
   # Simple chat mode without tools
   console_chat("openai:gpt-4o", agent = NULL)
@@ -69,11 +94,20 @@ if (interactive()) {
   # /quit or /exit - End the chat
   # /save [path]   - Save session to file
   # /load [path]   - Load session from file
+  # /model         - Open the provider/model chooser
   # /model [id]    - Switch to a different model
+  # /model current - Show the active model
   # /history       - Show conversation history
   # /stats         - Show token usage statistics
   # /clear         - Clear conversation history
   # /stream [on|off] - Toggle streaming mode
+  # /inspect [on|off] - Toggle inspect mode
+  # /inspect turn - Open overlay for the latest turn
+  # /inspect tool <index> - Open overlay for a tool in the latest turn
+  # /inspect next - Move inspector overlay to the next tool
+  # /inspect prev - Move inspector overlay to the previous tool
+  # /inspect close - Close the active inspect overlay
+  # /debug [on|off]  - Toggle detailed tool/thinking output
   # /local [on|off]- Toggle local execution mode (Global Environment)
   # /help          - Show available commands
   # /agent [on|off] - Toggle agent mode

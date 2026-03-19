@@ -31,3 +31,9 @@
 ^tutorial$
 ^intro\.zip$
 ^.*_files$
+^\.positai$
+^\.claude$
+^idea$
+^doc$
+^docs$
+^plan$

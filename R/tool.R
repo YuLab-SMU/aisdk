@@ -845,6 +845,7 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
         }
 
         result <- tool_obj$run(tc$arguments, envir = envir)
+        raw_result <- result
 
         # Convert result to string if needed
         if (!is.character(result)) {
@@ -861,6 +862,7 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
               id = tc$id,
               name = tc$name,
               result = result,
+              raw_result = raw_result,
               is_error = TRUE
             ))
           }
@@ -875,6 +877,7 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
           id = tc$id,
           name = tc$name,
           result = result,
+          raw_result = raw_result,
           is_error = FALSE
         )
       },
@@ -892,6 +895,7 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
           id = tc$id,
           name = tc$name,
           result = paste0("Error executing tool '", tc$name, "': ", conditionMessage(e)),
+          raw_result = NULL,
           is_error = TRUE
         )
       }

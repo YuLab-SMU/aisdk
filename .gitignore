@@ -47,6 +47,8 @@ artifacts/
 /intro/
 /doc/
 /Meta/
+dev_docs/
+idea/
 
 # Transient R plots and archives
 Rplots.pdf
@@ -57,3 +59,4 @@ Rplots*.pdf
 /.quarto/
 **/*.quarto_ipynb
 _site/
+.positai

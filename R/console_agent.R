@@ -106,18 +106,20 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
                     }
                 }
 
-                result <- tryCatch(
-                    {
-                        capture.output(eval(parse(text = args$code), envir = globalenv()))
-                    },
-                    error = function(e) {
-                        return(paste("Error:", conditionMessage(e)))
-                    }
+                captured <- capture_r_execution(
+                    eval(parse(text = args$code), envir = globalenv()),
+                    envir = globalenv(),
+                    auto_print_value = TRUE
                 )
-                if (length(result) == 0) {
-                    return("Execution complete. No text output.")
+
+                if (!isTRUE(captured$ok)) {
+                    return(paste("Error:", captured$error))
                 }
-                paste("Execution complete. Output:\n", paste(result, collapse = "\n"))
+
+                paste(
+                    "Execution complete. Output:\n",
+                    format_captured_execution(captured)
+                )
             },
             layer = "computer"
         ),

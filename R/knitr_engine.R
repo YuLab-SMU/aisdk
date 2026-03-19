@@ -45,7 +45,6 @@ eng_ai <- function(options) {
     return("Error: knitr is not available")
   }
 
-  # --- 1. Setup ---
   envir <- options$envir %||% knitr::knit_global()
   user_prompt <- paste(options$code, collapse = "\n")
 
@@ -54,16 +53,9 @@ eng_ai <- function(options) {
     return("")
   }
 
-  # --- 2. Get or Create Session ---
   session <- get_or_create_session(options)
-
-  # --- 3. Build Context ---
   context_str <- build_context(user_prompt, options$context, envir)
-
-  # --- 4. Construct Full Prompt ---
   full_prompt <- construct_prompt(user_prompt, context_str)
-
-  # --- 5. Call LLM ---
   response <- tryCatch(
     {
       session$send(full_prompt)
@@ -74,89 +66,298 @@ eng_ai <- function(options) {
   )
 
   response_text <- response$text %||% ""
-
-  # --- 6. Extract and Execute Code with Retry ---
-  max_retries <- options$max_retries %||% 2
   extracted_code <- extract_r_code(response_text)
-
-  # Format output
-  explanation <- remove_r_code_blocks(response_text)
-  out_parts <- character(0)
-  if (nzchar(explanation)) {
-    out_parts <- c(out_parts, explanation)
-  }
-
-  if (isTRUE(options$eval) && nzchar(extracted_code)) {
+  if (nzchar(extracted_code)) {
     extracted_code <- sanitize_r_code(extracted_code)
-
-    # Use knit_child to evaluate the code and capture all output natively
-    code_chunk <- c("```{r, error=TRUE, echo=TRUE}", strsplit(extracted_code, "\n")[[1]], "```")
-    # If echo is FALSE in the parent chunk, we pass it down to hide the code
-    if (isFALSE(options$echo)) {
-      code_chunk[1] <- "```{r, error=TRUE, echo=FALSE}"
-    }
-
-    knit_out <- knitr::knit_child(text = code_chunk, envir = envir, quiet = TRUE)
-
-    # Retry if error detected in output
-    retry_count <- 0
-    while (grepl("## Error", knit_out) && retry_count < max_retries) {
-      retry_count <- retry_count + 1
-
-      # Extract error message for the prompt
-      error_lines <- grep("## Error", strsplit(knit_out, "\n")[[1]], value = TRUE)
-      error_msg <- paste(error_lines, collapse = "\n")
-
-      retry_prompt <- paste0(
-        "The previous code failed with this error:\n\n```\n",
-        error_msg, "\n```\n\n",
-        "Please fix the code and try again."
-      )
-
-      response <- tryCatch(
-        {
-          session$send(retry_prompt)
-        },
-        error = function(e) {
-          NULL
-        }
-      )
-
-      if (is.null(response)) {
-        break
-      }
-
-      new_response <- response$text %||% ""
-      new_explanation <- remove_r_code_blocks(new_response)
-      if (nzchar(new_explanation)) {
-        out_parts <- c(out_parts, "\n\n---\n\n**Retry:**\n\n", new_explanation)
-      }
-
-      extracted_code <- extract_r_code(new_response)
-
-      if (nzchar(extracted_code)) {
-        extracted_code <- sanitize_r_code(extracted_code)
-        code_chunk <- c("```{r, error=TRUE, echo=TRUE}", strsplit(extracted_code, "\n")[[1]], "```")
-        if (isFALSE(options$echo)) {
-          code_chunk[1] <- "```{r, error=TRUE, echo=FALSE}"
-        }
-        knit_out <- knitr::knit_child(text = code_chunk, envir = envir, quiet = TRUE)
-      }
-    }
-
-    if (nzchar(knit_out)) {
-      out_parts <- c(out_parts, knit_out)
-    }
-  } else if (isTRUE(options$echo) && nzchar(extracted_code)) {
-    # If not evaluating but echo is TRUE, just show the code
-    out_parts <- c(out_parts, paste0("```r\n", extracted_code, "\n```"))
   }
 
-  # --- 7. Return Final String ---
-  # We must tell knitr to render this result as 'asis' so it doesn't get double encoded
-  # while allowing knitr::engine_output to echo the user's prompt code
+  out <- response_text
+  if (isTRUE(options$eval) && nzchar(extracted_code)) {
+    execution_output <- evaluate_ai_review_code(extracted_code, options, envir)
+    narrative <- trimws(remove_r_code_blocks(response_text))
+    parts <- Filter(nzchar, c(narrative, execution_output))
+    out <- if (length(parts) > 0) paste(parts, collapse = "\n\n") else execution_output
+  }
+
   options$results <- "asis"
-  knitr::engine_output(options, code = options$code, out = paste(out_parts, collapse = "\n\n"))
+  knitr::engine_output(options, code = character(), out = out)
+}
+
+#' @keywords internal
+resolve_ai_review_input_path <- function(input_file = NULL) {
+  if (is.null(input_file) || !nzchar(input_file)) {
+    return("unknown.Rmd")
+  }
+
+  normalized <- normalizePath(input_file, winslash = "/", mustWork = FALSE)
+
+  # Quarto hands knitr an intermediate `.rmarkdown` path for `.qmd` sources.
+  # When a sibling `.qmd` exists, persist review records against the source file
+  # so `get_pending_reviews("...qmd")` works predictably.
+  if (grepl("\\.rmarkdown$", input_file, ignore.case = TRUE)) {
+    qmd_candidate <- sub("\\.rmarkdown$", ".qmd", input_file, ignore.case = TRUE)
+    if (file.exists(qmd_candidate)) {
+      return(normalizePath(qmd_candidate, winslash = "/", mustWork = FALSE))
+    }
+  }
+
+  normalized
+}
+
+#' @keywords internal
+derive_ai_review_card_state <- function(review_status = NULL, execution_status = NULL) {
+  if (identical(review_status, "approved")) {
+    return("frozen")
+  }
+
+  if (identical(review_status, "rejected")) {
+    return("rejected")
+  }
+
+  if (identical(execution_status, "error")) {
+    return("error")
+  }
+
+  if (identical(execution_status, "completed")) {
+    return("ran")
+  }
+
+  "draft"
+}
+
+#' @keywords internal
+build_ai_review_artifact_record <- function(state,
+                                            prompt,
+                                            response_text,
+                                            draft_response,
+                                            final_code,
+                                            execution_status,
+                                            execution_output = "",
+                                            error_message = NULL,
+                                            transcript = list(),
+                                            retries = list(),
+                                            model_id = NULL,
+                                            session_id = NULL,
+                                            review_mode = "none",
+                                            runtime_mode = "static",
+                                            defer_eval = FALSE,
+                                            embed_session = "none",
+                                            runtime_manifest = NULL) {
+  list(
+    state = state,
+    prompt = prompt,
+    response_text = response_text,
+    draft_response = draft_response,
+    final_code = final_code,
+    execution = list(
+      status = execution_status,
+      output = execution_output,
+      error = error_message
+    ),
+    transcript = transcript %||% list(),
+    retries = retries %||% list(),
+    model = model_id,
+    session_id = session_id,
+    review_mode = review_mode,
+    runtime_mode = runtime_mode,
+    defer_eval = defer_eval,
+    embed_session = embed_session,
+    runtime_manifest = runtime_manifest
+  )
+}
+
+#' @keywords internal
+persist_ai_review_runtime_record <- function(memory, review, artifact = NULL) {
+  memory$store_review(
+    chunk_id = review$chunk_id,
+    file_path = review$file_path,
+    chunk_label = review$chunk_label,
+    prompt = review$prompt,
+    response = review$response,
+    status = review$status %||% "pending",
+    ai_agent = review$ai_agent %||% NULL,
+    uncertainty = review$uncertainty %||% NULL,
+    session_id = review$session_id %||% NULL,
+    review_mode = review$review_mode %||% NULL,
+    runtime_mode = review$runtime_mode %||% NULL,
+    execution_status = review$execution_status %||% NULL,
+    execution_output = review$execution_output %||% NULL,
+    final_code = review$final_code %||% NULL,
+    error_message = review$error_message %||% NULL
+  )
+
+  if (!is.null(artifact)) {
+    memory$store_review_artifact(
+      chunk_id = review$chunk_id,
+      artifact = artifact,
+      session_id = review$session_id %||% NULL,
+      review_mode = review$review_mode %||% NULL,
+      runtime_mode = review$runtime_mode %||% NULL
+    )
+  }
+
+  memory$update_execution_result(
+    chunk_id = review$chunk_id,
+    execution_status = review$execution_status %||% NULL,
+    execution_output = review$execution_output %||% NULL,
+    final_code = review$final_code %||% NULL,
+    error_message = review$error_message %||% NULL
+  )
+
+  invisible(TRUE)
+}
+
+#' @keywords internal
+ai_review_capture_transcript <- function(session) {
+  if (is.null(session) || !is.function(session$get_history)) {
+    return(list())
+  }
+
+  history <- tryCatch(session$get_history(), error = function(e) list())
+  if (!is.list(history)) {
+    return(list())
+  }
+
+  lapply(history, function(entry) {
+    if (!is.list(entry)) {
+      return(list(content = as.character(entry)))
+    }
+
+    role <- entry$role %||% entry$author %||% NULL
+    content <- entry$content %||% entry$text %||% entry$message %||% NULL
+    reasoning <- entry$reasoning %||% NULL
+    list(
+      role = if (!is.null(role)) as.character(role) else NULL,
+      content = if (!is.null(content)) as.character(content) else NULL,
+      reasoning = if (!is.null(reasoning)) as.character(reasoning) else NULL
+    )
+  })
+}
+
+#' @keywords internal
+execute_ai_review_code <- function(initial_code, initial_response, draft_response,
+                                   session, options, envir,
+                                   existing_transcript = list()) {
+  current_code <- initial_code
+  current_response <- initial_response
+  current_draft <- draft_response
+  retries <- list()
+  execution_output <- ""
+  error_message <- NULL
+  max_retries <- options$max_retries %||% 2L
+  attempt <- 0L
+
+  repeat {
+    execution_output <- evaluate_ai_review_code(current_code, options, envir)
+    error_message <- extract_ai_review_execution_error(execution_output)
+
+    if (is.null(error_message)) {
+      transcript <- ai_review_capture_transcript(session)
+      if (length(transcript) == 0) {
+        transcript <- existing_transcript
+      }
+      return(list(
+        final_code = current_code,
+        response_text = current_response,
+        draft_response = current_draft,
+        execution_output = execution_output,
+        execution_status = "completed",
+        error_message = NULL,
+        retries = retries,
+        transcript = transcript
+      ))
+    }
+
+    if (attempt >= max_retries || is.null(session)) {
+      transcript <- ai_review_capture_transcript(session)
+      if (length(transcript) == 0) {
+        transcript <- existing_transcript
+      }
+      return(list(
+        final_code = current_code,
+        response_text = current_response,
+        draft_response = current_draft,
+        execution_output = execution_output,
+        execution_status = "error",
+        error_message = error_message,
+        retries = retries,
+        transcript = transcript
+      ))
+    }
+
+    attempt <- attempt + 1L
+    retries[[length(retries) + 1L]] <- list(
+      attempt = attempt,
+      code = current_code,
+      output = execution_output,
+      error = error_message
+    )
+
+    retry_prompt <- paste0(
+      "The previous code failed with this error:\n\n```\n",
+      error_message,
+      "\n```\n\nPlease fix the code and try again."
+    )
+
+    retry_response <- tryCatch(
+      session$send(retry_prompt),
+      error = function(e) list(text = paste0("**Error calling LLM:** ", e$message))
+    )
+    current_response <- retry_response$text %||% ""
+    retry_explanation <- remove_r_code_blocks(current_response)
+    if (nzchar(retry_explanation)) {
+      current_draft <- paste(
+        c(current_draft, "\n\n---\n\nRetry:\n\n", retry_explanation),
+        collapse = ""
+      )
+    }
+
+    current_code <- extract_r_code(current_response)
+    if (!nzchar(current_code)) {
+      transcript <- ai_review_capture_transcript(session)
+      if (length(transcript) == 0) {
+        transcript <- existing_transcript
+      }
+      return(list(
+        final_code = "",
+        response_text = current_response,
+        draft_response = current_draft,
+        execution_output = execution_output,
+        execution_status = "no_code",
+        error_message = "Retry response did not include executable R code.",
+        retries = retries,
+        transcript = transcript
+      ))
+    }
+
+    current_code <- sanitize_r_code(current_code)
+  }
+}
+
+#' @keywords internal
+evaluate_ai_review_code <- function(code, options, envir) {
+  code_chunk <- c("```{r, error=TRUE, echo=TRUE}", strsplit(code, "\n", fixed = TRUE)[[1]], "```")
+  if (isFALSE(options$echo)) {
+    code_chunk[1] <- "```{r, error=TRUE, echo=FALSE}"
+  }
+
+  knitr::knit_child(text = code_chunk, envir = envir, quiet = TRUE)
+}
+
+#' @keywords internal
+extract_ai_review_execution_error <- function(output) {
+  if (is.null(output) || !nzchar(output)) {
+    return(NULL)
+  }
+
+  lines <- strsplit(output, "\n", fixed = TRUE)[[1]]
+  error_lines <- grep("(^## Error)|(^Error)", lines, value = TRUE)
+
+  if (length(error_lines) == 0) {
+    return(NULL)
+  }
+
+  paste(error_lines, collapse = "\n")
 }
 
 #' @title Get or Create Session
@@ -368,10 +569,11 @@ sanitize_r_code <- function(code) {
 }
 
 
+#' @title Remove R Code Blocks
 #' @description
-#' Removes R code blocks from text to get just the explanation.
+#' Removes fenced R code blocks from text, leaving the explanatory prose.
 #' @param text The text to process.
-#' @return Text without R code blocks.
+#' @return A character string with R code blocks removed.
 #' @keywords internal
 remove_r_code_blocks <- function(text) {
   if (is.null(text) || !nzchar(text)) {

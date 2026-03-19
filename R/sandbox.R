@@ -125,6 +125,8 @@ SandboxManager <- R6::R6Class(
             if (length(tools) > 0) {
                 self$bind_tools(tools)
             }
+
+            private$.reserved_names <- ls(private$.env, all.names = TRUE)
         },
 
         #' @description Bind Tool objects into the sandbox as callable R functions.
@@ -143,6 +145,11 @@ SandboxManager <- R6::R6Class(
                 wrapper <- private$make_tool_wrapper(t)
                 rlang::env_bind(private$.env, !!t$name := wrapper)
             }
+
+            private$.reserved_names <- union(
+                private$.reserved_names %||% character(0),
+                ls(private$.env, all.names = TRUE)
+            )
             invisible(self)
         },
 
@@ -157,10 +164,19 @@ SandboxManager <- R6::R6Class(
             result <- tryCatch(
                 {
                     parsed <- check_ast_safety(code_str)
-                    captured <- utils::capture.output({
-                        eval(parsed, envir = private$.env)
-                    })
-                    output <- paste(captured, collapse = "\n")
+                    captured <- capture_r_execution(
+                        eval(parsed, envir = private$.env),
+                        envir = environment(),
+                        auto_print_value = FALSE
+                    )
+                    output <- if (isTRUE(captured$ok)) {
+                        format_captured_execution(captured)
+                    } else {
+                        paste(
+                            "Error executing R code:",
+                            format_captured_execution(captured)
+                        )
+                    }
 
                     # Truncate if too long
                     if (nchar(output) > private$.max_output_chars) {
@@ -168,10 +184,6 @@ SandboxManager <- R6::R6Class(
                             substr(output, 1, private$.max_output_chars),
                             "\n\n... [Output truncated at ", private$.max_output_chars, " chars]"
                         )
-                    }
-
-                    if (nchar(output) == 0) {
-                        output <- "(Code executed successfully with no printed output)"
                     }
 
                     output
@@ -221,7 +233,10 @@ SandboxManager <- R6::R6Class(
         #'   Tool bindings and preloaded packages are preserved.
         reset = function() {
             # Remove user-created variables but keep tool bindings and package functions
-            user_vars <- setdiff(ls(private$.env), c(names(private$.tools)))
+            user_vars <- setdiff(
+                ls(private$.env, all.names = TRUE),
+                private$.reserved_names %||% character(0)
+            )
             rm(list = user_vars, envir = private$.env)
             invisible(self)
         },
@@ -242,6 +257,7 @@ SandboxManager <- R6::R6Class(
         .env = NULL,
         .tools = NULL,
         .max_output_chars = 8000,
+        .reserved_names = character(0),
 
         # Factory function to create a tool wrapper that captures the tool by value
         make_tool_wrapper = function(tool_obj) {

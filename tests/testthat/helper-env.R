@@ -18,6 +18,63 @@ skip_if_offline <- function() {
   }
 }
 
+#' Create a test evaluation environment with package namespace fallback
+#'
+#' @param parent Parent environment. Defaults to the installed aisdk namespace
+#'   when available, otherwise the global environment.
+#' @return A new environment used by source-based tests.
+#' @keywords internal
+aisdk_test_env <- function(parent = NULL) {
+  ns <- NULL
+  if ("aisdk" %in% loadedNamespaces()) {
+    ns <- asNamespace("aisdk")
+    parent <- ns
+  } else if (is.null(parent)) {
+    parent <- globalenv()
+  }
+
+  env <- new.env(parent = parent)
+  if (!is.null(ns)) {
+    ns_names <- ls(ns, all.names = TRUE)
+    ns_values <- mget(ns_names, envir = ns, inherits = FALSE)
+    if (".engine_env" %in% names(ns_values)) {
+      ns_values[[".engine_env"]] <- new.env(parent = emptyenv())
+    }
+    ns_values <- lapply(ns_values, function(value) {
+      if (is.function(value) && !is.primitive(value)) {
+        environment(value) <- env
+      }
+      value
+    })
+    list2env(ns_values, envir = env)
+  }
+  env$`%||%` <- rlang::`%||%`
+  env
+}
+
+#' Source a package file from the local source tree when available
+#'
+#' @param env Environment to source into.
+#' @param path File path relative to the package `R/` directory.
+#' @return Invisibly returns `TRUE` when a local source file was found and
+#'   sourced, otherwise `FALSE`.
+#' @keywords internal
+source_local_aisdk_file <- function(env, path) {
+  candidates <- c(
+    file.path("R", path),
+    file.path("..", "R", path),
+    file.path("..", "..", "R", path)
+  )
+
+  existing <- candidates[file.exists(candidates)]
+  if (!length(existing)) {
+    return(invisible(FALSE))
+  }
+
+  sys.source(existing[[1]], envir = env)
+  invisible(TRUE)
+}
+
 #' Skip test if API tests are not enabled
 #'
 #' @param provider Provider name for the message

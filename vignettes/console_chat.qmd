@@ -1,0 +1,332 @@
+---
+title: "Console Chat"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Console Chat}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+    eval: false
+---
+
+`console_chat()` is the terminal-first interactive interface in **aisdk**. It
+wraps a `ChatSession` in a REPL, adds an agent-oriented command surface, and
+provides a structured console UI with status, inspection, and debugging
+layers.
+
+This article focuses on how to use the console effectively today: how to start
+it, how the three view modes differ, how the inspector overlay works, and which
+slash commands matter in day-to-day work.
+
+## Why Use `console_chat()`
+
+`console_chat()` is useful when you want:
+
+- a fast terminal workflow instead of a Shiny or document-based interface
+- a persistent chat session with model switching and save/load support
+- an agent that can execute R code, shell commands, and file operations
+- compact default output that still lets you inspect tool-heavy turns
+- a troubleshooting path that stays inside the console
+
+It is especially effective for iterative analysis, quick automation, data
+inspection, and prompt-tool experimentation where leaving the terminal would
+slow you down.
+
+## Starting the Console
+
+### Default agent mode
+
+The default startup path enables the built-in terminal agent:
+
+```{r}
+# Start the default console agent
+# console_chat("openai:gpt-4o")
+```
+
+In this mode, the console can call tools for:
+
+- shell execution
+- reading and writing files
+- sandboxed R code execution
+- local R execution when explicitly enabled
+
+### Simple chat mode
+
+If you want plain chat without agent tools:
+
+```{r}
+# Disable agent tools
+# console_chat("openai:gpt-4o", agent = NULL)
+```
+
+### Debug startup
+
+If you are developing tools, providers, or console behavior itself:
+
+```{r}
+# Start directly in debug mode
+# console_chat("openai:gpt-4o", verbose = TRUE)
+```
+
+### Session and model inputs
+
+`console_chat()` accepts:
+
+- a model string, such as `"openai:gpt-4o"`
+- a `LanguageModelV1` object
+- an existing `ChatSession`
+
+That means you can either launch from scratch or drop into an existing session
+that already contains history, memory, or a custom agent.
+
+## UI Model
+
+The console UI is no longer just a print stream. It currently uses a shared
+frame builder that assembles several surfaces before rendering them through a
+conservative append-only terminal path.
+
+### Status bar
+
+The status bar stays visible as the top summary surface and shows:
+
+- current model
+- sandbox mode
+- current view mode
+- streaming on/off
+- local execution on/off
+- current tool state
+
+This gives you quick context without inspecting the transcript.
+
+### Tool timeline
+
+In inspect mode, tool-heavy turns emit a compact timeline summary rather than
+raw payload dumps. Each line records:
+
+- tool index
+- tool name
+- tool status
+- argument summary
+- result summary
+- message/warning counts when present
+- elapsed time when available
+
+### Inspector overlay
+
+The inspector overlay is a separate surface backed by real overlay state. It
+can open for:
+
+- the latest turn
+- a specific tool inside the latest turn
+
+It currently renders as a boxed overlay section below the status bar, but it is
+already modeled as a first-class overlay rather than an ad hoc print block.
+
+## View Modes
+
+`console_chat()` currently supports three presentation modes.
+
+### `clean`
+
+This is the default mode.
+
+Use it when you want:
+
+- calm transcript output
+- minimal tool noise
+- no raw tool payloads
+- no thinking output
+
+This is the right mode for most day-to-day usage.
+
+### `inspect`
+
+This is the middle layer between normal use and full debugging.
+
+Use it when you want:
+
+- compact transcript output
+- per-turn tool timeline summaries
+- access to the inspector overlay
+- warnings/messages preserved without raw log spam
+
+This is the recommended mode whenever a turn used tools and you need to answer
+"what happened?"
+
+### `debug`
+
+This is the troubleshooting mode.
+
+Use it when you want:
+
+- detailed tool logging
+- thinking visibility
+- lower-level execution visibility
+- development-oriented introspection
+
+This mode is intended for package development and difficult failures, not as
+the normal default.
+
+## Slash Commands
+
+### Session control
+
+- `/help`: show the command list
+- `/quit`, `/exit`: end the console session
+- `/save [path]`: save the current session
+- `/load <path>`: restore a saved session
+- `/clear`: clear conversation history
+
+### Model and runtime control
+
+- `/model <id>`: switch the model without losing the session
+- `/stream [on|off]`: toggle token streaming
+- `/local [on|off]`: enable or disable local execution mode
+- `/debug [on|off]`: switch between clean and debug behavior
+- `/inspect [on|off]`: switch into or out of inspect mode
+
+### Visibility and inspection
+
+- `/history`: show session history
+- `/stats`: show token and tool usage statistics
+- `/inspect turn`: open the inspector overlay for the latest turn
+- `/inspect tool <index>`: open the overlay for a specific tool
+- `/inspect next`: move to the next tool in the active inspector context
+- `/inspect prev`: move to the previous tool in the active inspector context
+- `/inspect close`: close the active inspector overlay
+
+## Inspector Workflow
+
+The most useful console workflow today is:
+
+1. Stay in `clean` mode while chatting normally.
+2. Switch to `inspect` after a tool-heavy turn.
+3. Review the timeline summary.
+4. Open the latest turn in the inspector overlay.
+5. Jump into a specific tool if needed.
+6. Navigate between tools with `/inspect next` and `/inspect prev`.
+7. Close the overlay when done.
+
+### What the inspector shows
+
+At turn level, the overlay shows:
+
+- turn id
+- current phase
+- elapsed time
+- compact previews of user and assistant content
+- collected messages and warnings
+- timeline entries for all tools in the turn
+
+At tool level, the overlay shows:
+
+- tool name and status
+- elapsed time
+- argument summary
+- result summary
+- messages and warnings
+- compact raw previews of arguments and results
+
+This preserves a useful hierarchy:
+
+- `clean` keeps the transcript calm
+- `inspect` shows what executed
+- the overlay shows enough detail to diagnose a turn
+- `debug` remains available when you need the full machinery
+
+## Agent Capabilities
+
+In default agent mode, `console_chat()` is not just a chat box. It is a
+terminal agent surface.
+
+Typical tasks include:
+
+- asking the model to inspect files in a project
+- running small R analyses
+- checking package versions or environment details
+- reading data files
+- writing small helper files
+- running shell commands inside the configured working directory
+
+The console keeps these actions compact by summarizing tool progress inline and
+moving deeper detail into the inspect layer.
+
+## Persistence and Session Continuity
+
+Because `console_chat()` sits on top of `ChatSession`, it inherits the session
+model rather than inventing a separate console-only state system.
+
+That means you can:
+
+- switch models mid-session
+- save and reload sessions
+- preserve history across runs
+- retain access to shared session memory and environment-backed state
+
+Typical pattern:
+
+```{r}
+# Save before stopping work
+# /save analysis_session.rds
+
+# Restore later
+# /load analysis_session.rds
+```
+
+## Local Execution and Sandbox Behavior
+
+The status bar makes execution context visible, which matters when an agent can
+touch the local environment.
+
+Key points:
+
+- the console starts with the configured sandbox mode
+- local execution is separately visible and separately toggleable
+- you can inspect the current runtime state from the status bar instead of
+  guessing
+
+When you enable local execution, the agent can work in the shared session
+environment more directly, so this should be treated as a deliberate workflow
+choice rather than a background detail.
+
+## Recommended Usage Pattern
+
+For most users, the practical workflow is:
+
+1. Start in default agent mode.
+2. Work in `clean` mode for normal conversation.
+3. Switch to `inspect` when a turn executed tools.
+4. Open the inspector overlay only when you need detail.
+5. Use `debug` when troubleshooting or developing console behavior.
+6. Save the session when you want to continue later.
+
+This keeps the console productive in normal use without giving up the ability
+to inspect execution deeply.
+
+## Current Limitations
+
+The current console is substantially more structured than the original REPL,
+but it is still mid-transition toward a fuller TUI architecture.
+
+Current limitations to be aware of:
+
+- overlay rendering still uses an append-only terminal path
+- frame building is in place, but region ownership is still evolving
+- keyboard-driven focus navigation is not yet a complete alternative to slash
+  commands
+- the composer is still based on the existing input path rather than a fully
+  custom multiline editor
+
+These constraints do not block normal use, but they explain why the inspector
+is command-driven today and why overlay behavior is intentionally conservative.
+
+## Related Articles
+
+- [Get Started](get_started.html): introductory package overview
+- [Chat Sessions](sessions.html): state, persistence, and shared environment
+- [Building Agents](agents.html): how agent tools and sessions fit together
+- [Computer Abstraction Layer](computer_abstraction.html): deeper background on
+  the terminal-oriented tool surface

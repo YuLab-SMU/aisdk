@@ -99,10 +99,34 @@ new_session$restore("my_analysis.json")
 ## Console Chat
 
 For a quick interactive REPL experience in the R console, use `console_chat()`.
+It is built on top of the same session model, so you can chat interactively,
+switch models, inspect history, and persist state without leaving the terminal.
 
 ```{r}
 # Starts an interactive chat loop in the console
 # console_chat(model = "openai:gpt-4o")
 ```
 
-For more details on how agents interact with sessions, see the [Agents](agents.html) vignette.
+Key capabilities:
+
+- `clean`, `inspect`, and `debug` view modes for different levels of output detail
+- inline tool execution summaries for agent-driven turns
+- an inspector overlay for the latest turn or a specific tool
+- session persistence with `/save` and `/load`
+- model switching with `/model <id>`
+- optional local execution mode with `/local [on|off]`
+
+Useful commands during a session:
+
+- `/inspect on`: switch to inspect mode
+- `/inspect turn`: open the latest turn in the inspector overlay
+- `/inspect tool <index>`: inspect a specific tool
+- `/inspect next` / `/inspect prev`: move between tools in the inspector
+- `/debug on`: enable detailed troubleshooting output
+- `/stats`: review session usage statistics
+- `/history`: show the conversation history
+
+For a deeper terminal walkthrough, including inspect/debug modes and overlay
+navigation, see the [Console Chat](console_chat.html) vignette. For more
+details on how agents interact with sessions, see the [Agents](agents.html)
+vignette.

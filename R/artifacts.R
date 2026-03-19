@@ -67,6 +67,319 @@ safe_join <- function(base_dir, subdir, filename) {
   normalizePath(path, winslash = "/", mustWork = FALSE)
 }
 
+#' @keywords internal
+parse_chunk_label <- function(header, file_type = "rmd") {
+  inner <- sub("^```\\{r\\s*", "", header)
+  inner <- sub("\\}\\s*$", "", inner)
+  inner <- trimws(inner)
+  if (!nzchar(inner)) return(NULL)
+  parts <- strsplit(inner, ",")[[1]]
+  label <- trimws(parts[1])
+  if (!nzchar(label)) return(NULL)
+  label
+}
+
+#' @keywords internal
+detect_file_type <- function(filename) {
+  if (grepl("\\.qmd$", filename, ignore.case = TRUE)) "qmd" else "rmd"
+}
+
+#' @keywords internal
+compact_ai_review_value <- function(x) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+
+  if (is.list(x)) {
+    out <- lapply(x, compact_ai_review_value)
+    keep <- !vapply(out, is.null, logical(1))
+    out <- out[keep]
+    if (length(out) == 0) {
+      return(NULL)
+    }
+    return(out)
+  }
+
+  x
+}
+
+#' @keywords internal
+truncate_ai_review_text <- function(text, max_chars = 240L) {
+  if (is.null(text) || !nzchar(text)) {
+    return("")
+  }
+
+  text <- gsub("\\s+", " ", trimws(as.character(text)))
+  if (nchar(text, type = "chars") <= max_chars) {
+    return(text)
+  }
+
+  paste0(substr(text, 1L, max_chars - 1L), "...")
+}
+
+#' @keywords internal
+normalize_ai_review_transcript_entry <- function(entry) {
+  if (!is.list(entry)) {
+    return(list(content = as.character(entry)))
+  }
+
+  list(
+    role = entry$role %||% entry$author %||% NULL,
+    content = entry$content %||% entry$text %||% entry$message %||% NULL,
+    reasoning = entry$reasoning %||% NULL
+  )
+}
+
+#' @keywords internal
+summarize_ai_review_transcript <- function(transcript, max_messages = 6L, max_chars = 240L) {
+  transcript <- transcript %||% list()
+  if (!is.list(transcript) || length(transcript) == 0) {
+    return(list(mode = "summary", message_count = 0L, entries = list()))
+  }
+
+  normalized <- lapply(transcript, normalize_ai_review_transcript_entry)
+  limited <- normalized[seq_len(min(length(normalized), max_messages))]
+
+  entries <- lapply(limited, function(entry) {
+    list(
+      role = entry$role %||% NULL,
+      excerpt = truncate_ai_review_text(entry$content %||% "", max_chars = max_chars),
+      reasoning_excerpt = truncate_ai_review_text(entry$reasoning %||% "", max_chars = max_chars)
+    )
+  })
+
+  list(
+    mode = "summary",
+    message_count = length(normalized),
+    entries = entries
+  )
+}
+
+#' @keywords internal
+build_ai_review_provenance_payload <- function(chunk_id, chunk_label,
+                                               file_path = NULL,
+                                               artifact = list(),
+                                               review_status = NULL,
+                                               timestamps = list(),
+                                               embed_session = c("none", "summary", "full"),
+                                               ai_agent = NULL,
+                                               uncertainty = NULL) {
+  embed_session <- match.arg(embed_session)
+  if (identical(embed_session, "none")) {
+    return(NULL)
+  }
+
+  artifact <- artifact %||% list()
+  transcript <- artifact$transcript %||% list()
+  final_code <- artifact$final_code %||% ""
+
+  transcript_payload <- if (identical(embed_session, "full")) {
+    list(
+      mode = "full",
+      message_count = length(transcript),
+      messages = lapply(transcript, normalize_ai_review_transcript_entry)
+    )
+  } else {
+    summarize_ai_review_transcript(transcript)
+  }
+
+  payload <- list(
+    version = 1L,
+    chunk = list(
+      id = chunk_id,
+      label = chunk_label,
+      file_path = file_path %||% NULL
+    ),
+    prompt = artifact$prompt %||% "",
+    model = list(
+      id = artifact$model %||% NULL,
+      session_id = artifact$session_id %||% NULL,
+      ai_agent = ai_agent %||% NULL,
+      uncertainty = uncertainty %||% NULL
+    ),
+    review = list(
+      mode = artifact$review_mode %||% NULL,
+      runtime = artifact$runtime_mode %||% NULL,
+      status = review_status %||% NULL,
+      state = artifact$state %||% NULL,
+      created_at = timestamps$created_at %||% NULL,
+      updated_at = timestamps$updated_at %||% NULL,
+      reviewed_at = timestamps$reviewed_at %||% NULL
+    ),
+    execution = list(
+      status = artifact$execution$status %||% NULL,
+      retry_count = length(artifact$retries %||% list())
+    ),
+    code = list(
+      checksum = if (nzchar(final_code)) digest::digest(final_code, algo = "sha256", serialize = FALSE) else NULL
+    ),
+    transcript = transcript_payload
+  )
+
+  compact_ai_review_value(payload)
+}
+
+#' @keywords internal
+format_ai_review_trace_text <- function(payload) {
+  if (is.null(payload)) {
+    return("No embedded agent trace is available.")
+  }
+
+  lines <- character()
+  model <- payload$model %||% list()
+  review <- payload$review %||% list()
+  execution <- payload$execution %||% list()
+  transcript <- payload$transcript %||% list()
+
+  if (nzchar(model$session_id %||% "")) {
+    lines <- c(lines, paste0("Session: ", model$session_id))
+  }
+  if (nzchar(model$id %||% "")) {
+    lines <- c(lines, paste0("Model: ", model$id))
+  }
+  if (nzchar(review$status %||% "")) {
+    lines <- c(lines, paste0("Review Status: ", review$status))
+  }
+  if (nzchar(execution$status %||% "")) {
+    lines <- c(lines, paste0("Execution Status: ", execution$status))
+  }
+
+  if (length(lines) > 0) {
+    lines <- c(lines, "")
+  }
+
+  if (identical(transcript$mode %||% NULL, "summary")) {
+    entries <- transcript$entries %||% list()
+    if (length(entries) == 0) {
+      return(paste(c(lines, "No transcript entries were embedded."), collapse = "\n"))
+    }
+
+    for (i in seq_along(entries)) {
+      entry <- entries[[i]] %||% list()
+      role <- toupper(entry$role %||% "message")
+      lines <- c(lines, paste0("[", i, "] ", role))
+      if (nzchar(entry$reasoning_excerpt %||% "")) {
+        lines <- c(lines, paste0("Reasoning: ", entry$reasoning_excerpt))
+      }
+      if (nzchar(entry$excerpt %||% "")) {
+        lines <- c(lines, paste0("Content: ", entry$excerpt))
+      }
+      lines <- c(lines, "")
+    }
+
+    return(trimws(paste(lines, collapse = "\n")))
+  }
+
+  if (identical(transcript$mode %||% NULL, "full")) {
+    messages <- transcript$messages %||% list()
+    if (length(messages) == 0) {
+      return(paste(c(lines, "No transcript entries were embedded."), collapse = "\n"))
+    }
+
+    for (i in seq_along(messages)) {
+      entry <- normalize_ai_review_transcript_entry(messages[[i]])
+      role <- toupper(entry$role %||% "message")
+      lines <- c(lines, paste0("[", i, "] ", role))
+      if (nzchar(entry$reasoning %||% "")) {
+        lines <- c(lines, "Reasoning:", entry$reasoning, "")
+      }
+      if (nzchar(entry$content %||% "")) {
+        lines <- c(lines, "Content:", entry$content, "")
+      }
+    }
+
+    return(trimws(paste(lines, collapse = "\n")))
+  }
+
+  paste(
+    c(
+      lines,
+      jsonlite::toJSON(compact_ai_review_value(payload), auto_unbox = TRUE, null = "null", pretty = TRUE)
+    ),
+    collapse = "\n"
+  )
+}
+
+#' @keywords internal
+format_ai_review_metadata_text <- function(runtime_manifest = NULL, provenance_payload = NULL) {
+  payload <- compact_ai_review_value(list(
+    runtime = runtime_manifest$runtime %||% NULL,
+    document = runtime_manifest$document %||% NULL,
+    review = runtime_manifest$review %||% NULL,
+    execution = runtime_manifest$execution %||% NULL,
+    session = runtime_manifest$session %||% NULL,
+    code = runtime_manifest$code %||% NULL,
+    model = provenance_payload$model %||% NULL,
+    chunk = provenance_payload$chunk %||% NULL
+  ))
+
+  if (is.null(payload)) {
+    return("No embedded artifact metadata is available.")
+  }
+
+  jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null", pretty = TRUE)
+}
+
+#' @keywords internal
+serialize_ai_review_provenance_payload <- function(payload) {
+  if (is.null(payload)) {
+    return(NULL)
+  }
+
+  jsonlite::toJSON(
+    payload,
+    auto_unbox = TRUE,
+    null = "null",
+    pretty = FALSE
+  )
+}
+
+#' @keywords internal
+serialize_ai_review_runtime_manifest <- function(manifest) {
+  if (is.null(manifest)) {
+    return(NULL)
+  }
+
+  jsonlite::toJSON(
+    compact_ai_review_value(manifest),
+    auto_unbox = TRUE,
+    null = "null",
+    pretty = FALSE
+  )
+}
+
+#' @keywords internal
+render_ai_review_runtime_manifest_tag <- function(chunk_id, manifest) {
+  json <- serialize_ai_review_runtime_manifest(manifest)
+  if (is.null(json) || !nzchar(json)) {
+    return(NULL)
+  }
+
+  htmltools::tags$script(
+    type = "application/json",
+    class = "aisdk-ai-review-card__runtime-manifest",
+    `data-role` = "embedded-runtime-manifest",
+    `data-chunk-id` = chunk_id,
+    htmltools::HTML(json)
+  )
+}
+
+#' @keywords internal
+render_ai_review_provenance_tag <- function(chunk_id, payload) {
+  json <- serialize_ai_review_provenance_payload(payload)
+  if (is.null(json) || !nzchar(json)) {
+    return(NULL)
+  }
+
+  htmltools::tags$script(
+    type = "application/json",
+    class = "aisdk-ai-review-card__provenance",
+    `data-role` = "embedded-provenance",
+    `data-chunk-id` = chunk_id,
+    htmltools::HTML(json)
+  )
+}
+
 create_artifact_tools <- function(default_dir = NULL) {
   save_text_tool <- Tool$new(
     name = "save_text_artifact",
@@ -122,6 +435,7 @@ create_artifact_tools <- function(default_dir = NULL) {
         return(paste0("Error: Rmd not found: ", path))
       }
 
+      file_type <- detect_file_type(filename)
       lines <- readLines(path, warn = FALSE)
       chunks <- list()
       in_chunk <- FALSE
@@ -130,27 +444,11 @@ create_artifact_tools <- function(default_dir = NULL) {
       chunk_lines <- character(0)
       chunk_index <- 0
 
-      parse_label <- function(header) {
-        # header like ```{r label, opt=1}
-        inner <- sub("^```\\{r\\s*", "", header)
-        inner <- sub("\\}\\s*$", "", inner)
-        inner <- trimws(inner)
-        if (!nzchar(inner)) {
-          return(NULL)
-        }
-        parts <- strsplit(inner, ",")[[1]]
-        label <- trimws(parts[1])
-        if (!nzchar(label)) {
-          return(NULL)
-        }
-        label
-      }
-
       for (line in lines) {
         if (!in_chunk && grepl("^```\\{r", line)) {
           in_chunk <- TRUE
           chunk_header <- line
-          chunk_label <- parse_label(line)
+          chunk_label <- parse_chunk_label(line, file_type)
           chunk_lines <- character(0)
           chunk_index <- chunk_index + 1
           next
@@ -201,26 +499,12 @@ create_artifact_tools <- function(default_dir = NULL) {
         return(paste0("Error: Rmd not found: ", path))
       }
 
+      file_type <- detect_file_type(filename)
       lines <- readLines(path, warn = FALSE)
       out <- character(0)
       in_chunk <- FALSE
       updated <- FALSE
       current_label <- NULL
-
-      parse_label <- function(header) {
-        inner <- sub("^```\\{r\\s*", "", header)
-        inner <- sub("\\}\\s*$", "", inner)
-        inner <- trimws(inner)
-        if (!nzchar(inner)) {
-          return(NULL)
-        }
-        parts <- strsplit(inner, ",")[[1]]
-        label <- trimws(parts[1])
-        if (!nzchar(label)) {
-          return(NULL)
-        }
-        label
-      }
 
       build_header <- function(label, options, original) {
         if (!is.null(options) && nzchar(options)) {
@@ -234,7 +518,7 @@ create_artifact_tools <- function(default_dir = NULL) {
         line <- lines[i]
         if (!in_chunk && grepl("^```\\{r", line)) {
           in_chunk <- TRUE
-          current_label <- parse_label(line)
+          current_label <- parse_chunk_label(line, file_type)
           if (!is.null(current_label) && identical(current_label, args$label)) {
             header <- build_header(current_label, args$options, line)
             out <- c(out, header)
@@ -380,30 +664,16 @@ create_artifact_tools <- function(default_dir = NULL) {
         return(paste0("Error: Rmd not found: ", path))
       }
 
+      file_type <- detect_file_type(filename)
       lines <- readLines(path, warn = FALSE)
       in_chunk <- FALSE
       current_label <- NULL
       chunk_lines <- character(0)
 
-      parse_label <- function(header) {
-        inner <- sub("^```\\{r\\s*", "", header)
-        inner <- sub("\\}\\s*$", "", inner)
-        inner <- trimws(inner)
-        if (!nzchar(inner)) {
-          return(NULL)
-        }
-        parts <- strsplit(inner, ",")[[1]]
-        label <- trimws(parts[1])
-        if (!nzchar(label)) {
-          return(NULL)
-        }
-        label
-      }
-
       for (line in lines) {
         if (!in_chunk && grepl("^```\\{r", line)) {
           in_chunk <- TRUE
-          current_label <- parse_label(line)
+          current_label <- parse_chunk_label(line, file_type)
           chunk_lines <- character(0)
           next
         }

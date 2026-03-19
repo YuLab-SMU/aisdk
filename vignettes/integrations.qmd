@@ -89,10 +89,13 @@ Now the user can say "Change the plot to red", and the AI will execute the tool,
 
 ## RMarkdown and Quarto Integration
 
-**aisdk** also includes a custom knitr engine `{ai}` that allows you to use LLMs to generate and execute R code directly within RMarkdown or Quarto documents. 
+**aisdk** also includes a custom knitr engine `{ai}` for AI-assisted code
+generation. In `.Rmd` documents you use direct `{ai}` chunks; in `.qmd`
+documents you should use `{r}` chunks with `#| engine: ai`.
 
 ### 1. Register the AI Engine
-Before using `{ai}` chunks in your document, you need to register the engine. It's recommended to do this in an initial setup chunk.
+Before using `{ai}` chunks in your document, register the engine in an initial
+setup chunk.
 
 ```r
 library(aisdk)
@@ -100,7 +103,9 @@ register_ai_engine()
 ```
 
 ### 2. Basic Usage
-Once registered, you can use `{ai}` as the chunk language. You simply provide instructions or prompts within the chunk.
+
+If you do not opt into review mode, `{ai}` keeps the simpler legacy flow:
+prompt the model, extract code, and execute immediately when `eval = TRUE`.
 
 ````markdown
 ```{ai}
@@ -109,24 +114,35 @@ colored by the number of cylinders (cyl). Make it look nice using ggplot2.
 ```
 ````
 
-Behind the scenes, the engine will:
-1. Send your prompt to the LLM.
-2. Extract the R code the LLM generates.
-3. Automatically execute the code (if `eval = TRUE`) in the document's environment.
-4. Output the LLM's explanation, the generated code (if `echo = TRUE`), and the code's output (plots, tables, console text).
+For Quarto, the equivalent pattern is:
 
-### 3. Chunk Options
+````markdown
+```{r}
+#| engine: ai
+#| eval: true
+Create a scatter plot of mpg vs wt from the mtcars dataset,
+colored by the number of cylinders (cyl). Make it look nice using ggplot2.
+```
+````
 
-The `{ai}` engine supports several custom chunk options:
+### 3. Session and Provider Options
 
-- **`model`**: Specifies the LLM to use (e.g., `model = "anthropic:claude-3-5-sonnet-20241022"`). Defaults to the value of `getOption("aisdk.default_model")`.
-- **`session`**: A character string naming the chat session. The engine maintains session history across multiple `{ai}` chunks within the same document, allowing you to ask follow-up questions. Defaults to `"default"`.
-- **`new_session`**: If `TRUE`, clears the previous history for the specified session and starts fresh.
-- **`system`**: Custom system prompt instructions for the LLM.
-- **`context`**: Controls how data is passed from your R environment to the LLM.
+Provider/session options for `{ai}` chunks:
+
+- **`model`**: Specific model identifier. Defaults to
+  `getOption("aisdk.default_model")`.
+- **`session`**: Named model conversation shared across `{ai}` chunks.
+  Defaults to `"default"`.
+- **`new_session`**: If `TRUE`, resets the named session before the chunk runs.
+- **`system`**: Additional system prompt instructions.
+- **`context`**: Controls how R objects are sent to the model. Use `FALSE` to
+  disable, or a character vector to specify exact objects.
 
 #### Context Auto-Detection
-The most powerful feature of the `{ai}` engine is **context**. If your prompt mentions variables that exist in the knitr environment, the engine will automatically detect them and send summaries of their structure/data to the LLM. 
+
+If your prompt mentions variables that already exist in the knitr environment,
+the engine can automatically summarize those objects and pass the summaries to
+the model. This keeps the prompt grounded in the current document state.
 
 For example, if you load a dataset in a previous `{r}` chunk:
 
@@ -139,9 +155,28 @@ my_data <- data.frame(category = c("A", "A", "B", "C"), value = rnorm(4))
 Calculate the mean of 'value' grouped by 'category' in my_data using dplyr.
 ```
 ````
-The engine will see `my_data` in your prompt, find it in the environment, and send its schema to the LLM so it writes accurate code.
+The engine sees `my_data` in the prompt, finds it in the knitr environment, and
+sends its schema to the model so it can write accurate code.
 
 You can manually control this with the `context` chunk option:
-- `context = "my_data"`: Explicitly include only `my_data`.
-- `context = c("data1", "data2")`: Include multiple specific objects.
-- `context = FALSE`: Disable context passing entirely.
+- `context = "my_data"` explicitly includes only `my_data`
+- `context = c("data1", "data2")` includes multiple specific objects
+- `context = FALSE` disables context passing entirely
+
+### 4. Quarto Notes
+
+Quarto `.qmd` files should use `{r}` chunks with `#| engine: ai`. Direct
+` ```{ai ...}` blocks in Quarto are not being executed by Quarto here; they are
+rendered literally instead of being dispatched to the registered knitr engine.
+
+### 5. Behavior Notes
+
+The `{ai}` engine in R Markdown and Quarto is intentionally simple:
+
+- it sends the prompt to the model
+- extracts executable R code from fenced code blocks
+- executes that code immediately when `eval = TRUE`
+- returns the model text directly when `eval = FALSE`
+
+If you need human review or workflow state, that should live outside the static
+document rendering path.

@@ -239,7 +239,12 @@ generate_text <- function(model,
           # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
           if (interactive()) {
             for (tr in tool_results) {
-              print_tool_result(tr$name, tr$result)
+              print_tool_result(
+                tr$name,
+                tr$result,
+                success = !isTRUE(tr$is_error),
+                raw_result = tr$raw_result %||% tr$result
+              )
             }
           }
 
@@ -517,7 +522,12 @@ stream_text <- function(model,
           # Log tool results
           if (interactive()) {
             for (tr in tool_results) {
-              renderer$render_tool_result(tr$name, tr$result)
+              renderer$render_tool_result(
+                tr$name,
+                tr$result,
+                success = !isTRUE(tr$is_error),
+                raw_result = tr$raw_result %||% tr$result
+              )
             }
           }
 
@@ -698,36 +708,10 @@ if (!exists("%||%")) {
 
 #' @keywords internal
 print_tool_execution <- function(name, arguments) {
-  args_str <- tryCatch(
-    safe_to_json(arguments, auto_unbox = TRUE),
-    error = function(e) "..."
-  )
-
-  if (requireNamespace("cli", quietly = TRUE)) {
-    cli::cli_alert_info("Calling tool {.fn {name}} with args {.code {args_str}}")
-  } else {
-    message(sprintf("\u2139 Calling tool %s(%s)", name, args_str))
-  }
+  cli_tool_start(name, arguments)
 }
 
 #' @keywords internal
-print_tool_result <- function(name, result) {
-  if (is.null(result)) {
-    res_str <- "NULL"
-  } else {
-    res_str <- if (is.character(result)) result else safe_to_json(result, auto_unbox = TRUE)
-    if (length(res_str) == 0) {
-      res_str <- "NULL"
-    }
-  }
-  # Truncate if too long (e.g. > 200 chars) for display
-  if (nchar(res_str) > 200) {
-    res_str <- paste0(substr(res_str, 1, 197), "...")
-  }
-
-  if (requireNamespace("cli", quietly = TRUE)) {
-    cli::cli_alert_success("Tool {.fn {name}} returned: {.val {res_str}}")
-  } else {
-    message(sprintf("\u2714 Tool %s returned: %s", name, res_str))
-  }
+print_tool_result <- function(name, result, success = TRUE, raw_result = result) {
+  cli_tool_result(name, result, success = success, raw_result = raw_result)
 }

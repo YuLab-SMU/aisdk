@@ -334,6 +334,305 @@ ProjectMemory <- R6::R6Class(
     },
 
     #' @description
+    #' Store or update a human review for an AI-generated chunk.
+    #' @param chunk_id Unique identifier for the chunk.
+    #' @param file_path Path to the source file.
+    #' @param chunk_label Chunk label from knitr.
+    #' @param prompt The prompt sent to the AI.
+    #' @param response The AI's response.
+    #' @param status Review status ("pending", "approved", "rejected").
+    #' @param ai_agent Optional agent name.
+    #' @param uncertainty Optional uncertainty level.
+    #' @param session_id Optional session identifier for transcript/provenance.
+    #' @param review_mode Optional normalized review mode.
+    #' @param runtime_mode Optional normalized runtime mode.
+    #' @param artifact_json Optional JSON review artifact payload.
+    #' @param execution_status Optional execution state.
+    #' @param execution_output Optional execution output text.
+    #' @param final_code Optional finalized executable code.
+    #' @param error_message Optional execution or generation error.
+    #' @return The database row ID.
+    store_review = function(chunk_id, file_path, chunk_label, prompt, response,
+                           status = "pending", ai_agent = NULL, uncertainty = NULL,
+                           session_id = NULL, review_mode = NULL, runtime_mode = NULL,
+                           artifact_json = NULL, execution_status = NULL,
+                           execution_output = NULL, final_code = NULL,
+                           error_message = NULL) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+
+      # Check if exists to preserve created_at and extended fields
+      existing <- DBI::dbGetQuery(con, "SELECT * FROM human_reviews WHERE chunk_id = ?",
+                                  params = list(chunk_id))
+      created_at <- if (nrow(existing) > 0) existing$created_at[1] else now
+      reviewed_at <- if (nrow(existing) > 0) existing$reviewed_at[1] else NA_character_
+
+      # Convert NULL to NA for SQL
+      ai_agent <- private$coalesce_db_value(ai_agent, existing, "ai_agent")
+      uncertainty <- private$coalesce_db_value(uncertainty, existing, "uncertainty")
+      session_id <- private$coalesce_db_value(session_id, existing, "session_id")
+      review_mode <- private$coalesce_db_value(review_mode, existing, "review_mode")
+      runtime_mode <- private$coalesce_db_value(runtime_mode, existing, "runtime_mode")
+      artifact_json <- private$coalesce_db_value(artifact_json, existing, "artifact_json")
+      execution_status <- private$coalesce_db_value(execution_status, existing, "execution_status")
+      execution_output <- private$coalesce_db_value(execution_output, existing, "execution_output")
+      final_code <- private$coalesce_db_value(final_code, existing, "final_code")
+      error_message <- private$coalesce_db_value(error_message, existing, "error_message")
+
+      DBI::dbExecute(con, "
+        INSERT OR REPLACE INTO human_reviews
+        (chunk_id, file_path, chunk_label, prompt, response, status, ai_agent, uncertainty,
+         session_id, review_mode, runtime_mode, artifact_json, execution_status, execution_output,
+         final_code, error_message, reviewed_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ", params = list(chunk_id, file_path, chunk_label, prompt, response, status,
+                       ai_agent, uncertainty, session_id, review_mode, runtime_mode, artifact_json,
+                       execution_status, execution_output, final_code, error_message, reviewed_at,
+                       created_at, now))
+
+      DBI::dbGetQuery(con, "SELECT last_insert_rowid()")[[1]]
+    },
+
+    #' @description
+    #' Store structured review artifact metadata for a chunk.
+    #' @param chunk_id Chunk identifier.
+    #' @param session_id Optional session identifier.
+    #' @param review_mode Optional normalized review mode.
+    #' @param runtime_mode Optional normalized runtime mode.
+    #' @param artifact A serializable list representing the review artifact.
+    #' @return Invisible TRUE.
+    store_review_artifact = function(chunk_id, artifact, session_id = NULL,
+                                     review_mode = NULL, runtime_mode = NULL) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      existing <- DBI::dbGetQuery(con, "SELECT chunk_id FROM human_reviews WHERE chunk_id = ?",
+                                  params = list(chunk_id))
+      if (nrow(existing) == 0) {
+        rlang::abort(sprintf("Cannot store review artifact: chunk_id '%s' was not found.", chunk_id))
+      }
+
+      now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      DBI::dbExecute(con, "
+        UPDATE human_reviews
+        SET session_id = COALESCE(?, session_id),
+            review_mode = COALESCE(?, review_mode),
+            runtime_mode = COALESCE(?, runtime_mode),
+            artifact_json = ?,
+            updated_at = ?
+        WHERE chunk_id = ?
+      ", params = list(
+        if (is.null(session_id)) NA_character_ else session_id,
+        if (is.null(review_mode)) NA_character_ else review_mode,
+        if (is.null(runtime_mode)) NA_character_ else runtime_mode,
+        private$serialize_json(artifact),
+        now,
+        chunk_id
+      ))
+
+      invisible(TRUE)
+    },
+
+    #' @description
+    #' Get a review by chunk ID.
+    #' @param chunk_id Chunk identifier.
+    #' @return A list with review details, or NULL if not found.
+    get_review = function(chunk_id) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      result <- DBI::dbGetQuery(con, "SELECT * FROM human_reviews WHERE chunk_id = ?",
+                                params = list(chunk_id))
+
+      if (nrow(result) == 0) return(NULL)
+      as.list(result[1, ])
+    },
+
+    #' @description
+    #' Get a parsed review artifact by chunk ID.
+    #' @param chunk_id Chunk identifier.
+    #' @return A list artifact, or NULL if none is stored.
+    get_review_artifact = function(chunk_id) {
+      review <- self$get_review(chunk_id)
+      if (is.null(review) || is.null(review$artifact_json) ||
+          is.na(review$artifact_json) || !nzchar(review$artifact_json)) {
+        return(NULL)
+      }
+
+      private$deserialize_json(review$artifact_json)
+    },
+
+    #' @description
+    #' Get a review together with its parsed artifact.
+    #' @param chunk_id Chunk identifier.
+    #' @return A list with `review` and `artifact`, or NULL if not found.
+    get_review_runtime_record = function(chunk_id) {
+      review <- self$get_review(chunk_id)
+      if (is.null(review)) {
+        return(NULL)
+      }
+
+      list(
+        review = review,
+        artifact = self$get_review_artifact(chunk_id)
+      )
+    },
+
+    #' @description
+    #' Get all reviews for a given source file.
+    #' @param file_path Source document path.
+    #' @return A data frame of reviews ordered by updated time.
+    get_reviews_for_file = function(file_path) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      DBI::dbGetQuery(con, "
+        SELECT * FROM human_reviews
+        WHERE file_path = ?
+        ORDER BY updated_at DESC, chunk_id ASC
+      ", params = list(file_path))
+    },
+
+    #' @description
+    #' Record a saveback lifecycle event for one or more chunk reviews.
+    #' @param chunk_ids Character vector of chunk identifiers.
+    #' @param source_path Source document path.
+    #' @param html_path Optional rendered HTML path.
+    #' @param status Saveback status string.
+    #' @param rerendered Whether a rerender occurred.
+    #' @param message Optional message.
+    #' @return Invisible TRUE.
+    record_review_saveback = function(chunk_ids, source_path,
+                                      html_path = NULL,
+                                      status = "requested",
+                                      rerendered = FALSE,
+                                      message = NULL) {
+      chunk_ids <- unique(stats::na.omit(chunk_ids %||% character(0)))
+      if (length(chunk_ids) == 0) {
+        return(invisible(TRUE))
+      }
+
+      payload <- list(
+        source_path = source_path,
+        html_path = html_path,
+        status = status,
+        rerendered = rerendered,
+        message = message
+      )
+
+      for (chunk_id in chunk_ids) {
+        self$append_review_event(
+          chunk_id = chunk_id,
+          event_type = paste0("saveback:", status),
+          payload = payload
+        )
+      }
+
+      invisible(TRUE)
+    },
+
+    #' @description
+    #' Update execution result fields for a chunk review.
+    #' @param chunk_id Chunk identifier.
+    #' @param execution_status Execution state string.
+    #' @param execution_output Optional execution output text.
+    #' @param final_code Optional finalized executable code.
+    #' @param error_message Optional execution error.
+    #' @return Invisible TRUE.
+    update_execution_result = function(chunk_id, execution_status,
+                                       execution_output = NULL,
+                                       final_code = NULL,
+                                       error_message = NULL) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      DBI::dbExecute(con, "
+        UPDATE human_reviews
+        SET execution_status = ?,
+            execution_output = ?,
+            final_code = ?,
+            error_message = ?,
+            updated_at = ?
+        WHERE chunk_id = ?
+      ", params = list(
+        execution_status,
+        if (is.null(execution_output)) NA_character_ else execution_output,
+        if (is.null(final_code)) NA_character_ else final_code,
+        if (is.null(error_message)) NA_character_ else error_message,
+        now,
+        chunk_id
+      ))
+
+      invisible(TRUE)
+    },
+
+    #' @description
+    #' Append an audit event for a reviewed chunk.
+    #' @param chunk_id Chunk identifier.
+    #' @param event_type Event type string.
+    #' @param payload Optional serializable payload list.
+    #' @return The database row ID.
+    append_review_event = function(chunk_id, event_type, payload = NULL) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      DBI::dbExecute(con, "
+        INSERT INTO review_events (chunk_id, event_type, payload, created_at)
+        VALUES (?, ?, ?, datetime('now'))
+      ", params = list(
+        chunk_id,
+        event_type,
+        if (is.null(payload)) NA_character_ else private$serialize_json(payload)
+      ))
+
+      DBI::dbGetQuery(con, "SELECT last_insert_rowid()")[[1]]
+    },
+
+    #' @description
+    #' Update review status.
+    #' @param chunk_id Chunk identifier.
+    #' @param status New status ("approved" or "rejected").
+    update_review_status = function(chunk_id, status) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      now <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      DBI::dbExecute(con, "
+        UPDATE human_reviews
+        SET status = ?, reviewed_at = ?, updated_at = ?
+        WHERE chunk_id = ?
+      ", params = list(status, now, now, chunk_id))
+
+      self$append_review_event(chunk_id, paste0("status:", status))
+    },
+
+    #' @description
+    #' Get pending reviews, optionally filtered by file.
+    #' @param file_path Optional file path filter.
+    #' @return A data frame of pending reviews.
+    get_pending_reviews = function(file_path = NULL) {
+      con <- private$get_connection()
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+      if (!is.null(file_path)) {
+        DBI::dbGetQuery(con, "
+          SELECT * FROM human_reviews
+          WHERE status = 'pending' AND file_path = ?
+          ORDER BY created_at DESC
+        ", params = list(file_path))
+      } else {
+        DBI::dbGetQuery(con, "
+          SELECT * FROM human_reviews
+          WHERE status = 'pending'
+          ORDER BY created_at DESC
+        ")
+      }
+    },
+
+    #' @description
     #' Get memory statistics.
     #' @return A list with counts and sizes.
     stats = function() {
@@ -345,6 +644,8 @@ ProjectMemory <- R6::R6Class(
         fixes = DBI::dbGetQuery(con, "SELECT COUNT(*) as n FROM fixes")$n,
         workflow_nodes = DBI::dbGetQuery(con, "SELECT COUNT(*) as n FROM workflow_nodes")$n,
         conversations = DBI::dbGetQuery(con, "SELECT COUNT(*) as n FROM conversations")$n,
+        human_reviews = DBI::dbGetQuery(con, "SELECT COUNT(*) as n FROM human_reviews")$n,
+        review_events = DBI::dbGetQuery(con, "SELECT COUNT(*) as n FROM review_events")$n,
         db_size_mb = round(file.info(self$db_path)$size / (1024^2), 2)
       )
     },
@@ -365,6 +666,8 @@ ProjectMemory <- R6::R6Class(
       DBI::dbExecute(con, "DELETE FROM fixes")
       DBI::dbExecute(con, "DELETE FROM workflow_nodes")
       DBI::dbExecute(con, "DELETE FROM conversations")
+      DBI::dbExecute(con, "DELETE FROM human_reviews")
+      DBI::dbExecute(con, "DELETE FROM review_events")
 
       message("Memory cleared.")
       invisible(self)
@@ -380,6 +683,8 @@ ProjectMemory <- R6::R6Class(
       cat("  Fixes:", stats$fixes, "\n")
       cat("  Workflow Nodes:", stats$workflow_nodes, "\n")
       cat("  Conversations:", stats$conversations, "\n")
+      cat("  Human Reviews:", stats$human_reviews, "\n")
+      cat("  Review Events:", stats$review_events, "\n")
       cat("  Size:", stats$db_size_mb, "MB\n")
       invisible(self)
     }
@@ -440,11 +745,61 @@ ProjectMemory <- R6::R6Class(
         )
       ")
 
+      DBI::dbExecute(con, "
+        CREATE TABLE IF NOT EXISTS human_reviews (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          chunk_id TEXT NOT NULL UNIQUE,
+          file_path TEXT NOT NULL,
+          chunk_label TEXT,
+          prompt TEXT NOT NULL,
+          response TEXT NOT NULL,
+          status TEXT DEFAULT 'pending',
+          ai_agent TEXT,
+          uncertainty TEXT,
+          session_id TEXT,
+          review_mode TEXT,
+          runtime_mode TEXT,
+          artifact_json TEXT,
+          execution_status TEXT,
+          execution_output TEXT,
+          final_code TEXT,
+          error_message TEXT,
+          reviewed_at TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ")
+
+      DBI::dbExecute(con, "
+        CREATE TABLE IF NOT EXISTS review_events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          chunk_id TEXT NOT NULL,
+          event_type TEXT NOT NULL,
+          payload TEXT,
+          created_at TEXT NOT NULL
+        )
+      ")
+
+      private$ensure_columns(con, "human_reviews", c(
+        session_id = "TEXT",
+        review_mode = "TEXT",
+        runtime_mode = "TEXT",
+        artifact_json = "TEXT",
+        execution_status = "TEXT",
+        execution_output = "TEXT",
+        final_code = "TEXT",
+        error_message = "TEXT"
+      ))
+
       # Create indices for faster lookups
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_snippets_hash ON snippets(code_hash)")
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_fixes_signature ON fixes(error_signature)")
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_workflow_id ON workflow_nodes(workflow_id)")
       DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_session_id ON conversations(session_id)")
+      DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_chunk_id ON human_reviews(chunk_id)")
+      DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_review_status ON human_reviews(status)")
+      DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_review_file ON human_reviews(file_path)")
+      DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_review_event_chunk ON review_events(chunk_id)")
     },
     get_connection = function() {
       if (!requireNamespace("DBI", quietly = TRUE)) {
@@ -475,6 +830,37 @@ ProjectMemory <- R6::R6Class(
 
       # Create hash
       digest::digest(signature, algo = "md5")
+    },
+    ensure_columns = function(con, table_name, columns) {
+      existing_fields <- DBI::dbListFields(con, table_name)
+      for (column_name in names(columns)) {
+        if (!column_name %in% existing_fields) {
+          DBI::dbExecute(
+            con,
+            sprintf("ALTER TABLE %s ADD COLUMN %s %s", table_name, column_name, columns[[column_name]])
+          )
+        }
+      }
+    },
+    coalesce_db_value = function(value, existing, field) {
+      if (!is.null(value)) {
+        return(value)
+      }
+
+      if (nrow(existing) > 0 && field %in% names(existing)) {
+        existing_value <- existing[[field]][1]
+        if (!is.null(existing_value) && !is.na(existing_value)) {
+          return(existing_value)
+        }
+      }
+
+      NA_character_
+    },
+    serialize_json = function(value) {
+      jsonlite::toJSON(value, auto_unbox = TRUE, null = "null")
+    },
+    deserialize_json = function(value) {
+      jsonlite::fromJSON(value, simplifyVector = FALSE)
     }
   )
 )

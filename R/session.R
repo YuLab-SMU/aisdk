@@ -105,7 +105,11 @@ ChatSession <- R6::R6Class(
 
       # Append assistant response to history
       if (!is.null(result$text) && nzchar(result$text)) {
-        self$append_message("assistant", result$text)
+        self$append_message(
+          "assistant",
+          result$text,
+          reasoning = result$reasoning %||% NULL
+        )
       }
 
       # Update stats
@@ -151,7 +155,11 @@ ChatSession <- R6::R6Class(
         }
       } else if (!is.null(result$text) && nzchar(result$text)) {
         # No tool calls were made, just append the final response
-        self$append_message("assistant", result$text)
+        self$append_message(
+          "assistant",
+          result$text,
+          reasoning = result$reasoning %||% NULL
+        )
       }
 
       # Update stats
@@ -163,8 +171,12 @@ ChatSession <- R6::R6Class(
     #' @description Append a message to the history.
     #' @param role Message role: "user", "assistant", "system", or "tool".
     #' @param content Message content.
-    append_message = function(role, content) {
+    #' @param reasoning Optional reasoning text to attach to the message.
+    append_message = function(role, content, reasoning = NULL) {
       msg <- list(role = role, content = content)
+      if (!is.null(reasoning) && nzchar(reasoning)) {
+        msg$reasoning <- reasoning
+      }
       private$.history <- c(private$.history, list(msg))
       invisible(self)
     },

@@ -15,6 +15,170 @@ should_show_thinking <- function() {
 }
 
 #' @keywords internal
+get_tool_log_mode <- function() {
+  mode <- getOption("aisdk.tool_log_mode", "detailed")
+  if (!is.character(mode) || length(mode) == 0 || !nzchar(mode[[1]])) {
+    return("detailed")
+  }
+
+  mode <- tolower(mode[[1]])
+  if (!mode %in% c("compact", "detailed")) {
+    return("detailed")
+  }
+
+  mode
+}
+
+#' @keywords internal
+tool_log_is_compact <- function() {
+  identical(get_tool_log_mode(), "compact")
+}
+
+#' @keywords internal
+get_console_app_state <- function() {
+  state <- getOption("aisdk.console_app_state", NULL)
+  if (is.environment(state)) {
+    return(state)
+  }
+  NULL
+}
+
+#' @keywords internal
+tool_spinner_frame <- local({
+  frames <- c("\u280b", "\u2819", "\u2839", "\u2838", "\u283c", "\u2834", "\u2826", "\u2827", "\u2807", "\u280f")
+  idx <- 0L
+
+  function() {
+    idx <<- idx + 1L
+    frames[((idx - 1L) %% length(frames)) + 1L]
+  }
+})
+
+#' @keywords internal
+compact_text_preview <- function(text, width = 60) {
+  if (is.null(text) || !length(text)) {
+    return("")
+  }
+
+  text <- paste(text, collapse = " ")
+  text <- gsub("[\r\n\t]+", " ", text)
+  text <- gsub("\\s+", " ", trimws(text))
+
+  if (!nzchar(text)) {
+    return("")
+  }
+
+  if (nchar(text) > width) {
+    paste0(substr(text, 1, width - 3L), "...")
+  } else {
+    text
+  }
+}
+
+#' @keywords internal
+compact_path_preview <- function(path) {
+  path <- compact_text_preview(path, width = 50)
+  if (!nzchar(path)) {
+    return("file")
+  }
+
+  parts <- strsplit(path, "/|\\\\", perl = TRUE)[[1]]
+  leaf <- tail(parts[nzchar(parts)], 1)
+
+  if (length(leaf) == 1 && nzchar(leaf) && nchar(leaf) <= 30) {
+    return(leaf)
+  }
+
+  path
+}
+
+#' @keywords internal
+compact_tool_start_label <- function(name, arguments) {
+  args <- if (is.null(arguments)) list() else arguments
+
+  switch(name,
+    "execute_r_code" = {
+      snippet <- compact_text_preview(args$code, width = 52)
+      if (nzchar(snippet)) {
+        paste0("Running R code: ", snippet)
+      } else {
+        "Running R code"
+      }
+    },
+    "execute_r_code_local" = {
+      snippet <- compact_text_preview(args$code, width = 48)
+      if (nzchar(snippet)) {
+        paste0("Running local R code: ", snippet)
+      } else {
+        "Running local R code"
+      }
+    },
+    "read_file" = paste0("Reading ", compact_path_preview(args$path)),
+    "write_file" = paste0("Writing ", compact_path_preview(args$path)),
+    "bash" = {
+      snippet <- compact_text_preview(args$command, width = 52)
+      if (nzchar(snippet)) {
+        paste0("Running shell command: ", snippet)
+      } else {
+        "Running shell command"
+      }
+    },
+    "bash_execute" = {
+      snippet <- compact_text_preview(args$command, width = 52)
+      if (nzchar(snippet)) {
+        paste0("Running shell command: ", snippet)
+      } else {
+        "Running shell command"
+      }
+    },
+    "ask_user" = "Waiting for your input",
+    paste0("Running ", name)
+  )
+}
+
+#' @keywords internal
+tool_result_failed <- function(result, success = TRUE) {
+  if (!isTRUE(success)) {
+    return(TRUE)
+  }
+
+  if (is.null(result)) {
+    return(FALSE)
+  }
+
+  text <- if (is.character(result)) {
+    paste(result, collapse = " ")
+  } else {
+    tryCatch(safe_to_json(result, auto_unbox = TRUE), error = function(e) "")
+  }
+
+  text <- trimws(text)
+  grepl("^(Error|Error executing tool:|Tool execution denied|Sandbox violation:)", text, ignore.case = TRUE)
+}
+
+#' @keywords internal
+compact_tool_result_label <- function(name, result, success = TRUE) {
+  failed <- tool_result_failed(result, success)
+
+  base <- switch(name,
+    "execute_r_code" = "R code",
+    "execute_r_code_local" = "Local R code",
+    "read_file" = "File read",
+    "write_file" = "File write",
+    "bash" = "Shell command",
+    "bash_execute" = "Shell command",
+    "ask_user" = "Prompt",
+    name
+  )
+
+  if (failed) {
+    paste0(base, " failed")
+  } else {
+    paste0(base, " completed")
+  }
+}
+
+#' @keywords internal
 create_markdown_stream_renderer <- function() {
   buffer <- ""
   in_code_block <- FALSE
@@ -277,6 +441,21 @@ create_markdown_stream_renderer <- function() {
 
 #' @keywords internal
 cli_tool_start <- function(name, arguments) {
+  app_state <- get_console_app_state()
+  if (!is.null(app_state)) {
+    console_app_record_tool_start(app_state, name, arguments)
+  }
+
+  if (tool_log_is_compact()) {
+    if (!requireNamespace("cli", quietly = TRUE)) {
+      message(sprintf("%s %s", tool_spinner_frame(), compact_tool_start_label(name, arguments)))
+      return()
+    }
+
+    cli::cli_text("{cli::col_grey(tool_spinner_frame())} {cli::col_grey(compact_tool_start_label(name, arguments))}")
+    return()
+  }
+
   if (!requireNamespace("cli", quietly = TRUE)) {
     args_str <- tryCatch(safe_to_json(arguments, auto_unbox = TRUE), error = function(e) "...")
     message(sprintf("\u2139 Calling tool %s(%s)", name, args_str))
@@ -306,10 +485,34 @@ cli_tool_start <- function(name, arguments) {
 }
 
 #' @keywords internal
-cli_tool_result <- function(name, result, success = TRUE) {
+cli_tool_result <- function(name, result, success = TRUE, raw_result = result) {
+  app_state <- get_console_app_state()
+  if (!is.null(app_state)) {
+    console_app_record_tool_result(app_state, name, result, success = success, raw_result = raw_result)
+  }
+
+  failed <- tool_result_failed(result, success)
+
+  if (tool_log_is_compact()) {
+    label <- compact_tool_result_label(name, result, success = !failed)
+
+    if (!requireNamespace("cli", quietly = TRUE)) {
+      status <- if (failed) "\u2716" else "\u2714"
+      message(sprintf("%s %s", status, label))
+      return()
+    }
+
+    if (failed) {
+      cli::cli_text("{cli::col_red(cli::symbol$cross)} {cli::col_red(label)}")
+    } else {
+      cli::cli_text("{cli::col_grey(cli::symbol$tick)} {cli::col_grey(label)}")
+    }
+    return()
+  }
+
   if (!requireNamespace("cli", quietly = TRUE)) {
     res_str <- if (is.character(result)) result else safe_to_json(result, auto_unbox = TRUE)
-    status <- if (success) "\u2714" else "\u2716"
+    status <- if (failed) "\u2716" else "\u2714"
     message(sprintf("%s Tool %s returned: %s", status, name, res_str))
     return()
   }
@@ -325,7 +528,7 @@ cli_tool_result <- function(name, result, success = TRUE) {
     res_preview <- paste0(substr(res_preview, 1, 197), "...")
   }
 
-  if (success) {
+  if (!failed) {
     cli::cli_div(theme = list(span.emph = list(color = "blue")))
     cli::cli_text("{cli::col_green(cli::symbol$tick)} Tool {.emph {name}} returned: {.val {res_preview}}")
   } else {

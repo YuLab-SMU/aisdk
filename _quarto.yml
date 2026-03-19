@@ -43,6 +43,8 @@ website:
             text: "Using Tools"
           - href: vignettes/sessions.qmd
             text: "Chat Sessions"
+          - href: vignettes/console_chat.qmd
+            text: "Console Chat"
           - href: vignettes/structured_outputs.qmd
             text: "Structured Outputs"
           - href: vignettes/mcp.qmd
@@ -83,4 +85,3 @@ knitr:
   opts_chunk: 
     collapse: true
     comment: "#>"
-

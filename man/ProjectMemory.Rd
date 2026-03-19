@@ -31,6 +31,17 @@ resuming failed long-running jobs.
 \item \href{#method-ProjectMemory-get_resumable_nodes}{\code{ProjectMemory$get_resumable_nodes()}}
 \item \href{#method-ProjectMemory-store_conversation}{\code{ProjectMemory$store_conversation()}}
 \item \href{#method-ProjectMemory-get_conversation}{\code{ProjectMemory$get_conversation()}}
+\item \href{#method-ProjectMemory-store_review}{\code{ProjectMemory$store_review()}}
+\item \href{#method-ProjectMemory-store_review_artifact}{\code{ProjectMemory$store_review_artifact()}}
+\item \href{#method-ProjectMemory-get_review}{\code{ProjectMemory$get_review()}}
+\item \href{#method-ProjectMemory-get_review_artifact}{\code{ProjectMemory$get_review_artifact()}}
+\item \href{#method-ProjectMemory-get_review_runtime_record}{\code{ProjectMemory$get_review_runtime_record()}}
+\item \href{#method-ProjectMemory-get_reviews_for_file}{\code{ProjectMemory$get_reviews_for_file()}}
+\item \href{#method-ProjectMemory-record_review_saveback}{\code{ProjectMemory$record_review_saveback()}}
+\item \href{#method-ProjectMemory-update_execution_result}{\code{ProjectMemory$update_execution_result()}}
+\item \href{#method-ProjectMemory-append_review_event}{\code{ProjectMemory$append_review_event()}}
+\item \href{#method-ProjectMemory-update_review_status}{\code{ProjectMemory$update_review_status()}}
+\item \href{#method-ProjectMemory-get_pending_reviews}{\code{ProjectMemory$get_pending_reviews()}}
 \item \href{#method-ProjectMemory-stats}{\code{ProjectMemory$stats()}}
 \item \href{#method-ProjectMemory-clear}{\code{ProjectMemory$clear()}}
 \item \href{#method-ProjectMemory-print}{\code{ProjectMemory$print()}}
@@ -312,6 +323,321 @@ Get conversation history for a session.
 }
 \subsection{Returns}{
 A data frame of conversation messages.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-store_review"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-store_review}{}}}
+\subsection{Method \code{store_review()}}{
+Store or update a human review for an AI-generated chunk.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$store_review(
+  chunk_id,
+  file_path,
+  chunk_label,
+  prompt,
+  response,
+  status = "pending",
+  ai_agent = NULL,
+  uncertainty = NULL,
+  session_id = NULL,
+  review_mode = NULL,
+  runtime_mode = NULL,
+  artifact_json = NULL,
+  execution_status = NULL,
+  execution_output = NULL,
+  final_code = NULL,
+  error_message = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Unique identifier for the chunk.}
+
+\item{\code{file_path}}{Path to the source file.}
+
+\item{\code{chunk_label}}{Chunk label from knitr.}
+
+\item{\code{prompt}}{The prompt sent to the AI.}
+
+\item{\code{response}}{The AI's response.}
+
+\item{\code{status}}{Review status ("pending", "approved", "rejected").}
+
+\item{\code{ai_agent}}{Optional agent name.}
+
+\item{\code{uncertainty}}{Optional uncertainty level.}
+
+\item{\code{session_id}}{Optional session identifier for transcript/provenance.}
+
+\item{\code{review_mode}}{Optional normalized review mode.}
+
+\item{\code{runtime_mode}}{Optional normalized runtime mode.}
+
+\item{\code{artifact_json}}{Optional JSON review artifact payload.}
+
+\item{\code{execution_status}}{Optional execution state.}
+
+\item{\code{execution_output}}{Optional execution output text.}
+
+\item{\code{final_code}}{Optional finalized executable code.}
+
+\item{\code{error_message}}{Optional execution or generation error.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The database row ID.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-store_review_artifact"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-store_review_artifact}{}}}
+\subsection{Method \code{store_review_artifact()}}{
+Store structured review artifact metadata for a chunk.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$store_review_artifact(
+  chunk_id,
+  artifact,
+  session_id = NULL,
+  review_mode = NULL,
+  runtime_mode = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+
+\item{\code{artifact}}{A serializable list representing the review artifact.}
+
+\item{\code{session_id}}{Optional session identifier.}
+
+\item{\code{review_mode}}{Optional normalized review mode.}
+
+\item{\code{runtime_mode}}{Optional normalized runtime mode.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible TRUE.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-get_review"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-get_review}{}}}
+\subsection{Method \code{get_review()}}{
+Get a review by chunk ID.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$get_review(chunk_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with review details, or NULL if not found.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-get_review_artifact"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-get_review_artifact}{}}}
+\subsection{Method \code{get_review_artifact()}}{
+Get a parsed review artifact by chunk ID.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$get_review_artifact(chunk_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list artifact, or NULL if none is stored.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-get_review_runtime_record"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-get_review_runtime_record}{}}}
+\subsection{Method \code{get_review_runtime_record()}}{
+Get a review together with its parsed artifact.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$get_review_runtime_record(chunk_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with \code{review} and \code{artifact}, or NULL if not found.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-get_reviews_for_file"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-get_reviews_for_file}{}}}
+\subsection{Method \code{get_reviews_for_file()}}{
+Get all reviews for a given source file.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$get_reviews_for_file(file_path)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{file_path}}{Source document path.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame of reviews ordered by updated time.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-record_review_saveback"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-record_review_saveback}{}}}
+\subsection{Method \code{record_review_saveback()}}{
+Record a saveback lifecycle event for one or more chunk reviews.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$record_review_saveback(
+  chunk_ids,
+  source_path,
+  html_path = NULL,
+  status = "requested",
+  rerendered = FALSE,
+  message = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_ids}}{Character vector of chunk identifiers.}
+
+\item{\code{source_path}}{Source document path.}
+
+\item{\code{html_path}}{Optional rendered HTML path.}
+
+\item{\code{status}}{Saveback status string.}
+
+\item{\code{rerendered}}{Whether a rerender occurred.}
+
+\item{\code{message}}{Optional message.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible TRUE.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-update_execution_result"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-update_execution_result}{}}}
+\subsection{Method \code{update_execution_result()}}{
+Update execution result fields for a chunk review.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$update_execution_result(
+  chunk_id,
+  execution_status,
+  execution_output = NULL,
+  final_code = NULL,
+  error_message = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+
+\item{\code{execution_status}}{Execution state string.}
+
+\item{\code{execution_output}}{Optional execution output text.}
+
+\item{\code{final_code}}{Optional finalized executable code.}
+
+\item{\code{error_message}}{Optional execution error.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible TRUE.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-append_review_event"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-append_review_event}{}}}
+\subsection{Method \code{append_review_event()}}{
+Append an audit event for a reviewed chunk.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$append_review_event(chunk_id, event_type, payload = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+
+\item{\code{event_type}}{Event type string.}
+
+\item{\code{payload}}{Optional serializable payload list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The database row ID.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-update_review_status"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-update_review_status}{}}}
+\subsection{Method \code{update_review_status()}}{
+Update review status.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$update_review_status(chunk_id, status)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{chunk_id}}{Chunk identifier.}
+
+\item{\code{status}}{New status ("approved" or "rejected").}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectMemory-get_pending_reviews"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectMemory-get_pending_reviews}{}}}
+\subsection{Method \code{get_pending_reviews()}}{
+Get pending reviews, optionally filtered by file.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$get_pending_reviews(file_path = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{file_path}}{Optional file path filter.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame of pending reviews.
 }
 }
 \if{html}{\out{<hr>}}

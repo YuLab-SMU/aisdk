@@ -12,6 +12,18 @@ NULL
 #' Launch an interactive chat session in the R console. Supports streaming
 #' output, slash commands, and colorful display using the cli package.
 #'
+#' The console UI has three presentation modes:
+#' - `clean`: compact default output with a stable status bar
+#' - `inspect`: keeps the compact transcript but adds a per-turn tool timeline
+#'   and an overlay-backed inspector
+#' - `debug`: shows detailed tool logs and thinking output for troubleshooting
+#'
+#' In agent mode, `console_chat()` can execute shell and R tools, summarize tool
+#' progress inline, and open an inspector overlay for the latest turn or a
+#' specific tool. The current implementation uses a shared frame builder for the
+#' status bar, tool timeline, and overlay surfaces, while preserving an
+#' append-only terminal fallback.
+#'
 #' By default, the console operates in agent mode with tools for bash execution,
 #' file operations, R code execution, and more. Set `agent = NULL` for simple
 #' chat without tools.
@@ -21,12 +33,16 @@ NULL
 #' @param tools Optional list of additional Tool objects.
 #' @param hooks Optional HookHandler object.
 #' @param stream Whether to use streaming output. Default TRUE.
+#' @param verbose Logical. If `TRUE`, show detailed tool calls, tool results, and
+#'   thinking output. Defaults to `FALSE` for a cleaner console UI.
 #' @param agent Agent configuration. Options:
 #'   - `"auto"` (default): Use the built-in console agent with terminal tools
 #'   - `NULL`: Simple chat mode without tools
 #'   - An Agent object: Use the provided custom agent
 #' @param working_dir Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.
 #' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
+#' @param show_thinking Logical. Whether to show model thinking blocks when the
+#'   provider exposes them. Defaults to `verbose`.
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
@@ -34,6 +50,9 @@ NULL
 #' if (interactive()) {
 #'   # Start with default agent (intelligent terminal mode)
 #'   console_chat("openai:gpt-4o")
+#'
+#'   # Start in debug mode with full tool logs
+#'   console_chat("openai:gpt-4o", verbose = TRUE)
 #'
 #'   # Simple chat mode without tools
 #'   console_chat("openai:gpt-4o", agent = NULL)
@@ -50,11 +69,20 @@ NULL
 #'   # /quit or /exit - End the chat
 #'   # /save [path]   - Save session to file
 #'   # /load [path]   - Load session from file
+#'   # /model         - Open the provider/model chooser
 #'   # /model [id]    - Switch to a different model
+#'   # /model current - Show the active model
 #'   # /history       - Show conversation history
 #'   # /stats         - Show token usage statistics
 #'   # /clear         - Clear conversation history
 #'   # /stream [on|off] - Toggle streaming mode
+#'   # /inspect [on|off] - Toggle inspect mode
+#'   # /inspect turn - Open overlay for the latest turn
+#'   # /inspect tool <index> - Open overlay for a tool in the latest turn
+#'   # /inspect next - Move inspector overlay to the next tool
+#'   # /inspect prev - Move inspector overlay to the previous tool
+#'   # /inspect close - Close the active inspect overlay
+#'   # /debug [on|off]  - Toggle detailed tool/thinking output
 #'   # /local [on|off]- Toggle local execution mode (Global Environment)
 #'   # /help          - Show available commands
 #'   # /agent [on|off] - Toggle agent mode
@@ -65,13 +93,18 @@ console_chat <- function(session = NULL,
                          tools = NULL,
                          hooks = NULL,
                          stream = TRUE,
+                         verbose = FALSE,
                          agent = "auto",
                          working_dir = if (interactive()) getwd() else tempdir(),
-                         sandbox_mode = "permissive") {
+                         sandbox_mode = "permissive",
+                         show_thinking = verbose) {
   # Ensure cli package is available
   if (!requireNamespace("cli", quietly = TRUE)) {
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
   }
+
+  verbose <- isTRUE(verbose)
+  show_thinking <- isTRUE(show_thinking)
 
   # Resolve agent
   agent_mode <- FALSE
@@ -89,10 +122,7 @@ console_chat <- function(session = NULL,
 
   # Create or use existing session
   if (is.null(session)) {
-    cli::cli_alert_warning("No model specified.")
-    model_id <- console_input(
-      "Enter model ID (e.g., openai:gpt-4o), or press Enter to skip"
-    )
+    model_id <- prompt_console_provider_profile()
     if (!is.null(model_id) && nzchar(model_id)) {
       session <- tryCatch(
         create_chat_session(
@@ -142,17 +172,27 @@ console_chat <- function(session = NULL,
     rlang::abort("session must be a ChatSession object, LanguageModelV1 object, or model string ID")
   }
 
+  view_mode <- if (isTRUE(verbose)) "debug" else "clean"
+
   # Welcome message
+  app_state <- create_console_app_state(
+    session = session,
+    agent_enabled = agent_mode,
+    sandbox_mode = sandbox_mode,
+    stream_enabled = stream,
+    local_execution_enabled = isTRUE(session$get_envir()$.local_mode),
+    view_mode = view_mode
+  )
+
   cli::cli_h1("R AI SDK Console Chat")
-  cli::cli_text("Model: {.val {session$get_model_id() %||% '(not set)'}}")
   if (agent_mode) {
     n_tools <- length(session$.__enclos_env__$private$.tools)
     cli::cli_text("Agent mode: {.val enabled} ({n_tools} tools)")
   } else {
     cli::cli_text("Agent mode: {.val disabled} (simple chat)")
   }
+  render_console_frame(build_console_frame(app_state), state = app_state, force = TRUE)
   cli::cli_text("Type {.code /help} for commands, {.code /quit} to exit.")
-  cli::cli_rule()
 
   # Main REPL loop
   while (TRUE) {
@@ -181,12 +221,26 @@ console_chat <- function(session = NULL,
 
     # Check for commands
     if (startsWith(input, "/")) {
-      result <- handle_command(input, session, stream)
+      result <- handle_command(
+        input,
+        session,
+        stream,
+        verbose,
+        show_thinking,
+        app_state = app_state
+      )
       if (result$exit) {
         break
       }
       session <- result$session
       stream <- result$stream
+      verbose <- result$verbose
+      show_thinking <- result$show_thinking
+      console_app_sync_session(app_state, session)
+      console_app_set_stream_enabled(app_state, stream)
+      if (isTRUE(result$refresh_status)) {
+        render_console_frame(build_console_frame(app_state), state = app_state, force = TRUE)
+      }
       next
     }
 
@@ -198,37 +252,60 @@ console_chat <- function(session = NULL,
     }
 
     # Send message to model
+    console_app_start_turn(app_state, input)
     cli::cli_text("")
     cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
 
     tryCatch(
       {
-        if (stream) {
-          # Streaming output - let stream_text handle rendering with its built-in renderer
-          # By not providing a callback, stream_text will use create_stream_renderer()
-          # which provides proper markdown formatting AND streaming output
-          session$send_stream(input, callback = NULL)
-        } else {
-          # Non-streaming output
-          md_renderer <- create_markdown_stream_renderer()
-          result <- session$send(input)
-          if (!is.null(result$text)) {
-            # Render as markdown
-            md_renderer$process_chunk(result$text, FALSE)
-            md_renderer$process_chunk(NULL, TRUE)
-          }
+        with_console_chat_display(
+          app_state = app_state,
+          code = {
+            if (stream) {
+              md_renderer <- create_markdown_stream_renderer()
+              session$send_stream(
+                input,
+                callback = function(text, done) {
+                  if (isTRUE(done)) {
+                    md_renderer$process_chunk(NULL, TRUE)
+                  } else {
+                    console_app_append_assistant_text(app_state, text)
+                    md_renderer$process_chunk(text, FALSE)
+                  }
+                }
+              )
+            } else {
+              # Non-streaming output
+              md_renderer <- create_markdown_stream_renderer()
+              result <- session$send(input)
+              if (!is.null(result$text)) {
+                console_app_append_assistant_text(app_state, result$text)
+                # Render as markdown
+                md_renderer$process_chunk(result$text, FALSE)
+                md_renderer$process_chunk(NULL, TRUE)
+              }
 
-          # Show tool calls if any
-          if (!is.null(result$tool_calls) && length(result$tool_calls) > 0) {
-            cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
+              # Show tool calls if any in debug mode
+              if (isTRUE(verbose) && !is.null(result$tool_calls) && length(result$tool_calls) > 0) {
+                cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
+              }
+            }
           }
-        }
+        )
+        console_app_finish_turn(app_state, failed = FALSE)
       },
       error = function(e) {
+        console_app_finish_turn(app_state, failed = TRUE)
         cli::cli_alert_danger("Error: {conditionMessage(e)}")
       }
     )
 
+    render_console_frame(
+      build_console_frame(app_state),
+      state = app_state,
+      sections = c("timeline", "overlay"),
+      force = FALSE
+    )
     cli::cli_text("")
   }
 
@@ -245,13 +322,27 @@ readline_multiline <- function() {
 }
 
 #' @keywords internal
-handle_command <- function(input, session, stream) {
+handle_command <- function(input,
+                           session,
+                           stream,
+                           verbose = FALSE,
+                           show_thinking = verbose,
+                           app_state = NULL,
+                           model_prompt_hooks = NULL,
+                           model_prompt_fn = prompt_console_provider_profile) {
   # Parse command and arguments
   parts <- strsplit(trimws(input), "\\s+", perl = TRUE)[[1]]
   cmd <- tolower(parts[1])
   args <- if (length(parts) > 1) parts[-1] else character(0)
 
-  result <- list(exit = FALSE, session = session, stream = stream)
+  result <- list(
+    exit = FALSE,
+    session = session,
+    stream = stream,
+    verbose = isTRUE(verbose),
+    show_thinking = isTRUE(show_thinking),
+    refresh_status = FALSE
+  )
 
   switch(cmd,
     "/quit" = ,
@@ -267,11 +358,20 @@ handle_command <- function(input, session, stream) {
         "{.code /quit}, {.code /exit} - End the chat session",
         "{.code /save [path]} - Save session (default: chat_session.rds)",
         "{.code /load <path>} - Load a saved session",
-        "{.code /model <id>} - Switch model (e.g., openai:gpt-4o)",
+        "{.code /model} - Open the provider/model chooser",
+        "{.code /model <id>} - Switch model directly (e.g., openai:gpt-4o)",
+        "{.code /model current} - Show the current model",
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
         "{.code /clear} - Clear conversation history",
         "{.code /stream [on|off]} - Toggle streaming mode",
+        "{.code /inspect [on|off]} - Toggle inspect mode",
+        "{.code /inspect turn} - Open overlay for the latest turn",
+        "{.code /inspect tool <index>} - Open overlay for a tool in the latest turn",
+        "{.code /inspect next} - Move inspector overlay to the next tool",
+        "{.code /inspect prev} - Move inspector overlay to the previous tool",
+        "{.code /inspect close} - Close the active inspect overlay",
+        "{.code /debug [on|off]} - Toggle detailed tool and thinking output",
         "{.code /local [on|off]} - Toggle local execution mode",
         "{.code /help} - Show this help message"
       ))
@@ -303,6 +403,10 @@ handle_command <- function(input, session, stream) {
               hooks <- session$.__enclos_env__$private$.hooks
 
               result$session <- load_chat_session(path, tools = tools, hooks = hooks)
+              if (!is.null(app_state)) {
+                console_app_sync_session(app_state, result$session)
+              }
+              result$refresh_status <- TRUE
               cli::cli_alert_success("Session loaded from {.file {path}}")
               cli::cli_text("Model: {.val {result$session$get_model_id()}}")
               cli::cli_text("History: {.val {length(result$session$get_history())}} messages")
@@ -316,18 +420,43 @@ handle_command <- function(input, session, stream) {
     },
     "/model" = {
       if (length(args) == 0) {
-        cli::cli_text("Current model: {.val {session$get_model_id() %||% '(not set)'}}")
+        model_id <- model_prompt_fn(prompt_hooks = model_prompt_hooks %||% default_console_prompt_hooks())
+        if (is.null(model_id) || !nzchar(model_id)) {
+          cli::cli_alert_info("Model chooser cancelled.")
+        } else {
+          tryCatch(
+            {
+              session$switch_model(model_id)
+              if (!is.null(app_state)) {
+                console_app_sync_session(app_state, session)
+              }
+              result$refresh_status <- TRUE
+              cli::cli_alert_success("Switched to model: {.val {model_id}}")
+            },
+            error = function(e) {
+              cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
+            }
+          )
+        }
       } else {
         model_id <- args[1]
-        tryCatch(
-          {
-            session$switch_model(model_id)
-            cli::cli_alert_success("Switched to model: {.val {model_id}}")
-          },
-          error = function(e) {
-            cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
-          }
-        )
+        if (identical(tolower(model_id), "current")) {
+          cli::cli_text("Current model: {.val {session$get_model_id() %||% '(not set)'}}")
+        } else {
+          tryCatch(
+            {
+              session$switch_model(model_id)
+              if (!is.null(app_state)) {
+                console_app_sync_session(app_state, session)
+              }
+              result$refresh_status <- TRUE
+              cli::cli_alert_success("Switched to model: {.val {model_id}}")
+            },
+            error = function(e) {
+              cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
+            }
+          )
+        }
       }
     },
     "/history" = {
@@ -376,12 +505,127 @@ handle_command <- function(input, session, stream) {
         arg <- tolower(args[1])
         if (arg %in% c("on", "true", "1", "yes")) {
           result$stream <- TRUE
+          if (!is.null(app_state)) {
+            console_app_set_stream_enabled(app_state, TRUE)
+          }
+          result$refresh_status <- TRUE
           cli::cli_alert_success("Streaming enabled.")
         } else if (arg %in% c("off", "false", "0", "no")) {
           result$stream <- FALSE
+          if (!is.null(app_state)) {
+            console_app_set_stream_enabled(app_state, FALSE)
+          }
+          result$refresh_status <- TRUE
           cli::cli_alert_success("Streaming disabled.")
         } else {
           cli::cli_alert_danger("Usage: {.code /stream [on|off]}")
+        }
+      }
+    },
+    "/inspect" = {
+      current_mode <- if (!is.null(app_state)) app_state$view_mode else if (isTRUE(verbose)) "debug" else "clean"
+      if (length(args) == 0) {
+        cli::cli_text("Current view: {.val {current_mode}}")
+      } else {
+        arg <- tolower(args[1])
+        if (arg %in% c("on", "true", "1", "yes")) {
+          if (!is.null(app_state)) {
+            console_app_set_view_mode(app_state, "inspect")
+          }
+          result$verbose <- FALSE
+          result$show_thinking <- FALSE
+          result$refresh_status <- TRUE
+          cli::cli_alert_success("Inspect view enabled. Tool timelines are now summarized after each turn.")
+        } else if (arg %in% c("off", "false", "0", "no")) {
+          if (!is.null(app_state)) {
+            console_app_set_view_mode(app_state, "clean")
+            console_app_close_overlay_by_type(app_state, "inspector")
+          }
+          result$verbose <- FALSE
+          result$show_thinking <- FALSE
+          result$refresh_status <- TRUE
+          cli::cli_alert_success("Inspect view disabled. Console output is now clean.")
+        } else if (arg == "close") {
+          if (is.null(app_state)) {
+            cli::cli_alert_warning("Inspect overlays are only available when console app state is active.")
+          } else {
+            console_app_close_overlay_by_type(app_state, "inspector")
+            result$refresh_status <- TRUE
+            cli::cli_alert_success("Inspect overlay closed.")
+          }
+        } else if (arg %in% c("next", "prev")) {
+          if (is.null(app_state)) {
+            cli::cli_alert_warning("Inspect overlays are only available when console app state is active.")
+          } else {
+            overlay <- console_app_navigate_inspector(app_state, direction = arg)
+            if (is.null(overlay)) {
+              cli::cli_alert_warning("No further inspector target is available in that direction.")
+            } else {
+              result$refresh_status <- TRUE
+              cli::cli_alert_success("Inspect overlay moved to the {.val {arg}} tool.")
+            }
+          }
+        } else if (arg %in% c("turn", "last")) {
+          if (is.null(app_state)) {
+            cli::cli_alert_warning("Inspect details are only available when console app state is active.")
+          } else {
+            overlay <- console_app_open_turn_overlay(app_state)
+            if (is.null(overlay)) {
+              cli::cli_alert_info("No turns are available to inspect yet.")
+            } else {
+              result$refresh_status <- TRUE
+              cli::cli_alert_success("Inspect overlay opened for the latest turn.")
+            }
+          }
+        } else if (arg == "tool") {
+          if (is.null(app_state)) {
+            cli::cli_alert_warning("Inspect details are only available when console app state is active.")
+          } else if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /inspect tool <index>}")
+          } else {
+            tool_index <- suppressWarnings(as.integer(args[2]))
+            if (is.na(tool_index)) {
+              cli::cli_alert_danger("Tool index must be a number.")
+            } else {
+              overlay <- console_app_open_turn_overlay(app_state, tool_index = tool_index)
+              if (is.null(overlay)) {
+                cli::cli_alert_warning("Requested inspection target is not available.")
+              } else {
+                result$refresh_status <- TRUE
+                cli::cli_alert_success("Inspect overlay opened for tool {.val {tool_index}}.")
+              }
+            }
+          }
+        } else {
+          cli::cli_alert_danger("Usage: {.code /inspect [on|off|turn|tool <index>|next|prev|close]}")
+        }
+      }
+    },
+    "/debug" = ,
+    "/verbose" = {
+      if (length(args) == 0) {
+        current_mode <- if (!is.null(app_state)) app_state$view_mode else if (result$verbose) "debug" else "clean"
+        cli::cli_text("Current view: {.val {current_mode}}")
+      } else {
+        arg <- tolower(args[1])
+        if (arg %in% c("on", "true", "1", "yes")) {
+          if (!is.null(app_state)) {
+            console_app_set_view_mode(app_state, "debug")
+          }
+          result$verbose <- TRUE
+          result$show_thinking <- TRUE
+          result$refresh_status <- TRUE
+          cli::cli_alert_success("Debug view enabled. Detailed tool logs and thinking are now visible.")
+        } else if (arg %in% c("off", "false", "0", "no")) {
+          if (!is.null(app_state)) {
+            console_app_set_view_mode(app_state, "clean")
+          }
+          result$verbose <- FALSE
+          result$show_thinking <- FALSE
+          result$refresh_status <- TRUE
+          cli::cli_alert_success("Debug view disabled. Console output is now compact.")
+        } else {
+          cli::cli_alert_danger("Usage: {.code /debug [on|off]}")
         }
       }
     },
@@ -393,9 +637,17 @@ handle_command <- function(input, session, stream) {
         arg <- tolower(args[1])
         if (arg %in% c("on", "true", "1", "yes")) {
           assign(".local_mode", TRUE, envir = session$get_envir())
+          if (!is.null(app_state)) {
+            console_app_set_local_execution_enabled(app_state, TRUE)
+          }
+          result$refresh_status <- TRUE
           cli::cli_alert_success("Local execution mode enabled. The agent can now modify your workspace.")
         } else if (arg %in% c("off", "false", "0", "no")) {
           assign(".local_mode", FALSE, envir = session$get_envir())
+          if (!is.null(app_state)) {
+            console_app_set_local_execution_enabled(app_state, FALSE)
+          }
+          result$refresh_status <- TRUE
           cli::cli_alert_success("Local execution mode disabled.")
         } else {
           cli::cli_alert_danger("Usage: {.code /local [on|off]}")
@@ -507,4 +759,24 @@ console_input <- function(prompt, default = NULL) {
 # Null-coalescing operator
 if (!exists("%||%")) {
   `%||%` <- function(x, y) if (is.null(x)) y else x
+}
+
+#' @keywords internal
+with_console_chat_display <- function(verbose = FALSE,
+                                      show_thinking = verbose,
+                                      app_state = NULL,
+                                      code) {
+  if (!is.null(app_state)) {
+    verbose <- identical(app_state$view_mode, "debug")
+    show_thinking <- console_view_mode_show_thinking(app_state$view_mode)
+  }
+
+  old_opts <- options(
+    aisdk.tool_log_mode = if (isTRUE(verbose)) "detailed" else "compact",
+    aisdk.show_thinking = isTRUE(show_thinking),
+    aisdk.console_app_state = app_state
+  )
+  on.exit(options(old_opts), add = TRUE)
+
+  force(code)
 }

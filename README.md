@@ -135,6 +135,35 @@ session$send("What is 1234 + 5678?")
 session$send("Divide that by 2") 
 ```
 
+### Interactive Console Chat
+
+If you want a terminal-first workflow, `console_chat()` provides an interactive
+REPL on top of `ChatSession` with built-in agent tooling:
+
+```r
+# Start with the default terminal agent
+# console_chat("openai:gpt-4o")
+
+# Start in compact chat mode without tools
+# console_chat("openai:gpt-4o", agent = NULL)
+```
+
+Current console features include:
+
+- streaming replies with slash-command session control
+- three output modes: `clean`, `inspect`, and `debug`
+- a persistent status bar showing model, sandbox, stream, and tool state
+- per-turn tool timeline summaries in inspect mode
+- an overlay-backed inspector for the latest turn or an individual tool
+- session persistence via `/save` and `/load`
+
+Useful commands:
+
+- `/inspect on`, `/inspect turn`, `/inspect tool <index>`
+- `/inspect next`, `/inspect prev`, `/inspect close`
+- `/debug [on|off]`, `/stream [on|off]`
+- `/model <id>`, `/history`, `/stats`, `/clear`
+
 ### Skills System
 
 The Skills system allows you to package specialized knowledge and tools that can be dynamically loaded by agents. This saves context window space and keeps your agents focused.
