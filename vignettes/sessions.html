@@ -337,6 +337,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Chat Sessions</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/console_chat.html">
+ <span class="dropdown-text">Console Chat</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/structured_outputs.html">
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
@@ -481,12 +485,42 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="va">new_session</span><span class="op">$</span><span class="fu">restore</span><span class="op">(</span><span class="st">"my_analysis.json"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="console-chat" class="level2"><h2 class="anchored" data-anchor-id="console-chat">Console Chat</h2>
-<p>For a quick interactive REPL experience in the R console, use <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>.</p>
+<p>For a quick interactive REPL experience in the R console, use <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>. It is built on top of the same session model, so you can chat interactively, switch models, inspect history, and persist state without leaving the terminal.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Starts an interactive chat loop in the console</span></span>
 <span><span class="co"># console_chat(model = "openai:gpt-4o")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>For more details on how agents interact with sessions, see the <a href="agents.html">Agents</a> vignette.</p>
+<p>Key capabilities:</p>
+<ul>
+<li>
+<code>clean</code>, <code>inspect</code>, and <code>debug</code> view modes for different levels of output detail</li>
+<li>inline tool execution summaries for agent-driven turns</li>
+<li>an inspector overlay for the latest turn or a specific tool</li>
+<li>session persistence with <code>/save</code> and <code>/load</code>
+</li>
+<li>model switching with <code>/model &lt;id&gt;</code>
+</li>
+<li>optional local execution mode with <code>/local [on|off]</code>
+</li>
+</ul>
+<p>Useful commands during a session:</p>
+<ul>
+<li>
+<code>/inspect on</code>: switch to inspect mode</li>
+<li>
+<code>/inspect turn</code>: open the latest turn in the inspector overlay</li>
+<li>
+<code>/inspect tool &lt;index&gt;</code>: inspect a specific tool</li>
+<li>
+<code>/inspect next</code> / <code>/inspect prev</code>: move between tools in the inspector</li>
+<li>
+<code>/debug on</code>: enable detailed troubleshooting output</li>
+<li>
+<code>/stats</code>: review session usage statistics</li>
+<li>
+<code>/history</code>: show the conversation history</li>
+</ul>
+<p>For a deeper terminal walkthrough, including inspect/debug modes and overlay navigation, see the <a href="console_chat.html">Console Chat</a> vignette. For more details on how agents interact with sessions, see the <a href="agents.html">Agents</a> vignette.</p>
 
 
 </section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">

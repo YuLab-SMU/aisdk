@@ -337,6 +337,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Chat Sessions</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/console_chat.html">
+ <span class="dropdown-text">Console Chat</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/structured_outputs.html">
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
@@ -423,7 +427,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>You can install the development version from GitHub:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html">install_github</a></span><span class="op">(</span><span class="st">"YuLab-SMU/aisdk"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html">install_github</a></span><span class="op">(</span><span class="st">"YuLab-SMU/aisdk"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section><section id="basic-usage" class="level2"><h2 class="anchored" data-anchor-id="basic-usage">Basic Usage</h2>
 <section id="configuration" class="level3"><h3 class="anchored" data-anchor-id="configuration">1. Configuration</h3>
@@ -530,19 +534,80 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="co"># Start a simple chat without agent tools</span></span>
 <span><span class="co"># console_chat("openai:gpt-4o", agent = NULL)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>While in the console, you can use slash commands to manage the session:</p>
+<p><code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code> now exposes a structured terminal workflow rather than a plain print stream:</p>
+<ul>
+<li>A persistent status bar shows the current model, sandbox mode, view mode, streaming state, local execution state, and tool activity.</li>
+<li>Agent mode can run shell commands, read and write files, and execute R code through natural language.</li>
+<li>Tool-heavy turns stay compact in normal use, but remain inspectable when you need to understand what happened.</li>
+<li>The console keeps a shared frame structure for status, timeline, and overlay surfaces, while still degrading safely to an append-only terminal path.</li>
+</ul>
+<section id="view-modes" class="level4"><h4 class="anchored" data-anchor-id="view-modes">View modes</h4>
 <ul>
 <li>
-<code>/help</code>: Show all available commands.</li>
+<code>clean</code>: the default mode. Keeps the transcript calm and hides raw tool payloads.</li>
 <li>
-<code>/model &lt;id&gt;</code>: Switch the model on the fly.</li>
+<code>inspect</code>: adds per-turn tool timeline summaries and an inspector overlay for drilling into the latest turn or an individual tool.</li>
 <li>
-<code>/save [path]</code> / <code>/load &lt;path&gt;</code>: Persist and restore sessions.</li>
+<code>debug</code>: enables detailed tool logging and thinking output for development and troubleshooting.</li>
+</ul>
+<p>You can switch modes live:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Enter inspect mode</span></span>
+<span><span class="co"># /inspect on</span></span>
+<span></span>
+<span><span class="co"># Enter debug mode</span></span>
+<span><span class="co"># /debug on</span></span>
+<span></span>
+<span><span class="co"># Return to compact clean mode</span></span>
+<span><span class="co"># /debug off</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="inspector-workflow" class="level4"><h4 class="anchored" data-anchor-id="inspector-workflow">Inspector workflow</h4>
+<p>The inspector is useful when a turn used tools and you want to understand the execution path without switching the entire console into debug mode.</p>
+<ul>
 <li>
-<code>/clear</code>: Reset the conversation history.</li>
+<code>/inspect turn</code>: opens the inspector overlay for the latest turn.</li>
 <li>
-<code>/quit</code>: Exit the interactive session.</li>
-</ul></section></section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
+<code>/inspect tool &lt;index&gt;</code>: opens the inspector overlay for a specific tool in the latest turn.</li>
+<li>
+<code>/inspect next</code> / <code>/inspect prev</code>: moves between tools inside the current inspector context.</li>
+<li>
+<code>/inspect close</code>: closes the active inspector overlay.</li>
+</ul>
+<p>The inspector overlay shows:</p>
+<ul>
+<li>turn or tool identity</li>
+<li>elapsed time</li>
+<li>summary of arguments and results</li>
+<li>captured messages and warnings</li>
+<li>compact previews of raw arguments and raw results</li>
+</ul></section><section id="common-slash-commands" class="level4"><h4 class="anchored" data-anchor-id="common-slash-commands">Common slash commands</h4>
+<ul>
+<li>
+<code>/help</code>: show all available commands.</li>
+<li>
+<code>/model &lt;id&gt;</code>: switch the model on the fly.</li>
+<li>
+<code>/save [path]</code> / <code>/load &lt;path&gt;</code>: persist and restore sessions.</li>
+<li>
+<code>/history</code>: inspect conversation history.</li>
+<li>
+<code>/stats</code>: inspect session usage statistics.</li>
+<li>
+<code>/stream [on|off]</code>: toggle token streaming.</li>
+<li>
+<code>/local [on|off]</code>: toggle local execution mode in the shared session environment.</li>
+<li>
+<code>/clear</code>: reset the conversation history.</li>
+<li>
+<code>/quit</code>: exit the interactive session.</li>
+</ul></section><section id="practical-usage-pattern" class="level4"><h4 class="anchored" data-anchor-id="practical-usage-pattern">Practical usage pattern</h4>
+<p>In day-to-day work, the recommended workflow is:</p>
+<ol type="1">
+<li>Start in <code>clean</code> mode for normal conversation.</li>
+<li>Switch to <code>inspect</code> when a turn uses tools and you want a concise explanation of what ran.</li>
+<li>Open the inspector overlay for the latest turn or a specific tool.</li>
+<li>Use <code>debug</code> only when developing providers, tools, or console behavior itself.</li>
+</ol></section></section></section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
 <p>Explore the following vignettes for more advanced features:</p>
 <ul>
 <li>
@@ -553,6 +618,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <a href="tools.html">Tools</a>: Deep dive into the Tool system and Schema DSL.</li>
 <li>
 <a href="sessions.html">Sessions</a>: Advanced session management and persistence.</li>
+<li>
+<a href="console_chat.html">Console Chat</a>: Full guide to the terminal REPL, inspect/debug modes, and inspector overlay workflow.</li>
 <li>
 <a href="mcp.html">MCP</a>: Connect to external tools via the Model Context Protocol.</li>
 <li>

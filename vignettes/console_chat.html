@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.8.27">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-
-
-<title>Function Reference – aisdk</title>
+<title>Console Chat – aisdk</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,8 +17,42 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
-
 
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
@@ -44,8 +75,7 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -71,12 +101,8 @@ ul.task-list li input[type="checkbox"] {
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script>
-
-
-<link rel="stylesheet" href="styles.css">
+}</script><link rel="stylesheet" href="styles.css">
 </head>
-
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -242,9 +268,7 @@ ul.task-list li input[type="checkbox"] {
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
-      <div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -256,7 +280,7 @@ ul.task-list li input[type="checkbox"] {
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-  <li class="nav-item">
+<li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -264,8 +288,8 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
-        <li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
+<li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -341,40 +365,82 @@ ul.task-list li input[type="checkbox"] {
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-  </li>
+</li>
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-            <ul class="navbar-nav navbar-nav-scroll ms-auto">
-  <li class="nav-item compact">
+<ul class="navbar-nav navbar-nav-scroll ms-auto">
+<li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-          </div> <!-- /navcollapse -->
+</div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+   
+  <ul>
+<li><a href="#why-use-console_chat" id="toc-why-use-console_chat" class="nav-link active" data-scroll-target="#why-use-console_chat">Why Use <code>console_chat()</code></a></li>
+  <li>
+<a href="#starting-the-console" id="toc-starting-the-console" class="nav-link" data-scroll-target="#starting-the-console">Starting the Console</a>
+  <ul class="collapse">
+<li><a href="#default-agent-mode" id="toc-default-agent-mode" class="nav-link" data-scroll-target="#default-agent-mode">Default agent mode</a></li>
+  <li><a href="#simple-chat-mode" id="toc-simple-chat-mode" class="nav-link" data-scroll-target="#simple-chat-mode">Simple chat mode</a></li>
+  <li><a href="#debug-startup" id="toc-debug-startup" class="nav-link" data-scroll-target="#debug-startup">Debug startup</a></li>
+  <li><a href="#session-and-model-inputs" id="toc-session-and-model-inputs" class="nav-link" data-scroll-target="#session-and-model-inputs">Session and model inputs</a></li>
+  </ul>
+</li>
+  <li>
+<a href="#ui-model" id="toc-ui-model" class="nav-link" data-scroll-target="#ui-model">UI Model</a>
+  <ul class="collapse">
+<li><a href="#status-bar" id="toc-status-bar" class="nav-link" data-scroll-target="#status-bar">Status bar</a></li>
+  <li><a href="#tool-timeline" id="toc-tool-timeline" class="nav-link" data-scroll-target="#tool-timeline">Tool timeline</a></li>
+  <li><a href="#inspector-overlay" id="toc-inspector-overlay" class="nav-link" data-scroll-target="#inspector-overlay">Inspector overlay</a></li>
+  </ul>
+</li>
+  <li>
+<a href="#view-modes" id="toc-view-modes" class="nav-link" data-scroll-target="#view-modes">View Modes</a>
+  <ul class="collapse">
+<li><a href="#clean" id="toc-clean" class="nav-link" data-scroll-target="#clean"><code>clean</code></a></li>
+  <li><a href="#inspect" id="toc-inspect" class="nav-link" data-scroll-target="#inspect"><code>inspect</code></a></li>
+  <li><a href="#debug" id="toc-debug" class="nav-link" data-scroll-target="#debug"><code>debug</code></a></li>
+  </ul>
+</li>
+  <li>
+<a href="#slash-commands" id="toc-slash-commands" class="nav-link" data-scroll-target="#slash-commands">Slash Commands</a>
+  <ul class="collapse">
+<li><a href="#session-control" id="toc-session-control" class="nav-link" data-scroll-target="#session-control">Session control</a></li>
+  <li><a href="#model-and-runtime-control" id="toc-model-and-runtime-control" class="nav-link" data-scroll-target="#model-and-runtime-control">Model and runtime control</a></li>
+  <li><a href="#visibility-and-inspection" id="toc-visibility-and-inspection" class="nav-link" data-scroll-target="#visibility-and-inspection">Visibility and inspection</a></li>
+  </ul>
+</li>
+  <li>
+<a href="#inspector-workflow" id="toc-inspector-workflow" class="nav-link" data-scroll-target="#inspector-workflow">Inspector Workflow</a>
+  <ul class="collapse">
+<li><a href="#what-the-inspector-shows" id="toc-what-the-inspector-shows" class="nav-link" data-scroll-target="#what-the-inspector-shows">What the inspector shows</a></li>
+  </ul>
+</li>
+  <li><a href="#agent-capabilities" id="toc-agent-capabilities" class="nav-link" data-scroll-target="#agent-capabilities">Agent Capabilities</a></li>
+  <li><a href="#persistence-and-session-continuity" id="toc-persistence-and-session-continuity" class="nav-link" data-scroll-target="#persistence-and-session-continuity">Persistence and Session Continuity</a></li>
+  <li><a href="#local-execution-and-sandbox-behavior" id="toc-local-execution-and-sandbox-behavior" class="nav-link" data-scroll-target="#local-execution-and-sandbox-behavior">Local Execution and Sandbox Behavior</a></li>
+  <li><a href="#recommended-usage-pattern" id="toc-recommended-usage-pattern" class="nav-link" data-scroll-target="#recommended-usage-pattern">Recommended Usage Pattern</a></li>
+  <li><a href="#current-limitations" id="toc-current-limitations" class="nav-link" data-scroll-target="#current-limitations">Current Limitations</a></li>
+  <li><a href="#related-articles" id="toc-related-articles" class="nav-link" data-scroll-target="#related-articles">Related Articles</a></li>
+  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/console_chat.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content">
-
-
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">Function Reference</h1>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
+<h1 class="title">Console Chat</h1>
 </div>
 
 
@@ -388,15 +454,269 @@ ul.task-list li input[type="checkbox"] {
   
 
 
-</header>
+</header><p><code>console_chat()</code> is the terminal-first interactive interface in <strong>aisdk</strong>. It wraps a <code>ChatSession</code> in a REPL, adds an agent-oriented command surface, and provides a structured console UI with status, inspection, and debugging layers.</p>
+<p>This article focuses on how to use the console effectively today: how to start it, how the three view modes differ, how the inspector overlay works, and which slash commands matter in day-to-day work.</p>
+<section id="why-use-console_chat" class="level2"><h2 class="anchored" data-anchor-id="why-use-console_chat">Why Use <code>console_chat()</code>
+</h2>
+<p><code>console_chat()</code> is useful when you want:</p>
+<ul>
+<li>a fast terminal workflow instead of a Shiny or document-based interface</li>
+<li>a persistent chat session with model switching and save/load support</li>
+<li>an agent that can execute R code, shell commands, and file operations</li>
+<li>compact default output that still lets you inspect tool-heavy turns</li>
+<li>a troubleshooting path that stays inside the console</li>
+</ul>
+<p>It is especially effective for iterative analysis, quick automation, data inspection, and prompt-tool experimentation where leaving the terminal would slow you down.</p>
+</section><section id="starting-the-console" class="level2"><h2 class="anchored" data-anchor-id="starting-the-console">Starting the Console</h2>
+<section id="default-agent-mode" class="level3"><h3 class="anchored" data-anchor-id="default-agent-mode">Default agent mode</h3>
+<p>The default startup path enables the built-in terminal agent:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Start the default console agent</span></span>
+<span><span class="co"># console_chat("openai:gpt-4o")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>In this mode, the console can call tools for:</p>
+<ul>
+<li>shell execution</li>
+<li>reading and writing files</li>
+<li>sandboxed R code execution</li>
+<li>local R execution when explicitly enabled</li>
+</ul></section><section id="simple-chat-mode" class="level3"><h3 class="anchored" data-anchor-id="simple-chat-mode">Simple chat mode</h3>
+<p>If you want plain chat without agent tools:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Disable agent tools</span></span>
+<span><span class="co"># console_chat("openai:gpt-4o", agent = NULL)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="debug-startup" class="level3"><h3 class="anchored" data-anchor-id="debug-startup">Debug startup</h3>
+<p>If you are developing tools, providers, or console behavior itself:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Start directly in debug mode</span></span>
+<span><span class="co"># console_chat("openai:gpt-4o", verbose = TRUE)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="session-and-model-inputs" class="level3"><h3 class="anchored" data-anchor-id="session-and-model-inputs">Session and model inputs</h3>
+<p><code>console_chat()</code> accepts:</p>
+<ul>
+<li>a model string, such as <code>"openai:gpt-4o"</code>
+</li>
+<li>a <code>LanguageModelV1</code> object</li>
+<li>an existing <code>ChatSession</code>
+</li>
+</ul>
+<p>That means you can either launch from scratch or drop into an existing session that already contains history, memory, or a custom agent.</p>
+</section></section><section id="ui-model" class="level2"><h2 class="anchored" data-anchor-id="ui-model">UI Model</h2>
+<p>The console UI is no longer just a print stream. It currently uses a shared frame builder that assembles several surfaces before rendering them through a conservative append-only terminal path.</p>
+<section id="status-bar" class="level3"><h3 class="anchored" data-anchor-id="status-bar">Status bar</h3>
+<p>The status bar stays visible as the top summary surface and shows:</p>
+<ul>
+<li>current model</li>
+<li>sandbox mode</li>
+<li>current view mode</li>
+<li>streaming on/off</li>
+<li>local execution on/off</li>
+<li>current tool state</li>
+</ul>
+<p>This gives you quick context without inspecting the transcript.</p>
+</section><section id="tool-timeline" class="level3"><h3 class="anchored" data-anchor-id="tool-timeline">Tool timeline</h3>
+<p>In inspect mode, tool-heavy turns emit a compact timeline summary rather than raw payload dumps. Each line records:</p>
+<ul>
+<li>tool index</li>
+<li>tool name</li>
+<li>tool status</li>
+<li>argument summary</li>
+<li>result summary</li>
+<li>message/warning counts when present</li>
+<li>elapsed time when available</li>
+</ul></section><section id="inspector-overlay" class="level3"><h3 class="anchored" data-anchor-id="inspector-overlay">Inspector overlay</h3>
+<p>The inspector overlay is a separate surface backed by real overlay state. It can open for:</p>
+<ul>
+<li>the latest turn</li>
+<li>a specific tool inside the latest turn</li>
+</ul>
+<p>It currently renders as a boxed overlay section below the status bar, but it is already modeled as a first-class overlay rather than an ad hoc print block.</p>
+</section></section><section id="view-modes" class="level2"><h2 class="anchored" data-anchor-id="view-modes">View Modes</h2>
+<p><code>console_chat()</code> currently supports three presentation modes.</p>
+<section id="clean" class="level3"><h3 class="anchored" data-anchor-id="clean"><code>clean</code></h3>
+<p>This is the default mode.</p>
+<p>Use it when you want:</p>
+<ul>
+<li>calm transcript output</li>
+<li>minimal tool noise</li>
+<li>no raw tool payloads</li>
+<li>no thinking output</li>
+</ul>
+<p>This is the right mode for most day-to-day usage.</p>
+</section><section id="inspect" class="level3"><h3 class="anchored" data-anchor-id="inspect"><code>inspect</code></h3>
+<p>This is the middle layer between normal use and full debugging.</p>
+<p>Use it when you want:</p>
+<ul>
+<li>compact transcript output</li>
+<li>per-turn tool timeline summaries</li>
+<li>access to the inspector overlay</li>
+<li>warnings/messages preserved without raw log spam</li>
+</ul>
+<p>This is the recommended mode whenever a turn used tools and you need to answer “what happened?”</p>
+</section><section id="debug" class="level3"><h3 class="anchored" data-anchor-id="debug"><code>debug</code></h3>
+<p>This is the troubleshooting mode.</p>
+<p>Use it when you want:</p>
+<ul>
+<li>detailed tool logging</li>
+<li>thinking visibility</li>
+<li>lower-level execution visibility</li>
+<li>development-oriented introspection</li>
+</ul>
+<p>This mode is intended for package development and difficult failures, not as the normal default.</p>
+</section></section><section id="slash-commands" class="level2"><h2 class="anchored" data-anchor-id="slash-commands">Slash Commands</h2>
+<section id="session-control" class="level3"><h3 class="anchored" data-anchor-id="session-control">Session control</h3>
+<ul>
+<li>
+<code>/help</code>: show the command list</li>
+<li>
+<code>/quit</code>, <code>/exit</code>: end the console session</li>
+<li>
+<code>/save [path]</code>: save the current session</li>
+<li>
+<code>/load &lt;path&gt;</code>: restore a saved session</li>
+<li>
+<code>/clear</code>: clear conversation history</li>
+</ul></section><section id="model-and-runtime-control" class="level3"><h3 class="anchored" data-anchor-id="model-and-runtime-control">Model and runtime control</h3>
+<ul>
+<li>
+<code>/model &lt;id&gt;</code>: switch the model without losing the session</li>
+<li>
+<code>/stream [on|off]</code>: toggle token streaming</li>
+<li>
+<code>/local [on|off]</code>: enable or disable local execution mode</li>
+<li>
+<code>/debug [on|off]</code>: switch between clean and debug behavior</li>
+<li>
+<code>/inspect [on|off]</code>: switch into or out of inspect mode</li>
+</ul></section><section id="visibility-and-inspection" class="level3"><h3 class="anchored" data-anchor-id="visibility-and-inspection">Visibility and inspection</h3>
+<ul>
+<li>
+<code>/history</code>: show session history</li>
+<li>
+<code>/stats</code>: show token and tool usage statistics</li>
+<li>
+<code>/inspect turn</code>: open the inspector overlay for the latest turn</li>
+<li>
+<code>/inspect tool &lt;index&gt;</code>: open the overlay for a specific tool</li>
+<li>
+<code>/inspect next</code>: move to the next tool in the active inspector context</li>
+<li>
+<code>/inspect prev</code>: move to the previous tool in the active inspector context</li>
+<li>
+<code>/inspect close</code>: close the active inspector overlay</li>
+</ul></section></section><section id="inspector-workflow" class="level2"><h2 class="anchored" data-anchor-id="inspector-workflow">Inspector Workflow</h2>
+<p>The most useful console workflow today is:</p>
+<ol type="1">
+<li>Stay in <code>clean</code> mode while chatting normally.</li>
+<li>Switch to <code>inspect</code> after a tool-heavy turn.</li>
+<li>Review the timeline summary.</li>
+<li>Open the latest turn in the inspector overlay.</li>
+<li>Jump into a specific tool if needed.</li>
+<li>Navigate between tools with <code>/inspect next</code> and <code>/inspect prev</code>.</li>
+<li>Close the overlay when done.</li>
+</ol>
+<section id="what-the-inspector-shows" class="level3"><h3 class="anchored" data-anchor-id="what-the-inspector-shows">What the inspector shows</h3>
+<p>At turn level, the overlay shows:</p>
+<ul>
+<li>turn id</li>
+<li>current phase</li>
+<li>elapsed time</li>
+<li>compact previews of user and assistant content</li>
+<li>collected messages and warnings</li>
+<li>timeline entries for all tools in the turn</li>
+</ul>
+<p>At tool level, the overlay shows:</p>
+<ul>
+<li>tool name and status</li>
+<li>elapsed time</li>
+<li>argument summary</li>
+<li>result summary</li>
+<li>messages and warnings</li>
+<li>compact raw previews of arguments and results</li>
+</ul>
+<p>This preserves a useful hierarchy:</p>
+<ul>
+<li>
+<code>clean</code> keeps the transcript calm</li>
+<li>
+<code>inspect</code> shows what executed</li>
+<li>the overlay shows enough detail to diagnose a turn</li>
+<li>
+<code>debug</code> remains available when you need the full machinery</li>
+</ul></section></section><section id="agent-capabilities" class="level2"><h2 class="anchored" data-anchor-id="agent-capabilities">Agent Capabilities</h2>
+<p>In default agent mode, <code>console_chat()</code> is not just a chat box. It is a terminal agent surface.</p>
+<p>Typical tasks include:</p>
+<ul>
+<li>asking the model to inspect files in a project</li>
+<li>running small R analyses</li>
+<li>checking package versions or environment details</li>
+<li>reading data files</li>
+<li>writing small helper files</li>
+<li>running shell commands inside the configured working directory</li>
+</ul>
+<p>The console keeps these actions compact by summarizing tool progress inline and moving deeper detail into the inspect layer.</p>
+</section><section id="persistence-and-session-continuity" class="level2"><h2 class="anchored" data-anchor-id="persistence-and-session-continuity">Persistence and Session Continuity</h2>
+<p>Because <code>console_chat()</code> sits on top of <code>ChatSession</code>, it inherits the session model rather than inventing a separate console-only state system.</p>
+<p>That means you can:</p>
+<ul>
+<li>switch models mid-session</li>
+<li>save and reload sessions</li>
+<li>preserve history across runs</li>
+<li>retain access to shared session memory and environment-backed state</li>
+</ul>
+<p>Typical pattern:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Save before stopping work</span></span>
+<span><span class="co"># /save analysis_session.rds</span></span>
+<span></span>
+<span><span class="co"># Restore later</span></span>
+<span><span class="co"># /load analysis_session.rds</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section><section id="local-execution-and-sandbox-behavior" class="level2"><h2 class="anchored" data-anchor-id="local-execution-and-sandbox-behavior">Local Execution and Sandbox Behavior</h2>
+<p>The status bar makes execution context visible, which matters when an agent can touch the local environment.</p>
+<p>Key points:</p>
+<ul>
+<li>the console starts with the configured sandbox mode</li>
+<li>local execution is separately visible and separately toggleable</li>
+<li>you can inspect the current runtime state from the status bar instead of guessing</li>
+</ul>
+<p>When you enable local execution, the agent can work in the shared session environment more directly, so this should be treated as a deliberate workflow choice rather than a background detail.</p>
+</section><section id="recommended-usage-pattern" class="level2"><h2 class="anchored" data-anchor-id="recommended-usage-pattern">Recommended Usage Pattern</h2>
+<p>For most users, the practical workflow is:</p>
+<ol type="1">
+<li>Start in default agent mode.</li>
+<li>Work in <code>clean</code> mode for normal conversation.</li>
+<li>Switch to <code>inspect</code> when a turn executed tools.</li>
+<li>Open the inspector overlay only when you need detail.</li>
+<li>Use <code>debug</code> when troubleshooting or developing console behavior.</li>
+<li>Save the session when you want to continue later.</li>
+</ol>
+<p>This keeps the console productive in normal use without giving up the ability to inspect execution deeply.</p>
+</section><section id="current-limitations" class="level2"><h2 class="anchored" data-anchor-id="current-limitations">Current Limitations</h2>
+<p>The current console is substantially more structured than the original REPL, but it is still mid-transition toward a fuller TUI architecture.</p>
+<p>Current limitations to be aware of:</p>
+<ul>
+<li>overlay rendering still uses an append-only terminal path</li>
+<li>frame building is in place, but region ownership is still evolving</li>
+<li>keyboard-driven focus navigation is not yet a complete alternative to slash commands</li>
+<li>the composer is still based on the existing input path rather than a fully custom multiline editor</li>
+</ul>
+<p>These constraints do not block normal use, but they explain why the inspector is command-driven today and why overlay behavior is intentionally conservative.</p>
+</section><section id="related-articles" class="level2"><h2 class="anchored" data-anchor-id="related-articles">Related Articles</h2>
+<ul>
+<li>
+<a href="get_started.html">Get Started</a>: introductory package overview</li>
+<li>
+<a href="sessions.html">Chat Sessions</a>: state, persistence, and shared environment</li>
+<li>
+<a href="agents.html">Building Agents</a>: how agent tools and sessions fit together</li>
+<li>
+<a href="computer_abstraction.html">Computer Abstraction Layer</a>: deeper background on the terminal-oriented tool surface</li>
+</ul>
 
 
-<p>Here you can document the main functions of aisdk.</p>
-
-
-
-</main> <!-- /main -->
-<script id="quarto-html-after-body" type="application/javascript">
+</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -813,5 +1133,4 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/console_chat.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
