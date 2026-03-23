@@ -1,1 +1,1 @@
-Sitemap: https://YuLab-SMU.github.io/aisdk/sitemap.xml
+Sitemap: https://yulab-smu.top/aisdk/sitemap.xml

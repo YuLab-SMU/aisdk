@@ -2,10 +2,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.8.27">
+<meta name="generator" content="quarto-1.9.36">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Get Started with aisdk – aisdk</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -63,19 +66,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <meta name="quarto:offset" content="../">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-4d9afe2b8d18ee9fa5d0d57b5ed4214d.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-ed96de9b727972fe78a7b5d16c58bf87.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-dark-f418161beb48e0141c760e455f12af2c.css" rel="stylesheet" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-776d4fc2eb00dd76daa9fce8b42b33ef.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-8e550e7b0f9acfe3bf9f022eedd7e0f0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-c0d3274c6341dae0439b49f61e7f57e5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-9724e4a841528b6c128336afd3f70104.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-c0d3274c6341dae0439b49f61e7f57e5.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -454,12 +456,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="co"># model &lt;- create_volcengine()$language_model("your-endpoint-id")</span></span>
 <span><span class="co"># model &lt;- create_stepfun()$language_model("step-1-8k")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p>If you want a package-wide default, set it once and omit <code>model</code> from high-level helpers:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/set_model.html">set_model</a></span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Equivalent shortcut</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/model.html">model</a></span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Inspect the current default</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/model.html">model</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
 </section><section id="generating-text" class="level3"><h3 class="anchored" data-anchor-id="generating-text">3. Generating Text</h3>
 <p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code> for simple request-response interactions.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Simple prompt</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Simple prompt</span></span>
 <span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
 <span>  prompt <span class="op">=</span> <span class="st">"What are the advantages of using R6 classes in R?"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -475,8 +486,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="streaming-responses" class="level3"><h3 class="anchored" data-anchor-id="streaming-responses">4. Streaming Responses</h3>
 <p>For real-time output, use <code><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text()</a></code> with a callback.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text</a></span><span class="op">(</span></span>
 <span>  prompt <span class="op">=</span> <span class="st">"Write a short poem about data science."</span>,</span>
 <span>  callback <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">chunk</span>, <span class="va">done</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">done</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span></span>
@@ -486,8 +496,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="managing-state-with-chatsession" class="level3"><h3 class="anchored" data-anchor-id="managing-state-with-chatsession">5. Managing State with ChatSession</h3>
 <p>For stateful conversations, use <code>ChatSession</code>. It automatically manages history and provides a higher-level API.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Initialize a session</span></span>
-<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>model <span class="op">=</span> <span class="va">model</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Initialize a session</span></span>
+<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># First message</span></span>
 <span><span class="va">res1</span> <span class="op">&lt;-</span> <span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"Hi, I'm analyzing gene expression data."</span><span class="op">)</span></span>
@@ -503,7 +513,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="tools-and-function-calling" class="level3"><h3 class="anchored" data-anchor-id="tools-and-function-calling">6. Tools and Function Calling</h3>
 <p><strong>aisdk</strong> makes it easy to give LLMs access to R functions.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Define a tool using the schema DSL</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Define a tool using the schema DSL</span></span>
 <span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"get_weather"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Get current weather for a city"</span>,</span>
@@ -511,7 +521,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>    city <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"The city name, e.g., Beijing"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"The weather in"</span>, <span class="va">args</span><span class="op">$</span><span class="va">city</span>, <span class="st">"is sunny, 25°C."</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"The weather in"</span>, <span class="va">args</span><span class="op">$</span><span class="va">city</span>, <span class="st">"is sunny, 25 degrees C."</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -528,7 +538,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section><section id="interactive-console-chat" class="level3"><h3 class="anchored" data-anchor-id="interactive-console-chat">7. Interactive Console Chat</h3>
 <p>For a more interactive experience, <strong>aisdk</strong> provides a built-in REPL (Read-Eval-Print Loop) called <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>. This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Start an interactive chat with an intelligent agent (default)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Optional: set a package-wide default first</span></span>
+<span><span class="co"># set_model("openai:gpt-4o")</span></span>
+<span></span>
+<span><span class="co"># Start an interactive chat with an intelligent agent (default)</span></span>
 <span><span class="co"># console_chat("openai:gpt-4o")</span></span>
 <span></span>
 <span><span class="co"># Start a simple chat without agent tools</span></span>
@@ -552,7 +565,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <p>You can switch modes live:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Enter inspect mode</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Enter inspect mode</span></span>
 <span><span class="co"># /inspect on</span></span>
 <span></span>
 <span><span class="co"># Enter debug mode</span></span>
@@ -713,7 +726,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/YuLab-SMU\.github\.io\/aisdk\/");
+        var filterRegex = new RegExp("https:\/\/yulab-smu\.top\/aisdk\/");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
