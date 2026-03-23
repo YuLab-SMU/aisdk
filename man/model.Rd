@@ -15,9 +15,11 @@ invisibly returns the previous default model.
 }
 \description{
 Shortcut for default model configuration. Call with no arguments to read the
-current default model, or pass a model to update it.
+current default model, or pass a model to update it. This is equivalent to
+calling \code{get_model()} and \code{set_model()} directly.
 }
 \examples{
 model()
 model("openai:gpt-4o-mini")
+model(NULL)
 }

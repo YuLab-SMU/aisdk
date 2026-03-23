@@ -130,7 +130,8 @@ colored by the number of cylinders (cyl). Make it look nice using ggplot2.
 Provider/session options for `{ai}` chunks:
 
 - **`model`**: Specific model identifier. Defaults to
-  `getOption("aisdk.default_model")`.
+  `get_model()`, which resolves the package-wide default model configured with
+  `set_model()`.
 - **`session`**: Named model conversation shared across `{ai}` chunks.
   Defaults to `"default"`.
 - **`new_session`**: If `TRUE`, resets the named session before the chunk runs.

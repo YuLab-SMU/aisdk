@@ -14,10 +14,12 @@ Invisibly returns the previous default model.
 }
 \description{
 Sets the package-wide default language model. Pass \code{NULL} to restore the
-built-in default.
+built-in default (\code{"openai:gpt-4o"} unless overridden with
+\code{options(aisdk.default_model = ...)}).
 }
 \examples{
 old <- set_model("deepseek:deepseek-chat")
 current <- get_model()
 set_model(old)
+set_model(NULL)
 }

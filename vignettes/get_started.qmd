@@ -55,6 +55,19 @@ model <- create_openai()$language_model("gpt-4o")
 # model <- create_stepfun()$language_model("step-1-8k")
 ```
 
+If you want a package-wide default, set it once and omit `model` from
+high-level helpers:
+
+```{r}
+set_model("openai:gpt-4o")
+
+# Equivalent shortcut
+model("openai:gpt-4o")
+
+# Inspect the current default
+model()
+```
+
 ### 3. Generating Text
 
 Use `generate_text()` for simple request-response interactions.
@@ -62,7 +75,6 @@ Use `generate_text()` for simple request-response interactions.
 ```{r}
 # Simple prompt
 response <- generate_text(
-  model = model,
   prompt = "What are the advantages of using R6 classes in R?"
 )
 
@@ -82,7 +94,6 @@ For real-time output, use `stream_text()` with a callback.
 
 ```{r}
 stream_text(
-  model = model,
   prompt = "Write a short poem about data science.",
   callback = function(chunk, done) {
     if (!done) cat(chunk)
@@ -96,7 +107,7 @@ For stateful conversations, use `ChatSession`. It automatically manages history 
 
 ```{r}
 # Initialize a session
-session <- ChatSession$new(model = model)
+session <- ChatSession$new()
 
 # First message
 res1 <- session$send("Hi, I'm analyzing gene expression data.")
@@ -143,6 +154,9 @@ cat(response$text)
 For a more interactive experience, **aisdk** provides a built-in REPL (Read-Eval-Print Loop) called `console_chat()`. This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.
 
 ```{r}
+# Optional: set a package-wide default first
+# set_model("openai:gpt-4o")
+
 # Start an interactive chat with an intelligent agent (default)
 # console_chat("openai:gpt-4o")
 

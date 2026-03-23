@@ -14,5 +14,10 @@ A model identifier string or a \code{LanguageModelV1} object.
 }
 \description{
 Returns the current package-wide default language model. This is used by
-high-level helpers when \code{model = NULL}.
+high-level helpers when \code{model = NULL}. If no explicit default has been set,
+\code{get_model()} falls back to \code{getOption("aisdk.default_model")} and then to
+\code{"openai:gpt-4o"}.
+}
+\examples{
+get_model()
 }

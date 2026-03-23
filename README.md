@@ -41,7 +41,7 @@ devtools::install_github("YuLab-SMU/aisdk")
 library(aisdk)
 
 file.edit(".env")
-## set OPENAI_API_KEY\OPENAI_BASE_URL\OPENAI_MODEL to .env file.
+## set OPENAI_API_KEY and, if needed, OPENAI_BASE_URL / OPENAI_MODEL in .env.
 
 library(dotenv)
 load_dot_env()
@@ -54,6 +54,36 @@ model <- provider$language_model(Sys.getenv("OPENAI_MODEL"))
 response <- stream_text(model, "Explain the concept of 'tidy evaluation' in R.")
 render_text(response)
 ```
+
+### Set a Global Default Model
+
+If you use the same model across a project, set it once and let high-level
+helpers reuse it automatically.
+
+``` r
+library(aisdk)
+
+# Use a provider:model identifier
+set_model("openai:gpt-4o-mini")
+
+# Or store a concrete LanguageModelV1 object
+# set_model(create_openai()$language_model("gpt-4o-mini"))
+
+# High-level helpers now work without an explicit model argument
+response <- generate_text(prompt = "Summarize the purpose of testthat in R.")
+cat(response$text)
+
+chat <- ChatSession$new()
+chat$send("Continue with two practical testing tips.")
+
+# Inspect or update the current default
+model()
+model("anthropic:claude-3-5-sonnet-latest")
+```
+
+The package-wide default model is used by `generate_text()`, `stream_text()`,
+`ChatSession`, `create_chat_session()`, `auto_fix()`, and the `{ai}` knitr
+engine when `model` is omitted.
 
 ### Advanced Options (AIHubMix Native Interfaces)
 

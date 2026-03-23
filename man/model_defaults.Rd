@@ -5,6 +5,8 @@
 \title{Default Model Configuration}
 \description{
 Utilities for reading and updating the package-wide default language model.
-Functions that accept \code{model = NULL} use this default when no explicit model
-is supplied.
+High-level helpers that accept \code{model = NULL}, including \code{generate_text()},
+\code{stream_text()}, \code{ChatSession$new()}, \code{create_chat_session()},
+\code{auto_fix()}, and the knitr \code{{ai}} engine, use this default when no
+explicit model is supplied.
 }

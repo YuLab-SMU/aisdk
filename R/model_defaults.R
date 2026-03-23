@@ -1,8 +1,10 @@
 #' @title Default Model Configuration
 #' @description
 #' Utilities for reading and updating the package-wide default language model.
-#' Functions that accept `model = NULL` use this default when no explicit model
-#' is supplied.
+#' High-level helpers that accept `model = NULL`, including `generate_text()`,
+#' `stream_text()`, `ChatSession$new()`, `create_chat_session()`,
+#' `auto_fix()`, and the knitr `{ai}` engine, use this default when no
+#' explicit model is supplied.
 #' @name model_defaults
 NULL
 
@@ -33,10 +35,14 @@ default_model_id <- function(model) {
 #' @title Get Default Model
 #' @description
 #' Returns the current package-wide default language model. This is used by
-#' high-level helpers when `model = NULL`.
+#' high-level helpers when `model = NULL`. If no explicit default has been set,
+#' `get_model()` falls back to `getOption("aisdk.default_model")` and then to
+#' `"openai:gpt-4o"`.
 #' @param default Fallback model identifier when no explicit default has been set.
 #' @return A model identifier string or a `LanguageModelV1` object.
 #' @export
+#' @examples
+#' get_model()
 get_model <- function(default = "openai:gpt-4o") {
   current <- .model_env$default %||% getOption("aisdk.default_model")
   current %||% default
@@ -45,7 +51,8 @@ get_model <- function(default = "openai:gpt-4o") {
 #' @title Set Default Model
 #' @description
 #' Sets the package-wide default language model. Pass `NULL` to restore the
-#' built-in default.
+#' built-in default (`"openai:gpt-4o"` unless overridden with
+#' `options(aisdk.default_model = ...)`).
 #' @param new A model identifier string, a `LanguageModelV1` object, or `NULL`.
 #' @return Invisibly returns the previous default model.
 #' @export
@@ -53,6 +60,7 @@ get_model <- function(default = "openai:gpt-4o") {
 #' old <- set_model("deepseek:deepseek-chat")
 #' current <- get_model()
 #' set_model(old)
+#' set_model(NULL)
 set_model <- function(new = NULL) {
   old <- get_model()
 
@@ -73,7 +81,8 @@ set_model <- function(new = NULL) {
 #' @title Model Shortcut
 #' @description
 #' Shortcut for default model configuration. Call with no arguments to read the
-#' current default model, or pass a model to update it.
+#' current default model, or pass a model to update it. This is equivalent to
+#' calling `get_model()` and `set_model()` directly.
 #' @param new Optional model identifier string or `LanguageModelV1` object.
 #' @return When `new` is missing, returns the current default model. Otherwise
 #'   invisibly returns the previous default model.
@@ -81,6 +90,7 @@ set_model <- function(new = NULL) {
 #' @examples
 #' model()
 #' model("openai:gpt-4o-mini")
+#' model(NULL)
 model <- function(new) {
   if (missing(new)) {
     return(get_model())
