@@ -17,15 +17,14 @@ as ordinary R functions, filters/aggregates the results with dplyr, and
 latency, and context window pressure.
 \subsection{Architecture}{
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{User Tools ──► SandboxManager ──► Isolated R Env
-                │                    ├── tool_a()
-                │                    ├── tool_b()
-                │                    ├── dplyr::*
-                │                    └── purrr::*
-                │
-                ▼
-            create_r_code_tool() ──► Single "execute_r_code" Tool
-                                     (registered with LLM)
+\if{html}{\out{<div class="sourceCode">}}\preformatted{User tools -> SandboxManager -> isolated R environment
+  - tool_a()
+  - tool_b()
+  - dplyr::*
+  - purrr::*
+
+create_r_code_tool() -> single "execute_r_code" tool
+  (registered with the LLM)
 }\if{html}{\out{</div>}}
 }
 }

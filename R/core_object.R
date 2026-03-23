@@ -49,7 +49,7 @@
 #' print(result$object$sentiment)
 #' }
 #' }
-generate_object <- function(model,
+generate_object <- function(model = NULL,
                              prompt,
                              schema,
                              schema_name = "result",

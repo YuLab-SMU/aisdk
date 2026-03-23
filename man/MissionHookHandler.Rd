@@ -6,7 +6,7 @@
 \description{
 R6 class to manage Mission-level lifecycle hooks.
 Supported events span the full Mission state machine:
-planning → step execution → completion / stall / escalation.
+planning -> step execution -> completion / stall / escalation.
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

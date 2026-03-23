@@ -29,11 +29,11 @@ A skill is a directory (often stored in a global `skills/` folder) with the foll
 
 ```text
 my_skill/
-├── SKILL.md       # Required: Metadata (YAML) + Instructions (Markdown)
-├── scripts/       # Optional: R scripts for the agent to run
-│   └── analyze.R
-└── assets/        # Optional: Reference data, schemas, or templates
-    └── template.json
+|- SKILL.md       # Required: Metadata (YAML) + Instructions (Markdown)
+|- scripts/       # Optional: R scripts for the agent to run
+|  `- analyze.R
+`- assets/        # Optional: Reference data, schemas, or templates
+   `- template.json
 ```
 
 ### Example: `data_cleaner/SKILL.md`

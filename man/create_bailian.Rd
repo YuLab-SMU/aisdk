@@ -17,7 +17,7 @@ create_bailian(api_key = NULL, base_url = NULL, headers = NULL)
 A BailianProvider object.
 }
 \description{
-Factory function to create an Alibaba Cloud Bailian (百炼) provider using the DashScope API.
+Factory function to create an Alibaba Cloud Bailian provider using the DashScope API.
 }
 \section{Supported Models}{
 
@@ -39,7 +39,7 @@ bailian <- create_bailian()
 
 # Standard chat model
 model <- bailian$language_model("qwen-plus")
-result <- generate_text(model, "你好")
+result <- generate_text(model, "Hello")
 
 # Reasoning model (QwQ with chain-of-thought)
 model <- bailian$language_model("qwq-32b")

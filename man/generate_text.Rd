@@ -5,7 +5,7 @@
 \title{Generate Text}
 \usage{
 generate_text(
-  model,
+  model = NULL,
   prompt,
   system = NULL,
   temperature = 0.7,
@@ -40,7 +40,7 @@ Set to higher values (e.g., 5) to enable automatic tool execution.}
 \item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
 All tools are bound into an isolated R environment and replaced by a single
 \code{execute_r_code} meta-tool. The LLM writes R code to batch-invoke tools,
-filter data with dplyr/purrr, and return only summary results—dramatically
+filter data with dplyr/purrr, and return only summary results, dramatically
 reducing token usage and latency. Default FALSE.}
 
 \item{skills}{Optional path to skills directory, or a SkillRegistry object.

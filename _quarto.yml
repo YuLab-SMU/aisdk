@@ -8,7 +8,7 @@ project:
 
 website:
   title: "aisdk"
-  site-url: "https://YuLab-SMU.github.io/aisdk/"
+  site-url: "https://yulab-smu.top/aisdk/"
   description: "A production-grade AI SDK for R, providing a unified interface for multiple AI model providers, advanced multi-agent orchestration, and MCP integration."
   repo-url: https://github.com/YuLab-SMU/aisdk
   repo-actions: [edit, issue]

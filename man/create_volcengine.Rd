@@ -17,7 +17,7 @@ create_volcengine(api_key = NULL, base_url = NULL, headers = NULL)
 A VolcengineProvider object.
 }
 \description{
-Factory function to create a Volcengine (火山引擎) provider using the Ark API.
+Factory function to create a Volcengine provider using the Ark API.
 }
 \section{Supported Models}{
 
@@ -77,7 +77,7 @@ if (interactive()) {
 
     # Chat API (standard models)
     model <- volcengine$language_model("doubao-1-5-pro-256k-250115")
-    result <- generate_text(model, "你好")
+    result <- generate_text(model, "Hello")
 
     # Responses API (reasoning models like DeepSeek)
     model <- volcengine$responses_model("deepseek-r1-250120")

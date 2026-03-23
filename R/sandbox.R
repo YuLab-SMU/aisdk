@@ -14,15 +14,14 @@
 #'
 #' ## Architecture
 #' ```
-#' User Tools ──► SandboxManager ──► Isolated R Env
-#'                 │                    ├── tool_a()
-#'                 │                    ├── tool_b()
-#'                 │                    ├── dplyr::*
-#'                 │                    └── purrr::*
-#'                 │
-#'                 ▼
-#'             create_r_code_tool() ──► Single "execute_r_code" Tool
-#'                                      (registered with LLM)
+#' User tools -> SandboxManager -> isolated R environment
+#'   - tool_a()
+#'   - tool_b()
+#'   - dplyr::*
+#'   - purrr::*
+#'
+#' create_r_code_tool() -> single "execute_r_code" tool
+#'   (registered with the LLM)
 #' ```
 #' @name sandbox
 NULL

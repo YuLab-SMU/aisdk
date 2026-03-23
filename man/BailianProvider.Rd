@@ -4,7 +4,7 @@
 \alias{BailianProvider}
 \title{Bailian Provider Class}
 \description{
-Provider class for Alibaba Cloud Bailian (百炼) / DashScope platform.
+Provider class for Alibaba Cloud Bailian / DashScope platform.
 }
 \section{Super class}{
 \code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{BailianProvider}

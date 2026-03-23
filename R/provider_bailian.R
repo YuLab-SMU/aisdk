@@ -1,5 +1,5 @@
 #' @name provider_bailian
-#' @title Alibaba Cloud Bailian (百炼) Provider
+#' @title Alibaba Cloud Bailian Provider
 #' @description
 #' Implementation for Alibaba Cloud Bailian (DashScope) hosted models.
 #' DashScope API is OpenAI-compatible with support for Qwen series models
@@ -36,7 +36,7 @@ BailianLanguageModel <- R6::R6Class(
 
 #' @title Bailian Provider Class
 #' @description
-#' Provider class for Alibaba Cloud Bailian (百炼) / DashScope platform.
+#' Provider class for Alibaba Cloud Bailian / DashScope platform.
 #' @export
 BailianProvider <- R6::R6Class(
     "BailianProvider",
@@ -76,7 +76,7 @@ BailianProvider <- R6::R6Class(
 
 #' @title Create Alibaba Cloud Bailian Provider
 #' @description
-#' Factory function to create an Alibaba Cloud Bailian (百炼) provider using the DashScope API.
+#' Factory function to create an Alibaba Cloud Bailian provider using the DashScope API.
 #'
 #' @section Supported Models:
 #' DashScope platform hosts Qwen series and other models:
@@ -101,7 +101,7 @@ BailianProvider <- R6::R6Class(
 #'
 #' # Standard chat model
 #' model <- bailian$language_model("qwen-plus")
-#' result <- generate_text(model, "你好")
+#' result <- generate_text(model, "Hello")
 #'
 #' # Reasoning model (QwQ with chain-of-thought)
 #' model <- bailian$language_model("qwq-32b")

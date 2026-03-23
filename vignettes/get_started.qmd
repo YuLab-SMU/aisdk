@@ -123,7 +123,7 @@ weather_tool <- tool(
     city = z_string("The city name, e.g., Beijing")
   ),
   execute = function(args) {
-    paste("The weather in", args$city, "is sunny, 25°C.")
+    paste("The weather in", args$city, "is sunny, 25 degrees C.")
   }
 )
 

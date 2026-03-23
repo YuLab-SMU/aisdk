@@ -6,7 +6,7 @@
 \usage{
 hypothesis_fix_verify(
   code,
-  model = getOption("aisdk.default_model"),
+  model = NULL,
   test_fn = NULL,
   max_iterations = 5,
   verbose = TRUE

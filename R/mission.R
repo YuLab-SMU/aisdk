@@ -7,9 +7,9 @@
 #' persistence for resume-after-interrupt.
 #'
 #' Architecture position:
-#' Mission → (MissionStep → executor: Agent | AgentTeam | Flow | function)
-#'         → SharedSession (shared state across steps)
-#'         → MissionHookHandler (observability)
+#' Mission -> (MissionStep -> executor: Agent | AgentTeam | Flow | function)
+#'         -> SharedSession (shared state across steps)
+#'         -> MissionHookHandler (observability)
 #'
 #' @name mission
 NULL
@@ -90,7 +90,7 @@ MissionStep <- R6::R6Class(
       self$error_history <- list()
     },
 
-    #' @description Execute this step once (no retry logic — handled by Mission).
+    #' @description Execute this step once (no retry logic; handled by Mission).
     #' @param session A ChatSession for shared state.
     #' @param model Model ID string.
     #' @param context Optional error-injection context string.
@@ -171,7 +171,7 @@ MissionStep <- R6::R6Class(
 #'
 #' Key capabilities:
 #' \itemize{
-#'   \item Full state machine: pending → planning → running → succeeded/failed/stalled
+#'   \item Full state machine: pending -> planning -> running -> succeeded/failed/stalled
 #'   \item LLM-driven auto-planning: converts a goal string into ordered MissionSteps
 #'   \item Step-level retry with exponential backoff + error-context injection
 #'   \item DAG dependency resolution (depends_on)
@@ -201,7 +201,7 @@ Mission <- R6::R6Class(
     stall_policy = NULL,
     #' @field hooks MissionHookHandler for lifecycle events.
     hooks = NULL,
-    #' @field audit_log list<list> — full chronological record of events.
+    #' @field audit_log list<list> full chronological record of events.
     audit_log = NULL,
     #' @field auto_plan If TRUE and steps is NULL, use LLM to plan before running.
     auto_plan = TRUE,

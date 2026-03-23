@@ -6,7 +6,7 @@
 \usage{
 auto_fix(
   expr,
-  model = getOption("aisdk.default_model", "openai:gpt-4o"),
+  model = NULL,
   max_attempts = 3,
   context = NULL,
   verbose = TRUE,

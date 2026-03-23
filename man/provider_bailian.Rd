@@ -2,7 +2,7 @@
 % Please edit documentation in R/provider_bailian.R
 \name{provider_bailian}
 \alias{provider_bailian}
-\title{Alibaba Cloud Bailian (百炼) Provider}
+\title{Alibaba Cloud Bailian Provider}
 \description{
 Implementation for Alibaba Cloud Bailian (DashScope) hosted models.
 DashScope API is OpenAI-compatible with support for Qwen series models

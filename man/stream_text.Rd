@@ -5,7 +5,7 @@
 \title{Stream Text}
 \usage{
 stream_text(
-  model,
+  model = NULL,
   prompt,
   callback = NULL,
   system = NULL,

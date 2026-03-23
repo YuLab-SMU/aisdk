@@ -229,7 +229,7 @@ ChatSession <- R6::R6Class(
       if (!is.null(private$.model)) {
         return(paste0(private$.model$provider, ":", private$.model$model_id))
       }
-      NULL
+      default_model_id(get_model())
     },
 
     #' @description Get token usage statistics.
@@ -443,11 +443,21 @@ ChatSession <- R6::R6Class(
       if (!is.null(private$.model)) {
         return(private$.model)
       }
-      if (!is.null(private$.model_id)) {
+      model_ref <- private$.model_id %||% get_model()
+
+      if (inherits(model_ref, "LanguageModelV1")) {
+        private$.model <- model_ref
+        private$.model_id <- default_model_id(model_ref)
+        return(private$.model)
+      }
+
+      if (is.character(model_ref)) {
+        private$.model_id <- model_ref
         reg <- private$.registry %||% get_default_registry()
         private$.model <- reg$language_model(private$.model_id)
         return(private$.model)
       }
+
       rlang::abort("No model configured for ChatSession")
     },
     update_stats = function(result) {

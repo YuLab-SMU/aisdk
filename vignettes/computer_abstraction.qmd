@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-The **Computer Abstraction Layer** is a modern agent design pattern (2026) that implements a hierarchical action space. Instead of loading many tool definitions into the context window, agents use a small set of atomic tools that provide access to the operating system layer—bash, filesystem, and code execution.
+The **Computer Abstraction Layer** is a modern agent design pattern (2026) that implements a hierarchical action space. Instead of loading many tool definitions into the context window, agents use a small set of atomic tools that provide access to the operating system layer: bash, filesystem, and code execution.
 
 This approach, inspired by production systems like Claude Code and Manus, reduces context window usage by 30-50% while providing more flexibility for complex tasks.
 
@@ -25,26 +25,19 @@ This approach, inspired by production systems like Claude Code and Manus, reduce
 
 ### Hierarchical Action Space
 
-```
-                    ┌─────────────────┐
-                    │   LLM Context   │
-                    │   (Agent)       │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Atomic Tools   │
-                    │  • bash         │  ← Only 4 tools in context
-                    │  • read_file    │
-                    │  • write_file   │
-                    │  • execute_r    │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Computer Layer │
-                    │  • Scripts      │  ← Unlimited actions via
-                    │  • CLIs         │     bash/filesystem
-                    │  • Utilities    │
-                    └─────────────────┘
+```text
+LLM context (agent)
+  v
+Atomic tools
+  - bash         # Only 4 tools in context
+  - read_file
+  - write_file
+  - execute_r
+  v
+Computer layer
+  - Scripts      # Unlimited actions via bash/filesystem
+  - CLIs
+  - Utilities
 ```
 
 ### Benefits

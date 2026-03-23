@@ -9,8 +9,8 @@
 #' space where agents can use any bash command, CLI, or script.
 #'
 #' @references
-#' - Manus architecture (atomic tools → virtual computer)
-#' - Claude Code pattern (small set of tools → OS layer)
+#' - Manus architecture (atomic tools -> virtual computer)
+#' - Claude Code pattern (small set of tools -> OS layer)
 #' - CodeAct paper (chain actions via code execution)
 #'
 #' @name computer

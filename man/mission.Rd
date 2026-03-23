@@ -9,7 +9,7 @@ A Mission is the global leadership layer above Agent/AgentTeam/Flow.
 
 Key capabilities:
 \itemize{
-\item Full state machine: pending → planning → running → succeeded/failed/stalled
+\item Full state machine: pending -> planning -> running -> succeeded/failed/stalled
 \item LLM-driven auto-planning: converts a goal string into ordered MissionSteps
 \item Step-level retry with exponential backoff + error-context injection
 \item DAG dependency resolution (depends_on)
@@ -38,7 +38,7 @@ Key capabilities:
 
 \item{\code{hooks}}{MissionHookHandler for lifecycle events.}
 
-\item{\code{audit_log}}{list\if{html}{\out{<list>}} — full chronological record of events.}
+\item{\code{audit_log}}{list\if{html}{\out{<list>}} full chronological record of events.}
 
 \item{\code{auto_plan}}{If TRUE and steps is NULL, use LLM to plan before running.}
 

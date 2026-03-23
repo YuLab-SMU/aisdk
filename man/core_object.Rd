@@ -6,7 +6,7 @@
 \title{Core Object API: Structured Output Generation}
 \usage{
 generate_object(
-  model,
+  model = NULL,
   prompt,
   schema,
   schema_name = "result",

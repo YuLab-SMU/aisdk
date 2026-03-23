@@ -46,7 +46,7 @@ result <- generate_text("openai:gpt-4o", "Hello!")
 Useful links:
 \itemize{
   \item \url{https://github.com/YuLab-SMU/aisdk}
-  \item \url{https://YuLab-SMU.github.io/aisdk/}
+  \item \url{https://yulab-smu.top/aisdk/}
   \item Report bugs at \url{https://github.com/YuLab-SMU/aisdk/issues}
 }
 

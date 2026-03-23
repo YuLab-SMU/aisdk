@@ -1,7 +1,7 @@
 #' @name provider_stepfun
 #' @title Stepfun Provider
 #' @description
-#' Implementation for Stepfun (阶跃星辰) models.
+#' Implementation for Stepfun models.
 #' Stepfun API is OpenAI-compatible.
 #' @keywords internal
 NULL

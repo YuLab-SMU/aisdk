@@ -688,7 +688,7 @@ perform_ai_review_live_action <- function(memory, chunk_id, action, envir = glob
     },
     "regenerate" = {
       model_id <- ai_review_live_value(artifact$model) %||%
-        getOption("aisdk.default_model", "openai:gpt-4o")
+        get_model()
       session <- create_chat_session(
         model = model_id,
         system_prompt = get_default_system_prompt()

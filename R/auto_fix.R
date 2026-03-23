@@ -37,12 +37,14 @@ NULL
 #' )
 #' }
 auto_fix <- function(expr,
-                     model = getOption("aisdk.default_model", "openai:gpt-4o"),
+                     model = NULL,
                      max_attempts = 3,
                      context = NULL,
                      verbose = TRUE,
                      memory = NULL) {
   # Capture the expression as text for LLM analysis
+  model <- model %||% get_model()
+
   expr_text <- deparse(substitute(expr))
   if (length(expr_text) > 1) {
     expr_text <- paste(expr_text, collapse = "\n")
@@ -334,10 +336,12 @@ safe_eval <- function(expr, timeout_seconds = 30, envir = parent.frame()) {
 #' @return List with result, fix history, and verification status.
 #' @export
 hypothesis_fix_verify <- function(code,
-                                  model = getOption("aisdk.default_model"),
+                                  model = NULL,
                                   test_fn = NULL,
                                   max_iterations = 5,
                                   verbose = TRUE) {
+  model <- model %||% get_model()
+
   history <- list()
   current_code <- code
 

@@ -368,7 +368,7 @@ extract_ai_review_execution_error <- function(output) {
 #' @return A ChatSession object.
 #' @keywords internal
 get_or_create_session <- function(options) {
-  model <- options$model %||% getOption("aisdk.default_model", "openai:gpt-4o")
+  model <- options$model %||% get_model()
   session_name <- options$session %||% "default"
 
   # Check if we need to reset (e.g., new document)

@@ -4,7 +4,7 @@
 \alias{VolcengineProvider}
 \title{Volcengine Provider Class}
 \description{
-Provider class for Volcengine (火山引擎) Ark platform.
+Provider class for the Volcengine Ark platform.
 }
 \section{Super class}{
 \code{\link[aisdk:OpenAIProvider]{aisdk::OpenAIProvider}} -> \code{VolcengineProvider}

@@ -2,9 +2,9 @@
 % Please edit documentation in R/provider_volcengine.R
 \name{provider_volcengine}
 \alias{provider_volcengine}
-\title{Volcengine (火山引擎) Provider}
+\title{Volcengine Provider}
 \description{
-Implementation for Volcengine Ark (火山方舟) hosted models.
+Implementation for Volcengine Ark hosted models.
 Volcengine API is OpenAI-compatible with support for reasoning models (e.g., Doubao, DeepSeek).
 }
 \keyword{internal}

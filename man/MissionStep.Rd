@@ -85,7 +85,7 @@ Initialize a MissionStep.
 \if{html}{\out{<a id="method-MissionStep-run"></a>}}
 \if{latex}{\out{\hypertarget{method-MissionStep-run}{}}}
 \subsection{Method \code{run()}}{
-Execute this step once (no retry logic — handled by Mission).
+Execute this step once (no retry logic; handled by Mission).
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MissionStep$run(session, model, context = NULL)}\if{html}{\out{</div>}}
 }

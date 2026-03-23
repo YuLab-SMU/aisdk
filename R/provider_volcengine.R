@@ -1,7 +1,7 @@
 #' @name provider_volcengine
-#' @title Volcengine (火山引擎) Provider
+#' @title Volcengine Provider
 #' @description
-#' Implementation for Volcengine Ark (火山方舟) hosted models.
+#' Implementation for Volcengine Ark hosted models.
 #' Volcengine API is OpenAI-compatible with support for reasoning models (e.g., Doubao, DeepSeek).
 #' @keywords internal
 NULL
@@ -35,7 +35,7 @@ VolcengineLanguageModel <- R6::R6Class(
 
 #' @title Volcengine Provider Class
 #' @description
-#' Provider class for Volcengine (火山引擎) Ark platform.
+#' Provider class for the Volcengine Ark platform.
 #' @export
 VolcengineProvider <- R6::R6Class(
     "VolcengineProvider",
@@ -92,7 +92,7 @@ VolcengineProvider <- R6::R6Class(
 
 #' @title Create Volcengine/Ark Provider
 #' @description
-#' Factory function to create a Volcengine (火山引擎) provider using the Ark API.
+#' Factory function to create a Volcengine provider using the Ark API.
 #'
 #' @eval generate_model_docs("volcengine")
 #'
@@ -133,7 +133,7 @@ VolcengineProvider <- R6::R6Class(
 #'
 #'     # Chat API (standard models)
 #'     model <- volcengine$language_model("doubao-1-5-pro-256k-250115")
-#'     result <- generate_text(model, "你好")
+#'     result <- generate_text(model, "Hello")
 #'
 #'     # Responses API (reasoning models like DeepSeek)
 #'     model <- volcengine$responses_model("deepseek-r1-250120")

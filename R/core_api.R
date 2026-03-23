@@ -25,7 +25,7 @@ NULL
 #' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
 #'   All tools are bound into an isolated R environment and replaced by a single
 #'   `execute_r_code` meta-tool. The LLM writes R code to batch-invoke tools,
-#'   filter data with dplyr/purrr, and return only summary results—dramatically
+#'   filter data with dplyr/purrr, and return only summary results, dramatically
 #'   reducing token usage and latency. Default FALSE.
 #' @param skills Optional path to skills directory, or a SkillRegistry object.
 #'   When provided, skill tools are auto-injected and skill summaries are added
@@ -53,7 +53,7 @@ NULL
 #'   result <- generate_text(model, "...", hooks = my_hooks)
 #' }
 #' }
-generate_text <- function(model,
+generate_text <- function(model = NULL,
                           prompt,
                           system = NULL,
                           temperature = 0.7,
@@ -339,7 +339,7 @@ generate_text <- function(model,
 #'   })
 #' }
 #' }
-stream_text <- function(model,
+stream_text <- function(model = NULL,
                         prompt,
                         callback = NULL,
                         system = NULL,
@@ -659,6 +659,14 @@ handle_network_error <- function(e) {
 #' @keywords internal
 resolve_model <- function(model, registry = NULL, type = c("language", "embedding")) {
   type <- match.arg(type)
+
+  if (is.null(model)) {
+    if (type == "language") {
+      model <- get_model()
+    } else {
+      rlang::abort("No embedding model configured. Please supply `model` explicitly.")
+    }
+  }
 
   if (is.character(model)) {
     # Model is a string ID, resolve from registry
