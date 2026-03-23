@@ -11,11 +11,11 @@ and stall detection through reconcile().
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{pending_queue}}{list\if{html}{\out{<Mission>}} waiting to run.}
+\item{\code{pending_queue}}{List of \code{Mission} objects waiting to run.}
 
-\item{\code{running}}{list\if{html}{\out{<Mission>}} currently executing.}
+\item{\code{running}}{List of \code{Mission} objects currently executing.}
 
-\item{\code{completed}}{list\if{html}{\out{<Mission>}} that have finished.}
+\item{\code{completed}}{List of \code{Mission} objects that have finished.}
 
 \item{\code{max_concurrent}}{Maximum simultaneous missions. Default 3.}
 
@@ -105,7 +105,7 @@ on Windows). Completed missions are moved to $completed.
 }
 
 \subsection{Returns}{
-Invisible list\if{html}{\out{<Mission>}} of all completed missions.
+Invisibly returns the list of completed \code{Mission} objects.
 }
 }
 \if{html}{\out{<hr>}}
@@ -146,7 +146,8 @@ Poll all async handles and collect completed missions.
 }
 
 \subsection{Returns}{
-Named list: completed (list\if{html}{\out{<Mission>}}), still_running (integer count).
+Named list with \code{completed} (list of \code{Mission} objects) and
+\code{still_running} (integer count).
 }
 }
 \if{html}{\out{<hr>}}

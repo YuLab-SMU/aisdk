@@ -24,11 +24,11 @@ MissionOrchestrator <- R6::R6Class(
   "MissionOrchestrator",
   lock_objects = FALSE,
   public = list(
-    #' @field pending_queue list<Mission> waiting to run.
+    #' @field pending_queue List of `Mission` objects waiting to run.
     pending_queue = NULL,
-    #' @field running list<Mission> currently executing.
+    #' @field running List of `Mission` objects currently executing.
     running = NULL,
-    #' @field completed list<Mission> that have finished.
+    #' @field completed List of `Mission` objects that have finished.
     completed = NULL,
     #' @field max_concurrent Maximum simultaneous missions. Default 3.
     max_concurrent = 3,
@@ -83,7 +83,7 @@ MissionOrchestrator <- R6::R6Class(
     #' missions run in parallel (via parallel::mclapply on Unix, sequentially
     #' on Windows). Completed missions are moved to $completed.
     #' @param model Optional model override for all missions in this run.
-    #' @return Invisible list<Mission> of all completed missions.
+    #' @return Invisibly returns the list of completed `Mission` objects.
     run_all = function(model = NULL) {
       effective_model <- model %||% self$global_model
 
@@ -175,7 +175,8 @@ MissionOrchestrator <- R6::R6Class(
     },
 
     #' @description Poll all async handles and collect completed missions.
-    #' @return Named list: completed (list<Mission>), still_running (integer count).
+    #' @return Named list with `completed` (list of `Mission` objects) and
+    #'   `still_running` (integer count).
     poll_async = function() {
       completed_now <- list()
       still_running <- list()

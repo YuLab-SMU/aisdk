@@ -62,7 +62,8 @@ MissionStep <- R6::R6Class(
     depends_on = NULL,
     #' @field result The text result from the executor on success.
     result = NULL,
-    #' @field error_history list<list(attempt, error, timestamp)> of past failures.
+    #' @field error_history List of failure records, each containing
+    #'   `attempt`, `error`, and `timestamp`.
     error_history = NULL,
 
     #' @description Initialize a MissionStep.
@@ -189,7 +190,7 @@ Mission <- R6::R6Class(
     id = NULL,
     #' @field goal Natural language goal description.
     goal = NULL,
-    #' @field steps list<MissionStep>.
+    #' @field steps List of `MissionStep` objects.
     steps = NULL,
     #' @field status Mission status string.
     status = "pending",
@@ -201,7 +202,7 @@ Mission <- R6::R6Class(
     stall_policy = NULL,
     #' @field hooks MissionHookHandler for lifecycle events.
     hooks = NULL,
-    #' @field audit_log list<list> full chronological record of events.
+    #' @field audit_log List of event records in chronological order.
     audit_log = NULL,
     #' @field auto_plan If TRUE and steps is NULL, use LLM to plan before running.
     auto_plan = TRUE,
@@ -210,7 +211,8 @@ Mission <- R6::R6Class(
 
     #' @description Initialize a new Mission.
     #' @param goal Natural language goal description.
-    #' @param steps Optional list<MissionStep>. If NULL and auto_plan=TRUE, LLM plans them.
+    #' @param steps Optional list of `MissionStep` objects. If NULL and
+    #'   auto_plan=TRUE, the LLM plans them.
     #' @param model Default model ID (e.g., "anthropic:claude-opus-4-6").
     #' @param executor Default executor for all steps (Agent, AgentTeam, Flow, or function).
     #'   Used for auto-planned steps when no per-step executor is specified.

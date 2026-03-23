@@ -26,7 +26,7 @@ Key capabilities:
 
 \item{\code{goal}}{Natural language goal description.}
 
-\item{\code{steps}}{list\if{html}{\out{<MissionStep>}}.}
+\item{\code{steps}}{List of \code{MissionStep} objects.}
 
 \item{\code{status}}{Mission status string.}
 
@@ -38,7 +38,7 @@ Key capabilities:
 
 \item{\code{hooks}}{MissionHookHandler for lifecycle events.}
 
-\item{\code{audit_log}}{list\if{html}{\out{<list>}} full chronological record of events.}
+\item{\code{audit_log}}{List of event records in chronological order.}
 
 \item{\code{auto_plan}}{If TRUE and steps is NULL, use LLM to plan before running.}
 
@@ -81,7 +81,8 @@ Initialize a new Mission.
 \describe{
 \item{\code{goal}}{Natural language goal description.}
 
-\item{\code{steps}}{Optional list\if{html}{\out{<MissionStep>}}. If NULL and auto_plan=TRUE, LLM plans them.}
+\item{\code{steps}}{Optional list of \code{MissionStep} objects. If NULL and
+auto_plan=TRUE, the LLM plans them.}
 
 \item{\code{model}}{Default model ID (e.g., "anthropic:claude-opus-4-6").}
 

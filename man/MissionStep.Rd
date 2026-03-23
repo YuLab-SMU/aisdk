@@ -31,7 +31,8 @@ retry loop with error-history injection.
 
 \item{\code{result}}{The text result from the executor on success.}
 
-\item{\code{error_history}}{list<list(attempt, error, timestamp)> of past failures.}
+\item{\code{error_history}}{List of failure records, each containing
+\code{attempt}, \code{error}, and \code{timestamp}.}
 }
 \if{html}{\out{</div>}}
 }

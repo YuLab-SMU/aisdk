@@ -30,3 +30,7 @@ For this reason, the final local check was run with `_R_CHECK_FORCE_SUGGESTS_=fa
 ## Resubmission notes
 
 - Added `AGENTS.md` to `.Rbuildignore` so local agent instructions are excluded from the source tarball.
+- Reworked the roxygen documentation for `Mission`, `MissionStep`, and
+  `MissionOrchestrator` to remove angle-bracket type annotations such as
+  `list<Mission>` and `list<MissionStep>`, which were being emitted into the
+  HTML manual as invalid tags during CRAN incoming checks.
