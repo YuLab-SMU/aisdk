@@ -8,10 +8,11 @@
 NULL
 
 console_app_overlay_counter <- local({
-  next_id <- 1L
+  state <- new.env(parent = emptyenv())
+  state$next_id <- 1L
   function() {
-    id <- sprintf("overlay-%d", next_id)
-    next_id <<- next_id + 1L
+    id <- sprintf("overlay-%d", state$next_id)
+    state$next_id <- state$next_id + 1L
     id
   }
 })

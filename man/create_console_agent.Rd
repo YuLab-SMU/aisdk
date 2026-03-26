@@ -5,14 +5,14 @@
 \title{Create Console Agent}
 \usage{
 create_console_agent(
-  working_dir = if (interactive()) getwd() else tempdir(),
+  working_dir = tempdir(),
   sandbox_mode = "permissive",
   additional_tools = NULL,
   language = "auto"
 )
 }
 \arguments{
-\item{working_dir}{Working directory. Defaults to getwd() interactively, tempdir() otherwise.}
+\item{working_dir}{Working directory. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none" (default: "permissive").}
 

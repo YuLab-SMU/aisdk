@@ -4,7 +4,7 @@
 \alias{create_skill}
 \title{Create Skill Scaffold}
 \usage{
-create_skill(name, path = ".", author = NULL, description = NULL)
+create_skill(name, path = tempdir(), author = NULL, description = NULL)
 }
 \arguments{
 \item{name}{Skill name.}

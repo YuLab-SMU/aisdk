@@ -54,16 +54,13 @@ resuming failed long-running jobs.
 \subsection{Method \code{new()}}{
 Create or connect to a project memory database.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$new(
-  project_root = if (interactive()) getwd() else tempdir(),
-  db_name = "memory.sqlite"
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ProjectMemory$new(project_root = tempdir(), db_name = "memory.sqlite")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{project_root}}{Project root directory. Defaults to getwd() interactively, tempdir() otherwise.}
+\item{\code{project_root}}{Project root directory. Defaults to \code{tempdir()}.}
 
 \item{\code{db_name}}{Database filename. Defaults to "memory.sqlite".}
 }

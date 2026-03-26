@@ -28,6 +28,9 @@ Before submitting changes, rebuild documentation and verify the tarball rather t
 - Submit-check the tarball, not just the repo tree: `R CMD build .` then `R CMD check --as-cran aisdk_*.tar.gz`.
 - Keep documentation ASCII-safe where possible. Non-ASCII text in roxygen, `README`, or vignettes can break the PDF manual on CRAN.
 - Update or remove redirected URLs. CRAN flags stale links in `DESCRIPTION`, `README.md`, and generated `.Rd` files.
+- Do not let writing APIs default to `getwd()`, `"."`, or the user's home directory. Use `tempdir()` by default and write to temp locations in examples, tests, and vignettes unless the user explicitly passes a path.
+- Do not use `<<-` or write to `.GlobalEnv` in package code. Keep mutable state in local environments, R6 fields, or explicit package-private environments.
+- Do not leave runnable examples on unexported functions. Either export the function or omit the example block.
 - Keep the build clean via `.Rbuildignore`. Do not let `dev_logs/`, `docs/`, hidden files, local env files, or nested `.git/` directories leak into the tarball.
 - Avoid non-portable file names and overlong paths in shipped files.
 - Check for accidental artifacts before release, especially `Rplots*.pdf`, `.DS_Store`, `.Rhistory`, and `.RData`.

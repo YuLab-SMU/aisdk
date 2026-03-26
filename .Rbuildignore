@@ -38,4 +38,7 @@
 ^docs$
 ^plan$
 ^AGENTS\.md$
+^agents\.md$
+^\.aisdk$
+^mtcars_.*\.(png|pdf)$
 ^cran-comments\.md$

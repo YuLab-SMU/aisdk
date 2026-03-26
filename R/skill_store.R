@@ -609,7 +609,7 @@ get_skill_store <- function() {
 #' @param description Brief description.
 #' @return Path to the created skill directory.
 #' @export
-create_skill <- function(name, path = ".", author = NULL, description = NULL) {
+create_skill <- function(name, path = tempdir(), author = NULL, description = NULL) {
   skill_dir <- file.path(path, name)
 
   if (dir.exists(skill_dir)) {

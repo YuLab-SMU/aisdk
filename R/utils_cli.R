@@ -46,11 +46,12 @@ get_console_app_state <- function() {
 #' @keywords internal
 tool_spinner_frame <- local({
   frames <- c("\u280b", "\u2819", "\u2839", "\u2838", "\u283c", "\u2834", "\u2826", "\u2827", "\u2807", "\u280f")
-  idx <- 0L
+  state <- new.env(parent = emptyenv())
+  state$idx <- 0L
 
   function() {
-    idx <<- idx + 1L
-    frames[((idx - 1L) %% length(frames)) + 1L]
+    state$idx <- state$idx + 1L
+    frames[((state$idx - 1L) %% length(frames)) + 1L]
   }
 })
 
@@ -180,16 +181,17 @@ compact_tool_result_label <- function(name, result, success = TRUE) {
 
 #' @keywords internal
 create_markdown_stream_renderer <- function() {
-  buffer <- ""
-  in_code_block <- FALSE
-  in_thinking_block <- FALSE
-  thinking_line_count <- 0
-  thinking_lines_printed <- 0  # Track how many lines we've actually printed
+  state <- new.env(parent = emptyenv())
+  state$buffer <- ""
+  state$in_code_block <- FALSE
+  state$in_thinking_block <- FALSE
+  state$thinking_line_count <- 0
+  state$thinking_lines_printed <- 0  # Track how many lines we've actually printed
   has_cli <- requireNamespace("cli", quietly = TRUE)
   show_thinking <- should_show_thinking()
-  
+
   # For compact mode (show_thinking = FALSE): track current thinking text for typewriter effect
-  current_thinking_text <- ""
+  state$current_thinking_text <- ""
   typing_delay <- 8  # milliseconds per character (adjust for desired speed)
   
   # ANSI escape codes for line manipulation
@@ -240,20 +242,20 @@ create_markdown_stream_renderer <- function() {
   render_line_cli <- function(line) {
     # Check for thinking block tags
     if (grepl("<think>", line, fixed = TRUE)) {
-      in_thinking_block <<- TRUE
-      thinking_line_count <<- 0
-      thinking_lines_printed <<- 0
+      state$in_thinking_block <- TRUE
+      state$thinking_line_count <- 0
+      state$thinking_lines_printed <- 0
 
       if (show_thinking) {
         # Full mode: Print thinking header
         cat(cli::col_grey(paste0(cli::symbol$line, cli::symbol$line, " ", cli::symbol$pointer, " Thinking...")), "\n")
         cat(cli::col_grey(cli::symbol$line), "\n")
-        thinking_lines_printed <<- 2  # Header + separator line
+        state$thinking_lines_printed <- 2  # Header + separator line
         utils::flush.console()
       } else {
         # Compact mode: Initialize typewriter mode
-        current_thinking_text <<- ""
-        cat(cli::col_grey(paste0(cli::symbol$ellipsis, " Thinking (", thinking_line_count, " lines)...")))
+        state$current_thinking_text <- ""
+        cat(cli::col_grey(paste0(cli::symbol$ellipsis, " Thinking (", state$thinking_line_count, " lines)...")))
         utils::flush.console()
       }
 
@@ -264,28 +266,28 @@ create_markdown_stream_renderer <- function() {
     if (grepl("</think>", line, fixed = TRUE)) {
       parts <- strsplit(line, "</think>", fixed = TRUE)[[1]]
       if (length(parts) > 0 && nchar(parts[1]) > 0) {
-        thinking_line_count <<- thinking_line_count + 1
+        state$thinking_line_count <- state$thinking_line_count + 1
         if (show_thinking) {
           cat(cli::col_grey(paste0(cli::symbol$line, "  ", parts[1])), "\n")
-          thinking_lines_printed <<- thinking_lines_printed + 1
+          state$thinking_lines_printed <- state$thinking_lines_printed + 1
         }
       }
-      in_thinking_block <<- FALSE
+      state$in_thinking_block <- FALSE
 
       if (show_thinking) {
         # Print footer
         cat(cli::col_grey(cli::symbol$line), "\n")
-        cat(cli::col_grey(paste0(cli::symbol$line, cli::symbol$line, " ", cli::symbol$tick, " Done thinking (", thinking_line_count, " lines)")), "\n\n")
-        thinking_lines_printed <<- thinking_lines_printed + 3  # separator + footer + blank
+        cat(cli::col_grey(paste0(cli::symbol$line, cli::symbol$line, " ", cli::symbol$tick, " Done thinking (", state$thinking_line_count, " lines)")), "\n\n")
+        state$thinking_lines_printed <- state$thinking_lines_printed + 3  # separator + footer + blank
         utils::flush.console()
-        
+
         # Wait 0.3 seconds only if ANSI is supported
         if (supports_ansi) {
           Sys.sleep(0.3)
           # Clear all thinking output
-          clear_lines(thinking_lines_printed)
+          clear_lines(state$thinking_lines_printed)
           # Print compact completion message with hint
-          cat(cli::col_grey(paste0(cli::symbol$tick, " Thinking complete (", thinking_line_count, " lines)")), "\n")
+          cat(cli::col_grey(paste0(cli::symbol$tick, " Thinking complete (", state$thinking_line_count, " lines)")), "\n")
           cat(cli::col_grey(paste0("  (", cli::symbol$info, " Hide with options(aisdk.show_thinking = FALSE))")), "\n\n")
         } else {
           # If ANSI is not supported, thinking content stays visible
@@ -296,43 +298,43 @@ create_markdown_stream_renderer <- function() {
         # Compact mode: Clear the single-line indicator completely
         cat("\r", paste(rep(" ", 200), collapse = ""), "\r", sep = "")
         # Print compact completion message
-        cat(cli::col_grey(paste0(cli::symbol$tick, " Thinking complete (", thinking_line_count, " lines)")), "\n\n")
+        cat(cli::col_grey(paste0(cli::symbol$tick, " Thinking complete (", state$thinking_line_count, " lines)")), "\n\n")
       }
-      
+
       utils::flush.console()
 
-      thinking_line_count <<- 0
-      thinking_lines_printed <<- 0
-      current_thinking_text <<- ""
+      state$thinking_line_count <- 0
+      state$thinking_lines_printed <- 0
+      state$current_thinking_text <- ""
       return()
     }
 
-    if (in_thinking_block) {
-      thinking_line_count <<- thinking_line_count + 1
+    if (state$in_thinking_block) {
+      state$thinking_line_count <- state$thinking_line_count + 1
       if (show_thinking) {
         # Full mode: print thinking content
         cat(cli::col_grey(paste0(cli::symbol$line, "  ", line)), "\n")
-        thinking_lines_printed <<- thinking_lines_printed + 1
+        state$thinking_lines_printed <- state$thinking_lines_printed + 1
         utils::flush.console()
       } else {
         # Compact mode: Typewriter effect - show each line with typing animation
         # Reset for new line
-        current_thinking_text <<- ""
-        
+        state$current_thinking_text <- ""
+
         # Typewriter effect: print each character with delay
         for (i in seq_len(nchar(line))) {
           char <- substr(line, i, i)
-          current_thinking_text <<- paste0(current_thinking_text, char)
-          
+          state$current_thinking_text <- paste0(state$current_thinking_text, char)
+
           # Truncate if too long for display
-          display_text <- current_thinking_text
+          display_text <- state$current_thinking_text
           if (nchar(display_text) > 70) {
             display_text <- paste0(substr(display_text, 1, 67), "...")
           }
-          
+
           # Update the line (use more spaces to clear)
           cat("\r", paste(rep(" ", 150), collapse = ""), "\r", sep = "")
-          cat(cli::col_grey(paste0(cli::symbol$ellipsis, " Thinking (", thinking_line_count, " lines): ", display_text)))
+          cat(cli::col_grey(paste0(cli::symbol$ellipsis, " Thinking (", state$thinking_line_count, " lines): ", display_text)))
           utils::flush.console()
           
           # Small delay for typewriter effect
@@ -344,12 +346,12 @@ create_markdown_stream_renderer <- function() {
 
     # Check for code blocks
     if (grepl("^```", line)) {
-      in_code_block <<- !in_code_block
+      state$in_code_block <- !state$in_code_block
       cat(cli::col_grey(line), "\n", sep = "")
       return()
     }
 
-    if (in_code_block) {
+    if (state$in_code_block) {
       cat(cli::col_cyan(line), "\n", sep = "")
       return()
     }
@@ -391,33 +393,33 @@ create_markdown_stream_renderer <- function() {
   process_chunk <- function(text, done = FALSE) {
     # When done=TRUE, flush any remaining buffer content
     if (done) {
-      if (nzchar(buffer)) {
-        lines <- strsplit(buffer, "\n", fixed = TRUE)[[1]]
+      if (nzchar(state$buffer)) {
+        lines <- strsplit(state$buffer, "\n", fixed = TRUE)[[1]]
         render_lines(lines)
-        buffer <<- ""
+        state$buffer <- ""
       }
       return()
     }
 
     if (is.null(text) || !nzchar(text)) return()
 
-    buffer <<- paste0(buffer, text)
+    state$buffer <- paste0(state$buffer, text)
 
     # Split buffer into lines
-    lines <- strsplit(buffer, "\n", fixed = TRUE)[[1]]
+    lines <- strsplit(state$buffer, "\n", fixed = TRUE)[[1]]
 
-    ends_with_newline <- grepl("\n$", buffer)
+    ends_with_newline <- grepl("\n$", state$buffer)
 
     # Determine complete lines to render
     lines_to_render <- character(0)
 
     if (ends_with_newline) {
       lines_to_render <- lines
-      buffer <<- ""
+      state$buffer <- ""
     } else {
       if (length(lines) > 1) {
         lines_to_render <- lines[1:(length(lines) - 1)]
-        buffer <<- lines[length(lines)]
+        state$buffer <- lines[length(lines)]
       }
     }
 
@@ -427,12 +429,12 @@ create_markdown_stream_renderer <- function() {
   }
 
   reset <- function() {
-    buffer <<- ""
-    in_code_block <<- FALSE
-    in_thinking_block <<- FALSE
-    thinking_line_count <<- 0
-    thinking_lines_printed <<- 0
-    current_thinking_text <<- ""
+    state$buffer <- ""
+    state$in_code_block <- FALSE
+    state$in_thinking_block <- FALSE
+    state$thinking_line_count <- 0
+    state$thinking_lines_printed <- 0
+    state$current_thinking_text <- ""
   }
 
   list(process_chunk = process_chunk, reset = reset)

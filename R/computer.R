@@ -35,9 +35,9 @@ Computer <- R6::R6Class("Computer",
 
     #' @description
     #' Initialize computer abstraction
-    #' @param working_dir Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().
+    #' @param working_dir Working directory. Defaults to `tempdir()`.
     #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
-    initialize = function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
+    initialize = function(working_dir = tempdir(), sandbox_mode = "permissive") {
       self$working_dir <- normalizePath(working_dir, mustWork = FALSE)
       self$sandbox_mode <- sandbox_mode
       self$execution_log <- list()
@@ -57,6 +57,7 @@ Computer <- R6::R6Class("Computer",
     bash = function(command, timeout_ms = 30000, capture_output = TRUE) {
       # Log execution
       private$log_execution("bash", list(command = command))
+      before_files <- private$list_files_snapshot()
 
       # Check sandbox restrictions
       if (self$sandbox_mode == "strict") {
@@ -88,7 +89,8 @@ Computer <- R6::R6Class("Computer",
             stdout = proc$stdout,
             stderr = proc$stderr,
             exit_code = proc$status,
-            error = proc$status != 0
+            error = proc$status != 0,
+            created_files = private$diff_created_files(before_files)
           )
         },
         error = function(e) {
@@ -96,7 +98,8 @@ Computer <- R6::R6Class("Computer",
             stdout = "",
             stderr = conditionMessage(e),
             exit_code = 1,
-            error = TRUE
+            error = TRUE,
+            created_files = character(0)
           )
         }
       )
@@ -183,7 +186,8 @@ Computer <- R6::R6Class("Computer",
           list(
             success = TRUE,
             error = FALSE,
-            path = full_path
+            path = full_path,
+            created_files = list(full_path)
           )
         },
         error = function(e) {
@@ -205,6 +209,7 @@ Computer <- R6::R6Class("Computer",
     execute_r_code = function(code, timeout_ms = 30000, capture_output = TRUE) {
       # Log execution
       private$log_execution("execute_r_code", list(code_length = nchar(code)))
+      before_files <- private$list_files_snapshot()
 
       # Check sandbox restrictions
       if (self$sandbox_mode == "strict") {
@@ -223,10 +228,11 @@ Computer <- R6::R6Class("Computer",
       result <- tryCatch(
         {
           callr::r(
-            function(code_str, wd) {
+            function(code_str, wd, before_files) {
               setwd(wd)
-              messages <- character(0)
-              warnings <- character(0)
+              state <- new.env(parent = emptyenv())
+              state$messages <- character(0)
+              state$warnings <- character(0)
               value <- NULL
               visible <- FALSE
 
@@ -241,11 +247,11 @@ Computer <- R6::R6Class("Computer",
                     }
                   },
                   message = function(m) {
-                    messages <<- c(messages, trimws(conditionMessage(m)))
+                    state$messages <- c(state$messages, trimws(conditionMessage(m)))
                     invokeRestart("muffleMessage")
                   },
                   warning = function(w) {
-                    warnings <<- c(warnings, trimws(conditionMessage(w)))
+                    state$warnings <- c(state$warnings, trimws(conditionMessage(w)))
                     invokeRestart("muffleWarning")
                   }
                 ),
@@ -256,11 +262,22 @@ Computer <- R6::R6Class("Computer",
                 result = value,
                 visible = visible,
                 output = output,
-                messages = messages,
-                warnings = warnings
+                messages = state$messages,
+                warnings = state$warnings,
+                created_files = setdiff(
+                  {
+                    files <- list.files(wd, recursive = TRUE, full.names = TRUE, all.files = FALSE, no.. = TRUE)
+                    files[file.exists(files) & !dir.exists(files)]
+                  },
+                  before_files %||% character(0)
+                )
               )
             },
-            args = list(code_str = code, wd = self$working_dir),
+            args = list(
+              code_str = code,
+              wd = self$working_dir,
+              before_files = before_files
+            ),
             timeout = timeout_ms / 1000,
             show = FALSE,
             error = "stack"
@@ -299,7 +316,8 @@ Computer <- R6::R6Class("Computer",
           output = output_lines,
           error = FALSE,
           messages = result$messages %||% character(0),
-          warnings = result$warnings %||% character(0)
+          warnings = result$warnings %||% character(0),
+          created_files = normalizePath(result$created_files %||% character(0), winslash = "/", mustWork = FALSE)
         )
       }
     },
@@ -319,6 +337,22 @@ Computer <- R6::R6Class("Computer",
     }
   ),
   private = list(
+    list_files_snapshot = function() {
+      if (!dir.exists(self$working_dir)) {
+        return(character(0))
+      }
+      files <- list.files(self$working_dir, recursive = TRUE, full.names = TRUE, all.files = FALSE, no.. = TRUE)
+      files[file.exists(files) & !dir.exists(files)]
+    },
+
+    diff_created_files = function(before_files) {
+      created <- setdiff(private$list_files_snapshot(), before_files %||% character(0))
+      if (length(created) == 0) {
+        return(character(0))
+      }
+      normalizePath(created, winslash = "/", mustWork = FALSE)
+    },
+
     #' Check bash command for sandbox violations
     check_bash_violation = function(command) {
       # Strict mode: block dangerous commands
@@ -399,13 +433,23 @@ Computer <- R6::R6Class("Computer",
 #' a small set of primitives that agents can use to perform complex actions.
 #'
 #' @param computer Computer instance (default: create new)
-#' @param working_dir Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().
+#' @param working_dir Working directory. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
 #' @return List of Tool objects
 #' @export
-create_computer_tools <- function(computer = NULL, working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
+create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sandbox_mode = "permissive") {
   if (is.null(computer)) {
     computer <- Computer$new(working_dir = working_dir, sandbox_mode = sandbox_mode)
+  }
+
+  annotate_artifacts <- function(text, paths = character(0)) {
+    out <- text
+    if (length(paths) > 0) {
+      attr(out, "aisdk_artifacts") <- lapply(paths, function(path) {
+        list(path = normalizePath(path, winslash = "/", mustWork = FALSE))
+      })
+    }
+    out
   }
 
   list(
@@ -425,7 +469,7 @@ create_computer_tools <- function(computer = NULL, working_dir = if (interactive
         if (result$error) {
           paste("Error (exit code", result$exit_code, "):\n", result$stderr)
         } else {
-          result$stdout
+          annotate_artifacts(result$stdout, result$created_files %||% character(0))
         }
       },
       layer = "computer"
@@ -470,7 +514,10 @@ create_computer_tools <- function(computer = NULL, working_dir = if (interactive
         if (result$error) {
           result$message
         } else {
-          paste("Successfully wrote to:", result$path)
+          annotate_artifacts(
+            paste("Successfully wrote to:", result$path),
+            result$created_files %||% character(0)
+          )
         }
       },
       layer = "computer"
@@ -492,10 +539,13 @@ create_computer_tools <- function(computer = NULL, working_dir = if (interactive
         if (result$error) {
           paste("Error:", result$message)
         } else {
-          structure(
+          annotate_artifacts(
+            structure(
             paste("Result:", paste(result$output, collapse = "\n")),
             aisdk_messages = result$messages %||% character(0),
             aisdk_warnings = result$warnings %||% character(0)
+            ),
+            result$created_files %||% character(0)
           )
         }
       },

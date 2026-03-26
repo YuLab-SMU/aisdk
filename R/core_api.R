@@ -124,13 +124,15 @@ generate_text <- function(model = NULL,
 
   # Track all tool calls for debugging/logging
   all_tool_calls <- list()
+  all_tool_results <- list()
   step <- 0
   result <- NULL
 
   # Circuit breaker state
-  consecutive_identical_calls <- 0
-  consecutive_tool_errors <- 0
-  last_tool_signature <- NULL
+  breaker_state <- new.env(parent = emptyenv())
+  breaker_state$consecutive_identical_calls <- 0
+  breaker_state$consecutive_tool_errors <- 0
+  breaker_state$last_tool_signature <- NULL
   max_identical_calls <- 3 # Threshold for repeating identical tool calls
   max_tool_errors <- 3 # Threshold for consecutive tool execution errors
 
@@ -177,16 +179,16 @@ generate_text <- function(model = NULL,
             }, character(1)),
             collapse = "|"
           )
-          if (identical(current_signature, last_tool_signature)) {
-            consecutive_identical_calls <- consecutive_identical_calls + 1
+          if (identical(current_signature, breaker_state$last_tool_signature)) {
+            breaker_state$consecutive_identical_calls <- breaker_state$consecutive_identical_calls + 1
           } else {
-            consecutive_identical_calls <- 0
-            last_tool_signature <- current_signature
+            breaker_state$consecutive_identical_calls <- 0
+            breaker_state$last_tool_signature <- current_signature
           }
-          if (consecutive_identical_calls >= max_identical_calls) {
+          if (breaker_state$consecutive_identical_calls >= max_identical_calls) {
             warning(
               "Circuit breaker triggered: model repeated identical tool calls ",
-              consecutive_identical_calls, " times."
+              breaker_state$consecutive_identical_calls, " times."
             )
             result$finish_reason <- "tool_failure"
             break
@@ -206,14 +208,14 @@ generate_text <- function(model = NULL,
           tool_results <- tryCatch(
             {
               res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-              consecutive_tool_errors <- 0 # Reset on success
+              breaker_state$consecutive_tool_errors <- 0 # Reset on success
               res
             },
             error = function(e) {
-              consecutive_tool_errors <<- consecutive_tool_errors + 1
-              if (consecutive_tool_errors >= max_tool_errors) {
+              breaker_state$consecutive_tool_errors <- breaker_state$consecutive_tool_errors + 1
+              if (breaker_state$consecutive_tool_errors >= max_tool_errors) {
                 warning(
-                  "Circuit breaker triggered: ", consecutive_tool_errors,
+                  "Circuit breaker triggered: ", breaker_state$consecutive_tool_errors,
                   " consecutive tool execution failures. Last error: ",
                   conditionMessage(e)
                 )
@@ -235,6 +237,7 @@ generate_text <- function(model = NULL,
             result$finish_reason <- "tool_failure"
             break
           }
+          all_tool_results <- c(all_tool_results, tool_results)
 
           # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
           if (interactive()) {
@@ -297,6 +300,7 @@ generate_text <- function(model = NULL,
     }
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
+    result$all_tool_results <- all_tool_results
   }
 
   # Trigger on_generation_end
@@ -408,15 +412,17 @@ stream_text <- function(model = NULL,
   )
 
   all_tool_calls <- list()
+  all_tool_results <- list()
   step <- 0
   result <- NULL
 
   renderer <- create_stream_renderer()
 
   # Circuit breaker state
-  consecutive_identical_calls <- 0
-  consecutive_tool_errors <- 0
-  last_tool_signature <- NULL
+  breaker_state <- new.env(parent = emptyenv())
+  breaker_state$consecutive_identical_calls <- 0
+  breaker_state$consecutive_tool_errors <- 0
+  breaker_state$last_tool_signature <- NULL
   max_identical_calls <- 3
   max_tool_errors <- 3
 
@@ -461,16 +467,16 @@ stream_text <- function(model = NULL,
             }, character(1)),
             collapse = "|"
           )
-          if (identical(current_signature, last_tool_signature)) {
-            consecutive_identical_calls <- consecutive_identical_calls + 1
+          if (identical(current_signature, breaker_state$last_tool_signature)) {
+            breaker_state$consecutive_identical_calls <- breaker_state$consecutive_identical_calls + 1
           } else {
-            consecutive_identical_calls <- 0
-            last_tool_signature <- current_signature
+            breaker_state$consecutive_identical_calls <- 0
+            breaker_state$last_tool_signature <- current_signature
           }
-          if (consecutive_identical_calls >= max_identical_calls) {
+          if (breaker_state$consecutive_identical_calls >= max_identical_calls) {
             warning(
               "Circuit breaker triggered: model repeated identical tool calls ",
-              consecutive_identical_calls, " times."
+              breaker_state$consecutive_identical_calls, " times."
             )
             result$finish_reason <- "tool_failure"
             break
@@ -490,14 +496,14 @@ stream_text <- function(model = NULL,
           tool_results <- tryCatch(
             {
               res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-              consecutive_tool_errors <- 0
+              breaker_state$consecutive_tool_errors <- 0
               res
             },
             error = function(e) {
-              consecutive_tool_errors <<- consecutive_tool_errors + 1
-              if (consecutive_tool_errors >= max_tool_errors) {
+              breaker_state$consecutive_tool_errors <- breaker_state$consecutive_tool_errors + 1
+              if (breaker_state$consecutive_tool_errors >= max_tool_errors) {
                 warning(
-                  "Circuit breaker triggered: ", consecutive_tool_errors,
+                  "Circuit breaker triggered: ", breaker_state$consecutive_tool_errors,
                   " consecutive tool execution failures. Last error: ",
                   conditionMessage(e)
                 )
@@ -518,6 +524,7 @@ stream_text <- function(model = NULL,
             result$finish_reason <- "tool_failure"
             break
           }
+          all_tool_results <- c(all_tool_results, tool_results)
 
           # Log tool results
           if (interactive()) {
@@ -582,6 +589,7 @@ stream_text <- function(model = NULL,
     }
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
+    result$all_tool_results <- all_tool_results
     # Return messages added during tool execution for session history sync
     # Calculate which messages were added (everything after the initial prompt)
     initial_len <- length(build_messages(prompt, system))

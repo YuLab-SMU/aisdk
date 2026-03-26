@@ -12,7 +12,7 @@ console_chat(
   stream = TRUE,
   verbose = FALSE,
   agent = "auto",
-  working_dir = if (interactive()) getwd() else tempdir(),
+  working_dir = tempdir(),
   sandbox_mode = "permissive",
   show_thinking = verbose
 )
@@ -38,7 +38,7 @@ thinking output. Defaults to \code{FALSE} for a cleaner console UI.}
 \item An Agent object: Use the provided custom agent
 }}
 
-\item{working_dir}{Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.}
+\item{working_dir}{Working directory for the console agent. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode for the console agent: "strict", "permissive" (default), or "none".}
 

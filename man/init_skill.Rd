@@ -4,7 +4,7 @@
 \alias{init_skill}
 \title{Initialize a New Skill}
 \usage{
-init_skill(name, path = ".")
+init_skill(name, path = tempdir())
 }
 \arguments{
 \item{name}{Name of the skill.}

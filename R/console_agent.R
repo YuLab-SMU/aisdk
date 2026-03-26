@@ -14,7 +14,7 @@ NULL
 #' plus additional console-specific tools.
 #'
 #'
-#' @param working_dir Working directory. Defaults to getwd() interactively, tempdir() otherwise.
+#' @param working_dir Working directory. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @return A list of Tool objects.
 #' @export
@@ -26,7 +26,7 @@ NULL
 #'     session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
 #' }
 #' }
-create_console_tools <- function(working_dir = if (interactive()) getwd() else tempdir(), sandbox_mode = "permissive") {
+create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permissive") {
     # Get base computer tools
     computer_tools <- create_computer_tools(
         working_dir = working_dir,
@@ -307,7 +307,7 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 #' natural language interaction.
 #'
 #'
-#' @param working_dir Working directory. Defaults to getwd() interactively, tempdir() otherwise.
+#' @param working_dir Working directory. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @param additional_tools Optional list of additional Tool objects to include.
 #' @param language Language for responses: "auto", "en", or "zh" (default: "auto").
@@ -326,7 +326,7 @@ create_console_tools <- function(working_dir = if (interactive()) getwd() else t
 #'     console_chat("openai:gpt-4o", agent = agent)
 #' }
 #' }
-create_console_agent <- function(working_dir = if (interactive()) getwd() else tempdir(),
+create_console_agent <- function(working_dir = tempdir(),
                                  sandbox_mode = "permissive",
                                  additional_tools = NULL,
                                  language = "auto") {

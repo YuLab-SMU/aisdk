@@ -1,5 +1,5 @@
 Package: aisdk
-Title: Unified Interface for AI Model Providers in R
+Title: Unified Interface for AI Model Providers
 Version: 1.1.0
 Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
 Description: A production-grade AI toolkit for R featuring a layered
@@ -15,11 +15,12 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
-        digest, parallel, stats, tools, utils, base64enc, curl, htmltools
+        digest, parallel, stats, tools, utils, base64enc, curl, htmltools,
+        openssl
 Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,
         evaluate, shiny, shinyjs, bslib, commonmark, ggplot2, dplyr, readr,
         readxl, DBI, RSQLite, torch, onnx, rstudioapi, DT, withr, httpuv,
-        devtools, fs, dotenv, quarto
+        devtools, fs, dotenv, quarto, pdftools
 Config/testthat/edition: 3
 URL: https://github.com/YuLab-SMU/aisdk,
         https://yulab-smu.top/aisdk/

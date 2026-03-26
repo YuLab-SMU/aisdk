@@ -4,13 +4,10 @@
 \alias{create_console_tools}
 \title{Create Console Tools}
 \usage{
-create_console_tools(
-  working_dir = if (interactive()) getwd() else tempdir(),
-  sandbox_mode = "permissive"
-)
+create_console_tools(working_dir = tempdir(), sandbox_mode = "permissive")
 }
 \arguments{
-\item{working_dir}{Working directory. Defaults to getwd() interactively, tempdir() otherwise.}
+\item{working_dir}{Working directory. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none" (default: "permissive").}
 }

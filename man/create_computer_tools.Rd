@@ -6,14 +6,14 @@
 \usage{
 create_computer_tools(
   computer = NULL,
-  working_dir = if (interactive()) getwd() else tempdir(),
+  working_dir = tempdir(),
   sandbox_mode = "permissive"
 )
 }
 \arguments{
 \item{computer}{Computer instance (default: create new)}
 
-\item{working_dir}{Working directory. Defaults to getwd() in interactive mode, otherwise tempdir().}
+\item{working_dir}{Working directory. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none"}
 }

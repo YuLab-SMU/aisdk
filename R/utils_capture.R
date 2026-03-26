@@ -10,10 +10,11 @@ NULL
 capture_r_execution <- function(expr, envir = parent.frame(), auto_print_value = FALSE) {
   expr <- substitute(expr)
 
-  messages <- character(0)
-  warnings <- character(0)
-  value <- NULL
-  visible <- FALSE
+  state <- new.env(parent = emptyenv())
+  state$messages <- character(0)
+  state$warnings <- character(0)
+  state$value <- NULL
+  state$visible <- FALSE
 
   result <- tryCatch(
     {
@@ -21,32 +22,32 @@ capture_r_execution <- function(expr, envir = parent.frame(), auto_print_value =
         withCallingHandlers(
           {
             evaluated <- withVisible(eval(expr, envir = envir))
-            value <<- evaluated$value
-            visible <<- isTRUE(evaluated$visible)
+            state$value <- evaluated$value
+            state$visible <- isTRUE(evaluated$visible)
           },
           message = function(m) {
-            messages <<- c(messages, trimws(conditionMessage(m)))
+            state$messages <- c(state$messages, trimws(conditionMessage(m)))
             invokeRestart("muffleMessage")
           },
           warning = function(w) {
-            warnings <<- c(warnings, trimws(conditionMessage(w)))
+            state$warnings <- c(state$warnings, trimws(conditionMessage(w)))
             invokeRestart("muffleWarning")
           }
         ),
         type = "output"
       )
 
-      if (isTRUE(auto_print_value) && isTRUE(visible) && length(output) == 0) {
-        output <- utils::capture.output(print(value))
+      if (isTRUE(auto_print_value) && isTRUE(state$visible) && length(output) == 0) {
+        output <- utils::capture.output(print(state$value))
       }
 
       list(
         ok = TRUE,
-        value = value,
-        visible = visible,
+        value = state$value,
+        visible = state$visible,
         output = output,
-        messages = messages,
-        warnings = warnings
+        messages = state$messages,
+        warnings = state$warnings
       )
     },
     error = function(e) {
@@ -54,8 +55,8 @@ capture_r_execution <- function(expr, envir = parent.frame(), auto_print_value =
         ok = FALSE,
         error = conditionMessage(e),
         output = character(0),
-        messages = messages,
-        warnings = warnings
+        messages = state$messages,
+        warnings = state$warnings
       )
     }
   )

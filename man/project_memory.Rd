@@ -4,10 +4,7 @@
 \alias{project_memory}
 \title{Project Memory System}
 \usage{
-project_memory(
-  project_root = if (interactive()) getwd() else tempdir(),
-  db_name = "memory.sqlite"
-)
+project_memory(project_root = tempdir(), db_name = "memory.sqlite")
 }
 \arguments{
 \item{project_root}{Project root directory.}

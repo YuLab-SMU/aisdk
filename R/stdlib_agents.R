@@ -990,9 +990,9 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
     }
   }
 
-  # Ensure the create_skill skill is available
-  if (is.null(registry$get_skill("create_skill"))) {
-    rlang::abort("The 'create_skill' skill is required but not found in the registry.")
+  # Ensure the skill-creator skill is available
+  if (is.null(registry$get_skill("skill-creator"))) {
+    rlang::abort("The 'skill-creator' skill is required but not found in the registry.")
   }
 
   # Get standard skill creation tools
@@ -1019,7 +1019,7 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
     "## The Workflow\n",
     "1. **Ingest**: Learn the domain. Use `analyze_r_package` if wrapping a package.\n",
     "2. **Design**: Plan the skill structure. What inputs? What outputs? Draft the `SKILL.md` in your mind.\n",
-    "3. **Implement**: Use the 'create_skill' tools:\n",
+    "3. **Implement**: Use the 'skill-creator' workflow and tools:\n",
     "   - `create_structure.R`\n",
     "   - `write_skill_md.R`\n",
     "   - `write_script.R`\n",

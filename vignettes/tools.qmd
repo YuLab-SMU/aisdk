@@ -138,9 +138,8 @@ You can use the `aisdk` **Permission Hooks** and **Human-in-the-Loop (HITL)** sy
 The `create_computer_tools()` function provides a standardized set of tools for filesystem and bash operations, complete with safety sandboxing.
 
 ```{r}
-computer_tools <- create_computer_tools(working_dir = getwd())
+computer_tools <- create_computer_tools(working_dir = tempdir())
 # Includes: bash, read_file, write_file, execute_r_code
 ```
 
 For more details on computer tools, see the [Computer Abstraction](computer_abstraction.html) vignette.
-

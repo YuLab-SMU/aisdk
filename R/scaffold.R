@@ -6,7 +6,7 @@
 #' @param path Parent directory where the skill folder will be created.
 #' @return Path to the created skill directory.
 #' @export
-init_skill <- function(name, path = ".") {
+init_skill <- function(name, path = tempdir()) {
   skill_dir <- file.path(path, name)
   
   if (dir.exists(skill_dir)) {
@@ -55,12 +55,12 @@ init_skill <- function(name, path = ".") {
 
 #' @title Package a Skill
 #' @description
-#' Validates a skill and packages it into a .skill (zip) file.
+#' Validates a skill and packages it into a `.skill` zip file.
 #' @param path Path to the skill directory.
-#' @param output_dir Directory to save the .skill file. Defaults to current directory.
+#' @param output_dir Directory to save the packaged file. Defaults to `tempdir()`.
 #' @return Path to the created .skill file.
 #' @export
-package_skill <- function(path, output_dir = ".") {
+package_skill <- function(path, output_dir = tempdir()) {
   if (!dir.exists(path)) {
     rlang::abort(paste0("Skill directory not found: ", path))
   }

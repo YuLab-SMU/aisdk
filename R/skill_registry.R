@@ -157,7 +157,11 @@ SkillRegistry <- R6::R6Class(
       lines <- c(
         "## Available Skills",
         "",
-        "The following skills are available. Use `load_skill` to get detailed instructions.",
+        "The following skills are available.",
+        "You must proactively choose and use a relevant skill when the user's task matches a skill description, even if the user does not know the skill name or never mentions skills explicitly.",
+        "When a request involves a recognizable domain such as PDFs, OCR, files, reports, APIs, data analysis, or document handling, inspect likely matching skills before answering from memory.",
+        "Use `load_skill` to read the chosen skill before acting. Then use `read_skill_resource` or `execute_skill_script` when the skill instructions call for them.",
+        "If the user is asking to add a reusable new capability, teach the assistant a workflow, or an obvious repeated task is missing from the skill set, look for a skill-creation capability such as `skill-creator` and use it instead of only improvising a one-off answer.",
         ""
       )
       

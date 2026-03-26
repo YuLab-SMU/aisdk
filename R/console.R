@@ -39,7 +39,7 @@ NULL
 #'   - `"auto"` (default): Use the built-in console agent with terminal tools
 #'   - `NULL`: Simple chat mode without tools
 #'   - An Agent object: Use the provided custom agent
-#' @param working_dir Working directory for the console agent. Defaults to getwd() interactively, tempdir() otherwise.
+#' @param working_dir Working directory for the console agent. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
 #' @param show_thinking Logical. Whether to show model thinking blocks when the
 #'   provider exposes them. Defaults to `verbose`.
@@ -95,7 +95,7 @@ console_chat <- function(session = NULL,
                          stream = TRUE,
                          verbose = FALSE,
                          agent = "auto",
-                         working_dir = if (interactive()) getwd() else tempdir(),
+                         working_dir = tempdir(),
                          sandbox_mode = "permissive",
                          show_thinking = verbose) {
   # Ensure cli package is available

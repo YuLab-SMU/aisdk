@@ -4,16 +4,16 @@
 \alias{package_skill}
 \title{Package a Skill}
 \usage{
-package_skill(path, output_dir = ".")
+package_skill(path, output_dir = tempdir())
 }
 \arguments{
 \item{path}{Path to the skill directory.}
 
-\item{output_dir}{Directory to save the .skill file. Defaults to current directory.}
+\item{output_dir}{Directory to save the packaged file. Defaults to \code{tempdir()}.}
 }
 \value{
 Path to the created .skill file.
 }
 \description{
-Validates a skill and packages it into a .skill (zip) file.
+Validates a skill and packages it into a \code{.skill} zip file.
 }

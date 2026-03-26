@@ -11,6 +11,16 @@
 #' @name utils_http
 NULL
 
+should_skip_internet_check <- function() {
+  opt <- getOption("aisdk.skip_internet_check", NULL)
+  if (isTRUE(opt)) {
+    return(TRUE)
+  }
+
+  env <- Sys.getenv("AISDK_SKIP_INTERNET_CHECK", "")
+  identical(tolower(trimws(env)), "true") || identical(trimws(env), "1")
+}
+
 #' @title Post to API with Retry
 #' @description
 #' Makes a POST request to an API endpoint with automatic retry on failure.
@@ -29,7 +39,7 @@ post_to_api <- function(url, headers, body,
                         initial_delay_ms = 2000,
                         backoff_factor = 2) {
   # CRAN policy: fail gracefully when internet is unavailable
-  if (!curl::has_internet()) {
+  if (!should_skip_internet_check() && !curl::has_internet()) {
     message("Internet connection is not available. Cannot reach: ", url)
     message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
     return(NULL)
@@ -138,7 +148,7 @@ post_to_api <- function(url, headers, body,
 #' @keywords internal
 stream_from_api <- function(url, headers, body, callback) {
   # CRAN policy: fail gracefully when internet is unavailable
-  if (!curl::has_internet()) {
+  if (!should_skip_internet_check() && !curl::has_internet()) {
     message("Internet connection is not available. Cannot reach: ", url)
     message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
     return(invisible(NULL))
@@ -173,7 +183,8 @@ stream_from_api <- function(url, headers, body, callback) {
 
   # Track consecutive errors for circuit breaker
 
-  consecutive_errors <- 0
+  stream_state <- new.env(parent = emptyenv())
+  stream_state$consecutive_errors <- 0
   max_consecutive_errors <- 10
 
   # Iterate over the stream using standard SSE parsing
@@ -182,8 +193,8 @@ stream_from_api <- function(url, headers, body, callback) {
     event <- tryCatch(
       httr2::resp_stream_sse(resp),
       error = function(e) {
-        consecutive_errors <<- consecutive_errors + 1
-        if (consecutive_errors >= max_consecutive_errors) {
+        stream_state$consecutive_errors <- stream_state$consecutive_errors + 1
+        if (stream_state$consecutive_errors >= max_consecutive_errors) {
           rlang::abort(c(
             "Too many consecutive SSE parsing errors",
             "x" = conditionMessage(e)
@@ -194,7 +205,7 @@ stream_from_api <- function(url, headers, body, callback) {
     )
 
     if (!is.null(event)) {
-      consecutive_errors <- 0 # Reset on successful event
+      stream_state$consecutive_errors <- 0 # Reset on successful event
 
       # Standard SSE handling
       # OpenAI and compatible APIs usually send JSON in the 'data' field

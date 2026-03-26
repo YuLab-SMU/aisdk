@@ -56,7 +56,7 @@ For fine-grained control, create a Computer instance directly:
 ```{r}
 # Create computer in working directory
 comp <- Computer$new(
-  working_dir = getwd(),
+  working_dir = tempdir(),
   sandbox_mode = "permissive"
 )
 ```
@@ -74,7 +74,7 @@ The computer abstraction supports three sandbox modes:
 ```{r}
 # Strict mode for production
 comp <- Computer$new(
-  working_dir = getwd(),
+  working_dir = tempdir(),
   sandbox_mode = "strict"
 )
 
@@ -144,7 +144,7 @@ Create agents with computer tools:
 ```{r}
 # Create computer tools
 computer_tools <- create_computer_tools(
-  working_dir = getwd(),
+  working_dir = tempdir(),
   sandbox_mode = "permissive"
 )
 

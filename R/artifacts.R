@@ -3,8 +3,7 @@
 
 create_artifact_dir <- function(base_dir = NULL) {
   if (is.null(base_dir) || !nzchar(base_dir)) {
-    fallback <- if (interactive()) file.path(getwd(), "artifacts") else file.path(tempdir(), "artifacts")
-    base_dir <- fallback
+    base_dir <- file.path(tempdir(), "artifacts")
   }
   ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
   dir <- file.path(base_dir, ts)

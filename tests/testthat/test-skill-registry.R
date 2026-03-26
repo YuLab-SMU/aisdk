@@ -97,14 +97,15 @@ test_that("SkillRegistry$list_skills returns empty data.frame when empty", {
 
 test_that("SkillRegistry$generate_prompt_section returns formatted string", {
   skip_if_not(dir.exists(fixtures_path), "Test fixtures not found")
-  
+
   registry <- SkillRegistry$new(fixtures_path)
   prompt <- registry$generate_prompt_section()
-  
+
   expect_type(prompt, "character")
   expect_true(grepl("Available Skills", prompt))
   expect_true(grepl("test_skill", prompt))
   expect_true(grepl("load_skill", prompt))
+  expect_true(grepl("even if the user does not know the skill name", prompt, fixed = TRUE))
 })
 
 test_that("SkillRegistry$generate_prompt_section returns empty string when empty", {

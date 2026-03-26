@@ -23,10 +23,10 @@ ProjectMemory <- R6::R6Class(
 
     #' @description
     #' Create or connect to a project memory database.
-    #' @param project_root Project root directory. Defaults to getwd() interactively, tempdir() otherwise.
+    #' @param project_root Project root directory. Defaults to `tempdir()`.
     #' @param db_name Database filename. Defaults to "memory.sqlite".
     #' @return A new ProjectMemory object.
-    initialize = function(project_root = if (interactive()) getwd() else tempdir(), db_name = "memory.sqlite") {
+    initialize = function(project_root = tempdir(), db_name = "memory.sqlite") {
       self$project_root <- normalizePath(project_root, mustWork = TRUE)
 
       # Create .aisdk directory if it doesn't exist
@@ -897,7 +897,7 @@ ProjectMemory <- R6::R6Class(
 #' memory$search_snippets("summarize")
 #' }
 #' }
-project_memory <- function(project_root = if (interactive()) getwd() else tempdir(), db_name = "memory.sqlite") {
+project_memory <- function(project_root = tempdir(), db_name = "memory.sqlite") {
   ProjectMemory$new(project_root, db_name)
 }
 

@@ -224,16 +224,6 @@ repair_json_string <- function(json_str) {
 #' @param error_message Optional error message from the failed call.
 #' @return A repaired tool call list, or an "invalid" tool call if unrepairable.
 #' @keywords internal
-#' @examples
-#' \donttest{
-#' if (interactive()) {
-#'   # If LLM calls "GetWeather" but tool is "get_weather"
-#'   repaired <- repair_tool_call(
-#'     list(name = "GetWeather", arguments = list(city = "Tokyo")),
-#'     tools = list(get_weather_tool)
-#'   )
-#' }
-#' }
 repair_tool_call <- function(tool_call, tools, error_message = NULL) {
   original_name <- tool_call$name
 
