@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "sessions": {
+    "feishu:cli_a9481f474378dcb5:direct:ou_b691b9456d16e14f878b05a60108a31b": {
+      "session_key": "feishu:cli_a9481f474378dcb5:direct:ou_b691b9456d16e14f878b05a60108a31b",
+      "created_at": "2026-03-25T09:09:05.771Z",
+      "channel_id": "feishu",
+      "account_id": "cli_a9481f474378dcb5",
+      "chat_id": "oc_46f8d9bbd41e1ee0523cd986f322166b",
+      "chat_type": "direct",
+      "participants": [
+        {
+          "sender_id": "ou_b691b9456d16e14f878b05a60108a31b",
+          "sender_name": "user",
+          "last_seen_at": "2026-03-25T09:08:36.295Z"
+        }
+      ],
+      "metadata": {
+        "session_key": "feishu:cli_a9481f474378dcb5:direct:ou_b691b9456d16e14f878b05a60108a31b",
+        "channel_id": "feishu",
+        "account_id": "cli_a9481f474378dcb5",
+        "chat_id": "oc_46f8d9bbd41e1ee0523cd986f322166b",
+        "chat_type": "direct",
+        "participants": [
+          {
+            "sender_id": "ou_b691b9456d16e14f878b05a60108a31b",
+            "sender_name": "user",
+            "last_seen_at": "2026-03-25T09:08:36.295Z"
+          }
+        ],
+        "last_event_id": "om_x100b530e03cb28a4b3793d757e56e60",
+        "updated_at": "2026-03-25T09:08:36.299Z"
+      },
+      "updated_at": "2026-03-25T09:09:05.771Z",
+      "session_file": "/Users/xiayh/Projects/aisdk/.aisdk/feishu_live2/sessions/c10bca712913c53c76f3b50d7c490a347a9f04c4a048ae3eae48dca97dba9783.rds"
+    }
+  },
+  "events": {
+    "feishu": {
+      "om_x100b530e03cb28a4b3793d757e56e60": {
+        "processed_at": "2026-03-25T09:09:05.774Z",
+        "payload": {
+          "session_key": "feishu:cli_a9481f474378dcb5:direct:ou_b691b9456d16e14f878b05a60108a31b",
+          "chat_id": "oc_46f8d9bbd41e1ee0523cd986f322166b",
+          "sender_id": "ou_b691b9456d16e14f878b05a60108a31b"
+        }
+      }
+    }
+  }
+}

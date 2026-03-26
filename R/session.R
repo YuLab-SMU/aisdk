@@ -22,6 +22,7 @@ ChatSession <- R6::R6Class(
     #' @param max_steps Maximum steps for tool execution loops. Default 10.
     #' @param registry Optional ProviderRegistry for model resolution.
     #' @param memory Optional initial shared memory (list). For multi-agent state sharing.
+    #' @param metadata Optional session metadata (list). Used for channel/runtime state.
     #' @param envir Optional shared R environment. For multi-agent data sharing.
     #' @param agent Optional Agent object. If provided, the session inherits the agent's
     #'   tools and system prompt.
@@ -33,6 +34,7 @@ ChatSession <- R6::R6Class(
                           max_steps = 10,
                           registry = NULL,
                           memory = NULL,
+                          metadata = NULL,
                           envir = NULL,
                           agent = NULL) {
       private$.model_id <- if (is.character(model)) model else NULL
@@ -67,6 +69,7 @@ ChatSession <- R6::R6Class(
       private$.registry <- registry
       # Multi-agent support: shared memory and environment
       private$.memory <- if (is.null(memory)) list() else memory
+      private$.metadata <- if (is.null(metadata)) list() else metadata
       private$.envir <- if (is.null(envir)) new.env(parent = globalenv()) else envir
       private$.stats <- list(
         total_prompt_tokens = 0,
@@ -263,12 +266,13 @@ ChatSession <- R6::R6Class(
     #' @return A list containing session state.
     as_list = function() {
       list(
-        version = "0.9.0",
+        version = "1.0.0",
         model_id = self$get_model_id(),
         system_prompt = private$.system_prompt,
         history = private$.history,
         stats = private$.stats,
         max_steps = private$.max_steps,
+        metadata = private$.metadata,
         # Note: tools and hooks are not serialized (must be re-provided on load)
         tool_names = if (length(private$.tools) > 0) {
           sapply(private$.tools, function(t) t$name)
@@ -316,6 +320,9 @@ ChatSession <- R6::R6Class(
       if (!is.null(data$max_steps)) {
         private$.max_steps <- data$max_steps
       }
+      if (!is.null(data$metadata)) {
+        private$.metadata <- data$metadata
+      }
       invisible(self)
     },
 
@@ -326,6 +333,7 @@ ChatSession <- R6::R6Class(
       cat("  History:", length(private$.history), "messages\n")
       cat("  Tools:", length(private$.tools), "tools\n")
       cat("  Memory:", length(private$.memory), "keys\n")
+      cat("  Metadata:", length(private$.metadata), "keys\n")
       cat("  Envir:", length(ls(private$.envir)), "objects\n")
       cat("  Stats:\n")
       cat("    Total tokens:", private$.stats$total_tokens, "\n")
@@ -362,6 +370,49 @@ ChatSession <- R6::R6Class(
     #' @return Character vector of memory keys.
     list_memory = function() {
       names(private$.memory)
+    },
+
+    #' @description Get a value from session metadata.
+    #' @param key The metadata key to retrieve.
+    #' @param default Default value if key is not present.
+    #' @return The stored metadata value or default.
+    get_metadata = function(key, default = NULL) {
+      if (key %in% names(private$.metadata)) {
+        private$.metadata[[key]]
+      } else {
+        default
+      }
+    },
+
+    #' @description Set a value in session metadata.
+    #' @param key The metadata key to set.
+    #' @param value The value to store.
+    #' @return Invisible self for chaining.
+    set_metadata = function(key, value) {
+      private$.metadata[[key]] <- value
+      invisible(self)
+    },
+
+    #' @description Merge a named list into session metadata.
+    #' @param values Named list of metadata values.
+    #' @return Invisible self for chaining.
+    merge_metadata = function(values) {
+      if (is.null(values) || length(values) == 0) {
+        return(invisible(self))
+      }
+      if (is.null(names(values)) || any(!nzchar(names(values)))) {
+        rlang::abort("Session metadata updates must be a named list.")
+      }
+      for (key in names(values)) {
+        private$.metadata[[key]] <- values[[key]]
+      }
+      invisible(self)
+    },
+
+    #' @description List metadata keys.
+    #' @return Character vector of metadata keys.
+    list_metadata = function() {
+      names(private$.metadata)
     },
 
     #' @description Clear shared memory.
@@ -409,6 +460,7 @@ ChatSession <- R6::R6Class(
         model_id      = self$get_model_id(),
         system_prompt = private$.system_prompt,
         memory        = private$.memory,
+        metadata      = private$.metadata,
         history       = private$.history,
         stats         = private$.stats
       ), path)
@@ -421,6 +473,7 @@ ChatSession <- R6::R6Class(
     restore_checkpoint = function(path) {
       data <- readRDS(path)
       if (!is.null(data$memory))  private$.memory  <- data$memory
+      if (!is.null(data$metadata)) private$.metadata <- data$metadata
       if (!is.null(data$history)) private$.history <- data$history
       if (!is.null(data$stats))   private$.stats   <- data$stats
       invisible(self)
@@ -438,6 +491,7 @@ ChatSession <- R6::R6Class(
     .stats = NULL,
     # Multi-agent support
     .memory = NULL,
+    .metadata = NULL,
     .envir = NULL,
     get_model = function() {
       if (!is.null(private$.model)) {
@@ -491,6 +545,7 @@ ChatSession <- R6::R6Class(
 #' @param tools Optional list of Tool objects.
 #' @param hooks Optional HookHandler object.
 #' @param max_steps Maximum tool execution steps. Default 10.
+#' @param metadata Optional session metadata (list).
 #' @param agent Optional Agent object to initialize from.
 #' @return A ChatSession object.
 #' @export
@@ -526,6 +581,7 @@ create_chat_session <- function(model = NULL,
                                 tools = NULL,
                                 hooks = NULL,
                                 max_steps = 10,
+                                metadata = NULL,
                                 agent = NULL) {
   ChatSession$new(
     model = model,
@@ -533,6 +589,7 @@ create_chat_session <- function(model = NULL,
     tools = tools,
     hooks = hooks,
     max_steps = max_steps,
+    metadata = metadata,
     agent = agent
   )
 }

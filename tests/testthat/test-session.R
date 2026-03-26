@@ -91,7 +91,8 @@ test_that("as_list exports session state", {
   session <- ChatSession$new(
     model = openai_model_id,
     system_prompt = "Test system prompt",
-    max_steps = 5
+    max_steps = 5,
+    metadata = list(channel = list(channel_id = "feishu"))
   )
 
   session$append_message("user", "Hello")
@@ -99,11 +100,12 @@ test_that("as_list exports session state", {
 
   data <- session$as_list()
 
-  expect_equal(data$version, "0.9.0")
+  expect_equal(data$version, "1.0.0")
   expect_equal(data$model_id, openai_model_id)
   expect_equal(data$system_prompt, "Test system prompt")
   expect_equal(length(data$history), 2)
   expect_equal(data$max_steps, 5)
+  expect_equal(data$metadata$channel$channel_id, "feishu")
 })
 
 test_that("restore_from_list restores session state", {
@@ -214,4 +216,17 @@ test_that("ChatSession print method works", {
   expect_output(print(session), "ChatSession")
   expect_output(print(session), openai_model_id)
   expect_output(print(session), "1 messages")
+})
+
+test_that("ChatSession metadata helpers round-trip", {
+  session <- ChatSession$new(model = openai_model_id)
+
+  expect_null(session$get_metadata("channel"))
+
+  session$set_metadata("channel", list(channel_id = "feishu"))
+  session$merge_metadata(list(parent_session_key = "root"))
+
+  expect_equal(session$get_metadata("channel")$channel_id, "feishu")
+  expect_equal(session$get_metadata("parent_session_key"), "root")
+  expect_true(all(c("channel", "parent_session_key") %in% session$list_metadata()))
 })
