@@ -10,6 +10,7 @@ create_chat_session(
   tools = NULL,
   hooks = NULL,
   max_steps = 10,
+  metadata = NULL,
   agent = NULL
 )
 }
@@ -23,6 +24,8 @@ create_chat_session(
 \item{hooks}{Optional HookHandler object.}
 
 \item{max_steps}{Maximum tool execution steps. Default 10.}
+
+\item{metadata}{Optional session metadata (list).}
 
 \item{agent}{Optional Agent object to initialize from.}
 }

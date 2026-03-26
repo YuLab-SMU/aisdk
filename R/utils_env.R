@@ -10,20 +10,7 @@ NULL
 #' @return TRUE if API tests are enabled and keys are available, FALSE otherwise
 #' @export
 enable_api_tests <- function() {
-  # Check environment variable
   env_flag <- Sys.getenv("ENABLE_API_TESTS")
-
-  if (env_flag == "") {
-    # Default: only enable if API keys are present
-    openai_key <- Sys.getenv("OPENAI_API_KEY")
-    anthropic_key <- Sys.getenv("ANTHROPIC_API_KEY")
-
-    has_openai <- nzchar(openai_key) && !grepl("^your_|^example_", openai_key)
-    has_anthropic <- nzchar(anthropic_key) && !grepl("^your_|^example_", anthropic_key)
-
-    return(has_openai || has_anthropic)
-  }
-
   return(toupper(env_flag) == "TRUE")
 }
 

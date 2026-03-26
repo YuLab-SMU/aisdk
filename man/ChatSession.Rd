@@ -28,6 +28,10 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_memory}{\code{ChatSession$get_memory()}}
 \item \href{#method-ChatSession-set_memory}{\code{ChatSession$set_memory()}}
 \item \href{#method-ChatSession-list_memory}{\code{ChatSession$list_memory()}}
+\item \href{#method-ChatSession-get_metadata}{\code{ChatSession$get_metadata()}}
+\item \href{#method-ChatSession-set_metadata}{\code{ChatSession$set_metadata()}}
+\item \href{#method-ChatSession-merge_metadata}{\code{ChatSession$merge_metadata()}}
+\item \href{#method-ChatSession-list_metadata}{\code{ChatSession$list_metadata()}}
 \item \href{#method-ChatSession-clear_memory}{\code{ChatSession$clear_memory()}}
 \item \href{#method-ChatSession-get_envir}{\code{ChatSession$get_envir()}}
 \item \href{#method-ChatSession-eval_in_session}{\code{ChatSession$eval_in_session()}}
@@ -52,6 +56,7 @@ Initialize a new ChatSession.
   max_steps = 10,
   registry = NULL,
   memory = NULL,
+  metadata = NULL,
   envir = NULL,
   agent = NULL
 )}\if{html}{\out{</div>}}
@@ -75,6 +80,8 @@ Initialize a new ChatSession.
 \item{\code{registry}}{Optional ProviderRegistry for model resolution.}
 
 \item{\code{memory}}{Optional initial shared memory (list). For multi-agent state sharing.}
+
+\item{\code{metadata}}{Optional session metadata (list). Used for channel/runtime state.}
 
 \item{\code{envir}}{Optional shared R environment. For multi-agent data sharing.}
 
@@ -370,6 +377,83 @@ List all keys in shared memory.
 
 \subsection{Returns}{
 Character vector of memory keys.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_metadata"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_metadata}{}}}
+\subsection{Method \code{get_metadata()}}{
+Get a value from session metadata.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_metadata(key, default = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{key}}{The metadata key to retrieve.}
+
+\item{\code{default}}{Default value if key is not present.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The stored metadata value or default.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_metadata"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_metadata}{}}}
+\subsection{Method \code{set_metadata()}}{
+Set a value in session metadata.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_metadata(key, value)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{key}}{The metadata key to set.}
+
+\item{\code{value}}{The value to store.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-merge_metadata"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-merge_metadata}{}}}
+\subsection{Method \code{merge_metadata()}}{
+Merge a named list into session metadata.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$merge_metadata(values)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{values}}{Named list of metadata values.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-list_metadata"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-list_metadata}{}}}
+\subsection{Method \code{list_metadata()}}{
+List metadata keys.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$list_metadata()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Character vector of metadata keys.
 }
 }
 \if{html}{\out{<hr>}}
