@@ -1,36 +1,16 @@
-## Test environments
+Dear CRAN team,
 
-- macOS Tahoe 26.3, aarch64-apple-darwin20
-- R 4.5.2
+  thank you for the review and the detailed guidance.
 
-## R CMD check results
+  I have addressed all reported issues in the resubmitted version:
 
-This is a new submission.
+  - The redundant “in R” was removed from the package Title.
+  - The example for the unexported internal function `repair_tool_call()` was removed.
+  - File-writing defaults were revised so that package functions no longer write by default to the user home directory, package directory, or `getwd()`.
+  Examples and vignettes now use temporary directories where appropriate.
+  - Package code was updated to avoid modifying `.GlobalEnv`, and uses of `<<-` in package functions were removed.
 
-I ran:
+  The package documentation was regenerated and the package was rebuilt before resubmission.
 
-```sh
-Rscript -e "devtools::document()"
-R CMD build .
-env PATH="/Users/xiayh/Library/TinyTeX/bin/universal-darwin:$PATH" \
-  _R_CHECK_FORCE_SUGGESTS_=false \
-  R CMD check --as-cran aisdk_1.0.0.tar.gz
-```
-
-`R CMD check --as-cran` completed with 3 NOTEs and no ERRORs or WARNINGs:
-
-1. `New submission`
-2. `unable to verify current time`
-3. HTML validation was skipped locally because the system `tidy` is not recent enough
-
-During local checking, the following suggested packages were not available:
-`httptest2`, `skimr`, `torch`, and `onnx`.
-For this reason, the final local check was run with `_R_CHECK_FORCE_SUGGESTS_=false`.
-
-## Resubmission notes
-
-- Added `AGENTS.md` to `.Rbuildignore` so local agent instructions are excluded from the source tarball.
-- Reworked the roxygen documentation for `Mission`, `MissionStep`, and
-  `MissionOrchestrator` to remove angle-bracket type annotations such as
-  `list<Mission>` and `list<MissionStep>`, which were being emitted into the
-  HTML manual as invalid tags during CRAN incoming checks.
+  Best regards,
+  Yonghe Xia
