@@ -198,8 +198,21 @@ channel_extract_pdf_pages_python <- function(path) {
     return(list(page_count = 0L, pages = list(), extractor = NULL))
   }
 
+  deps_ready <- tryCatch(
+    suppressWarnings(system2(
+      python_bin,
+      c("-c", "import pypdf, pdfplumber"),
+      stdout = FALSE,
+      stderr = FALSE
+    )),
+    error = function(e) 1L
+  )
+  if (!identical(as.integer(deps_ready), 0L)) {
+    return(list(page_count = 0L, pages = list(), extractor = NULL))
+  }
+
   result <- tryCatch(
-    system2(python_bin, c(script_path, path), stdout = TRUE, stderr = TRUE),
+    suppressWarnings(system2(python_bin, c(script_path, path), stdout = TRUE, stderr = TRUE)),
     error = function(e) character(0)
   )
   if (length(result) == 0) {

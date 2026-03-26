@@ -85,6 +85,10 @@ skip_if_no_api_key <- function(provider = "API") {
 
   skip_if_offline()
 
+  if (!aisdk::enable_api_tests()) {
+    testthat::skip("API tests disabled: set ENABLE_API_TESTS=TRUE to run live API tests.")
+  }
+
   # has_api_key is now in R/utils_env.R
   if (!aisdk::has_api_key(provider_key)) {
     testthat::skip(paste0(provider, " tests skipped: Set ", toupper(provider), "_API_KEY in project .Renviron or set ENABLE_API_TESTS=TRUE"))

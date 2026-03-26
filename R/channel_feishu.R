@@ -382,7 +382,7 @@ FeishuChannelAdapter <- R6::R6Class(
       } else if (!is.null(message$metadata$document_context) && nzchar(message$metadata$document_context)) {
         lines <- c(lines, message$metadata$document_context)
       } else if (length(message$attachments %||% list()) > 0) {
-        lines <- c(lines, "[收到附件消息]")
+        lines <- c(lines, "[\u6536\u5230\u9644\u4ef6\u6d88\u606f]")
         for (attachment in message$attachments) {
           lines <- c(
             lines,
@@ -416,7 +416,7 @@ FeishuChannelAdapter <- R6::R6Class(
 
       text <- trimws(message$text %||% "")
       mentions_document <- nzchar(text) && grepl(
-        "刚上传|这个pdf|这篇文献|这个文件|该文献|这份pdf|这份文献|uploaded pdf|this pdf|the paper|document",
+        "\u521a\u4e0a\u4f20|\u8fd9\u4e2apdf|\u8fd9\u7bc7\u6587\u732e|\u8fd9\u4e2a\u6587\u4ef6|\u8be5\u6587\u732e|\u8fd9\u4efdpdf|\u8fd9\u4efd\u6587\u732e|uploaded pdf|this pdf|the paper|document",
         text,
         ignore.case = TRUE
       )
@@ -462,9 +462,9 @@ FeishuChannelAdapter <- R6::R6Class(
 
       status_text <- text %||% switch(
         status,
-        thinking = "\U0001F914 正在思考...",
-        working = "\U0001F4BB 正在处理...",
-        error = "\u26A0\ufe0f 处理时发生错误"
+        thinking = "\U0001F914 \u6b63\u5728\u601d\u8003...",
+        working = "\U0001F4BB \u6b63\u5728\u5904\u7406...",
+        error = "\u26A0\ufe0f \u5904\u7406\u65f6\u53d1\u751f\u9519\u8bef"
       )
 
       private$send_text_impl(message = message, text = status_text)

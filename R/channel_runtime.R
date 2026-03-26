@@ -48,19 +48,19 @@ channel_message_requests_skill_creation <- function(text) {
   }
 
   patterns <- c(
-    "帮我加个能力",
-    "加个能力",
-    "新增能力",
-    "增加能力",
-    "做成skill",
-    "做成技能",
-    "做成一个skill",
-    "以后自动处理",
-    "以后自动识别",
-    "以后遇到.*自动",
-    "这类.*自动处理",
-    "教会你",
-    "教你",
+    "\u5e2e\u6211\u52a0\u4e2a\u80fd\u529b",
+    "\u52a0\u4e2a\u80fd\u529b",
+    "\u65b0\u589e\u80fd\u529b",
+    "\u589e\u52a0\u80fd\u529b",
+    "\u505a\u6210skill",
+    "\u505a\u6210\u6280\u80fd",
+    "\u505a\u6210\u4e00\u4e2askill",
+    "\u4ee5\u540e\u81ea\u52a8\u5904\u7406",
+    "\u4ee5\u540e\u81ea\u52a8\u8bc6\u522b",
+    "\u4ee5\u540e\u9047\u5230.*\u81ea\u52a8",
+    "\u8fd9\u7c7b.*\u81ea\u52a8\u5904\u7406",
+    "\u6559\u4f1a\u4f60",
+    "\u6559\u4f60",
     "turn this into a skill",
     "make (this|that) a skill",
     "create a skill",
@@ -155,10 +155,10 @@ channel_claims_attachment_sent <- function(text) {
   }
 
   patterns <- c(
-    "发给你了",
-    "已发给你",
-    "已经发送",
-    "已发送",
+    "\u53d1\u7ed9\u4f60\u4e86",
+    "\u5df2\u53d1\u7ed9\u4f60",
+    "\u5df2\u7ecf\u53d1\u9001",
+    "\u5df2\u53d1\u9001",
     "sent to you",
     "i sent",
     "uploaded for you",
@@ -357,7 +357,7 @@ ChannelRuntime <- R6::R6Class(
       result <- tryCatch(
         session$send(prompt),
         error = function(e) {
-          err_text <- paste0("处理消息时发生错误：", conditionMessage(e))
+          err_text <- paste0("\u5904\u7406\u6d88\u606f\u65f6\u53d1\u751f\u9519\u8bef\uff1a", conditionMessage(e))
           tryCatch(
             adapter$send_status(message = message, status = "error", text = err_text),
             error = function(e2) NULL
@@ -367,7 +367,7 @@ ChannelRuntime <- R6::R6Class(
       )
       reply_text <- trimws(result$text %||% "")
       if (!nzchar(reply_text)) {
-        reply_text <- "我暂时没有生成有效回复。"
+        reply_text <- "\u6211\u6682\u65f6\u6ca1\u6709\u751f\u6210\u6709\u6548\u56de\u590d\u3002"
       }
 
       record <- private$build_record(session_key, message, session)
@@ -407,8 +407,8 @@ ChannelRuntime <- R6::R6Class(
         reply_text <- paste(
           reply_text,
           "",
-          "\u26A0\ufe0f 系统未检测到实际发送成功的附件。",
-          "如果你需要我发送图片或文件，请让我在最终回复里明确给出生成文件的绝对路径，系统才会自动上传并发送。",
+          "\u26A0\ufe0f \u7cfb\u7edf\u672a\u68c0\u6d4b\u5230\u5b9e\u9645\u53d1\u9001\u6210\u529f\u7684\u9644\u4ef6\u3002",
+          "\u5982\u679c\u4f60\u9700\u8981\u6211\u53d1\u9001\u56fe\u7247\u6216\u6587\u4ef6\uff0c\u8bf7\u8ba9\u6211\u5728\u6700\u7ec8\u56de\u590d\u91cc\u660e\u786e\u7ed9\u51fa\u751f\u6210\u6587\u4ef6\u7684\u7edd\u5bf9\u8def\u5f84\uff0c\u7cfb\u7edf\u624d\u4f1a\u81ea\u52a8\u4e0a\u4f20\u5e76\u53d1\u9001\u3002",
           sep = "\n"
         )
       }
