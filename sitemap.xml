@@ -1,83 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/agents.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/providers-others.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/tools.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/integrations.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/console_chat.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/sessions.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/computer_abstraction.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <loc>https://yulab-smu.top/aisdk/vignettes/get_started.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
   <url>
     <loc>https://yulab-smu.top/aisdk/vignettes/providers.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/providers-aihubmix.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/reference/index.html</loc>
-    <lastmod>2026-03-26T15:35:12.610Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/index.html</loc>
-    <lastmod>2026-03-26T15:35:12.590Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/get_started.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/providers-gemini.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/providers-custom.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/providers-anthropic.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
-  </url>
-  <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/mcp.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
   <url>
     <loc>https://yulab-smu.top/aisdk/vignettes/enterprise.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
   <url>
-    <loc>https://yulab-smu.top/aisdk/vignettes/skills.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <loc>https://yulab-smu.top/aisdk/vignettes/console_chat.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/integrations.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/mcp.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/computer_abstraction.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
   <url>
     <loc>https://yulab-smu.top/aisdk/vignettes/providers-openai.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/providers-others.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/reference/index.html</loc>
+    <lastmod>2026-03-26T15:37:19.015Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/index.html</loc>
+    <lastmod>2026-03-26T15:37:18.997Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/providers-custom.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
   <url>
     <loc>https://yulab-smu.top/aisdk/vignettes/structured_outputs.html</loc>
-    <lastmod>2026-03-26T15:35:12.615Z</lastmod>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/agents.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/sessions.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/tools.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/skills.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/providers-gemini.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/providers-anthropic.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
+  </url>
+  <url>
+    <loc>https://yulab-smu.top/aisdk/vignettes/providers-aihubmix.html</loc>
+    <lastmod>2026-03-26T15:37:19.019Z</lastmod>
   </url>
 </urlset>
