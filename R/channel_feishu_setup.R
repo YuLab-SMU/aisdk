@@ -20,6 +20,21 @@
 #' @param path Local webhook path.
 #' @return A list describing the chosen configuration and next-step commands.
 #' @export
+feishu_node_bin <- function() {
+  Sys.which("node")
+}
+
+feishu_npm_bin <- function() {
+  Sys.which("npm")
+}
+
+feishu_default_connection_mode <- function() {
+  if (nzchar(feishu_node_bin()) && nzchar(feishu_npm_bin())) {
+    return("long_connection")
+  }
+  "webhook"
+}
+
 setup_feishu_channel <- function(prompt_hooks = list(),
                                  renviron_path = NULL,
                                  current_model = NULL,
@@ -36,7 +51,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
   confirm_fn <- prompt_hooks$confirm %||% console_confirm
   save_fn <- prompt_hooks$save %||% update_renviron
 
-  mode <- "webhook"
+  mode <- feishu_default_connection_mode()
 
   app_id <- app_id %||% input_fn("FEISHU_APP_ID")
   app_secret <- app_secret %||% input_fn("FEISHU_APP_SECRET")
@@ -117,9 +132,15 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     commands$start_bridge <- "node demo/feishu_longconn_bridge.mjs"
   }
 
+  mode_label <- if (identical(mode, "long_connection")) {
+    "Long connection (recommended for local use)"
+  } else {
+    "Webhook server (pure R)"
+  }
+
   summary_lines <- c(
     "Feishu channel setup complete.",
-    "Mode: Webhook server (pure R)",
+    sprintf("Mode: %s", mode_label),
     sprintf("Local webhook URL: %s", local_webhook_url),
     sprintf("Workdir: %s", chosen_workdir),
     sprintf("Session root: %s", chosen_session_root),
@@ -133,13 +154,17 @@ setup_feishu_channel <- function(prompt_hooks = list(),
 
   summary_lines <- c(
     summary_lines,
-    "2. Configure Feishu event subscription to call the webhook URL exposed through your tunnel or deployment.",
+    if (identical(mode, "long_connection")) {
+      "2. No public callback URL is required for local development in long-connection mode."
+    } else {
+      "2. Configure Feishu event subscription to call the webhook URL exposed through your tunnel or deployment."
+    },
     "3. If you later want advanced settings such as encryption keys or a different webhook path, run the setup wizard again."
   )
 
   launch <- NULL
   if (isTRUE(start_now) && isTRUE(confirm_fn("Start the local Feishu webhook runtime now?"))) {
-    launch <- start_feishu_channel_service(
+    runtime_launch <- start_feishu_channel_service(
       app_id = app_id,
       app_secret = app_secret,
       model_id = model_id,
@@ -152,12 +177,29 @@ setup_feishu_channel <- function(prompt_hooks = list(),
       path = chosen_path,
       sandbox_mode = chosen_sandbox
     )
+    launch <- list(runtime = runtime_launch)
     summary_lines <- c(
       summary_lines,
       "",
-      sprintf("Local webhook runtime started in background (PID: %s).", launch$pid),
-      sprintf("Listening URL: %s", launch$url)
+      sprintf("Local webhook runtime started in background (PID: %s).", runtime_launch$pid),
+      sprintf("Listening URL: %s", runtime_launch$url)
     )
+
+    if (identical(mode, "long_connection")) {
+      bridge_dir <- file.path(chosen_workdir, ".aisdk", "feishu_bridge")
+      bridge_launch <- start_feishu_long_connection_service(
+        app_id = app_id,
+        app_secret = app_secret,
+        loopback_url = runtime_launch$url,
+        bridge_dir = bridge_dir
+      )
+      launch$bridge <- bridge_launch
+      summary_lines <- c(
+        summary_lines,
+        sprintf("Long-connection bridge started in background (PID: %s).", bridge_launch$pid),
+        sprintf("Bridge directory: %s", bridge_launch$directory)
+      )
+    }
   }
 
   list(
@@ -325,5 +367,62 @@ start_feishu_channel_service <- function(app_id,
       as.integer(port),
       if (startsWith(path, "/")) path else paste0("/", path)
     )
+  )
+}
+
+#' @title Start Feishu Long Connection Service
+#' @description
+#' Materialize the packaged Feishu bridge assets, install Node dependencies, and
+#' start the bridge in the background. This mode avoids the need for a public
+#' Feishu callback URL during local development.
+#' @param app_id Feishu app id.
+#' @param app_secret Feishu app secret.
+#' @param loopback_url Local webhook URL that the bridge should forward events to.
+#' @param bridge_dir Directory where the bridge assets should be written.
+#' @return A list with the background process id and bridge directory.
+#' @export
+start_feishu_long_connection_service <- function(app_id,
+                                                 app_secret,
+                                                 loopback_url = "http://127.0.0.1:8788/feishu/webhook",
+                                                 bridge_dir = file.path(tempdir(), "feishu_bridge")) {
+  node_bin <- feishu_node_bin()
+  npm_bin <- feishu_npm_bin()
+  if (!nzchar(node_bin) || !nzchar(npm_bin)) {
+    rlang::abort("Long-connection mode requires both 'node' and 'npm' to be installed and on PATH.")
+  }
+
+  info <- write_feishu_bridge_files(bridge_dir)
+
+  install <- processx::run(
+    npm_bin,
+    c("install"),
+    wd = info$directory,
+    echo = FALSE,
+    error_on_status = FALSE
+  )
+  if (!identical(install$status, 0L)) {
+    rlang::abort(paste(
+      "Failed to install Feishu bridge dependencies.",
+      install$stderr %||% install$stdout %||% "",
+      sep = "\n"
+    ))
+  }
+
+  process <- processx::process$new(
+    node_bin,
+    c("feishu_longconn_bridge.mjs"),
+    wd = info$directory,
+    env = c(
+      FEISHU_APP_ID = app_id,
+      FEISHU_APP_SECRET = app_secret,
+      FEISHU_LOOPBACK_URL = loopback_url
+    ),
+    cleanup = TRUE
+  )
+
+  list(
+    pid = process$get_pid(),
+    directory = info$directory,
+    loopback_url = loopback_url
   )
 }
