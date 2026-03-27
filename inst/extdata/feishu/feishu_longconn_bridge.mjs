@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Feishu long-connection bridge for local aisdk development.
+ * Feishu long-connection bridge for local aisdk usage.
  *
  * This script uses Feishu's official Node SDK long connection mode and forwards
  * plaintext event payloads to a local aisdk Feishu loopback handler.
@@ -31,15 +31,13 @@ async function loadLarkSdk() {
     if (error?.code === "ERR_MODULE_NOT_FOUND") {
       console.error("");
       console.error("[bridge] Missing Node dependency: @larksuiteoapi/node-sdk");
-      console.error("[bridge] Install it from the repository root with:");
+      console.error("[bridge] Install it in the bridge directory with:");
       console.error("");
-      console.error("  npm --prefix demo install");
+      console.error("  npm install");
       console.error("");
       console.error("[bridge] Then start the bridge with:");
       console.error("");
-      console.error("  node demo/feishu_longconn_bridge.mjs");
-      console.error("");
-      console.error("[bridge] For packaged usage, prefer using aisdk::write_feishu_bridge_files() to materialize the bridge assets into a normal directory first.");
+      console.error("  node feishu_longconn_bridge.mjs");
       console.error("");
       process.exit(1);
     }

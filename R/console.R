@@ -172,6 +172,8 @@ console_chat <- function(session = NULL,
     rlang::abort("session must be a ChatSession object, LanguageModelV1 object, or model string ID")
   }
 
+  assign(".session_model_id", session$get_model_id() %||% "", envir = session$get_envir())
+
   view_mode <- if (isTRUE(verbose)) "debug" else "clean"
 
   # Welcome message
@@ -427,6 +429,7 @@ handle_command <- function(input,
           tryCatch(
             {
               session$switch_model(model_id)
+              assign(".session_model_id", session$get_model_id() %||% "", envir = session$get_envir())
               if (!is.null(app_state)) {
                 console_app_sync_session(app_state, session)
               }
@@ -446,6 +449,7 @@ handle_command <- function(input,
           tryCatch(
             {
               session$switch_model(model_id)
+              assign(".session_model_id", session$get_model_id() %||% "", envir = session$get_envir())
               if (!is.null(app_state)) {
                 console_app_sync_session(app_state, session)
               }

@@ -8,6 +8,8 @@
 #'   `menu`, `input`, `confirm`, `save`.
 #' @param renviron_path Optional path to the `.Renviron` file used when saving.
 #'   If `NULL`, the wizard will ask before writing.
+#' @param current_model Optional current model id. When provided, this is reused
+#'   as the default `FEISHU_MODEL` so the user does not need to choose a model again.
 #' @param workdir Working directory that the Feishu bot should use.
 #' @param session_root Session store root for the Feishu runtime.
 #' @param host Local bind host for the webhook server.
@@ -17,6 +19,7 @@
 #' @export
 setup_feishu_channel <- function(prompt_hooks = list(),
                                  renviron_path = NULL,
+                                 current_model = NULL,
                                  workdir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
                                  session_root = file.path(workdir, ".aisdk", "feishu"),
                                  host = "127.0.0.1",
@@ -27,17 +30,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
   confirm_fn <- prompt_hooks$confirm %||% console_confirm
   save_fn <- prompt_hooks$save %||% update_renviron
 
-  mode_choice <- menu_fn(
-    "How do you want to connect Feishu?",
-    c(
-      "Webhook server (Recommended, pure R)",
-      "Long connection bridge (Advanced, requires Node.js)"
-    )
-  )
-  if (is.null(mode_choice)) {
-    return(list(cancelled = TRUE, summary = "Feishu setup cancelled."))
-  }
-  mode <- if (identical(mode_choice, 2L)) "long_connection" else "webhook"
+  mode <- "webhook"
 
   app_id <- input_fn("FEISHU_APP_ID")
   app_secret <- input_fn("FEISHU_APP_SECRET")
@@ -49,57 +42,34 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     ))
   }
 
-  verification_token <- if (identical(mode, "webhook")) {
-    input_fn("FEISHU_VERIFICATION_TOKEN (optional)", default = "")
-  } else {
-    ""
+  model_id <- current_model %||% Sys.getenv("FEISHU_MODEL", "")
+  if (!nzchar(model_id)) {
+    model_id <- Sys.getenv("OPENAI_MODEL_ID", "")
   }
-  encrypt_key <- if (identical(mode, "webhook")) {
-    input_fn("FEISHU_ENCRYPT_KEY (optional)", default = "")
-  } else {
-    ""
+  if (!nzchar(model_id)) {
+    model_id <- "openai:gpt-4o-mini"
   }
 
-  model_choice <- menu_fn(
-    "Which model setup do you want for the bot?",
-    c(
-      "OpenAI (Recommended)",
-      "Anthropic",
-      "Use existing environment only",
-      "Mock mode"
-    )
-  )
-  if (is.null(model_choice)) {
-    return(list(cancelled = TRUE, summary = "Feishu setup cancelled during model selection."))
+  verification_token <- ""
+  encrypt_key <- ""
+  chosen_workdir <- workdir
+  chosen_session_root <- session_root
+  chosen_host <- host
+  chosen_port <- as.character(port)
+  chosen_path <- path
+  chosen_sandbox <- "strict"
+
+  advanced_config <- isTRUE(confirm_fn("Do you want to review advanced Feishu settings?"))
+  if (isTRUE(advanced_config)) {
+    verification_token <- input_fn("FEISHU_VERIFICATION_TOKEN (optional)", default = "") %||% ""
+    encrypt_key <- input_fn("FEISHU_ENCRYPT_KEY (optional)", default = "") %||% ""
+    chosen_workdir <- input_fn("FEISHU_WORKDIR", default = workdir) %||% workdir
+    chosen_session_root <- input_fn("FEISHU_SESSION_ROOT", default = session_root) %||% session_root
+    chosen_host <- input_fn("FEISHU_HOST", default = host) %||% host
+    chosen_port <- input_fn("FEISHU_PORT", default = as.character(port)) %||% as.character(port)
+    chosen_path <- input_fn("FEISHU_PATH", default = path) %||% path
+    chosen_sandbox <- input_fn("FEISHU_SANDBOX_MODE", default = "strict") %||% "strict"
   }
-
-  model_id <- ""
-  provider_updates <- list()
-
-  if (identical(model_choice, 1L)) {
-    model_id <- input_fn("FEISHU_MODEL", default = "openai:gpt-4o-mini") %||% "openai:gpt-4o-mini"
-    openai_key <- input_fn("OPENAI_API_KEY", default = "")
-    if (nzchar(openai_key %||% "")) {
-      provider_updates$OPENAI_API_KEY <- openai_key
-    }
-  } else if (identical(model_choice, 2L)) {
-    model_id <- input_fn("FEISHU_MODEL", default = "anthropic:claude-sonnet-4-20250514") %||% "anthropic:claude-sonnet-4-20250514"
-    anthropic_key <- input_fn("ANTHROPIC_API_KEY", default = "")
-    if (nzchar(anthropic_key %||% "")) {
-      provider_updates$ANTHROPIC_API_KEY <- anthropic_key
-    }
-  } else if (identical(model_choice, 3L)) {
-    model_id <- input_fn("FEISHU_MODEL (leave empty to rely on current environment)", default = "") %||% ""
-  } else {
-    model_id <- ""
-  }
-
-  chosen_workdir <- input_fn("FEISHU_WORKDIR", default = workdir) %||% workdir
-  chosen_session_root <- input_fn("FEISHU_SESSION_ROOT", default = session_root) %||% session_root
-  chosen_host <- input_fn("FEISHU_HOST", default = host) %||% host
-  chosen_port <- input_fn("FEISHU_PORT", default = as.character(port)) %||% as.character(port)
-  chosen_path <- input_fn("FEISHU_PATH", default = path) %||% path
-  chosen_sandbox <- input_fn("FEISHU_SANDBOX_MODE", default = "strict") %||% "strict"
 
   updates <- c(
     list(
@@ -114,8 +84,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
       FEISHU_SANDBOX_MODE = chosen_sandbox
     ),
     if (nzchar(verification_token %||% "")) list(FEISHU_VERIFICATION_TOKEN = verification_token) else list(),
-    if (nzchar(encrypt_key %||% "")) list(FEISHU_ENCRYPT_KEY = encrypt_key) else list(),
-    provider_updates
+    if (nzchar(encrypt_key %||% "")) list(FEISHU_ENCRYPT_KEY = encrypt_key) else list()
   )
 
   save_config <- isTRUE(confirm_fn("Save this configuration to a .Renviron file?"))
@@ -144,11 +113,11 @@ setup_feishu_channel <- function(prompt_hooks = list(),
 
   summary_lines <- c(
     "Feishu channel setup complete.",
-    sprintf("Mode: %s", if (identical(mode, "webhook")) "Webhook server" else "Long connection bridge"),
+    "Mode: Webhook server (pure R)",
     sprintf("Local webhook URL: %s", local_webhook_url),
     sprintf("Workdir: %s", chosen_workdir),
     sprintf("Session root: %s", chosen_session_root),
-    if (nzchar(model_id)) sprintf("Model: %s", model_id) else "Model: mock mode or existing environment",
+    sprintf("Model: %s", model_id),
     if (isTRUE(save_config)) sprintf("Saved to: %s", save_path) else "Configuration not saved automatically.",
     "",
     "Next steps:",
@@ -156,20 +125,11 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     sprintf("   %s", commands$start_r)
   )
 
-  if (identical(mode, "webhook")) {
-    summary_lines <- c(
-      summary_lines,
-      "2. Configure Feishu event subscription to call the webhook URL exposed through your tunnel or deployment."
-    )
-  } else {
-    summary_lines <- c(
-      summary_lines,
-      "2. Install the Node bridge dependency once:",
-      sprintf("   %s", commands$install_node),
-      "3. Start the long-connection bridge:",
-      sprintf("   %s", commands$start_bridge)
-    )
-  }
+  summary_lines <- c(
+    summary_lines,
+    "2. Configure Feishu event subscription to call the webhook URL exposed through your tunnel or deployment.",
+    "3. If you later want advanced settings such as encryption keys or a different webhook path, run the setup wizard again."
+  )
 
   list(
     cancelled = FALSE,
@@ -180,5 +140,58 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     local_webhook_url = local_webhook_url,
     commands = commands,
     summary = paste(summary_lines, collapse = "\n")
+  )
+}
+
+#' @title Write Feishu Bridge Files
+#' @description
+#' Copy the packaged Feishu long-connection bridge resources from
+#' `inst/extdata/feishu` into a user-selected directory. This is optional and is
+#' only needed when the user explicitly chooses the advanced Node.js
+#' long-connection workflow.
+#' @param dest_dir Destination directory. Defaults to `tempdir()`.
+#' @return A list with the destination directory, copied files, and suggested
+#'   next-step commands.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'   info <- write_feishu_bridge_files(tempdir())
+#'   info$summary
+#' }
+#' }
+write_feishu_bridge_files <- function(dest_dir = tempdir()) {
+  source_dir <- system.file("extdata", "feishu", package = "aisdk")
+  if (!nzchar(source_dir) || !dir.exists(source_dir)) {
+    rlang::abort("Packaged Feishu bridge resources were not found.")
+  }
+
+  dir.create(dest_dir, recursive = TRUE, showWarnings = FALSE)
+  files <- c("feishu_longconn_bridge.mjs", "package.json")
+  copied <- vapply(files, function(name) {
+    src <- file.path(source_dir, name)
+    dst <- file.path(dest_dir, name)
+    ok <- file.copy(src, dst, overwrite = TRUE)
+    if (!isTRUE(ok)) {
+      rlang::abort(sprintf("Failed to copy Feishu bridge file: %s", name))
+    }
+    normalizePath(dst, winslash = "/", mustWork = FALSE)
+  }, character(1))
+
+  summary <- paste(
+    "Feishu bridge files written.",
+    sprintf("Directory: %s", normalizePath(dest_dir, winslash = "/", mustWork = FALSE)),
+    "Next steps:",
+    "1. cd into that directory",
+    "2. run: npm install",
+    "3. run: node feishu_longconn_bridge.mjs",
+    sep = "\n"
+  )
+
+  list(
+    directory = normalizePath(dest_dir, winslash = "/", mustWork = FALSE),
+    files = unname(copied),
+    commands = c("npm install", "node feishu_longconn_bridge.mjs"),
+    summary = summary
   )
 }

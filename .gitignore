@@ -43,6 +43,8 @@ dev_logs/
 docs/
 .claude/
 artifacts/
+demo/node_modules/
+demo/package-lock.json
 
 /intro/
 /doc/

@@ -87,20 +87,11 @@ test_that("console agent system prompt includes key elements", {
 })
 
 test_that("setup_feishu_channel can build webhook configuration with prompt hooks", {
-    menu_answers <- c(1L, 1L)
+    menu_answers <- c(1L)
     input_answers <- c(
         "cli_test",
         "secret_test",
-        "token_test",
-        "encrypt_test",
-        "openai:gpt-4o-mini",
-        "sk-test",
-        tempdir(),
-        file.path(tempdir(), ".aisdk", "feishu"),
-        "127.0.0.1",
-        "8788",
-        "/feishu/webhook",
-        "strict"
+        tempfile(".Renviron")
     )
     saved <- NULL
 
@@ -116,13 +107,18 @@ test_that("setup_feishu_channel can build webhook configuration with prompt hook
                 input_answers <<- input_answers[-1]
                 answer
             },
-            confirm = function(question) TRUE,
+            confirm = function(question) {
+                if (grepl("advanced", question, ignore.case = TRUE)) {
+                    return(FALSE)
+                }
+                TRUE
+            },
             save = function(updates, path) {
                 saved <<- list(updates = updates, path = path)
                 invisible(TRUE)
             }
         ),
-        renviron_path = tempfile(".Renviron"),
+        current_model = "openai:gpt-4o-mini",
         workdir = tempdir(),
         session_root = file.path(tempdir(), ".aisdk", "feishu")
     )
@@ -132,5 +128,17 @@ test_that("setup_feishu_channel can build webhook configuration with prompt hook
     expect_true(isTRUE(result$saved))
     expect_true(grepl("Feishu channel setup complete.", result$summary, fixed = TRUE))
     expect_equal(saved$updates$FEISHU_APP_ID, "cli_test")
-    expect_equal(saved$updates$OPENAI_API_KEY, "sk-test")
+    expect_equal(saved$updates$FEISHU_MODEL, "openai:gpt-4o-mini")
+})
+
+test_that("write_feishu_bridge_files copies packaged bridge assets", {
+    out_dir <- tempfile("feishu-bridge-")
+    dir.create(out_dir, recursive = TRUE)
+    on.exit(unlink(out_dir, recursive = TRUE), add = TRUE)
+
+    info <- write_feishu_bridge_files(out_dir)
+
+    expect_true(file.exists(file.path(out_dir, "feishu_longconn_bridge.mjs")))
+    expect_true(file.exists(file.path(out_dir, "package.json")))
+    expect_true(grepl("npm install", info$summary, fixed = TRUE))
 })

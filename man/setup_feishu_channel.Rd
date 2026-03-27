@@ -7,6 +7,7 @@
 setup_feishu_channel(
   prompt_hooks = list(),
   renviron_path = NULL,
+  current_model = NULL,
   workdir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
   session_root = file.path(workdir, ".aisdk", "feishu"),
   host = "127.0.0.1",
@@ -20,6 +21,9 @@ setup_feishu_channel(
 
 \item{renviron_path}{Optional path to the \code{.Renviron} file used when saving.
 If \code{NULL}, the wizard will ask before writing.}
+
+\item{current_model}{Optional current model id. When provided, this is reused
+as the default \code{FEISHU_MODEL} so the user does not need to choose a model again.}
 
 \item{workdir}{Working directory that the Feishu bot should use.}
 

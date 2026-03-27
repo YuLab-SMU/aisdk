@@ -302,10 +302,12 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 "or asks to start using aisdk through Feishu without manually editing environment variables."
             ),
             parameters = NULL,
-            execute = function() {
+            execute = function(args) {
                 if (!interactive()) {
                     return("Error: setup_feishu_channel requires an interactive console session.")
                 }
+
+                current_model <- args$.envir$.session_model_id %||% ""
 
                 result <- setup_feishu_channel(
                     prompt_hooks = list(
@@ -314,6 +316,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                         confirm = console_confirm,
                         save = update_renviron
                     ),
+                    current_model = current_model,
                     workdir = working_dir,
                     session_root = file.path(working_dir, ".aisdk", "feishu")
                 )
@@ -442,6 +445,7 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 6. **Be efficient**: Use the most appropriate tool for each task
 7. **Be helpful**: Suggest next steps or related commands when useful
 8. **For integration setup requests**: Prefer dedicated setup tools such as `setup_feishu_channel` over dumping raw environment-variable instructions
+9. **Default behavior first**: Reuse the current session model and keep advanced integration parameters at sensible defaults unless the user explicitly asks to customize them
 
 ## Language
 
