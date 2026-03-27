@@ -21,6 +21,7 @@ test_that("create_console_tools includes all expected tools", {
     expect_true("find_files" %in% tool_names)
     expect_true("get_system_info" %in% tool_names)
     expect_true("get_environment" %in% tool_names)
+    expect_true("setup_feishu_channel" %in% tool_names)
 })
 
 test_that("list_directory tool works", {
@@ -82,4 +83,54 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("bash", prompt))
     expect_true(grepl("Working Directory", prompt))
     expect_true(grepl("Safety", prompt))
+    expect_true(grepl("setup_feishu_channel", prompt))
+})
+
+test_that("setup_feishu_channel can build webhook configuration with prompt hooks", {
+    menu_answers <- c(1L, 1L)
+    input_answers <- c(
+        "cli_test",
+        "secret_test",
+        "token_test",
+        "encrypt_test",
+        "openai:gpt-4o-mini",
+        "sk-test",
+        tempdir(),
+        file.path(tempdir(), ".aisdk", "feishu"),
+        "127.0.0.1",
+        "8788",
+        "/feishu/webhook",
+        "strict"
+    )
+    saved <- NULL
+
+    result <- setup_feishu_channel(
+        prompt_hooks = list(
+            menu = function(title, choices) {
+                answer <- menu_answers[[1]]
+                menu_answers <<- menu_answers[-1]
+                answer
+            },
+            input = function(prompt, default = NULL) {
+                answer <- input_answers[[1]]
+                input_answers <<- input_answers[-1]
+                answer
+            },
+            confirm = function(question) TRUE,
+            save = function(updates, path) {
+                saved <<- list(updates = updates, path = path)
+                invisible(TRUE)
+            }
+        ),
+        renviron_path = tempfile(".Renviron"),
+        workdir = tempdir(),
+        session_root = file.path(tempdir(), ".aisdk", "feishu")
+    )
+
+    expect_false(isTRUE(result$cancelled))
+    expect_equal(result$mode, "webhook")
+    expect_true(isTRUE(result$saved))
+    expect_true(grepl("Feishu channel setup complete.", result$summary, fixed = TRUE))
+    expect_equal(saved$updates$FEISHU_APP_ID, "cli_test")
+    expect_equal(saved$updates$OPENAI_API_KEY, "sk-test")
 })

@@ -292,6 +292,35 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 }, names, values), collapse = "\n")
             },
             layer = "computer"
+        ),
+
+        tool(
+            name = "setup_feishu_channel",
+            description = paste(
+                "Launch an interactive wizard for configuring a Feishu bot connection.",
+                "Use this when the user wants to connect Feishu, set up a Feishu bot, configure webhook settings,",
+                "or asks to start using aisdk through Feishu without manually editing environment variables."
+            ),
+            parameters = NULL,
+            execute = function() {
+                if (!interactive()) {
+                    return("Error: setup_feishu_channel requires an interactive console session.")
+                }
+
+                result <- setup_feishu_channel(
+                    prompt_hooks = list(
+                        menu = console_menu,
+                        input = console_input,
+                        confirm = console_confirm,
+                        save = update_renviron
+                    ),
+                    workdir = working_dir,
+                    session_root = file.path(working_dir, ".aisdk", "feishu")
+                )
+
+                result$summary %||% "Feishu setup finished."
+            },
+            layer = "computer"
         )
     )
 
@@ -391,6 +420,7 @@ You have access to powerful tools to help users interact with their computer:
 - **find_files**: Search for files by pattern
 - **get_system_info**: Get system and R environment information
 - **get_environment**: Check environment variables
+- **setup_feishu_channel**: Guided Feishu bot setup wizard for non-developer users
 
 ## Interactive Prompts
 
@@ -411,6 +441,7 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 5. **Be safe**: Confirm destructive operations via ask_user before proceeding
 6. **Be efficient**: Use the most appropriate tool for each task
 7. **Be helpful**: Suggest next steps or related commands when useful
+8. **For integration setup requests**: Prefer dedicated setup tools such as `setup_feishu_channel` over dumping raw environment-variable instructions
 
 ## Language
 

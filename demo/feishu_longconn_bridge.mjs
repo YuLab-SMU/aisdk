@@ -14,8 +14,6 @@
  *   FEISHU_LOOPBACK_URL=http://127.0.0.1:8788/feishu/webhook
  */
 
-import * as lark from "@larksuiteoapi/node-sdk";
-
 const appId = process.env.FEISHU_APP_ID || "";
 const appSecret = process.env.FEISHU_APP_SECRET || "";
 const loopbackUrl =
@@ -24,6 +22,27 @@ const loopbackUrl =
 if (!appId || !appSecret) {
   console.error("FEISHU_APP_ID and FEISHU_APP_SECRET must be set.");
   process.exit(1);
+}
+
+async function loadLarkSdk() {
+  try {
+    return await import("@larksuiteoapi/node-sdk");
+  } catch (error) {
+    if (error?.code === "ERR_MODULE_NOT_FOUND") {
+      console.error("");
+      console.error("[bridge] Missing Node dependency: @larksuiteoapi/node-sdk");
+      console.error("[bridge] Install it from the repository root with:");
+      console.error("");
+      console.error("  npm --prefix demo install");
+      console.error("");
+      console.error("[bridge] Then start the bridge with:");
+      console.error("");
+      console.error("  node demo/feishu_longconn_bridge.mjs");
+      console.error("");
+      process.exit(1);
+    }
+    throw error;
+  }
 }
 
 async function forwardEvent(eventType, data) {
@@ -53,20 +72,25 @@ async function forwardEvent(eventType, data) {
   );
 }
 
-const eventDispatcher = new lark.EventDispatcher({
-}).register({
-  "im.message.receive_v1": async (data) => {
-    await forwardEvent("im.message.receive_v1", data);
-  },
-});
+async function main() {
+  const lark = await loadLarkSdk();
 
-const client = new lark.WSClient({
-  appId,
-  appSecret,
-  logLevel: lark.LoggerLevel.info,
-});
+  const eventDispatcher = new lark.EventDispatcher({}).register({
+    "im.message.receive_v1": async (data) => {
+      await forwardEvent("im.message.receive_v1", data);
+    },
+  });
 
-console.log(`[bridge] connecting via long connection, loopback=${loopbackUrl}`);
-await client.start({
-  eventDispatcher,
-});
+  const client = new lark.WSClient({
+    appId,
+    appSecret,
+    logLevel: lark.LoggerLevel.info,
+  });
+
+  console.log(`[bridge] connecting via long connection, loopback=${loopbackUrl}`);
+  await client.start({
+    eventDispatcher,
+  });
+}
+
+await main();

@@ -1,0 +1,10 @@
+{
+  "name": "aisdk-feishu-demo",
+  "private": true,
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.50.0"
+  },
+  "scripts": {
+    "feishu:bridge": "node feishu_longconn_bridge.mjs"
+  }
+}
