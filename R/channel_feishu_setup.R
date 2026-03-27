@@ -139,27 +139,10 @@ setup_feishu_channel <- function(prompt_hooks = list(),
   }
 
   summary_lines <- c(
-    "Feishu channel setup complete.",
+    "Feishu connection setup complete.",
     sprintf("Mode: %s", mode_label),
-    sprintf("Local webhook URL: %s", local_webhook_url),
-    sprintf("Workdir: %s", chosen_workdir),
-    sprintf("Session root: %s", chosen_session_root),
     sprintf("Model: %s", model_id),
-    if (isTRUE(save_config)) sprintf("Saved to: %s", save_path) else "Configuration not saved automatically.",
-    "",
-    "Next steps:",
-    "1. Start the R Feishu webhook runtime:",
-    sprintf("   %s", commands$start_r)
-  )
-
-  summary_lines <- c(
-    summary_lines,
-    if (identical(mode, "long_connection")) {
-      "2. No public callback URL is required for local development in long-connection mode."
-    } else {
-      "2. Configure Feishu event subscription to call the webhook URL exposed through your tunnel or deployment."
-    },
-    "3. If you later want advanced settings such as encryption keys or a different webhook path, run the setup wizard again."
+    if (isTRUE(save_config)) sprintf("Saved to: %s", save_path) else "Configuration not saved automatically."
   )
 
   launch <- NULL
@@ -194,13 +177,26 @@ setup_feishu_channel <- function(prompt_hooks = list(),
         bridge_dir = bridge_dir
       )
       launch$bridge <- bridge_launch
-      summary_lines <- c(
+        summary_lines <- c(
         summary_lines,
         sprintf("Long-connection bridge started in background (PID: %s).", bridge_launch$pid),
         sprintf("Bridge directory: %s", bridge_launch$directory)
       )
     }
   }
+
+  summary_lines <- c(
+    summary_lines,
+    "",
+    "Next action:",
+    "Open Feishu and send the bot a test message now.",
+    "Example test message: 你好，帮我回复一句测试成功",
+    if (identical(mode, "long_connection")) {
+      "No public callback URL is required in this local mode."
+    } else {
+      sprintf("Make sure Feishu can reach your callback URL: %s", local_webhook_url)
+    }
+  )
 
   list(
     cancelled = FALSE,

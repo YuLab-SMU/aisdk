@@ -453,6 +453,7 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 8. **For integration setup requests**: Prefer dedicated setup tools such as `setup_feishu_channel` over dumping raw environment-variable instructions
 9. **Default behavior first**: Reuse the current session model and keep advanced integration parameters at sensible defaults unless the user explicitly asks to customize them
 10. **When the user already pasted credentials**: Pass those values directly into `setup_feishu_channel` instead of asking for them again
+11. **After successful setup**: Do not ask the user a new menu of unrelated next steps. Tell them the connection is ready and instruct them to go to Feishu and send a test message now
 
 ## Language
 
