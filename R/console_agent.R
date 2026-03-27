@@ -301,7 +301,11 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 "Use this when the user wants to connect Feishu, set up a Feishu bot, configure webhook settings,",
                 "or asks to start using aisdk through Feishu without manually editing environment variables."
             ),
-            parameters = z_empty_object(description = "No parameters required."),
+            parameters = z_object(
+                app_id = z_string(description = "Optional Feishu app id if the user already provided it", nullable = TRUE),
+                app_secret = z_string(description = "Optional Feishu app secret if the user already provided it", nullable = TRUE),
+                .required = character(0)
+            ),
             execute = function(args) {
                 if (!interactive()) {
                     return("Error: setup_feishu_channel requires an interactive console session.")
@@ -317,6 +321,8 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                         save = update_renviron
                     ),
                     current_model = current_model,
+                    app_id = args$app_id %||% NULL,
+                    app_secret = args$app_secret %||% NULL,
                     workdir = working_dir,
                     session_root = file.path(working_dir, ".aisdk", "feishu")
                 )
@@ -446,6 +452,7 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 7. **Be helpful**: Suggest next steps or related commands when useful
 8. **For integration setup requests**: Prefer dedicated setup tools such as `setup_feishu_channel` over dumping raw environment-variable instructions
 9. **Default behavior first**: Reuse the current session model and keep advanced integration parameters at sensible defaults unless the user explicitly asks to customize them
+10. **When the user already pasted credentials**: Pass those values directly into `setup_feishu_channel` instead of asking for them again
 
 ## Language
 

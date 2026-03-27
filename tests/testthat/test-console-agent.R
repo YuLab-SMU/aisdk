@@ -142,3 +142,38 @@ test_that("write_feishu_bridge_files copies packaged bridge assets", {
     expect_true(file.exists(file.path(out_dir, "package.json")))
     expect_true(grepl("npm install", info$summary, fixed = TRUE))
 })
+
+test_that("setup_feishu_channel can consume app credentials directly", {
+    saved <- NULL
+
+    result <- setup_feishu_channel(
+        prompt_hooks = list(
+            menu = function(title, choices) 1L,
+            input = function(prompt, default = NULL) tempfile(".Renviron"),
+            confirm = function(question) {
+                if (grepl("advanced", question, ignore.case = TRUE)) {
+                    return(FALSE)
+                }
+                if (grepl("Start the local Feishu webhook runtime now", question, ignore.case = TRUE)) {
+                    return(FALSE)
+                }
+                TRUE
+            },
+            save = function(updates, path) {
+                saved <<- list(updates = updates, path = path)
+                invisible(TRUE)
+            }
+        ),
+        current_model = "openai:gpt-5-mini",
+        app_id = "cli_a9481f474378dcb5",
+        app_secret = "secret_value",
+        workdir = tempdir(),
+        session_root = file.path(tempdir(), ".aisdk", "feishu"),
+        start_now = FALSE
+    )
+
+    expect_false(isTRUE(result$cancelled))
+    expect_equal(saved$updates$FEISHU_APP_ID, "cli_a9481f474378dcb5")
+    expect_equal(saved$updates$FEISHU_APP_SECRET, "secret_value")
+    expect_equal(saved$updates$FEISHU_MODEL, "openai:gpt-5-mini")
+})

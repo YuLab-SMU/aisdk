@@ -363,6 +363,7 @@ handle_command <- function(input,
         "{.code /model} - Open the provider/model chooser",
         "{.code /model <id>} - Switch model directly (e.g., openai:gpt-4o)",
         "{.code /model current} - Show the current model",
+        "{.code /feishu} - Launch the Feishu setup wizard",
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
         "{.code /clear} - Clear conversation history",
@@ -461,6 +462,25 @@ handle_command <- function(input,
             }
           )
         }
+      }
+    },
+    "/feishu" = {
+      if (!interactive()) {
+        cli::cli_alert_danger("Feishu setup requires an interactive console.")
+      } else {
+        wizard_result <- setup_feishu_channel(
+          prompt_hooks = list(
+            menu = console_menu,
+            input = console_input,
+            confirm = console_confirm,
+            save = update_renviron
+          ),
+          current_model = session$get_model_id() %||% "",
+          workdir = getwd(),
+          session_root = file.path(getwd(), ".aisdk", "feishu")
+        )
+        cli::cli_text("")
+        cli::cli_alert_info(wizard_result$summary %||% "Feishu setup finished.")
       }
     },
     "/history" = {

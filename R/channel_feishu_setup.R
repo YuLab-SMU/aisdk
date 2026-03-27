@@ -10,6 +10,9 @@
 #'   If `NULL`, the wizard will ask before writing.
 #' @param current_model Optional current model id. When provided, this is reused
 #'   as the default `FEISHU_MODEL` so the user does not need to choose a model again.
+#' @param app_id Optional Feishu app id. When supplied, the wizard will not ask for it.
+#' @param app_secret Optional Feishu app secret. When supplied, the wizard will not ask for it.
+#' @param start_now Whether to offer immediate startup of the local webhook runtime.
 #' @param workdir Working directory that the Feishu bot should use.
 #' @param session_root Session store root for the Feishu runtime.
 #' @param host Local bind host for the webhook server.
@@ -20,6 +23,9 @@
 setup_feishu_channel <- function(prompt_hooks = list(),
                                  renviron_path = NULL,
                                  current_model = NULL,
+                                 app_id = NULL,
+                                 app_secret = NULL,
+                                 start_now = TRUE,
                                  workdir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
                                  session_root = file.path(workdir, ".aisdk", "feishu"),
                                  host = "127.0.0.1",
@@ -32,8 +38,8 @@ setup_feishu_channel <- function(prompt_hooks = list(),
 
   mode <- "webhook"
 
-  app_id <- input_fn("FEISHU_APP_ID")
-  app_secret <- input_fn("FEISHU_APP_SECRET")
+  app_id <- app_id %||% input_fn("FEISHU_APP_ID")
+  app_secret <- app_secret %||% input_fn("FEISHU_APP_SECRET")
 
   if (!nzchar(app_id %||% "") || !nzchar(app_secret %||% "")) {
     return(list(
@@ -131,6 +137,29 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     "3. If you later want advanced settings such as encryption keys or a different webhook path, run the setup wizard again."
   )
 
+  launch <- NULL
+  if (isTRUE(start_now) && isTRUE(confirm_fn("Start the local Feishu webhook runtime now?"))) {
+    launch <- start_feishu_channel_service(
+      app_id = app_id,
+      app_secret = app_secret,
+      model_id = model_id,
+      verification_token = verification_token,
+      encrypt_key = encrypt_key,
+      workdir = chosen_workdir,
+      session_root = chosen_session_root,
+      host = chosen_host,
+      port = as.integer(chosen_port),
+      path = chosen_path,
+      sandbox_mode = chosen_sandbox
+    )
+    summary_lines <- c(
+      summary_lines,
+      "",
+      sprintf("Local webhook runtime started in background (PID: %s).", launch$pid),
+      sprintf("Listening URL: %s", launch$url)
+    )
+  }
+
   list(
     cancelled = FALSE,
     mode = mode,
@@ -139,6 +168,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     renviron_path = save_path,
     local_webhook_url = local_webhook_url,
     commands = commands,
+    launch = launch,
     summary = paste(summary_lines, collapse = "\n")
   )
 }
@@ -193,5 +223,107 @@ write_feishu_bridge_files <- function(dest_dir = tempdir()) {
     files = unname(copied),
     commands = c("npm install", "node feishu_longconn_bridge.mjs"),
     summary = summary
+  )
+}
+
+#' @title Start Feishu Channel Service
+#' @description
+#' Start the Feishu webhook runtime in a background R process for local use.
+#' @param app_id Feishu app id.
+#' @param app_secret Feishu app secret.
+#' @param model_id Model id used by the Feishu runtime.
+#' @param verification_token Optional callback verification token.
+#' @param encrypt_key Optional event subscription encryption key.
+#' @param workdir Working directory for tools and generated files.
+#' @param session_root Session store root.
+#' @param host Bind host.
+#' @param port Bind port.
+#' @param path Webhook path.
+#' @param sandbox_mode Sandbox mode for the Feishu agent.
+#' @return A list with the process id and local URL.
+#' @export
+start_feishu_channel_service <- function(app_id,
+                                         app_secret,
+                                         model_id = "openai:gpt-4o-mini",
+                                         verification_token = "",
+                                         encrypt_key = "",
+                                         workdir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
+                                         session_root = file.path(workdir, ".aisdk", "feishu"),
+                                         host = "127.0.0.1",
+                                         port = 8788L,
+                                         path = "/feishu/webhook",
+                                         sandbox_mode = "strict") {
+  process <- callr::r_bg(
+    func = function(app_id,
+                    app_secret,
+                    verification_token,
+                    encrypt_key,
+                    model_id,
+                    workdir,
+                    session_root,
+                    host,
+                    port,
+                    path,
+                    sandbox_mode) {
+      library(aisdk)
+      dir.create(session_root, recursive = TRUE, showWarnings = FALSE)
+      agent_tools <- create_computer_tools(
+        working_dir = workdir,
+        sandbox_mode = sandbox_mode
+      )
+      feishu_agent <- create_agent(
+        name = "FeishuAgent",
+        description = "Feishu chat agent with local computer tools for code, files, shell, and R execution",
+        system_prompt = paste0(
+          "You are an execution-capable AI agent operating through Feishu chat.\n",
+          "Use tools when they materially improve the answer.\n",
+          "Do not ask the user to use terminal-only controls.\n",
+          "If you generate a local file and include its absolute path in the final reply, the runtime will try to send it back as a Feishu attachment automatically.\n",
+          "Working directory: ", workdir, "\n",
+          "Sandbox mode: ", sandbox_mode, "\n"
+        ),
+        tools = agent_tools,
+        model = model_id
+      )
+      runtime <- create_feishu_channel_runtime(
+        session_store = create_file_channel_session_store(session_root),
+        app_id = app_id,
+        app_secret = app_secret,
+        verification_token = if (nzchar(verification_token)) verification_token else NULL,
+        encrypt_key = if (nzchar(encrypt_key)) encrypt_key else NULL,
+        model = model_id,
+        agent = feishu_agent
+      )
+      run_feishu_webhook_server(
+        runtime = runtime,
+        host = host,
+        port = port,
+        path = path
+      )
+    },
+    args = list(
+      app_id = app_id,
+      app_secret = app_secret,
+      verification_token = verification_token,
+      encrypt_key = encrypt_key,
+      model_id = model_id,
+      workdir = workdir,
+      session_root = session_root,
+      host = host,
+      port = as.integer(port),
+      path = path,
+      sandbox_mode = sandbox_mode
+    ),
+    supervise = TRUE
+  )
+
+  list(
+    pid = process$get_pid(),
+    url = sprintf(
+      "http://%s:%s%s",
+      host,
+      as.integer(port),
+      if (startsWith(path, "/")) path else paste0("/", path)
+    )
   )
 }

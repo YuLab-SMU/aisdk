@@ -8,6 +8,9 @@ setup_feishu_channel(
   prompt_hooks = list(),
   renviron_path = NULL,
   current_model = NULL,
+  app_id = NULL,
+  app_secret = NULL,
+  start_now = TRUE,
   workdir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
   session_root = file.path(workdir, ".aisdk", "feishu"),
   host = "127.0.0.1",
@@ -24,6 +27,12 @@ If \code{NULL}, the wizard will ask before writing.}
 
 \item{current_model}{Optional current model id. When provided, this is reused
 as the default \code{FEISHU_MODEL} so the user does not need to choose a model again.}
+
+\item{app_id}{Optional Feishu app id. When supplied, the wizard will not ask for it.}
+
+\item{app_secret}{Optional Feishu app secret. When supplied, the wizard will not ask for it.}
+
+\item{start_now}{Whether to offer immediate startup of the local webhook runtime.}
 
 \item{workdir}{Working directory that the Feishu bot should use.}
 
