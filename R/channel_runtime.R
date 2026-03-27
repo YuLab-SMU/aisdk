@@ -140,13 +140,21 @@ channel_extract_local_paths <- function(text) {
 
   normalized <- unique(vapply(paths, function(path) {
     candidate <- sub("[,.;:!?]+$", "", path)
-    if (!file.exists(candidate)) {
+    if (!channel_file_exists(candidate)) {
       return(NA_character_)
     }
-    normalizePath(candidate, winslash = "/", mustWork = FALSE)
+    channel_normalize_path(candidate)
   }, character(1)))
 
   normalized[!is.na(normalized)]
+}
+
+channel_file_exists <- function(path) {
+  file.exists(path)
+}
+
+channel_normalize_path <- function(path) {
+  normalizePath(path, winslash = "/", mustWork = FALSE)
 }
 
 channel_claims_attachment_sent <- function(text) {
