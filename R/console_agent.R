@@ -301,7 +301,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 "Use this when the user wants to connect Feishu, set up a Feishu bot, configure webhook settings,",
                 "or asks to start using aisdk through Feishu without manually editing environment variables."
             ),
-            parameters = NULL,
+            parameters = z_empty_object(description = "No parameters required."),
             execute = function(args) {
                 if (!interactive()) {
                     return("Error: setup_feishu_channel requires an interactive console session.")
