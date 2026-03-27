@@ -268,6 +268,17 @@ test_that("ChannelRuntime sends local attachments referenced in final reply text
   expect_equal(result$results[[1]]$attachments[[1]]$path, normalizePath(tmp_png, winslash = "/", mustWork = FALSE))
 })
 
+test_that("channel_extract_local_paths recognizes Windows absolute paths", {
+  extracted <- testthat::with_mocked_bindings(
+    channel_extract_local_paths("Done. File saved to C:/Users/test/output.png"),
+    file.exists = function(path) identical(path, "C:/Users/test/output.png"),
+    normalizePath = function(path, winslash = "/", mustWork = FALSE) path,
+    .package = "aisdk"
+  )
+
+  expect_equal(extracted, "C:/Users/test/output.png")
+})
+
 test_that("ChannelRuntime sends attachments from structured tool artifacts even without path in final text", {
   tmp_png <- tempfile(fileext = ".png")
   writeBin(as.raw(c(0x89, 0x50, 0x4E, 0x47)), tmp_png)

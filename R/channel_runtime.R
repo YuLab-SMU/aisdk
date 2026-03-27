@@ -132,7 +132,7 @@ channel_extract_local_paths <- function(text) {
     return(character(0))
   }
 
-  matches <- gregexpr("/[^\\s`\"'<>]+", text, perl = TRUE)
+  matches <- gregexpr("(?:(?:[A-Za-z]:[\\\\/])|/)[^\\s`\"'<>]+", text, perl = TRUE)
   paths <- regmatches(text, matches)[[1]]
   if (length(paths) == 0) {
     return(character(0))
