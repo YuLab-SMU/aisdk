@@ -136,6 +136,111 @@ post_to_api <- function(url, headers, body,
   }
 }
 
+#' @title Post Multipart to API with Retry
+#' @description
+#' Makes a multipart POST request to an API endpoint with automatic retry on
+#' failure. This is used for file-upload APIs such as image editing.
+#'
+#' @param url The API endpoint URL.
+#' @param headers A named list of HTTP headers.
+#' @param body A named list of multipart fields.
+#' @param max_retries Maximum number of retries (default: 2).
+#' @param initial_delay_ms Initial delay in milliseconds (default: 2000).
+#' @param backoff_factor Multiplier for delay on each retry (default: 2).
+#' @return The parsed JSON response.
+#' @keywords internal
+post_multipart_to_api <- function(url, headers, body,
+                                  max_retries = 2,
+                                  initial_delay_ms = 2000,
+                                  backoff_factor = 2) {
+  if (!should_skip_internet_check() && !curl::has_internet()) {
+    message("Internet connection is not available. Cannot reach: ", url)
+    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
+    return(NULL)
+  }
+
+  attempt <- 0
+  delay_ms <- initial_delay_ms
+
+  repeat {
+    attempt <- attempt + 1
+
+    tryCatch(
+      {
+        req <- httr2::request(url)
+        req <- httr2::req_headers(req, !!!headers)
+        req <- httr2::req_body_multipart(req, !!!body)
+        req <- httr2::req_timeout(req, 120)
+        req <- httr2::req_error(req, is_error = function(resp) FALSE)
+
+        resp <- httr2::req_perform(req)
+        status <- httr2::resp_status(resp)
+
+        if (status >= 200 && status < 300) {
+          resp_text <- tryCatch(
+            httr2::resp_body_string(resp),
+            error = function(e) ""
+          )
+
+          if (is.null(resp_text) || nchar(trimws(resp_text)) == 0) {
+            return(list())
+          }
+
+          return(tryCatch(
+            jsonlite::fromJSON(resp_text, simplifyVector = FALSE),
+            error = function(e) {
+              repaired <- fix_json(resp_text)
+              tryCatch(
+                jsonlite::fromJSON(repaired, simplifyVector = FALSE),
+                error = function(e2) list(`_raw_response` = resp_text)
+              )
+            }
+          ))
+        }
+
+        is_retryable <- status == 429 || status >= 500
+
+        if (!is_retryable || attempt > max_retries) {
+          error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+          rlang::abort(c(
+            paste0("API request failed with status ", status),
+            "i" = paste0("URL: ", url),
+            "x" = error_body
+          ), class = "aisdk_api_error")
+        }
+
+        retry_after <- httr2::resp_header(resp, "retry-after")
+        retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
+
+        if (!is.null(retry_after_ms)) {
+          delay_ms <- as.numeric(retry_after_ms)
+        } else if (!is.null(retry_after)) {
+          delay_ms <- as.numeric(retry_after) * 1000
+        }
+
+        message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+        Sys.sleep(delay_ms / 1000)
+        delay_ms <- delay_ms * backoff_factor
+      },
+      error = function(e) {
+        if (inherits(e, "aisdk_api_error")) {
+          rlang::cnd_signal(e)
+        }
+        if (attempt > max_retries) {
+          rlang::abort(c(
+            "API request failed after all retries",
+            "i" = paste0("URL: ", url),
+            "x" = conditionMessage(e)
+          ), class = "aisdk_api_error", parent = e)
+        }
+        message(sprintf("Network error, retrying in %d ms...", delay_ms))
+        Sys.sleep(delay_ms / 1000)
+        delay_ms <- delay_ms * backoff_factor
+      }
+    )
+  }
+}
+
 #' @title Stream from API
 #' @description
 #' Makes a streaming POST request and processes Server-Sent Events (SSE) using httr2.

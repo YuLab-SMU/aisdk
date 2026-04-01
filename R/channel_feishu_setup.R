@@ -1,3 +1,21 @@
+#' @keywords internal
+feishu_node_bin <- function() {
+  Sys.which("node")
+}
+
+#' @keywords internal
+feishu_npm_bin <- function() {
+  Sys.which("npm")
+}
+
+#' @keywords internal
+feishu_default_connection_mode <- function() {
+  if (nzchar(feishu_node_bin()) && nzchar(feishu_npm_bin())) {
+    return("long_connection")
+  }
+  "webhook"
+}
+
 #' @title Feishu Channel Setup Wizard
 #' @description
 #' Interactive helper for configuring the Feishu channel runtime without
@@ -20,21 +38,6 @@
 #' @param path Local webhook path.
 #' @return A list describing the chosen configuration and next-step commands.
 #' @export
-feishu_node_bin <- function() {
-  Sys.which("node")
-}
-
-feishu_npm_bin <- function() {
-  Sys.which("npm")
-}
-
-feishu_default_connection_mode <- function() {
-  if (nzchar(feishu_node_bin()) && nzchar(feishu_npm_bin())) {
-    return("long_connection")
-  }
-  "webhook"
-}
-
 setup_feishu_channel <- function(prompt_hooks = list(),
                                  renviron_path = NULL,
                                  current_model = NULL,
@@ -139,7 +142,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
   }
 
   summary_lines <- c(
-    "Feishu connection setup complete.",
+    "Feishu channel setup complete.",
     sprintf("Mode: %s", mode_label),
     sprintf("Model: %s", model_id),
     if (isTRUE(save_config)) sprintf("Saved to: %s", save_path) else "Configuration not saved automatically."
@@ -190,7 +193,7 @@ setup_feishu_channel <- function(prompt_hooks = list(),
     "",
     "Next action:",
     "Open Feishu and send the bot a test message now.",
-    "Example test message: 你好，帮我回复一句测试成功",
+    "Example test message: Hello, please reply with 'test successful'.",
     if (identical(mode, "long_connection")) {
       "No public callback URL is required in this local mode."
     } else {

@@ -21,6 +21,7 @@ Provider class for OpenAI. Can create language and embedding models.
 \item \href{#method-OpenAIProvider-responses_model}{\code{OpenAIProvider$responses_model()}}
 \item \href{#method-OpenAIProvider-smart_model}{\code{OpenAIProvider$smart_model()}}
 \item \href{#method-OpenAIProvider-embedding_model}{\code{OpenAIProvider$embedding_model()}}
+\item \href{#method-OpenAIProvider-image_model}{\code{OpenAIProvider$image_model()}}
 \item \href{#method-OpenAIProvider-clone}{\code{OpenAIProvider$clone()}}
 }
 }
@@ -166,6 +167,28 @@ Create an embedding model.
 }
 \subsection{Returns}{
 An OpenAIEmbeddingModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$image_model(
+  model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "gpt-image-1").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An OpenAIImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

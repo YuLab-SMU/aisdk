@@ -58,6 +58,15 @@ test_that("xAI provider requires model_id if env not set", {
     expect_equal(model$model_id, "grok-beta")
 })
 
+test_that("xAI provider creates image model correctly", {
+    provider <- suppressWarnings(create_xai(api_key = "test_key"))
+    model <- provider$image_model("grok-2-image")
+
+    expect_s3_class(model, "XAIImageModel")
+    expect_equal(model$model_id, "grok-2-image")
+    expect_equal(model$provider, "xai")
+})
+
 test_that("create_xai() warns when API key is missing", {
     # Temporarily unset API key
     old_key <- Sys.getenv("XAI_API_KEY")
@@ -99,4 +108,49 @@ test_that("xAI provider can make real API calls", {
     # Check that we got a response
     expect_true(!is.null(result$text))
     expect_true(nchar(result$text) > 0)
+})
+
+test_that("xAI image model generates and edits images with JSON payloads", {
+    provider <- suppressWarnings(create_xai(api_key = "test_key"))
+    model <- provider$image_model("grok-2-image")
+    captured_generation <- NULL
+    captured_edit <- NULL
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            if (grepl("/images/generations$", url)) {
+                captured_generation <<- body
+                return(list(
+                    data = list(list(
+                        b64_json = base64enc::base64encode(charToRaw("xai-gen"))
+                    ))
+                ))
+            }
+            captured_edit <<- body
+            list(
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("xai-edit"))
+                ))
+            )
+        }
+    )
+
+    generated <- generate_image(
+        model = model,
+        prompt = "Draw a cobalt blue mug",
+        output_dir = tempdir()
+    )
+    edited <- edit_image(
+        model = model,
+        image = "https://example.com/source.png",
+        prompt = "Make it watercolor",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_generation$model, "grok-2-image")
+    expect_equal(captured_generation$response_format, "b64_json")
+    expect_equal(captured_edit$image$type, "image_url")
+    expect_equal(captured_edit$image$url, "https://example.com/source.png")
+    expect_equal(rawToChar(generated$images[[1]]$bytes), "xai-gen")
+    expect_equal(rawToChar(edited$images[[1]]$bytes), "xai-edit")
 })

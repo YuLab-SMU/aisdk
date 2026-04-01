@@ -14,6 +14,7 @@ Provider class for OpenRouter.
 \itemize{
 \item \href{#method-OpenRouterProvider-new}{\code{OpenRouterProvider$new()}}
 \item \href{#method-OpenRouterProvider-language_model}{\code{OpenRouterProvider$language_model()}}
+\item \href{#method-OpenRouterProvider-image_model}{\code{OpenRouterProvider$image_model()}}
 \item \href{#method-OpenRouterProvider-clone}{\code{OpenRouterProvider$clone()}}
 }
 }
@@ -66,6 +67,26 @@ Create a language model.
 }
 \subsection{Returns}{
 An OpenRouterLanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenRouterProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenRouterProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenRouterProvider$image_model(model_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "openai/gpt-image-1").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An OpenAIImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

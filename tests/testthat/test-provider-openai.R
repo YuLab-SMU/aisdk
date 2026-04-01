@@ -37,6 +37,15 @@ test_that("OpenAI provider creates embedding model correctly", {
   expect_equal(model$provider, "openai")
 })
 
+test_that("OpenAI provider creates image model correctly", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1")
+
+  expect_s3_class(model, "OpenAIImageModel")
+  expect_equal(model$model_id, "gpt-image-1")
+  expect_equal(model$provider, "openai")
+})
+
 test_that("create_openai() accepts custom base_url", {
   provider <- safe_create_provider(create_openai,
     base_url = openai_base_url
@@ -111,6 +120,171 @@ test_that("OpenAI provider handles tool calls", {
 
   # Check response (can be text or tool calls)
   expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
+})
+
+test_that("OpenAI chat payload builder translates multimodal content blocks", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$language_model(openai_model)
+
+  payload <- model$build_payload(list(
+    messages = list(list(
+      role = "user",
+      content = list(
+        input_text("Describe this image"),
+        input_image("https://example.com/test.png", media_type = "image/png", detail = "high")
+      )
+    ))
+  ))
+
+  blocks <- payload$body$messages[[1]]$content
+  expect_equal(blocks[[1]]$type, "text")
+  expect_equal(blocks[[1]]$text, "Describe this image")
+  expect_equal(blocks[[2]]$type, "image_url")
+  expect_equal(blocks[[2]]$image_url$url, "https://example.com/test.png")
+  expect_equal(blocks[[2]]$image_url$detail, "high")
+})
+
+test_that("OpenAI responses model translates multimodal content blocks", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("o1")
+
+  fake_response <- list(
+    id = "resp_123",
+    output = list(list(
+      type = "message",
+      content = list(list(text = "done"))
+    )),
+    usage = list(input_tokens = 1, output_tokens = 1, total_tokens = 2)
+  )
+  captured <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body) {
+      captured <<- body
+      fake_response
+    }
+  )
+
+  model$do_generate(list(
+    messages = list(
+      list(role = "system", content = list(input_text("You are helpful."))),
+      list(
+        role = "user",
+        content = list(
+          input_text("Describe this image"),
+          input_image("https://example.com/test.png", media_type = "image/png")
+        )
+      )
+    )
+  ))
+
+  expect_equal(captured$instructions, "You are helpful.")
+  expect_equal(captured$input[[1]]$content[[1]]$type, "input_text")
+  expect_equal(captured$input[[1]]$content[[2]]$type, "input_image")
+  expect_equal(captured$input[[1]]$content[[2]]$image_url, "https://example.com/test.png")
+})
+
+test_that("OpenAI chat payload translates multimodal content blocks", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$language_model(openai_model)
+
+  payload <- model$build_payload(list(
+    messages = list(
+      list(
+        role = "user",
+        content = list(
+          input_text("Describe this image"),
+          input_image(
+            paste0(
+              "data:image/png;base64,",
+              base64enc::base64encode(charToRaw("fake-image"))
+            ),
+            media_type = "image/png",
+            detail = "high"
+          )
+        )
+      )
+    )
+  ))
+
+  content <- payload$body$messages[[1]]$content
+  expect_equal(content[[1]]$type, "text")
+  expect_equal(content[[1]]$text, "Describe this image")
+  expect_equal(content[[2]]$type, "image_url")
+  expect_match(content[[2]]$image_url$url, "^data:image/png;base64,")
+  expect_equal(content[[2]]$image_url$detail, "high")
+})
+
+test_that("OpenAI chat payload translates provider-neutral multimodal blocks", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$language_model("gpt-4o")
+
+  image_path <- tempfile(fileext = ".png")
+  writeBin(as.raw(0:15), image_path)
+  on.exit(unlink(image_path), add = TRUE)
+
+  payload <- model$build_payload(list(
+    messages = list(list(
+      role = "user",
+      content = list(
+        input_text("Describe this image."),
+        input_image(image_path, detail = "high")
+      )
+    ))
+  ))
+
+  expect_equal(payload$body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(payload$body$messages[[1]]$content[[1]]$text, "Describe this image.")
+  expect_equal(payload$body$messages[[1]]$content[[2]]$type, "image_url")
+  expect_match(payload$body$messages[[1]]$content[[2]]$image_url$url, "^data:image/png;base64,")
+  expect_equal(payload$body$messages[[1]]$content[[2]]$image_url$detail, "high")
+})
+
+test_that("OpenAI responses payload translates provider-neutral multimodal blocks", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("o1")
+
+  image_path <- tempfile(fileext = ".png")
+  writeBin(as.raw(0:15), image_path)
+  on.exit(unlink(image_path), add = TRUE)
+
+  captured_body <- NULL
+  mock_response <- list(
+    id = "resp_123",
+    output = list(list(
+      type = "message",
+      content = list(list(text = "ok"))
+    )),
+    status = "completed",
+    usage = list(
+      input_tokens = 10,
+      output_tokens = 5,
+      total_tokens = 15
+    )
+  )
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      mock_response
+    },
+    .package = "aisdk"
+  )
+
+  result <- model$generate(
+    messages = list(list(
+      role = "user",
+      content = list(
+        input_text("Analyze the image."),
+        input_image(image_path)
+      )
+    ))
+  )
+
+  expect_equal(result$text, "ok")
+  expect_equal(captured_body$input[[1]]$content[[1]]$type, "input_text")
+  expect_equal(captured_body$input[[1]]$content[[2]]$type, "input_image")
+  expect_match(captured_body$input[[1]]$content[[2]]$image_url, "^data:image/png;base64,")
 })
 
 # ============================================================================
@@ -207,6 +381,49 @@ test_that("OpenAI responses model returns correct history format", {
   expect_equal(model$get_history_format(), "openai_responses")
 })
 
+test_that("OpenAI responses API translates multimodal input blocks", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("o1")
+  captured_body <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body) {
+      captured_body <<- body
+      list(
+        id = "resp_test",
+        output = list(list(
+          type = "message",
+          content = list(list(text = "ok"))
+        ))
+      )
+    }
+  )
+
+  result <- model$do_generate(list(
+    messages = list(
+      list(
+        role = "user",
+        content = list(
+          input_text("What is in this image?"),
+          input_image(
+            paste0(
+              "data:image/png;base64,",
+              base64enc::base64encode(charToRaw("fake-image"))
+            ),
+            media_type = "image/png"
+          )
+        )
+      )
+    )
+  ))
+
+  expect_equal(result$text, "ok")
+  expect_equal(captured_body$input[[1]]$type, "message")
+  expect_equal(captured_body$input[[1]]$content[[1]]$type, "input_text")
+  expect_equal(captured_body$input[[1]]$content[[2]]$type, "input_image")
+  expect_match(captured_body$input[[1]]$content[[2]]$image_url, "^data:image/png;base64,")
+})
+
 # Live API tests for Responses API (only run when API key is available)
 test_that("OpenAI Responses API can make real API calls", {
   skip_if_no_api_key("OpenAI")
@@ -262,4 +479,120 @@ test_that("OpenAI Responses API maintains conversation state", {
   # Reset and verify state is cleared
   model$reset()
   expect_null(model$get_last_response_id())
+})
+
+test_that("OpenAI image model posts JSON generation payload and parses images", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1")
+  captured_body <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        created = 123,
+        data = list(list(
+          b64_json = base64enc::base64encode(charToRaw("png-bytes")),
+          revised_prompt = "revised"
+        ))
+      )
+    }
+  )
+
+  result <- generate_image(
+    model = model,
+    prompt = "Draw a blue mug",
+    output_dir = tempdir()
+  )
+
+  expect_equal(captured_body$model, "gpt-image-1")
+  expect_equal(captured_body$prompt, "Draw a blue mug")
+  expect_equal(captured_body$response_format, "b64_json")
+  expect_equal(result$images[[1]]$media_type, "image/png")
+  expect_equal(rawToChar(result$images[[1]]$bytes), "png-bytes")
+  expect_equal(result$images[[1]]$revised_prompt, "revised")
+})
+
+test_that("OpenAI image model posts multipart edit payload and parses images", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1")
+  captured_body <- NULL
+
+  input_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("fakepng"), input_path)
+  on.exit(unlink(input_path), add = TRUE)
+
+  local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        created = 456,
+        data = list(list(
+          b64_json = base64enc::base64encode(charToRaw("edited-bytes"))
+        ))
+      )
+    }
+  )
+
+  result <- edit_image(
+    model = model,
+    image = input_path,
+    prompt = "Make it cobalt blue",
+    output_dir = tempdir()
+  )
+
+  expect_equal(captured_body$model, "gpt-image-1")
+  expect_equal(captured_body$prompt, "Make it cobalt blue")
+  expect_equal(captured_body$response_format, "b64_json")
+  expect_true(!is.null(captured_body$image))
+  expect_equal(rawToChar(result$images[[1]]$bytes), "edited-bytes")
+})
+
+test_that("OpenAI image edit includes mask uploads when provided", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1")
+  captured_body <- NULL
+
+  image_path <- tempfile(fileext = ".png")
+  mask_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("fakepng"), image_path)
+  writeBin(charToRaw("maskpng"), mask_path)
+  on.exit(unlink(c(image_path, mask_path)), add = TRUE)
+
+  local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        created = 456,
+        data = list(list(
+          b64_json = base64enc::base64encode(charToRaw("edited-with-mask"))
+        ))
+      )
+    }
+  )
+
+  result <- edit_image(
+    model = model,
+    image = image_path,
+    mask = mask_path,
+    prompt = "Only change the mug color",
+    output_dir = tempdir()
+  )
+
+  expect_true(!is.null(captured_body$mask))
+  expect_equal(rawToChar(result$images[[1]]$bytes), "edited-with-mask")
+})
+
+test_that("OpenAI image edit rejects remote URLs for uploaded source images", {
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1")
+
+  expect_error(
+    edit_image(
+      model = model,
+      image = "https://example.com/source.png",
+      prompt = "Edit this image"
+    ),
+    "local file path or data URI"
+  )
 })

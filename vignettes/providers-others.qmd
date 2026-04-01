@@ -23,6 +23,21 @@ provider <- create_xai()
 model <- provider$language_model("grok-2")
 ```
 
+xAI image models can also be used through `image_model()`:
+
+```r
+provider <- create_xai()
+image_model <- provider$image_model("grok-2-image")
+
+result <- generate_image(
+  model = image_model,
+  prompt = "A premium product shot of a cobalt blue mug on white marble",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
 ## Volcengine (Doubao)
 Supports ByteDance's Doubao models. Requires `VOLCENGINE_API_KEY` and usually a model endpoint ID.
 ```r
@@ -30,11 +45,47 @@ provider <- create_volcengine()
 model <- provider$language_model("ep-...")
 ```
 
+Volcengine image models can also be used through `image_model()`:
+
+```r
+provider <- create_volcengine()
+image_model <- provider$image_model("doubao-seedream-5-0")
+
+result <- generate_image(
+  model = image_model,
+  prompt = "A clean product photo of a cobalt blue ceramic mug",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
 ## Stepfun
 Supports Stepfun's models.
 ```r
 provider <- create_stepfun()
 model <- provider$language_model("step-1-8k")
+```
+
+Stepfun image generation and editing models are also exposed:
+
+```r
+provider <- create_stepfun()
+image_model <- provider$image_model("step-1x-medium")
+edit_model <- provider$image_model("step-1x-edit")
+```
+
+For editing:
+
+```r
+result <- edit_image(
+  model = edit_model,
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
 ```
 
 ## Bailian (Qwen)
@@ -49,6 +100,21 @@ A universal API routing to hundreds of models.
 ```r
 provider <- create_openrouter()
 model <- provider$language_model("meta-llama/llama-3.1-405b")
+```
+
+When the upstream model supports OpenAI-style image APIs, OpenRouter can be used through `image_model()` as well:
+
+```r
+provider <- create_openrouter()
+image_model <- provider$image_model("openai/gpt-image-1")
+```
+
+## AiHubMix
+AiHubMix can route OpenAI-style image models through its unified API:
+
+```r
+provider <- create_aihubmix()
+image_model <- provider$image_model("gpt-image-1")
 ```
 
 ## Nvidia

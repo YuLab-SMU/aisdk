@@ -14,6 +14,7 @@ Provider class for Stepfun.
 \itemize{
 \item \href{#method-StepfunProvider-new}{\code{StepfunProvider$new()}}
 \item \href{#method-StepfunProvider-language_model}{\code{StepfunProvider$language_model()}}
+\item \href{#method-StepfunProvider-image_model}{\code{StepfunProvider$image_model()}}
 \item \href{#method-StepfunProvider-clone}{\code{StepfunProvider$clone()}}
 }
 }
@@ -65,6 +66,26 @@ Create a language model.
 }
 \subsection{Returns}{
 A StepfunLanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StepfunProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-StepfunProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StepfunProvider$image_model(model_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "step-1x-medium", "step-1x-edit").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A StepfunImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

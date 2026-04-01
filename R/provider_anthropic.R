@@ -48,14 +48,22 @@ AnthropicLanguageModel <- R6::R6Class(
       for (msg in messages) {
         if (msg$role == "system") {
           # Anthropic: system message is a top-level parameter
-          system_prompt <- msg$content
+          system_prompt <- if (is.character(msg$content) || is.null(msg$content)) {
+            msg$content
+          } else {
+            content_blocks_to_text(msg$content, arg_name = "system")
+          }
           # Check for cache_control in system message
           if (!is.null(msg$cache_control)) {
             system_cache_control <- msg$cache_control
           }
         } else {
           # user and assistant roles
-          content <- msg$content
+          content <- if (is.character(msg$content) || is.null(msg$content)) {
+            msg$content
+          } else {
+            translate_message_content(msg$content, target = "anthropic")
+          }
 
           # Construct message object
           msg_obj <- list(

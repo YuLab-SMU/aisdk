@@ -103,6 +103,40 @@ ProviderRegistry <- R6::R6Class(
       }
     },
 
+    #' @description Get an image model by ID.
+    #' @param id Model ID in the format "provider:model".
+    #' @return An ImageModelV1 object.
+    image_model = function(id) {
+      sep_pos <- regexpr(private$separator, id, fixed = TRUE)
+      if (sep_pos < 1) {
+        rlang::abort(c(
+          paste0("Invalid model ID format: ", id),
+          "i" = paste0("Expected format: provider", private$separator, "model")
+        ))
+      }
+      provider_id <- substr(id, 1, sep_pos - 1)
+      model_id <- substr(id, sep_pos + 1, nchar(id))
+
+      provider <- private$providers[[provider_id]]
+      if (is.null(provider)) {
+        available <- paste(names(private$providers), collapse = ", ")
+        rlang::abort(c(
+          paste0("Provider not found: ", provider_id),
+          "i" = if (nchar(available) > 0) paste0("Available providers: ", available) else "No providers registered."
+        ))
+      }
+
+      if (is.function(provider) && length(formals(provider)) == 0) {
+        provider <- provider()
+      }
+
+      if (inherits(provider, "R6") && !is.null(provider$image_model)) {
+        return(provider$image_model(model_id))
+      }
+
+      rlang::abort(paste0("Provider '", provider_id, "' does not support image models."))
+    },
+
     #' @description List all registered provider IDs.
     #' @return A character vector of provider IDs.
     list_providers = function() {

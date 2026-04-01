@@ -16,7 +16,7 @@ Uses \code{do_} prefix for internal methods to prevent direct usage by end-users
 
 \item{\code{model_id}}{The model identifier (e.g., "gpt-4o").}
 
-\item{\code{capabilities}}{Model capability flags (e.g., is_reasoning_model).}
+\item{\code{capabilities}}{Model capability flags.}
 }
 \if{html}{\out{</div>}}
 }
@@ -59,7 +59,7 @@ Initialize the model with provider and model ID.
 \if{html}{\out{<a id="method-LanguageModelV1-has_capability"></a>}}
 \if{latex}{\out{\hypertarget{method-LanguageModelV1-has_capability}{}}}
 \subsection{Method \code{has_capability()}}{
-Check if model has a specific capability.
+Check if the model has a specific capability.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$has_capability(cap)}\if{html}{\out{</div>}}
 }
@@ -67,7 +67,7 @@ Check if model has a specific capability.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{cap}}{Capability name (e.g., "is_reasoning_model").}
+\item{\code{cap}}{Capability name.}
 }
 \if{html}{\out{</div>}}
 }
@@ -79,7 +79,7 @@ Logical.
 \if{html}{\out{<a id="method-LanguageModelV1-generate"></a>}}
 \if{latex}{\out{\hypertarget{method-LanguageModelV1-generate}{}}}
 \subsection{Method \code{generate()}}{
-Public generation method (wrapper for do_generate).
+Public generation method.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$generate(...)}\if{html}{\out{</div>}}
 }
@@ -87,7 +87,7 @@ Public generation method (wrapper for do_generate).
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{...}}{Call options passed to do_generate.}
+\item{\code{...}}{Call options passed to \code{do_generate()}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -99,7 +99,7 @@ A GenerateResult object.
 \if{html}{\out{<a id="method-LanguageModelV1-stream"></a>}}
 \if{latex}{\out{\hypertarget{method-LanguageModelV1-stream}{}}}
 \subsection{Method \code{stream()}}{
-Public streaming method (wrapper for do_stream).
+Public streaming method.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$stream(callback, ...)}\if{html}{\out{</div>}}
 }
@@ -107,9 +107,9 @@ Public streaming method (wrapper for do_stream).
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{callback}}{Function to call with each chunk.}
+\item{\code{callback}}{Callback invoked with \verb{(text, done)}.}
 
-\item{\code{...}}{Call options passed to do_stream.}
+\item{\code{...}}{Call options passed to \code{do_stream()}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -151,19 +151,19 @@ Generate text (streaming). Abstract method.
 \describe{
 \item{\code{params}}{A list of call options.}
 
-\item{\code{callback}}{A function called for each chunk (text, done).}
+\item{\code{callback}}{Callback invoked with \verb{(text, done)}.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A GenerateResult object (accumulated from the stream).
+A GenerateResult object.
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-LanguageModelV1-format_tool_result"></a>}}
 \if{latex}{\out{\hypertarget{method-LanguageModelV1-format_tool_result}{}}}
 \subsection{Method \code{format_tool_result()}}{
-Format a tool execution result for the provider's API.
+Format a tool execution result for the provider API.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$format_tool_result(tool_call_id, tool_name, result_content)}\if{html}{\out{</div>}}
 }
@@ -171,29 +171,29 @@ Format a tool execution result for the provider's API.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{tool_call_id}}{The ID of the tool call.}
+\item{\code{tool_call_id}}{The tool call identifier.}
 
-\item{\code{tool_name}}{The name of the tool.}
+\item{\code{tool_name}}{The tool name.}
 
-\item{\code{result_content}}{The result content from executing the tool.}
+\item{\code{result_content}}{The tool execution result.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A list formatted as a message for this provider's API.
+A provider-specific tool result message.
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-LanguageModelV1-get_history_format"></a>}}
 \if{latex}{\out{\hypertarget{method-LanguageModelV1-get_history_format}{}}}
 \subsection{Method \code{get_history_format()}}{
-Get the message format used by this model's API for history.
+Get the message history format used by this model.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$get_history_format()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-A character string ("openai" or "anthropic").
+A character string such as \code{"openai"} or \code{"anthropic"}.
 }
 }
 \if{html}{\out{<hr>}}

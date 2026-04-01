@@ -136,3 +136,126 @@ test_that("Anthropic provider generates tool definition with cache_control", {
   expect_equal(tool_api$name, "get_weather")
   expect_equal(tool_api$cache_control$type, "ephemeral")
 })
+
+test_that("Anthropic formatter translates multimodal content blocks", {
+  provider <- safe_create_provider(create_anthropic)
+  model <- provider$language_model(anthropic_model)
+
+  fake_response <- list(
+    content = list(list(type = "text", text = "done")),
+    usage = list(input_tokens = 1, output_tokens = 1),
+    stop_reason = "end_turn"
+  )
+  captured <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body) {
+      captured <<- body
+      fake_response
+    }
+  )
+
+  model$do_generate(list(
+    messages = list(
+      list(role = "system", content = list(input_text("You are helpful."))),
+      list(
+        role = "user",
+        content = list(
+          input_text("Describe this image"),
+          input_image("https://example.com/test.png", media_type = "image/png")
+        )
+      )
+    ),
+    max_tokens = 20
+  ))
+
+  expect_equal(captured$system, "You are helpful.")
+  expect_equal(captured$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured$messages[[1]]$content[[2]]$type, "image")
+  expect_equal(captured$messages[[1]]$content[[2]]$source$type, "url")
+  expect_equal(captured$messages[[1]]$content[[2]]$source$url, "https://example.com/test.png")
+})
+
+test_that("Anthropic payload translates multimodal content blocks", {
+  provider <- safe_create_provider(create_anthropic, api_key = "test_key")
+  model <- provider$language_model(anthropic_model)
+  captured_body <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body) {
+      captured_body <<- body
+      list(
+        content = list(list(type = "text", text = "ok")),
+        stop_reason = "end_turn",
+        usage = list(input_tokens = 10, output_tokens = 2)
+      )
+    }
+  )
+
+  result <- model$do_generate(list(
+    messages = list(
+      list(
+        role = "user",
+        content = list(
+          input_text("Analyze this image"),
+          input_image(
+            paste0(
+              "data:image/png;base64,",
+              base64enc::base64encode(charToRaw("fake-image"))
+            ),
+            media_type = "image/png"
+          )
+        )
+      )
+    ),
+    max_tokens = 128
+  ))
+
+  expect_equal(result$text, "ok")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$text, "Analyze this image")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$type, "image")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$source$type, "base64")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$source$media_type, "image/png")
+})
+
+test_that("Anthropic payload translates provider-neutral multimodal blocks", {
+  provider <- create_anthropic(api_key = "test_key", base_url = "https://api.anthropic.com/v1")
+  model <- provider$language_model(anthropic_model)
+
+  image_path <- tempfile(fileext = ".png")
+  writeBin(as.raw(0:15), image_path)
+  on.exit(unlink(image_path), add = TRUE)
+
+  captured_body <- NULL
+  mock_response <- list(
+    content = list(list(type = "text", text = "ok")),
+    stop_reason = "end_turn",
+    usage = list(input_tokens = 10, output_tokens = 5)
+  )
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      mock_response
+    },
+    .package = "aisdk"
+  )
+
+  result <- model$generate(
+    messages = list(list(
+      role = "user",
+      content = list(
+        input_text("Analyze the image."),
+        input_image(image_path)
+      )
+    )),
+    max_tokens = 32
+  )
+
+  expect_equal(result$text, "ok")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$type, "image")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$source$type, "base64")
+  expect_equal(captured_body$messages[[1]]$content[[2]]$source$media_type, "image/png")
+})

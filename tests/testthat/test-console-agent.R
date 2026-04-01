@@ -2,7 +2,7 @@ test_that("create_console_agent creates valid agent", {
     agent <- create_console_agent()
     expect_s3_class(agent, "Agent")
     expect_equal(agent$name, "ConsoleAgent")
-    expect_true(length(agent$tools) >= 8) # At least 8 tools (4 computer + 4 console)
+    expect_true(length(agent$tools) >= 12)
 })
 
 test_that("create_console_tools includes all expected tools", {
@@ -19,9 +19,15 @@ test_that("create_console_tools includes all expected tools", {
     # Check console-specific tools
     expect_true("list_directory" %in% tool_names)
     expect_true("find_files" %in% tool_names)
+    expect_true("find_image_files" %in% tool_names)
     expect_true("get_system_info" %in% tool_names)
     expect_true("get_environment" %in% tool_names)
     expect_true("setup_feishu_channel" %in% tool_names)
+    expect_true("analyze_image_file" %in% tool_names)
+    expect_true("extract_from_image_file" %in% tool_names)
+    expect_true("generate_image_asset" %in% tool_names)
+    expect_true("edit_image_asset" %in% tool_names)
+    expect_true("get_recent_image_artifacts" %in% tool_names)
 })
 
 test_that("list_directory tool works", {
@@ -84,6 +90,221 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("Working Directory", prompt))
     expect_true(grepl("Safety", prompt))
     expect_true(grepl("setup_feishu_channel", prompt))
+    expect_true(grepl("find_image_files", prompt))
+    expect_true(grepl("analyze_image_file", prompt))
+    expect_true(grepl("extract_from_image_file", prompt))
+    expect_true(grepl("generate_image_asset", prompt))
+    expect_true(grepl("edit_image_asset", prompt))
+    expect_true(grepl("Treat image work as a native capability", prompt, fixed = TRUE))
+    expect_true(grepl("Search locally before asking", prompt, fixed = TRUE))
+})
+
+test_that("find_image_files ranks relevant local image candidates", {
+    workdir <- tempfile("console-images-")
+    dir.create(workdir, recursive = TRUE)
+    file.create(file.path(workdir, "login-screenshot.png"))
+    file.create(file.path(workdir, "hero-banner.jpg"))
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir)
+    find_img_tool <- tools[[which(sapply(tools, function(t) t$name) == "find_image_files")]]
+
+    result <- find_img_tool$run(list(query = "login screenshot", path = ".", recursive = TRUE, limit = 5L))
+
+    expect_true(grepl("Image candidates:", result, fixed = TRUE))
+    expect_true(grepl("login-screenshot.png", result, fixed = TRUE))
+})
+
+test_that("analyze_image_file can auto-select a likely local image candidate", {
+    workdir <- tempfile("console-images-auto-")
+    dir.create(workdir, recursive = TRUE)
+    file.create(file.path(workdir, "login-screenshot.png"))
+    file.create(file.path(workdir, "other-banner.jpg"))
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir)
+    analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    local_mocked_bindings(
+        analyze_image = function(model, image, prompt, ...) {
+            expect_equal(image, normalizePath(file.path(workdir, "login-screenshot.png"), winslash = "/", mustWork = FALSE))
+            GenerateResult$new(text = "Looks fine.")
+        }
+    )
+
+    result <- analyze_tool$run(
+        list(task = "Review the login screenshot"),
+        envir = envir
+    )
+
+    expect_true(grepl("Looks fine.", result, fixed = TRUE))
+    expect_true(any(grepl("Selection strategy:", attr(result, "aisdk_messages", exact = TRUE))))
+})
+
+test_that("analyze_image_file reports ambiguity when multiple candidates are similarly relevant", {
+    workdir <- tempfile("console-images-ambig-")
+    dir.create(workdir, recursive = TRUE)
+    file.create(file.path(workdir, "screen-a.png"))
+    file.create(file.path(workdir, "screen-b.png"))
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir)
+    analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    result <- analyze_tool$run(
+        list(task = "Check this screen"),
+        envir = envir
+    )
+
+    expect_true(grepl("Multiple likely image candidates were found.", result, fixed = TRUE))
+})
+
+test_that("generate_image_asset stores recent image artifacts", {
+    tools <- create_console_tools()
+    gen_tool <- tools[[which(sapply(tools, function(t) t$name) == "generate_image_asset")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    local_mocked_bindings(
+        generate_image = function(model, prompt, output_dir, ...) {
+            expect_equal(model, "openai:gpt-image-1")
+            GenerateImageResult$new(
+                images = list(list(
+                    path = file.path(output_dir, "generated.png"),
+                    media_type = "image/png"
+                )),
+                text = "done"
+            )
+        }
+    )
+
+    result <- gen_tool$run(
+        list(prompt = "Generate a blue mug image"),
+        envir = envir
+    )
+
+    expect_true(grepl("Generated 1 image", result))
+    expect_true(any(grepl("Image model:", attr(result, "aisdk_messages", exact = TRUE))))
+    expect_equal(envir$.console_image_artifacts[[1]]$kind, "generated")
+    expect_equal(envir$.console_image_artifacts[[1]]$artifacts[[1]]$path, file.path(tempdir(), "generated.png"))
+    expect_match(envir$.console_image_artifacts[[1]]$artifact_id, "^img-")
+})
+
+test_that("edit_image_asset reuses the latest image artifact when image_path is omitted", {
+    tools <- create_console_tools()
+    edit_tool <- tools[[which(sapply(tools, function(t) t$name) == "edit_image_asset")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "gemini:gemini-2.5-flash"
+    envir$.console_image_artifacts <- list(
+        list(
+            kind = "generated",
+            model = "gemini:gemini-3.1-flash-image-preview",
+            prompt = "Generate a mug",
+            artifacts = list(list(path = file.path(tempdir(), "last.png")))
+        )
+    )
+
+    local_mocked_bindings(
+        edit_image = function(model, image, prompt, mask, output_dir, ...) {
+            expect_equal(model, "gemini:gemini-3.1-flash-image-preview")
+            expect_equal(image, file.path(tempdir(), "last.png"))
+            expect_null(mask)
+            GenerateImageResult$new(
+                images = list(list(
+                    path = file.path(output_dir, "edited.png"),
+                    media_type = "image/png"
+                ))
+            )
+        }
+    )
+
+    result <- edit_tool$run(
+        list(prompt = "Make it cobalt blue"),
+        envir = envir
+    )
+
+    expect_true(grepl("Edited 1 image", result))
+    expect_true(any(grepl("Source image:", attr(result, "aisdk_messages", exact = TRUE))))
+    expect_equal(envir$.console_image_artifacts[[1]]$kind, "edited")
+    expect_equal(envir$.console_image_artifacts[[1]]$source_path, file.path(tempdir(), "last.png"))
+})
+
+test_that("get_recent_image_artifacts summarizes remembered image outputs", {
+    tools <- create_console_tools()
+    recent_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_recent_image_artifacts")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.console_image_artifacts <- list(
+        list(
+            kind = "generated",
+            model = "openai:gpt-image-1",
+            prompt = "Generate a mug",
+            artifacts = list(list(path = "/tmp/generated.png"))
+        ),
+        list(
+            kind = "edited",
+            model = "gemini:gemini-3.1-flash-image-preview",
+            prompt = "Change the color",
+            artifacts = list(list(path = "/tmp/edited.png"))
+        )
+    )
+
+    result <- recent_tool$run(list(limit = 2L), envir = envir)
+    expect_true(grepl("Recent image artifacts:", result, fixed = TRUE))
+    expect_true(grepl("/tmp/generated.png", result, fixed = TRUE))
+    expect_true(grepl("/tmp/edited.png", result, fixed = TRUE))
+})
+
+test_that("extract_from_image_file returns structured text and records extraction input", {
+    tools <- create_console_tools()
+    extract_tool <- tools[[which(sapply(tools, function(t) t$name) == "extract_from_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    local_mocked_bindings(
+        analyze_image = function(model, image, prompt, ...) {
+            expect_equal(model, "openai:gpt-4o")
+            expect_true(grepl("Return the result in clear JSON", prompt, fixed = TRUE))
+            GenerateResult$new(text = "{\"title\":\"Mock\"}")
+        }
+    )
+
+    result <- extract_tool$run(
+        list(path = "https://example.com/chart.png", task = "Extract the chart title"),
+        envir = envir
+    )
+
+    expect_true(grepl("\"title\":\"Mock\"", result, fixed = TRUE))
+    expect_equal(envir$.console_image_artifacts[[1]]$kind, "extraction_input")
+    expect_true(any(grepl("Vision model:", attr(result, "aisdk_messages", exact = TRUE))))
+})
+
+test_that("extract_from_image_file handles batch extraction paths", {
+    tools <- create_console_tools()
+    extract_tool <- tools[[which(sapply(tools, function(t) t$name) == "extract_from_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    local_mocked_bindings(
+        analyze_image = function(model, image, prompt, ...) {
+            GenerateResult$new(text = paste0("{\"image\":\"", basename(image), "\"}"))
+        }
+    )
+
+    result <- extract_tool$run(
+        list(
+            paths = c("https://example.com/a.png", "https://example.com/b.png"),
+            task = "Extract the visible title"
+        ),
+        envir = envir
+    )
+
+    expect_true(grepl("a.png", result, fixed = TRUE))
+    expect_true(grepl("b.png", result, fixed = TRUE))
+    expect_equal(envir$.console_image_artifacts[[1]]$kind, "extraction_input")
 })
 
 test_that("setup_feishu_channel can build webhook configuration with prompt hooks", {

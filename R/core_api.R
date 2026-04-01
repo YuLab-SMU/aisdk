@@ -113,6 +113,7 @@ generate_text <- function(model = NULL,
 
   # Build initial messages
   messages <- build_messages(prompt, system)
+  validate_model_messages(model, messages)
 
   # Build base params (tools stay constant across steps)
   base_params <- list(
@@ -402,6 +403,7 @@ stream_text <- function(model = NULL,
   }
 
   messages <- build_messages(prompt, system)
+  validate_model_messages(model, messages)
 
   # Build base params
   base_params <- list(
@@ -665,12 +667,14 @@ handle_network_error <- function(e) {
 }
 
 #' @keywords internal
-resolve_model <- function(model, registry = NULL, type = c("language", "embedding")) {
+resolve_model <- function(model, registry = NULL, type = c("language", "embedding", "image")) {
   type <- match.arg(type)
 
   if (is.null(model)) {
     if (type == "language") {
       model <- get_model()
+    } else if (type == "image") {
+      rlang::abort("No image model configured. Please supply `model` explicitly.")
     } else {
       rlang::abort("No embedding model configured. Please supply `model` explicitly.")
     }
@@ -681,13 +685,19 @@ resolve_model <- function(model, registry = NULL, type = c("language", "embeddin
     reg <- registry %||% get_default_registry()
     if (type == "language") {
       model <- reg$language_model(model)
+    } else if (type == "image") {
+      model <- reg$image_model(model)
     } else {
       model <- reg$embedding_model(model)
     }
   }
 
   # Validate model type
-  expected_class <- if (type == "language") "LanguageModelV1" else "EmbeddingModelV1"
+  expected_class <- switch(type,
+    language = "LanguageModelV1",
+    embedding = "EmbeddingModelV1",
+    image = "ImageModelV1"
+  )
   if (!inherits(model, expected_class)) {
     rlang::abort(paste0("Expected a ", expected_class, " object."))
   }

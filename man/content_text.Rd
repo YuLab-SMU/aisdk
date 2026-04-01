@@ -14,4 +14,6 @@ A list representing the text content.
 }
 \description{
 Creates a text content object for a multimodal message.
+This is kept for backward compatibility and returns the provider-neutral
+text block used by multimodal providers.
 }

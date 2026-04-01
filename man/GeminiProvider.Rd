@@ -18,6 +18,7 @@ Provider class for Google Gemini.
 \itemize{
 \item \href{#method-GeminiProvider-new}{\code{GeminiProvider$new()}}
 \item \href{#method-GeminiProvider-language_model}{\code{GeminiProvider$language_model()}}
+\item \href{#method-GeminiProvider-image_model}{\code{GeminiProvider$image_model()}}
 \item \href{#method-GeminiProvider-clone}{\code{GeminiProvider$clone()}}
 }
 }
@@ -69,6 +70,28 @@ Create a language model.
 }
 \subsection{Returns}{
 A GeminiLanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiProvider$image_model(
+  model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview")
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID for image generation.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GeminiImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

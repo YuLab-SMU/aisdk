@@ -92,7 +92,17 @@ test_that("as_list exports session state", {
     model = openai_model_id,
     system_prompt = "Test system prompt",
     max_steps = 5,
-    metadata = list(channel = list(channel_id = "feishu"))
+    metadata = list(channel = list(channel_id = "feishu")),
+    envir = local({
+      e <- new.env(parent = emptyenv())
+      e$.console_image_artifacts <- list(list(
+        artifact_id = "img-0001",
+        kind = "generated",
+        artifacts = list(list(path = "/tmp/generated.png"))
+      ))
+      e$.console_image_artifact_next_id <- 2L
+      e
+    })
   )
 
   session$append_message("user", "Hello")
@@ -106,6 +116,8 @@ test_that("as_list exports session state", {
   expect_equal(length(data$history), 2)
   expect_equal(data$max_steps, 5)
   expect_equal(data$metadata$channel$channel_id, "feishu")
+  expect_equal(data$envir_state$console_image_artifacts[[1]]$artifact_id, "img-0001")
+  expect_equal(data$envir_state$console_image_artifact_next_id, 2L)
 })
 
 test_that("restore_from_list restores session state", {
@@ -126,6 +138,28 @@ test_that("restore_from_list restores session state", {
   expect_equal(restored$get_model_id(), openai_model_id)
   expect_equal(length(restored$get_history()), 2)
   expect_equal(restored$get_last_response(), "Hi!")
+})
+
+test_that("restore_from_list restores console image artifact state into session environment", {
+  data <- list(
+    model_id = openai_model_id,
+    history = list(),
+    envir_state = list(
+      console_image_artifacts = list(list(
+        artifact_id = "img-0004",
+        kind = "edited",
+        artifacts = list(list(path = "/tmp/edited.png"))
+      )),
+      console_image_artifact_next_id = 5L
+    )
+  )
+
+  restored <- ChatSession$new()
+  restored$restore_from_list(data)
+  envir <- restored$get_envir()
+
+  expect_equal(envir$.console_image_artifacts[[1]]$artifact_id, "img-0004")
+  expect_equal(envir$.console_image_artifact_next_id, 5L)
 })
 
 test_that("save and load_chat_session work with RDS", {

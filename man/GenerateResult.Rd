@@ -22,23 +22,23 @@ which can be used for multi-turn conversations without sending full history.
 \describe{
 \item{\code{text}}{The generated text content.}
 
-\item{\code{usage}}{Token usage information (list with prompt_tokens, completion_tokens, total_tokens).}
+\item{\code{usage}}{Token usage information.}
 
 \item{\code{finish_reason}}{Reason the model stopped generating.}
 
 \item{\code{warnings}}{Any warnings from the model.}
 
-\item{\code{raw_response}}{The raw response from the API.}
+\item{\code{raw_response}}{The raw response from the provider API.}
 
-\item{\code{tool_calls}}{List of tool calls requested by the model. Each item contains id, name, arguments.}
+\item{\code{tool_calls}}{List of tool calls requested by the model.}
 
-\item{\code{steps}}{Number of ReAct loop steps taken (when max_steps > 1).}
+\item{\code{steps}}{Number of ReAct loop steps taken.}
 
-\item{\code{all_tool_calls}}{Accumulated list of all tool calls made across all ReAct steps.}
+\item{\code{all_tool_calls}}{Accumulated list of all tool calls across steps.}
 
-\item{\code{reasoning}}{Chain-of-thought/reasoning content from models that support it (o1, o3, DeepSeek, etc.).}
+\item{\code{reasoning}}{Optional chain-of-thought or reasoning content.}
 
-\item{\code{response_id}}{Server-side response ID for Responses API (used for stateful multi-turn conversations).}
+\item{\code{response_id}}{Server-side response ID for Responses-style APIs.}
 }
 \if{html}{\out{</div>}}
 }
@@ -91,7 +91,7 @@ Initialize a GenerateResult object.
 
 \item{\code{reasoning}}{Chain-of-thought content.}
 
-\item{\code{response_id}}{Server-side response ID for Responses API.}
+\item{\code{response_id}}{Server-side response ID for Responses-style APIs.}
 }
 \if{html}{\out{</div>}}
 }

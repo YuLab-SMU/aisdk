@@ -14,6 +14,48 @@ GeminiLanguageModel <- R6::R6Class(
     inherit = LanguageModelV1,
     private = list(
         config = NULL,
+        parse_candidate_parts = function(parts) {
+            text_content <- ""
+            tool_calls <- NULL
+            images <- NULL
+
+            for (part in parts) {
+                if (!is.null(part$text)) {
+                    text_content <- paste0(text_content, part$text)
+                } else if (!is.null(part$functionCall)) {
+                    if (is.null(tool_calls)) tool_calls <- list()
+                    tool_calls <- c(tool_calls, list(list(
+                        id = paste0("call_", part$functionCall$name, "_", sample(10000:99999, 1)),
+                        name = part$functionCall$name,
+                        arguments = part$functionCall$args
+                    )))
+                } else if (!is.null(part$inlineData)) {
+                    if (is.null(images)) images <- list()
+                    images <- c(images, list(list(
+                        media_type = part$inlineData$mimeType %||% "application/octet-stream",
+                        bytes = base64enc::base64decode(part$inlineData$data)
+                    )))
+                } else if (!is.null(part$inline_data)) {
+                    if (is.null(images)) images <- list()
+                    images <- c(images, list(list(
+                        media_type = part$inline_data$mimeType %||% "application/octet-stream",
+                        bytes = base64enc::base64decode(part$inline_data$data)
+                    )))
+                } else if (!is.null(part$fileData)) {
+                    if (is.null(images)) images <- list()
+                    images <- c(images, list(list(
+                        media_type = part$fileData$mimeType %||% "application/octet-stream",
+                        uri = part$fileData$fileUri
+                    )))
+                }
+            }
+
+            list(
+                text = text_content,
+                tool_calls = tool_calls,
+                images = images
+            )
+        },
         get_headers = function() {
             h <- list(
                 `Content-Type` = "application/json"
@@ -24,7 +66,19 @@ GeminiLanguageModel <- R6::R6Class(
             h
         },
 
-        # Format OpenAI-style messages to Gemini contents array
+        format_content_parts = function(content) {
+            if (is.null(content)) {
+                return(list())
+            }
+
+            if (is.character(content)) {
+                return(list(list(text = content)))
+            }
+
+            translate_message_content(content, target = "gemini")
+        },
+
+        # Format normalized messages to Gemini contents array
         format_messages = function(messages) {
             contents <- list()
             system_instruction <- NULL
@@ -32,18 +86,19 @@ GeminiLanguageModel <- R6::R6Class(
             for (msg in messages) {
                 if (msg$role == "system") {
                     system_instruction <- list(
-                        parts = list(list(text = msg$content))
+                        parts = list(list(text = if (is.character(msg$content) || is.null(msg$content)) {
+                            msg$content %||% ""
+                        } else {
+                            content_blocks_to_text(msg$content, arg_name = "system")
+                        }))
                     )
                 } else if (msg$role == "user") {
                     contents <- c(contents, list(list(
                         role = "user",
-                        parts = list(list(text = msg$content))
+                        parts = private$format_content_parts(msg$content)
                     )))
                 } else if (msg$role == "assistant") {
-                    parts <- list()
-                    if (!is.null(msg$content) && nzchar(msg$content)) {
-                        parts <- c(parts, list(list(text = msg$content)))
-                    }
+                    parts <- private$format_content_parts(msg$content)
                     if (!is.null(msg$tool_calls) && length(msg$tool_calls) > 0) {
                         for (tc in msg$tool_calls) {
                             parts <- c(parts, list(list(
@@ -90,6 +145,8 @@ GeminiLanguageModel <- R6::R6Class(
             if (!is.null(params$top_k)) config$topK <- params$top_k
             if (!is.null(params$max_tokens)) config$maxOutputTokens <- params$max_tokens
             if (!is.null(params$stop_sequences)) config$stopSequences <- params$stop_sequences
+            if (!is.null(params$response_modalities)) config$responseModalities <- params$response_modalities
+            if (!is.null(params$image_config)) config$imageConfig <- params$image_config
             if (length(config) == 0) {
                 return(NULL)
             }
@@ -191,6 +248,7 @@ GeminiLanguageModel <- R6::R6Class(
             # Parse Gemini response format
             text_content <- ""
             tool_calls <- NULL
+            images <- NULL
             finish_reason <- NULL
             usage <- NULL
 
@@ -199,18 +257,10 @@ GeminiLanguageModel <- R6::R6Class(
                 finish_reason <- candidate$finishReason
 
                 if (!is.null(candidate$content) && !is.null(candidate$content$parts)) {
-                    for (part in candidate$content$parts) {
-                        if (!is.null(part$text)) {
-                            text_content <- paste0(text_content, part$text)
-                        } else if (!is.null(part$functionCall)) {
-                            if (is.null(tool_calls)) tool_calls <- list()
-                            tool_calls <- c(tool_calls, list(list(
-                                id = paste0("call_", part$functionCall$name, "_", sample(10000:99999, 1)), # Gemini has no tool call ID, mock one
-                                name = part$functionCall$name,
-                                arguments = part$functionCall$args
-                            )))
-                        }
-                    }
+                    parsed <- private$parse_candidate_parts(candidate$content$parts)
+                    text_content <- parsed$text
+                    tool_calls <- parsed$tool_calls
+                    images <- parsed$images
                 }
             }
 
@@ -222,13 +272,17 @@ GeminiLanguageModel <- R6::R6Class(
                 )
             }
 
-            GenerateResult$new(
+            result <- GenerateResult$new(
                 text = text_content,
                 usage = usage,
                 finish_reason = finish_reason,
                 raw_response = response,
                 tool_calls = tool_calls
             )
+            if (!is.null(images)) {
+                result$images <- images
+            }
+            result
         },
 
         #' @description Generate text (streaming).
@@ -310,6 +364,178 @@ GeminiLanguageModel <- R6::R6Class(
     )
 )
 
+#' @title Gemini Image Model Class
+#' @description
+#' Image model implementation for Gemini image generation models.
+#' @keywords internal
+GeminiImageModel <- R6::R6Class(
+    "GeminiImageModel",
+    inherit = ImageModelV1,
+    private = list(
+        config = NULL,
+        get_headers = function() {
+            h <- list(
+                `Content-Type` = "application/json"
+            )
+            if (!is.null(private$config$headers)) {
+                h <- c(h, private$config$headers)
+            }
+            h
+        },
+        build_generation_config = function(params) {
+            config <- list(
+                responseModalities = params$response_modalities %||% list("IMAGE")
+            )
+            if (!is.null(params$size)) {
+                config$imageConfig <- utils::modifyList(
+                    config$imageConfig %||% list(),
+                    list(size = params$size)
+                )
+            }
+            if (!is.null(params$image_config)) {
+                config$imageConfig <- utils::modifyList(
+                    config$imageConfig %||% list(),
+                    params$image_config
+                )
+            }
+            config
+        },
+        build_payload = function(params) {
+            base <- private$config$base_url
+            if (!grepl("/models$", base)) {
+                base <- paste0(base, "/models")
+            }
+
+            url <- paste0(base, "/", self$model_id, ":generateContent?key=", private$config$api_key)
+            headers <- private$get_headers()
+
+            parts <- list()
+            if (!is.null(params$prompt) && nzchar(params$prompt)) {
+                parts <- c(parts, list(list(text = params$prompt)))
+            }
+            if (!is.null(params$image)) {
+                images <- params$image
+                if (!is.list(images)) {
+                    images <- as.list(images)
+                }
+                for (img in images) {
+                    parts <- c(parts, translate_blocks_gemini(list(input_image(img))))
+                }
+            }
+
+            body <- list(
+                contents = list(list(
+                    role = "user",
+                    parts = parts
+                )),
+                generationConfig = private$build_generation_config(params)
+            )
+
+            body <- body[!sapply(body, is.null)]
+            list(url = url, headers = headers, body = body)
+        }
+    ),
+    public = list(
+        #' @description Initialize the Gemini image model.
+        #' @param model_id The model ID.
+        #' @param config Configuration list with api_key, base_url, headers, etc.
+        initialize = function(model_id, config) {
+            super$initialize(
+                provider = config$provider_name %||% "gemini",
+                model_id = model_id,
+                capabilities = list(
+                    image_output = TRUE,
+                    image_edit = TRUE
+                )
+            )
+            private$config <- config
+        },
+
+        #' @description Generate images.
+        #' @param params A list of call options.
+        #' @return A GenerateImageResult object.
+        do_generate_image = function(params) {
+            if (is.null(params$prompt) || !nzchar(params$prompt)) {
+                rlang::abort("`prompt` must be a non-empty string.")
+            }
+
+            payload <- private$build_payload(params)
+            response <- post_to_api(payload$url, payload$headers, payload$body)
+
+            parsed_images <- list()
+            text_content <- ""
+            finish_reason <- NULL
+            usage <- NULL
+
+            if (!is.null(response$candidates) && length(response$candidates) > 0) {
+                candidate <- response$candidates[[1]]
+                finish_reason <- candidate$finishReason
+            }
+
+            if (!is.null(response$candidates) && length(response$candidates) > 0) {
+                candidate <- response$candidates[[1]]
+                if (!is.null(candidate$content$parts)) {
+                    for (part in candidate$content$parts) {
+                        if (!is.null(part$text)) {
+                            text_content <- paste0(text_content, part$text)
+                        } else if (!is.null(part$inlineData)) {
+                            parsed_images <- c(parsed_images, list(list(
+                                media_type = part$inlineData$mimeType %||% "application/octet-stream",
+                                bytes = base64enc::base64decode(part$inlineData$data)
+                            )))
+                        } else if (!is.null(part$inline_data)) {
+                            parsed_images <- c(parsed_images, list(list(
+                                media_type = part$inline_data$mimeType %||% "application/octet-stream",
+                                bytes = base64enc::base64decode(part$inline_data$data)
+                            )))
+                        }
+                    }
+                }
+            }
+
+            if (!is.null(response$usageMetadata)) {
+                usage <- list(
+                    prompt_tokens = response$usageMetadata$promptTokenCount,
+                    completion_tokens = response$usageMetadata$candidatesTokenCount,
+                    total_tokens = response$usageMetadata$totalTokenCount
+                )
+            }
+
+            images <- finalize_image_artifacts(
+                parsed_images,
+                output_dir = params$output_dir %||% tempdir(),
+                prefix = "gemini_image"
+            )
+
+            GenerateImageResult$new(
+                images = images,
+                text = text_content,
+                usage = usage,
+                finish_reason = finish_reason,
+                raw_response = response
+            )
+        },
+
+        #' @description Edit images.
+        #' @param params A list of call options.
+        #' @return A GenerateImageResult object.
+        do_edit_image = function(params) {
+            if (is.null(params$image)) {
+                rlang::abort("`image` must be supplied for Gemini image editing.")
+            }
+            if (!is.null(params$mask)) {
+                rlang::abort("Gemini image editing via aisdk does not support `mask` yet.")
+            }
+
+            if (is.null(params$prompt) || !nzchar(params$prompt)) {
+                params$prompt <- "Edit this image."
+            }
+
+            self$do_generate_image(params)
+        }
+    )
+)
+
 #' @title Gemini Provider Class
 #' @description
 #' Provider class for Google Gemini.
@@ -346,6 +572,13 @@ GeminiProvider <- R6::R6Class(
         #' @return A GeminiLanguageModel object.
         language_model = function(model_id = Sys.getenv("GEMINI_MODEL", "gemini-2.5-flash")) {
             GeminiLanguageModel$new(model_id, private$config)
+        },
+
+        #' @description Create an image model.
+        #' @param model_id The model ID for image generation.
+        #' @return A GeminiImageModel object.
+        image_model = function(model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview")) {
+            GeminiImageModel$new(model_id, private$config)
         }
     ),
     private = list(

@@ -48,6 +48,19 @@ test_that("create_aihubmix() uses environment variables", {
     expect_equal(model$model_id, "env-model")
 })
 
+test_that("AiHubMix provider creates image model correctly", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://custom.aihubmix.com/v1"
+    )
+
+    model <- provider$image_model("gpt-image-1")
+
+    expect_s3_class(model, "OpenAIImageModel")
+    expect_equal(model$model_id, "gpt-image-1")
+    expect_equal(model$provider, "aihubmix")
+})
+
 test_that("create_aihubmix() falls back to default base_url and model", {
     # Unset env vars
     old_key <- Sys.getenv("AIHUBMIX_API_KEY")

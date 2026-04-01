@@ -47,6 +47,10 @@ website:
             text: "Console Chat"
           - href: vignettes/structured_outputs.qmd
             text: "Structured Outputs"
+          - href: vignettes/multimodal.qmd
+            text: "Multimodal Input"
+          - href: vignettes/image_generation.qmd
+            text: "Image Generation"
           - href: vignettes/mcp.qmd
             text: "Connectivity (MCP)"
           - href: vignettes/skills.qmd

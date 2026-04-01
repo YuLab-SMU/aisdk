@@ -72,6 +72,17 @@ OpenRouterProvider <- R6::R6Class(
                 rlang::abort("Model ID not provided and OPENROUTER_MODEL environment variable not set.")
             }
             OpenRouterLanguageModel$new(model_id, private$config)
+        },
+
+        #' @description Create an image model.
+        #' @param model_id The model ID (e.g., "openai/gpt-image-1").
+        #' @return An OpenAIImageModel object.
+        image_model = function(model_id = NULL) {
+            model_id <- model_id %||% Sys.getenv("OPENROUTER_IMAGE_MODEL", unset = "")
+            if (is.null(model_id) || model_id == "") {
+                model_id <- "openai/gpt-image-1"
+            }
+            OpenAIImageModel$new(model_id, private$config)
         }
     )
 )

@@ -250,9 +250,54 @@ Typical tasks include:
 - reading data files
 - writing small helper files
 - running shell commands inside the configured working directory
+- analyzing screenshots, charts, or figures when the user asks visual questions
+- generating image assets when the user asks for posters, hero images, or illustrations
+- editing the most recently generated image when the user asks for follow-up changes
 
 The console keeps these actions compact by summarizing tool progress inline and
 moving deeper detail into the inspect layer.
+
+## Native Image Workflows
+
+Image and vision support in `console_chat()` is intended to behave like a native
+agent capability rather than a separate command language.
+
+That means the recommended user experience is:
+
+- the user asks naturally for screenshot analysis, OCR, chart reading, or UI critique
+- the agent decides to use image-analysis tools on its own
+- the user asks for a poster, thumbnail, product shot, or illustration
+- the agent decides to call image-generation tools on its own
+- the user says \"make the last one blue\" or \"edit the previous render\"
+- the agent reuses the most recent remembered image artifact when possible
+
+The current console agent has dedicated image tools behind the scenes for:
+
+- local image discovery
+- image analysis
+- structured extraction from images
+- image generation
+- image editing
+- recalling recent generated or edited image artifacts
+
+This keeps image work aligned with the rest of the agent workflow: the user asks
+for an outcome, and the agent chooses the right tool path.
+
+In the current design, the agent should usually try this order on its own:
+
+1. reuse the most recent relevant image artifact if one exists
+2. search the working directory for likely image candidates
+3. ask the user for a path only if neither step produced a clear candidate
+
+The console agent can also work across multiple images when that is the most
+natural interpretation of the request, for example:
+
+- comparing several screenshots
+- extracting repeated fields from multiple forms
+- reviewing a small batch of generated assets
+
+This is intentionally designed as an agent behavior rather than a separate
+special command language.
 
 ## Persistence and Session Continuity
 

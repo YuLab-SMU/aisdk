@@ -15,9 +15,11 @@ If NULL, attempts to guess from the file extension.}
 \item{detail}{Image detail suitable for some models (e.g., "auto", "low", "high").}
 }
 \value{
-A list representing the image content in OpenAI-compatible format.
+A provider-neutral image block.
 }
 \description{
 Creates an image content object for a multimodal message.
-automatically handles URLs and local files (converted to base64).
+Automatically handles URLs, data URIs, raw bytes, and local files.
+This is kept for backward compatibility and returns the provider-neutral
+image block used by multimodal providers.
 }

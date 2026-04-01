@@ -61,7 +61,7 @@ Generate embeddings for a value. Abstract method.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A list with embeddings.
+A provider-specific embedding result.
 }
 }
 \if{html}{\out{<hr>}}

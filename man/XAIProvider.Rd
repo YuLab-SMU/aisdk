@@ -14,6 +14,7 @@ Provider class for xAI.
 \itemize{
 \item \href{#method-XAIProvider-new}{\code{XAIProvider$new()}}
 \item \href{#method-XAIProvider-language_model}{\code{XAIProvider$language_model()}}
+\item \href{#method-XAIProvider-image_model}{\code{XAIProvider$image_model()}}
 \item \href{#method-XAIProvider-clone}{\code{XAIProvider$clone()}}
 }
 }
@@ -65,6 +66,26 @@ Create a language model.
 }
 \subsection{Returns}{
 A XAILanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-XAIProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-XAIProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{XAIProvider$image_model(model_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "grok-2-image").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A XAIImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

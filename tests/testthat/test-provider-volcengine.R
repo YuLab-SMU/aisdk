@@ -28,6 +28,15 @@ test_that("Volcengine provider creates language model correctly", {
     expect_equal(model$specification_version, "v1")
 })
 
+test_that("Volcengine provider creates image model correctly", {
+    provider <- safe_create_provider(create_volcengine)
+    model <- provider$image_model("doubao-seedream-5-0")
+
+    expect_s3_class(model, "VolcengineImageModel")
+    expect_equal(model$model_id, "doubao-seedream-5-0")
+    expect_equal(model$provider, "volcengine")
+})
+
 test_that("Volcengine provider requires model_id", {
     provider <- safe_create_provider(create_volcengine)
 
@@ -71,6 +80,76 @@ test_that("Volcengine provider inherits responses_model and smart_model", {
     # smart_model should be available (inherited from OpenAIProvider)
     expect_true(!is.null(provider$smart_model))
     expect_true(is.function(provider$smart_model))
+})
+
+test_that("Volcengine image model posts generation payload and parses images", {
+    provider <- safe_create_provider(create_volcengine)
+    model <- provider$image_model("doubao-seedream-5-0")
+    captured_body <- NULL
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("seedream-bytes"))
+                ))
+            )
+        }
+    )
+
+    result <- generate_image(
+        model = model,
+        prompt = "A sleek editorial mug photo",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_body$model, "doubao-seedream-5-0")
+    expect_equal(captured_body$response_format, "b64_json")
+    expect_equal(rawToChar(result$images[[1]]$bytes), "seedream-bytes")
+})
+
+test_that("Volcengine image edit reuses generations endpoint with image inputs", {
+    provider <- safe_create_provider(create_volcengine)
+    model <- provider$image_model("doubao-seedream-5-0")
+    captured_body <- NULL
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("edited-seedream"))
+                ))
+            )
+        }
+    )
+
+    result <- edit_image(
+        model = model,
+        image = "https://example.com/source.png",
+        prompt = "Turn this into a watercolor illustration",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_body$image, "https://example.com/source.png")
+    expect_equal(captured_body$prompt, "Turn this into a watercolor illustration")
+    expect_equal(rawToChar(result$images[[1]]$bytes), "edited-seedream")
+})
+
+test_that("Volcengine image edit rejects mask uploads for now", {
+    provider <- safe_create_provider(create_volcengine)
+    model <- provider$image_model("doubao-seedream-5-0")
+
+    expect_error(
+        edit_image(
+            model = model,
+            image = "https://example.com/source.png",
+            mask = "https://example.com/mask.png",
+            prompt = "Edit this image"
+        ),
+        "does not support `mask` yet"
+    )
 })
 
 # ============================================================================

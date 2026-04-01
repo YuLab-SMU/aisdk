@@ -265,6 +265,14 @@ ChatSession <- R6::R6Class(
     #' @description Export session state as a list (for serialization).
     #' @return A list containing session state.
     as_list = function() {
+      envir_state <- list()
+      if (exists(".console_image_artifacts", envir = private$.envir, inherits = FALSE)) {
+        envir_state$console_image_artifacts <- get(".console_image_artifacts", envir = private$.envir, inherits = FALSE)
+      }
+      if (exists(".console_image_artifact_next_id", envir = private$.envir, inherits = FALSE)) {
+        envir_state$console_image_artifact_next_id <- get(".console_image_artifact_next_id", envir = private$.envir, inherits = FALSE)
+      }
+
       list(
         version = "1.0.0",
         model_id = self$get_model_id(),
@@ -273,6 +281,7 @@ ChatSession <- R6::R6Class(
         stats = private$.stats,
         max_steps = private$.max_steps,
         metadata = private$.metadata,
+        envir_state = envir_state,
         # Note: tools and hooks are not serialized (must be re-provided on load)
         tool_names = if (length(private$.tools) > 0) {
           sapply(private$.tools, function(t) t$name)
@@ -322,6 +331,12 @@ ChatSession <- R6::R6Class(
       }
       if (!is.null(data$metadata)) {
         private$.metadata <- data$metadata
+      }
+      if (!is.null(data$envir_state$console_image_artifacts)) {
+        assign(".console_image_artifacts", data$envir_state$console_image_artifacts, envir = private$.envir)
+      }
+      if (!is.null(data$envir_state$console_image_artifact_next_id)) {
+        assign(".console_image_artifact_next_id", data$envir_state$console_image_artifact_next_id, envir = private$.envir)
       }
       invisible(self)
     },

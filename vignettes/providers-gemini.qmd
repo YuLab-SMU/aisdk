@@ -53,3 +53,59 @@ tools = list(
 ## Multimodal Input
 
 Gemini is natively multimodal. The SDK supports passing image data to Gemini models (see the [Multimodal](multimodal.html) vignette for details).
+
+```r
+library(aisdk)
+
+model <- create_gemini()$language_model("gemini-2.5-flash")
+
+result <- analyze_image(
+  model = model,
+  image = "inst/extdata/example.png",
+  prompt = "Describe the main objects in this image."
+)
+
+cat(result$text)
+```
+
+You can also build multimodal messages manually with `input_text()` and `input_image()` if you need full control over the prompt structure.
+
+## Image Generation
+
+Gemini is currently the first provider in `aisdk` with a dedicated `image_model()` path.
+
+```r
+library(aisdk)
+
+provider <- create_gemini()
+image_model <- provider$image_model("gemini-3.1-flash-image-preview")
+
+result <- generate_image(
+  model = image_model,
+  prompt = "A clean editorial photo of a blue ceramic mug on a white table.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+See the [Image Generation](image_generation.html) vignette for the full workflow.
+
+## Image Editing
+
+Gemini image models can also perform prompt-based image edits:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_gemini()$image_model("gemini-3.1-flash-image-preview"),
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+At the moment, `aisdk` supports prompt-based image editing for Gemini, but does not yet expose mask-based editing.

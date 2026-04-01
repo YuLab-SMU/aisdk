@@ -13,6 +13,7 @@ Manages registered providers and allows accessing models by ID.
 \item \href{#method-ProviderRegistry-register}{\code{ProviderRegistry$register()}}
 \item \href{#method-ProviderRegistry-language_model}{\code{ProviderRegistry$language_model()}}
 \item \href{#method-ProviderRegistry-embedding_model}{\code{ProviderRegistry$embedding_model()}}
+\item \href{#method-ProviderRegistry-image_model}{\code{ProviderRegistry$image_model()}}
 \item \href{#method-ProviderRegistry-list_providers}{\code{ProviderRegistry$list_providers()}}
 \item \href{#method-ProviderRegistry-clone}{\code{ProviderRegistry$clone()}}
 }
@@ -91,6 +92,26 @@ Get an embedding model by ID.
 }
 \subsection{Returns}{
 An EmbeddingModelV1 object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProviderRegistry-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-ProviderRegistry-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Get an image model by ID.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProviderRegistry$image_model(id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{id}}{Model ID in the format "provider:model".}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An ImageModelV1 object.
 }
 }
 \if{html}{\out{<hr>}}

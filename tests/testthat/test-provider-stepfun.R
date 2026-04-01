@@ -57,6 +57,15 @@ test_that("Stepfun provider requires model_id if env not set", {
     expect_equal(model$model_id, "step-3.5-flash")
 })
 
+test_that("Stepfun provider creates image model correctly", {
+    provider <- suppressWarnings(create_stepfun(api_key = "test_key"))
+    model <- provider$image_model("step-1x-medium")
+
+    expect_s3_class(model, "StepfunImageModel")
+    expect_equal(model$model_id, "step-1x-medium")
+    expect_equal(model$provider, "stepfun")
+})
+
 test_that("create_stepfun() warns when API key is missing", {
     # Temporarily unset API key
     old_key <- Sys.getenv("STEPFUN_API_KEY")
@@ -98,4 +107,80 @@ test_that("Stepfun provider can make real API calls", {
     # Check that we got a response
     expect_true(!is.null(result$text))
     expect_true(nchar(result$text) > 0)
+})
+
+test_that("Stepfun image model generates images and edits with step-1x-edit", {
+    provider <- suppressWarnings(create_stepfun(api_key = "test_key"))
+    gen_model <- provider$image_model("step-1x-medium")
+    edit_model <- provider$image_model("step-1x-edit")
+    captured_generation <- NULL
+    captured_edit <- NULL
+
+    input_path <- tempfile(fileext = ".png")
+    writeBin(charToRaw("stepfun-image"), input_path)
+    on.exit(unlink(input_path), add = TRUE)
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_generation <<- body
+            list(
+                data = list(list(
+                    image = base64enc::base64encode(charToRaw("stepfun-gen"))
+                ))
+            )
+        },
+        post_multipart_to_api = function(url, headers, body, ...) {
+            captured_edit <<- body
+            list(
+                data = list(list(
+                    image = base64enc::base64encode(charToRaw("stepfun-edit"))
+                ))
+            )
+        }
+    )
+
+    generated <- generate_image(
+        model = gen_model,
+        prompt = "Draw a white mug",
+        output_dir = tempdir()
+    )
+    edited <- edit_image(
+        model = edit_model,
+        image = input_path,
+        prompt = "Make it cobalt blue",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_generation$model, "step-1x-medium")
+    expect_equal(captured_generation$response_format, "b64_json")
+    expect_true(!is.null(captured_edit$image))
+    expect_equal(rawToChar(generated$images[[1]]$bytes), "stepfun-gen")
+    expect_equal(rawToChar(edited$images[[1]]$bytes), "stepfun-edit")
+})
+
+test_that("Stepfun image edit rejects unsupported model and mask", {
+    provider <- suppressWarnings(create_stepfun(api_key = "test_key"))
+
+    expect_error(
+        edit_image(
+            model = provider$image_model("step-1x-medium"),
+            image = tempfile(fileext = ".png"),
+            prompt = "Edit this image"
+        ),
+        "requires the `step-1x-edit` model"
+    )
+
+    input_path <- tempfile(fileext = ".png")
+    writeBin(charToRaw("stepfun-image"), input_path)
+    on.exit(unlink(input_path), add = TRUE)
+
+    expect_error(
+        edit_image(
+            model = provider$image_model("step-1x-edit"),
+            image = input_path,
+            mask = input_path,
+            prompt = "Edit this image"
+        ),
+        "does not support `mask` yet"
+    )
 })

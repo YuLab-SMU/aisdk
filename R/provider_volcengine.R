@@ -33,6 +33,137 @@ VolcengineLanguageModel <- R6::R6Class(
     )
 )
 
+#' @title Volcengine Image Model Class
+#' @description
+#' Image model implementation for Volcengine Ark image generation models such as
+#' Doubao Seedream. Volcengine exposes these models through an OpenAI-compatible
+#' image generation endpoint.
+#' @keywords internal
+VolcengineImageModel <- R6::R6Class(
+    "VolcengineImageModel",
+    inherit = ImageModelV1,
+    private = list(
+        config = NULL,
+        get_headers = function() {
+            h <- list(
+                `Content-Type` = "application/json",
+                Authorization = paste("Bearer", private$config$api_key)
+            )
+            if (!is.null(private$config$headers)) {
+                h <- c(h, private$config$headers)
+            }
+            h
+        },
+        build_body = function(params) {
+            body <- list(
+                model = self$model_id,
+                prompt = params$prompt %||% "Edit this image.",
+                response_format = params$response_format %||% "b64_json"
+            )
+
+            if (!is.null(params$image)) {
+                images <- params$image
+                if (!is.list(images)) {
+                    images <- as.list(images)
+                }
+                normalized <- lapply(images, normalize_image_input_for_json)
+                body$image <- if (length(normalized) == 1) normalized[[1]] else normalized
+            }
+
+            if (!is.null(params$n)) body$n <- params$n
+            if (!is.null(params$size)) body$size <- params$size
+            if (!is.null(params$guidance_scale)) body$guidance_scale <- params$guidance_scale
+            if (!is.null(params$seed)) body$seed <- params$seed
+            if (!is.null(params$watermark)) body$watermark <- params$watermark
+
+            handled <- c("prompt", "image", "output_dir", "response_format", "n", "size", "guidance_scale", "seed", "watermark")
+            extra <- params[setdiff(names(params), handled)]
+            if (length(extra) > 0) {
+                body <- utils::modifyList(body, extra)
+            }
+
+            body[!sapply(body, is.null)]
+        },
+        parse_image_response = function(response, output_dir = tempdir(), prefix = "volcengine_image") {
+            images <- list()
+
+            if (!is.null(response$data) && length(response$data) > 0) {
+                for (item in response$data) {
+                    artifact <- list(
+                        revised_prompt = item$revised_prompt %||% NULL
+                    )
+
+                    if (!is.null(item$b64_json)) {
+                        artifact$bytes <- base64enc::base64decode(item$b64_json)
+                        artifact$media_type <- "image/png"
+                    } else if (!is.null(item$url)) {
+                        artifact$uri <- item$url
+                    }
+
+                    images <- c(images, list(artifact))
+                }
+            }
+
+            finalize_image_artifacts(images, output_dir = output_dir, prefix = prefix)
+        }
+    ),
+    public = list(
+        #' @description Initialize the Volcengine image model.
+        #' @param model_id The model ID (e.g., "doubao-seedream-5-0").
+        #' @param config Configuration list.
+        initialize = function(model_id, config) {
+            super$initialize(
+                provider = config$provider_name %||% "volcengine",
+                model_id = model_id,
+                capabilities = list(
+                    image_output = TRUE,
+                    image_edit = TRUE
+                )
+            )
+            private$config <- config
+        },
+
+        #' @description Generate images.
+        #' @param params A list of call options.
+        #' @return A GenerateImageResult object.
+        do_generate_image = function(params) {
+            if (is.null(params$prompt) || !nzchar(params$prompt)) {
+                rlang::abort("`prompt` must be a non-empty string.")
+            }
+
+            url <- paste0(private$config$base_url, "/images/generations")
+            response <- post_to_api(url, private$get_headers(), private$build_body(params))
+
+            GenerateImageResult$new(
+                images = private$parse_image_response(
+                    response,
+                    output_dir = params$output_dir %||% tempdir(),
+                    prefix = "volcengine_image"
+                ),
+                usage = response$usage %||% NULL,
+                raw_response = response
+            )
+        },
+
+        #' @description Edit images by providing one or more reference images.
+        #' @param params A list of call options.
+        #' @return A GenerateImageResult object.
+        do_edit_image = function(params) {
+            if (is.null(params$image)) {
+                rlang::abort("`image` must be supplied for Volcengine image editing.")
+            }
+            if (is.null(params$prompt) || !nzchar(params$prompt)) {
+                params$prompt <- "Edit this image."
+            }
+            if (!is.null(params$mask)) {
+                rlang::abort("Volcengine image editing via aisdk does not support `mask` yet.")
+            }
+
+            self$do_generate_image(params)
+        }
+    )
+)
+
 #' @title Volcengine Provider Class
 #' @description
 #' Provider class for the Volcengine Ark platform.
@@ -86,6 +217,13 @@ VolcengineProvider <- R6::R6Class(
             }
 
             VolcengineLanguageModel$new(model_id, private$config)
+        },
+
+        #' @description Create an image model.
+        #' @param model_id The model ID (e.g., "doubao-seedream-5-0").
+        #' @return A VolcengineImageModel object.
+        image_model = function(model_id = Sys.getenv("ARK_IMAGE_MODEL", "doubao-seedream-5-0")) {
+            VolcengineImageModel$new(model_id, private$config)
         }
     )
 )

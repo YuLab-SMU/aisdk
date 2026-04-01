@@ -49,3 +49,41 @@ response <- generate_text(
 ```
 
 For a cleaner experience, see the [Structured Outputs](structured_outputs.html) vignette.
+
+### Image Models
+
+OpenAI image generation is exposed through a dedicated `image_model()` path rather than the chat APIs.
+
+```r
+library(aisdk)
+
+provider <- create_openai()
+image_model <- provider$image_model("gpt-image-1")
+
+result <- generate_image(
+  model = image_model,
+  prompt = "A clean product photo of a cobalt blue ceramic mug on linen",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+### Image Editing
+
+OpenAI image models also support image-to-image editing:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_openai()$image_model("gpt-image-1"),
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+In the current `aisdk` implementation, OpenAI image editing expects a local file path or data URI for the source image. Optional `mask` uploads are supported for localized edits.

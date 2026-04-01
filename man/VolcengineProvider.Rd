@@ -14,6 +14,7 @@ Provider class for the Volcengine Ark platform.
 \itemize{
 \item \href{#method-VolcengineProvider-new}{\code{VolcengineProvider$new()}}
 \item \href{#method-VolcengineProvider-language_model}{\code{VolcengineProvider$language_model()}}
+\item \href{#method-VolcengineProvider-image_model}{\code{VolcengineProvider$image_model()}}
 \item \href{#method-VolcengineProvider-clone}{\code{VolcengineProvider$clone()}}
 }
 }
@@ -65,6 +66,28 @@ Create a language model.
 }
 \subsection{Returns}{
 A VolcengineLanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-VolcengineProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-VolcengineProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{VolcengineProvider$image_model(
+  model_id = Sys.getenv("ARK_IMAGE_MODEL", "doubao-seedream-5-0")
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "doubao-seedream-5-0").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A VolcengineImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

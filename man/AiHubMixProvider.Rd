@@ -14,6 +14,7 @@ Provider class for AiHubMix.
 \itemize{
 \item \href{#method-AiHubMixProvider-new}{\code{AiHubMixProvider$new()}}
 \item \href{#method-AiHubMixProvider-language_model}{\code{AiHubMixProvider$language_model()}}
+\item \href{#method-AiHubMixProvider-image_model}{\code{AiHubMixProvider$image_model()}}
 \item \href{#method-AiHubMixProvider-clone}{\code{AiHubMixProvider$clone()}}
 }
 }
@@ -65,6 +66,26 @@ Create a language model.
 }
 \subsection{Returns}{
 An AiHubMixLanguageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-AiHubMixProvider-image_model"></a>}}
+\if{latex}{\out{\hypertarget{method-AiHubMixProvider-image_model}{}}}
+\subsection{Method \code{image_model()}}{
+Create an image model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{AiHubMixProvider$image_model(model_id = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID (e.g., "gpt-image-1").}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An OpenAIImageModel object.
 }
 }
 \if{html}{\out{<hr>}}

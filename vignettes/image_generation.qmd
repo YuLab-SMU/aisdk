@@ -1,0 +1,272 @@
+---
+title: "Image Generation"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Image Generation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`aisdk` now treats image generation as a first-class model family, separate from language models.
+
+That separation matters because image-generation models return image artifacts, not chat completions.
+
+## Core APIs
+
+The main entry points are:
+
+- `generate_image()`
+- `edit_image()`
+
+Both APIs resolve an `ImageModelV1` object and return a `GenerateImageResult`.
+
+## Creating an image model
+
+Use a provider's `image_model()` constructor:
+
+```r
+library(aisdk)
+
+provider <- create_gemini()
+model <- provider$image_model("gemini-3.1-flash-image-preview")
+```
+
+OpenAI image models use the same pattern:
+
+```r
+library(aisdk)
+
+provider <- create_openai()
+model <- provider$image_model("gpt-image-1")
+```
+
+Other supported provider patterns:
+
+```r
+create_volcengine()$image_model("doubao-seedream-5-0")
+create_xai()$image_model("grok-2-image")
+create_stepfun()$image_model("step-1x-medium")
+create_openrouter()$image_model("openai/gpt-image-1")
+create_aihubmix()$image_model("gpt-image-1")
+```
+
+## Provider support matrix
+
+The current `aisdk` image-model support looks like this:
+
+| Provider | Example model | `generate_image()` | `edit_image()` | Notes |
+|---|---|---:|---:|---|
+| Gemini | `gemini-3.1-flash-image-preview` | Yes | Yes | Prompt-based edits; `mask` not yet exposed |
+| OpenAI | `gpt-image-1` | Yes | Yes | `mask` supported; local file path or data URI required for edits |
+| Volcengine | `doubao-seedream-5-0` | Yes | Yes | Image-to-image reuses the generation endpoint with `image` input |
+| xAI | `grok-2-image` | Yes | Yes | JSON image generation and editing workflow |
+| Stepfun | `step-1x-medium` / `step-1x-edit` | Yes | Yes | Editing currently requires `step-1x-edit` |
+| OpenRouter | `openai/gpt-image-1` | Yes | Yes | Reuses OpenAI image-model path through the router |
+| AiHubMix | `gpt-image-1` | Yes | Yes | Reuses OpenAI image-model path through AiHubMix |
+
+In practice, the easiest rule is:
+
+- use a provider-native image model when one exists
+- use `OpenRouter` or `AiHubMix` when you want routing flexibility over OpenAI-style image APIs
+- use provider-specific docs if you need model naming or parameter hints
+
+## Text-to-image generation
+
+```r
+library(aisdk)
+
+result <- generate_image(
+  model = create_gemini()$image_model("gemini-3.1-flash-image-preview"),
+  prompt = "A studio product photo of a matte white ceramic mug on linen",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+OpenAI works the same way:
+
+```r
+library(aisdk)
+
+result <- generate_image(
+  model = create_openai()$image_model("gpt-image-1"),
+  prompt = "A minimalist editorial photo of a cobalt blue mug on a white plinth",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+Volcengine example:
+
+```r
+library(aisdk)
+
+result <- generate_image(
+  model = create_volcengine()$image_model("doubao-seedream-5-0"),
+  prompt = "A sleek editorial photo of a cobalt blue ceramic mug",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+xAI example:
+
+```r
+library(aisdk)
+
+result <- generate_image(
+  model = create_xai()$image_model("grok-2-image"),
+  prompt = "A premium product shot of a blue mug on white marble",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+Stepfun example:
+
+```r
+library(aisdk)
+
+result <- generate_image(
+  model = create_stepfun()$image_model("step-1x-medium"),
+  prompt = "A ceramic mug photographed in soft studio light",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+Generated images are materialized to disk automatically. By default, files are written to `tempdir()`, which is safer for package examples and scripts.
+
+## Image editing
+
+Gemini image models can also perform image-to-image edits.
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_gemini()$image_model("gemini-3.1-flash-image-preview"),
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color from white to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+In the current `aisdk` implementation:
+
+- `image` is required
+- `prompt` is optional but strongly recommended
+- `mask` is not yet implemented for Gemini
+
+OpenAI image models also support `edit_image()`:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_openai()$image_model("gpt-image-1"),
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color from white to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+In the current `aisdk` implementation, OpenAI image editing expects a local file path or data URI for the source image. `mask` is also supported when you want explicit localized edits.
+
+Volcengine image editing example:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_volcengine()$image_model("doubao-seedream-5-0"),
+  image = "inst/extdata/product.png",
+  prompt = "Turn this product photo into a watercolor illustration.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+xAI image editing example:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_xai()$image_model("grok-2-image"),
+  image = "https://example.com/source.png",
+  prompt = "Make this image look like a watercolor painting.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+Stepfun image editing example:
+
+```r
+library(aisdk)
+
+result <- edit_image(
+  model = create_stepfun()$image_model("step-1x-edit"),
+  image = "inst/extdata/product.png",
+  prompt = "Change the mug color to cobalt blue.",
+  output_dir = tempdir()
+)
+
+result$images[[1]]$path
+```
+
+Current provider-specific caveats:
+
+- Gemini: no `mask` support in `aisdk` yet
+- OpenAI: source image for editing must be a local file path or data URI
+- Volcengine: `mask` not yet exposed
+- xAI: image editing currently uses JSON image inputs
+- Stepfun: editing currently requires `step-1x-edit`
+
+## Returned image artifacts
+
+Each item in `result$images` is a list with fields such as:
+
+- `path`
+- `media_type`
+- `bytes`
+
+This makes it easy to either keep images on disk or continue processing them in memory.
+
+## Choosing a provider
+
+Use this rough decision guide:
+
+- **Gemini** when you want a clean provider-native path for both image understanding and image generation in the same SDK
+- **OpenAI** when you want the most standard OpenAI image workflow, including explicit edit and mask support
+- **Volcengine** when you want Doubao Seedream models hosted on Ark
+- **xAI** when you want Grok image APIs
+- **Stepfun** when you want Stepfun's dedicated image generation and edit models
+- **OpenRouter / AiHubMix** when you want OpenAI-style image APIs behind a routing layer
+
+## Relationship to multimodal language models
+
+Use the right API for the job:
+
+- use `analyze_image()` or `generate_text()` when you want text output from an image
+- use `generate_image()` or `edit_image()` when you want image output
+
+This split keeps the SDK architecture clean and makes it easier to add new providers with image-generation support later.
+
+## Provider roadmap
+
+Gemini, OpenAI, and Volcengine all support dedicated `image_model()` workflows in `aisdk`.
+
+The same abstraction is designed to support future provider-specific image models without overloading `LanguageModelV1`.

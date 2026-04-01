@@ -75,6 +75,16 @@ OpenAILanguageModel <- R6::R6Class(
         }
       }
       params
+    },
+
+    translate_chat_messages = function(messages) {
+      lapply(messages, function(msg) {
+        translated <- msg
+        if (!is.null(msg$content) && !identical(msg$role, "tool")) {
+          translated$content <- translate_message_content(msg$content, target = "openai_chat")
+        }
+        translated
+      })
     }
   ),
   public = list(
@@ -112,7 +122,7 @@ OpenAILanguageModel <- R6::R6Class(
 
       body <- list(
         model = self$model_id,
-        messages = params$messages,
+        messages = private$translate_chat_messages(params$messages),
         stream = FALSE
       )
 
@@ -216,7 +226,7 @@ OpenAILanguageModel <- R6::R6Class(
 
       body <- list(
         model = self$model_id,
-        messages = params$messages,
+        messages = private$translate_chat_messages(params$messages),
         stream = TRUE
       )
 
@@ -348,18 +358,22 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       for (msg in messages) {
         if (msg$role == "system") {
           # System messages become instructions parameter
-          system_instructions <- msg$content
+          system_instructions <- if (is.character(msg$content) || is.null(msg$content)) {
+            msg$content
+          } else {
+            content_blocks_to_text(msg$content, arg_name = "system")
+          }
         } else if (msg$role == "user") {
           input_items <- c(input_items, list(list(
             type = "message",
             role = "user",
-            content = msg$content
+            content = translate_message_content(msg$content, target = "openai_responses")
           )))
         } else if (msg$role == "assistant") {
           input_items <- c(input_items, list(list(
             type = "message",
             role = "assistant",
-            content = msg$content
+            content = translate_message_content(msg$content, target = "openai_responses")
           )))
         } else if (msg$role == "tool") {
           # Tool results in Responses API format
@@ -1028,6 +1042,176 @@ OpenAIEmbeddingModel <- R6::R6Class(
   )
 )
 
+#' @title OpenAI Image Model
+#' @description
+#' Image model implementation for OpenAI's image generation and editing APIs.
+#' @keywords internal
+OpenAIImageModel <- R6::R6Class(
+  "OpenAIImageModel",
+  inherit = ImageModelV1,
+  private = list(
+    config = NULL,
+    get_headers = function(include_content_type = TRUE) {
+      h <- list(
+        Authorization = paste("Bearer", private$config$api_key)
+      )
+      if (include_content_type) {
+        h$`Content-Type` <- "application/json"
+      }
+      if (!is.null(private$config$organization)) {
+        h$`OpenAI-Organization` <- private$config$organization
+      }
+      if (!is.null(private$config$headers)) {
+        h <- c(h, private$config$headers)
+      }
+      h
+    },
+    build_generation_body = function(params) {
+      body <- list(
+        model = self$model_id,
+        prompt = params$prompt,
+        response_format = params$response_format %||% "b64_json"
+      )
+
+      if (!is.null(params$n)) body$n <- params$n
+      if (!is.null(params$size)) body$size <- params$size
+      if (!is.null(params$quality)) body$quality <- params$quality
+      if (!is.null(params$background)) body$background <- params$background
+      if (!is.null(params$moderation)) body$moderation <- params$moderation
+      if (!is.null(params$output_format)) body$output_format <- params$output_format
+
+      handled <- c("prompt", "output_dir", "response_format", "n", "size", "quality", "background", "moderation", "output_format")
+      extra <- params[setdiff(names(params), handled)]
+      if (length(extra) > 0) {
+        body <- utils::modifyList(body, extra)
+      }
+
+      body[!sapply(body, is.null)]
+    },
+    build_edit_body = function(params) {
+      upload_dir <- params$output_dir %||% tempdir()
+      image_path <- materialize_image_upload(params$image, output_dir = upload_dir, prefix = "openai_image")
+
+      body <- list(
+        model = self$model_id,
+        image = curl::form_file(image_path),
+        prompt = params$prompt %||% "Edit this image.",
+        response_format = params$response_format %||% "b64_json"
+      )
+
+      if (!is.null(params$mask)) {
+        mask_path <- materialize_image_upload(params$mask, output_dir = upload_dir, prefix = "openai_mask")
+        body$mask <- curl::form_file(mask_path)
+      }
+
+      if (!is.null(params$n)) body$n <- as.character(params$n)
+      if (!is.null(params$size)) body$size <- params$size
+      if (!is.null(params$quality)) body$quality <- params$quality
+      if (!is.null(params$background)) body$background <- params$background
+      if (!is.null(params$output_format)) body$output_format <- params$output_format
+
+      handled <- c("image", "mask", "prompt", "output_dir", "response_format", "n", "size", "quality", "background", "output_format")
+      extra <- params[setdiff(names(params), handled)]
+      if (length(extra) > 0) {
+        body <- c(body, extra)
+      }
+
+      body[!sapply(body, is.null)]
+    },
+    parse_image_response = function(response, output_dir = tempdir(), prefix = "openai_image") {
+      images <- list()
+
+      if (!is.null(response$data) && length(response$data) > 0) {
+        for (item in response$data) {
+          artifact <- list(
+            revised_prompt = item$revised_prompt %||% NULL
+          )
+
+          if (!is.null(item$b64_json)) {
+            artifact$bytes <- base64enc::base64decode(item$b64_json)
+            artifact$media_type <- switch(item$output_format %||% "",
+              png = "image/png",
+              jpeg = "image/jpeg",
+              webp = "image/webp",
+              "image/png"
+            )
+          } else if (!is.null(item$url)) {
+            artifact$uri <- item$url
+          }
+
+          images <- c(images, list(artifact))
+        }
+      }
+
+      finalize_image_artifacts(images, output_dir = output_dir, prefix = prefix)
+    }
+  ),
+  public = list(
+    #' @description Initialize the OpenAI image model.
+    #' @param model_id The model ID (e.g., "gpt-image-1").
+    #' @param config Configuration list.
+    initialize = function(model_id, config) {
+      super$initialize(
+        provider = config$provider_name %||% "openai",
+        model_id = model_id,
+        capabilities = list(
+          image_output = TRUE,
+          image_edit = TRUE
+        )
+      )
+      private$config <- config
+    },
+
+    #' @description Generate images.
+    #' @param params A list of call options.
+    #' @return A GenerateImageResult object.
+    do_generate_image = function(params) {
+      if (is.null(params$prompt) || !nzchar(params$prompt)) {
+        rlang::abort("`prompt` must be a non-empty string.")
+      }
+
+      url <- paste0(private$config$base_url, "/images/generations")
+      headers <- private$get_headers(include_content_type = TRUE)
+      body <- private$build_generation_body(params)
+      response <- post_to_api(url, headers, body)
+
+      GenerateImageResult$new(
+        images = private$parse_image_response(
+          response,
+          output_dir = params$output_dir %||% tempdir(),
+          prefix = "openai_image"
+        ),
+        usage = response$usage %||% NULL,
+        raw_response = response
+      )
+    },
+
+    #' @description Edit images.
+    #' @param params A list of call options.
+    #' @return A GenerateImageResult object.
+    do_edit_image = function(params) {
+      if (is.null(params$image)) {
+        rlang::abort("`image` must be supplied for OpenAI image editing.")
+      }
+
+      url <- paste0(private$config$base_url, "/images/edits")
+      headers <- private$get_headers(include_content_type = FALSE)
+      body <- private$build_edit_body(params)
+      response <- post_multipart_to_api(url, headers, body)
+
+      GenerateImageResult$new(
+        images = private$parse_image_response(
+          response,
+          output_dir = params$output_dir %||% tempdir(),
+          prefix = "openai_edit"
+        ),
+        usage = response$usage %||% NULL,
+        raw_response = response
+      )
+    }
+  )
+)
+
 #' @title OpenAI Provider Class
 #' @description
 #' Provider class for OpenAI. Can create language and embedding models.
@@ -1128,6 +1312,13 @@ OpenAIProvider <- R6::R6Class(
     #' @return An OpenAIEmbeddingModel object.
     embedding_model = function(model_id = "text-embedding-3-small") {
       OpenAIEmbeddingModel$new(model_id, private$config)
+    },
+
+    #' @description Create an image model.
+    #' @param model_id The model ID (e.g., "gpt-image-1").
+    #' @return An OpenAIImageModel object.
+    image_model = function(model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")) {
+      OpenAIImageModel$new(model_id, private$config)
     }
   ),
   private = list(
