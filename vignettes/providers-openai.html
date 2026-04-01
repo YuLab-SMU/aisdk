@@ -358,6 +358,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/multimodal.html">
+ <span class="dropdown-text">Multimodal Input</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/image_generation.html">
+ <span class="dropdown-text">Image Generation</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/mcp.html">
  <span class="dropdown-text">Connectivity (MCP)</span></a>
   </li>  
@@ -413,6 +421,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#reasoning-models-o1-o3-mini" id="toc-reasoning-models-o1-o3-mini" class="nav-link" data-scroll-target="#reasoning-models-o1-o3-mini">Reasoning Models (o1, o3-mini)</a></li>
   <li><a href="#json-mode" id="toc-json-mode" class="nav-link" data-scroll-target="#json-mode">JSON Mode</a></li>
+  <li><a href="#image-models" id="toc-image-models" class="nav-link" data-scroll-target="#image-models">Image Models</a></li>
+  <li><a href="#image-editing" id="toc-image-editing" class="nav-link" data-scroll-target="#image-editing">Image Editing</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers-openai.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -472,6 +482,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">response_format =</span> <span class="fu">list</span>(<span class="at">type =</span> <span class="st">"json_object"</span>)</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>For a cleaner experience, see the <a href="structured_outputs.html">Structured Outputs</a> vignette.</p>
+</section>
+<section id="image-models" class="level3">
+<h3 class="anchored" data-anchor-id="image-models">Image Models</h3>
+<p>OpenAI image generation is exposed through a dedicated <code>image_model()</code> path rather than the chat APIs.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openai</span>()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> image_model,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A clean product photo of a cobalt blue ceramic mug on linen"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="image-editing" class="level3">
+<h3 class="anchored" data-anchor-id="image-editing">Image Editing</h3>
+<p>OpenAI image models also support image-to-image editing:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In the current <code>aisdk</code> implementation, OpenAI image editing expects a local file path or data URI for the source image. Optional <code>mask</code> uploads are supported for localized edits.</p>
 
 
 </section>

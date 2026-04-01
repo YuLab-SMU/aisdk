@@ -347,6 +347,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/multimodal.html">
+ <span class="dropdown-text">Multimodal Input</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/image_generation.html">
+ <span class="dropdown-text">Image Generation</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/mcp.html">
  <span class="dropdown-text">Connectivity (MCP)</span></a>
   </li>  
@@ -433,6 +441,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </ul>
 </li>
   <li><a href="#agent-capabilities" id="toc-agent-capabilities" class="nav-link" data-scroll-target="#agent-capabilities">Agent Capabilities</a></li>
+  <li><a href="#native-image-workflows" id="toc-native-image-workflows" class="nav-link" data-scroll-target="#native-image-workflows">Native Image Workflows</a></li>
   <li><a href="#persistence-and-session-continuity" id="toc-persistence-and-session-continuity" class="nav-link" data-scroll-target="#persistence-and-session-continuity">Persistence and Session Continuity</a></li>
   <li><a href="#local-execution-and-sandbox-behavior" id="toc-local-execution-and-sandbox-behavior" class="nav-link" data-scroll-target="#local-execution-and-sandbox-behavior">Local Execution and Sandbox Behavior</a></li>
   <li><a href="#recommended-usage-pattern" id="toc-recommended-usage-pattern" class="nav-link" data-scroll-target="#recommended-usage-pattern">Recommended Usage Pattern</a></li>
@@ -656,8 +665,45 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>reading data files</li>
 <li>writing small helper files</li>
 <li>running shell commands inside the configured working directory</li>
+<li>analyzing screenshots, charts, or figures when the user asks visual questions</li>
+<li>generating image assets when the user asks for posters, hero images, or illustrations</li>
+<li>editing the most recently generated image when the user asks for follow-up changes</li>
 </ul>
 <p>The console keeps these actions compact by summarizing tool progress inline and moving deeper detail into the inspect layer.</p>
+</section><section id="native-image-workflows" class="level2"><h2 class="anchored" data-anchor-id="native-image-workflows">Native Image Workflows</h2>
+<p>Image and vision support in <code>console_chat()</code> is intended to behave like a native agent capability rather than a separate command language.</p>
+<p>That means the recommended user experience is:</p>
+<ul>
+<li>the user asks naturally for screenshot analysis, OCR, chart reading, or UI critique</li>
+<li>the agent decides to use image-analysis tools on its own</li>
+<li>the user asks for a poster, thumbnail, product shot, or illustration</li>
+<li>the agent decides to call image-generation tools on its own</li>
+<li>the user says "make the last one blue" or "edit the previous render"</li>
+<li>the agent reuses the most recent remembered image artifact when possible</li>
+</ul>
+<p>The current console agent has dedicated image tools behind the scenes for:</p>
+<ul>
+<li>local image discovery</li>
+<li>image analysis</li>
+<li>structured extraction from images</li>
+<li>image generation</li>
+<li>image editing</li>
+<li>recalling recent generated or edited image artifacts</li>
+</ul>
+<p>This keeps image work aligned with the rest of the agent workflow: the user asks for an outcome, and the agent chooses the right tool path.</p>
+<p>In the current design, the agent should usually try this order on its own:</p>
+<ol type="1">
+<li>reuse the most recent relevant image artifact if one exists</li>
+<li>search the working directory for likely image candidates</li>
+<li>ask the user for a path only if neither step produced a clear candidate</li>
+</ol>
+<p>The console agent can also work across multiple images when that is the most natural interpretation of the request, for example:</p>
+<ul>
+<li>comparing several screenshots</li>
+<li>extracting repeated fields from multiple forms</li>
+<li>reviewing a small batch of generated assets</li>
+</ul>
+<p>This is intentionally designed as an agent behavior rather than a separate special command language.</p>
 </section><section id="persistence-and-session-continuity" class="level2"><h2 class="anchored" data-anchor-id="persistence-and-session-continuity">Persistence and Session Continuity</h2>
 <p>Because <code>console_chat()</code> sits on top of <code>ChatSession</code>, it inherits the session model rather than inventing a separate console-only state system.</p>
 <p>That means you can:</p>

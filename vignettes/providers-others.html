@@ -358,6 +358,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/multimodal.html">
+ <span class="dropdown-text">Multimodal Input</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/image_generation.html">
+ <span class="dropdown-text">Image Generation</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/mcp.html">
  <span class="dropdown-text">Connectivity (MCP)</span></a>
   </li>  
@@ -413,6 +421,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#stepfun" id="toc-stepfun" class="nav-link" data-scroll-target="#stepfun">Stepfun</a></li>
   <li><a href="#bailian-qwen" id="toc-bailian-qwen" class="nav-link" data-scroll-target="#bailian-qwen">Bailian (Qwen)</a></li>
   <li><a href="#openrouter" id="toc-openrouter" class="nav-link" data-scroll-target="#openrouter">OpenRouter</a></li>
+  <li><a href="#aihubmix" id="toc-aihubmix" class="nav-link" data-scroll-target="#aihubmix">AiHubMix</a></li>
   <li><a href="#nvidia" id="toc-nvidia" class="nav-link" data-scroll-target="#nvidia">Nvidia</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers-others.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -452,36 +461,80 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Supports Grok models.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_xai</span>()</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"grok-2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>xAI image models can also be used through <code>image_model()</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_xai</span>()</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> image_model,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A premium product shot of a cobalt blue mug on white marble"</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="volcengine-doubao" class="level2">
 <h2 class="anchored" data-anchor-id="volcengine-doubao">Volcengine (Doubao)</h2>
 <p>Supports ByteDance’s Doubao models. Requires <code>VOLCENGINE_API_KEY</code> and usually a model endpoint ID.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_volcengine</span>()</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"ep-..."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_volcengine</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"ep-..."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Volcengine image models can also be used through <code>image_model()</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_volcengine</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> image_model,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A clean product photo of a cobalt blue ceramic mug"</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="stepfun" class="level2">
 <h2 class="anchored" data-anchor-id="stepfun">Stepfun</h2>
 <p>Supports Stepfun’s models.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_stepfun</span>()</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"step-1-8k"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_stepfun</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"step-1-8k"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stepfun image generation and editing models are also exposed:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_stepfun</span>()</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-medium"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>edit_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-edit"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>For editing:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> edit_model,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="bailian-qwen" class="level2">
 <h2 class="anchored" data-anchor-id="bailian-qwen">Bailian (Qwen)</h2>
 <p>Supports Alibaba Cloud’s DashScope models (e.g., Qwen).</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_bailian</span>()</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"qwen-max"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_bailian</span>()</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"qwen-max"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="openrouter" class="level2">
 <h2 class="anchored" data-anchor-id="openrouter">OpenRouter</h2>
 <p>A universal API routing to hundreds of models.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openrouter</span>()</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"meta-llama/llama-3.1-405b"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openrouter</span>()</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"meta-llama/llama-3.1-405b"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>When the upstream model supports OpenAI-style image APIs, OpenRouter can be used through <code>image_model()</code> as well:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openrouter</span>()</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="aihubmix" class="level2">
+<h2 class="anchored" data-anchor-id="aihubmix">AiHubMix</h2>
+<p>AiHubMix can route OpenAI-style image models through its unified API:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_aihubmix</span>()</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="nvidia" class="level2">
 <h2 class="anchored" data-anchor-id="nvidia">Nvidia</h2>
 <p>Supports Nvidia NIM APIs.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_nvidia</span>()</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"meta/llama-3.1-405b-instruct"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_nvidia</span>()</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"meta/llama-3.1-405b-instruct"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>

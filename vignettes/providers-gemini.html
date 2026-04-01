@@ -358,6 +358,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Structured Outputs</span></a>
   </li>  
         <li>
+    <a class="dropdown-item" href="../vignettes/multimodal.html">
+ <span class="dropdown-text">Multimodal Input</span></a>
+  </li>  
+        <li>
+    <a class="dropdown-item" href="../vignettes/image_generation.html">
+ <span class="dropdown-text">Image Generation</span></a>
+  </li>  
+        <li>
     <a class="dropdown-item" href="../vignettes/mcp.html">
  <span class="dropdown-text">Connectivity (MCP)</span></a>
   </li>  
@@ -411,6 +419,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#google-search-grounding" id="toc-google-search-grounding" class="nav-link" data-scroll-target="#google-search-grounding">Google Search Grounding</a></li>
   <li><a href="#advanced-tool-options" id="toc-advanced-tool-options" class="nav-link" data-scroll-target="#advanced-tool-options">Advanced Tool Options</a></li>
   <li><a href="#multimodal-input" id="toc-multimodal-input" class="nav-link" data-scroll-target="#multimodal-input">Multimodal Input</a></li>
+  <li><a href="#image-generation" id="toc-image-generation" class="nav-link" data-scroll-target="#image-generation">Image Generation</a></li>
+  <li><a href="#image-editing" id="toc-image-editing" class="nav-link" data-scroll-target="#image-editing">Image Editing</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/providers-gemini.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
@@ -474,6 +484,50 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="multimodal-input" class="level2">
 <h2 class="anchored" data-anchor-id="multimodal-input">Multimodal Input</h2>
 <p>Gemini is natively multimodal. The SDK supports passing image data to Gemini models (see the <a href="multimodal.html">Multimodal</a> vignette for details).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">create_gemini</span>()<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"gemini-2.5-flash"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">analyze_image</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> model,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/example.png"</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Describe the main objects in this image."</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>text)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>You can also build multimodal messages manually with <code>input_text()</code> and <code>input_image()</code> if you need full control over the prompt structure.</p>
+</section>
+<section id="image-generation" class="level2">
+<h2 class="anchored" data-anchor-id="image-generation">Image Generation</h2>
+<p>Gemini is currently the first provider in <code>aisdk</code> with a dedicated <code>image_model()</code> path.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_gemini</span>()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gemini-3.1-flash-image-preview"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> image_model,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A clean editorial photo of a blue ceramic mug on a white table."</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>See the <a href="image_generation.html">Image Generation</a> vignette for the full workflow.</p>
+</section>
+<section id="image-editing" class="level2">
+<h2 class="anchored" data-anchor-id="image-editing">Image Editing</h2>
+<p>Gemini image models can also perform prompt-based image edits:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_gemini</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gemini-3.1-flash-image-preview"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>At the moment, <code>aisdk</code> supports prompt-based image editing for Gemini, but does not yet expose mask-based editing.</p>
 
 
 </section>

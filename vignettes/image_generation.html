@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.9.36">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Get Started with aisdk – aisdk</title>
+
+
+<title>Image Generation – aisdk</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -57,6 +60,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }
 </style>
 
+
 <script src="../site_libs/quarto-nav/quarto-nav.js"></script>
 <script src="../site_libs/quarto-nav/headroom.min.js"></script>
 <script src="../site_libs/clipboard/clipboard.min.js"></script>
@@ -77,7 +81,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="../site_libs/bootstrap/bootstrap-44814b0d3bcd5157c77410ede5e38fb6.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="../site_libs/bootstrap/bootstrap-dark-a1c154d556dea139e71da788b0061bd0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-44814b0d3bcd5157c77410ede5e38fb6.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light"><script id="quarto-search-options" type="application/json">{
+<link href="../site_libs/bootstrap/bootstrap-44814b0d3bcd5157c77410ede5e38fb6.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
   "collapse-after": 3,
@@ -103,8 +108,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-submit-button-title": "Submit",
     "search-label": "Search"
   }
-}</script><link rel="stylesheet" href="styles.css">
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
 </head>
+
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
     const toggleBodyColorMode = (bsSheetEl) => {
       const mode = bsSheetEl.getAttribute("data-mode");
@@ -270,7 +279,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top"><nav class="navbar navbar-expand-lg " data-bs-theme="dark"><div class="navbar-container container-fluid">
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../index.html">
     <span class="navbar-title">aisdk</span>
@@ -282,7 +293,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </button>
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll me-auto">
-<li class="nav-item">
+  <li class="nav-item">
     <a class="nav-link" href="../index.html"> 
 <span class="menu-text">Home</span></a>
   </li>  
@@ -290,8 +301,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="nav-link dropdown-toggle" href="#" id="nav-menu-articles" role="link" data-bs-toggle="dropdown" aria-expanded="false">
  <span class="menu-text">Articles</span>
     </a>
-    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">
-<li>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-articles">    
+        <li>
     <a class="dropdown-item" href="../vignettes/get_started.html">
  <span class="dropdown-text">Get Started</span></a>
   </li>  
@@ -375,50 +386,54 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="dropdown-text">Enterprise Operations</span></a>
   </li>  
     </ul>
-</li>
+  </li>
   <li class="nav-item">
     <a class="nav-link" href="../reference/index.html"> 
 <span class="menu-text">Reference</span></a>
   </li>  
 </ul>
-<ul class="navbar-nav navbar-nav-scroll ms-auto">
-<li class="nav-item compact">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
     <a class="nav-link" href="https://github.com/YuLab-SMU/aisdk"> <i class="bi bi-github" role="img" aria-label="GitHub">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
 </ul>
-</div> <!-- /navcollapse -->
+          </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
   <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
 </div>
       </div> <!-- /container-fluid -->
-    </nav></header><!-- content --><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active"><h2 id="toc-title">On this page</h2>
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
    
   <ul>
-<li><a href="#installation" id="toc-installation" class="nav-link active" data-scroll-target="#installation">Installation</a></li>
-  <li>
-<a href="#basic-usage" id="toc-basic-usage" class="nav-link" data-scroll-target="#basic-usage">Basic Usage</a>
-  <ul class="collapse">
-<li><a href="#configuration" id="toc-configuration" class="nav-link" data-scroll-target="#configuration">1. Configuration</a></li>
-  <li><a href="#creating-a-model" id="toc-creating-a-model" class="nav-link" data-scroll-target="#creating-a-model">2. Creating a Model</a></li>
-  <li><a href="#generating-text" id="toc-generating-text" class="nav-link" data-scroll-target="#generating-text">3. Generating Text</a></li>
-  <li><a href="#streaming-responses" id="toc-streaming-responses" class="nav-link" data-scroll-target="#streaming-responses">4. Streaming Responses</a></li>
-  <li><a href="#managing-state-with-chatsession" id="toc-managing-state-with-chatsession" class="nav-link" data-scroll-target="#managing-state-with-chatsession">5. Managing State with ChatSession</a></li>
-  <li><a href="#tools-and-function-calling" id="toc-tools-and-function-calling" class="nav-link" data-scroll-target="#tools-and-function-calling">6. Tools and Function Calling</a></li>
-  <li><a href="#interactive-console-chat" id="toc-interactive-console-chat" class="nav-link" data-scroll-target="#interactive-console-chat">7. Interactive Console Chat</a></li>
+  <li><a href="#core-apis" id="toc-core-apis" class="nav-link active" data-scroll-target="#core-apis">Core APIs</a></li>
+  <li><a href="#creating-an-image-model" id="toc-creating-an-image-model" class="nav-link" data-scroll-target="#creating-an-image-model">Creating an image model</a></li>
+  <li><a href="#provider-support-matrix" id="toc-provider-support-matrix" class="nav-link" data-scroll-target="#provider-support-matrix">Provider support matrix</a></li>
+  <li><a href="#text-to-image-generation" id="toc-text-to-image-generation" class="nav-link" data-scroll-target="#text-to-image-generation">Text-to-image generation</a></li>
+  <li><a href="#image-editing" id="toc-image-editing" class="nav-link" data-scroll-target="#image-editing">Image editing</a></li>
+  <li><a href="#returned-image-artifacts" id="toc-returned-image-artifacts" class="nav-link" data-scroll-target="#returned-image-artifacts">Returned image artifacts</a></li>
+  <li><a href="#choosing-a-provider" id="toc-choosing-a-provider" class="nav-link" data-scroll-target="#choosing-a-provider">Choosing a provider</a></li>
+  <li><a href="#relationship-to-multimodal-language-models" id="toc-relationship-to-multimodal-language-models" class="nav-link" data-scroll-target="#relationship-to-multimodal-language-models">Relationship to multimodal language models</a></li>
+  <li><a href="#provider-roadmap" id="toc-provider-roadmap" class="nav-link" data-scroll-target="#provider-roadmap">Provider roadmap</a></li>
   </ul>
-</li>
-  <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next Steps</a></li>
-  </ul><div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/get_started.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/image_generation.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block default"><div class="quarto-title">
-<h1 class="title">Get Started with aisdk</h1>
+<main class="content" id="quarto-document-content">
+
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Image Generation</h1>
 </div>
 
 
@@ -432,223 +447,285 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
 
 
-</header><p><strong>aisdk</strong> is a production-grade AI SDK for R, providing a unified interface for multiple AI model providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.). It features a layered architecture, robust error handling, and advanced capabilities like multi-agent orchestration and a distributed MCP (Model Context Protocol) ecosystem.</p>
-<section id="installation" class="level2"><h2 class="anchored" data-anchor-id="installation">Installation</h2>
-<p>You can install the development version from GitHub:</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html">install_github</a></span><span class="op">(</span><span class="st">"YuLab-SMU/aisdk"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="basic-usage" class="level2"><h2 class="anchored" data-anchor-id="basic-usage">Basic Usage</h2>
-<section id="configuration" class="level3"><h3 class="anchored" data-anchor-id="configuration">1. Configuration</h3>
-<p>Load the library and set your API keys as environment variables. We recommend using an <code>.Renviron</code> file for persistence.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Set API keys (Example)</span></span>
-<span><span class="co"># Sys.setenv(OPENAI_API_KEY = "sk-...")</span></span>
-<span><span class="co"># Sys.setenv(ANTHROPIC_API_KEY = "sk-ant-...")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="creating-a-model" class="level3"><h3 class="anchored" data-anchor-id="creating-a-model">2. Creating a Model</h3>
-<p>Create a model instance using provider factory functions.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Create an OpenAI model</span></span>
-<span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_openai.html">create_openai</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">language_model</span><span class="op">(</span><span class="st">"gpt-4o"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create an Anthropic / Gemini model</span></span>
-<span><span class="co"># model &lt;- create_anthropic()$language_model("claude-3-5-sonnet-20241022")</span></span>
-<span><span class="co"># model &lt;- create_gemini()$language_model("gemini-1.5-pro")</span></span>
-<span></span>
-<span><span class="co"># Create models from other supported providers (DeepSeek, Volcengine, Stepfun, etc.)</span></span>
-<span><span class="co"># model &lt;- create_deepseek()$language_model("deepseek-chat")</span></span>
-<span><span class="co"># model &lt;- create_volcengine()$language_model("your-endpoint-id")</span></span>
-<span><span class="co"># model &lt;- create_stepfun()$language_model("step-1-8k")</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p>If you want a package-wide default, set it once and omit <code>model</code> from high-level helpers:</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/set_model.html">set_model</a></span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Equivalent shortcut</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/model.html">model</a></span><span class="op">(</span><span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Inspect the current default</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/model.html">model</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="generating-text" class="level3"><h3 class="anchored" data-anchor-id="generating-text">3. Generating Text</h3>
-<p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text()</a></code> for simple request-response interactions.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Simple prompt</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  prompt <span class="op">=</span> <span class="st">"What are the advantages of using R6 classes in R?"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Using a system prompt for behavior control</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
-<span>  system <span class="op">=</span> <span class="st">"You are a helpful R programming expert."</span>,</span>
-<span>  prompt <span class="op">=</span> <span class="st">"Explain the difference between `lapply` and `sapply`."</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="streaming-responses" class="level3"><h3 class="anchored" data-anchor-id="streaming-responses">4. Streaming Responses</h3>
-<p>For real-time output, use <code><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text()</a></code> with a callback.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/stream_text.html">stream_text</a></span><span class="op">(</span></span>
-<span>  prompt <span class="op">=</span> <span class="st">"Write a short poem about data science."</span>,</span>
-<span>  callback <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">chunk</span>, <span class="va">done</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">done</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">chunk</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="managing-state-with-chatsession" class="level3"><h3 class="anchored" data-anchor-id="managing-state-with-chatsession">5. Managing State with ChatSession</h3>
-<p>For stateful conversations, use <code>ChatSession</code>. It automatically manages history and provides a higher-level API.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Initialize a session</span></span>
-<span><span class="va">session</span> <span class="op">&lt;-</span> <span class="va"><a href="https://rdrr.io/pkg/aisdk/man/ChatSession.html">ChatSession</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># First message</span></span>
-<span><span class="va">res1</span> <span class="op">&lt;-</span> <span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"Hi, I'm analyzing gene expression data."</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">res1</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Second message (context is preserved)</span></span>
-<span><span class="va">res2</span> <span class="op">&lt;-</span> <span class="va">session</span><span class="op">$</span><span class="fu">send</span><span class="op">(</span><span class="st">"What R packages would you recommend for normalization?"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">res2</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check history</span></span>
-<span><span class="co"># session$history()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="tools-and-function-calling" class="level3"><h3 class="anchored" data-anchor-id="tools-and-function-calling">6. Tools and Function Calling</h3>
-<p><strong>aisdk</strong> makes it easy to give LLMs access to R functions.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Define a tool using the schema DSL</span></span>
-<span><span class="va">weather_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"get_weather"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Get current weather for a city"</span>,</span>
-<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
-<span>    city <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="st">"The city name, e.g., Beijing"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste</a></span><span class="op">(</span><span class="st">"The weather in"</span>, <span class="va">args</span><span class="op">$</span><span class="va">city</span>, <span class="st">"is sunny, 25 degrees C."</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Use the tool</span></span>
-<span><span class="va">response</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/generate_text.html">generate_text</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="va">model</span>,</span>
-<span>  prompt <span class="op">=</span> <span class="st">"What's the weather like in Shanghai?"</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">weather_tool</span><span class="op">)</span>,</span>
-<span>  max_steps <span class="op">=</span> <span class="fl">3</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html">cat</a></span><span class="op">(</span><span class="va">response</span><span class="op">$</span><span class="va">text</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="interactive-console-chat" class="level3"><h3 class="anchored" data-anchor-id="interactive-console-chat">7. Interactive Console Chat</h3>
-<p>For a more interactive experience, <strong>aisdk</strong> provides a built-in REPL (Read-Eval-Print Loop) called <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>. This allows you to chat with the model directly in your R terminal, with support for streaming, slash commands, and an intelligent agent that can execute R code or bash commands.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Optional: set a package-wide default first</span></span>
-<span><span class="co"># set_model("openai:gpt-4o")</span></span>
-<span></span>
-<span><span class="co"># Start an interactive chat with an intelligent agent (default)</span></span>
-<span><span class="co"># console_chat("openai:gpt-4o")</span></span>
-<span></span>
-<span><span class="co"># Start a simple chat without agent tools</span></span>
-<span><span class="co"># console_chat("openai:gpt-4o", agent = NULL)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-<p><code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code> now exposes a structured terminal workflow rather than a plain print stream:</p>
-<ul>
-<li>A persistent status bar shows the current model, sandbox mode, view mode, streaming state, local execution state, and tool activity.</li>
-<li>Agent mode can run shell commands, read and write files, and execute R code through natural language.</li>
-<li>Tool-heavy turns stay compact in normal use, but remain inspectable when you need to understand what happened.</li>
-<li>The console keeps a shared frame structure for status, timeline, and overlay surfaces, while still degrading safely to an append-only terminal path.</li>
-</ul>
-<section id="view-modes" class="level4"><h4 class="anchored" data-anchor-id="view-modes">View modes</h4>
-<ul>
-<li>
-<code>clean</code>: the default mode. Keeps the transcript calm and hides raw tool payloads.</li>
-<li>
-<code>inspect</code>: adds per-turn tool timeline summaries and an inspector overlay for drilling into the latest turn or an individual tool.</li>
-<li>
-<code>debug</code>: enables detailed tool logging and thinking output for development and troubleshooting.</li>
-</ul>
-<p>You can switch modes live:</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="co"># Enter inspect mode</span></span>
-<span><span class="co"># /inspect on</span></span>
-<span></span>
-<span><span class="co"># Enter debug mode</span></span>
-<span><span class="co"># /debug on</span></span>
-<span></span>
-<span><span class="co"># Return to compact clean mode</span></span>
-<span><span class="co"># /debug off</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
-</section><section id="inspector-workflow" class="level4"><h4 class="anchored" data-anchor-id="inspector-workflow">Inspector workflow</h4>
-<p>The inspector is useful when a turn used tools and you want to understand the execution path without switching the entire console into debug mode.</p>
-<ul>
-<li>
-<code>/inspect turn</code>: opens the inspector overlay for the latest turn.</li>
-<li>
-<code>/inspect tool &lt;index&gt;</code>: opens the inspector overlay for a specific tool in the latest turn.</li>
-<li>
-<code>/inspect next</code> / <code>/inspect prev</code>: moves between tools inside the current inspector context.</li>
-<li>
-<code>/inspect close</code>: closes the active inspector overlay.</li>
-</ul>
-<p>The inspector overlay shows:</p>
-<ul>
-<li>turn or tool identity</li>
-<li>elapsed time</li>
-<li>summary of arguments and results</li>
-<li>captured messages and warnings</li>
-<li>compact previews of raw arguments and raw results</li>
-</ul></section><section id="common-slash-commands" class="level4"><h4 class="anchored" data-anchor-id="common-slash-commands">Common slash commands</h4>
-<ul>
-<li>
-<code>/help</code>: show all available commands.</li>
-<li>
-<code>/model &lt;id&gt;</code>: switch the model on the fly.</li>
-<li>
-<code>/save [path]</code> / <code>/load &lt;path&gt;</code>: persist and restore sessions.</li>
-<li>
-<code>/history</code>: inspect conversation history.</li>
-<li>
-<code>/stats</code>: inspect session usage statistics.</li>
-<li>
-<code>/stream [on|off]</code>: toggle token streaming.</li>
-<li>
-<code>/local [on|off]</code>: toggle local execution mode in the shared session environment.</li>
-<li>
-<code>/clear</code>: reset the conversation history.</li>
-<li>
-<code>/quit</code>: exit the interactive session.</li>
-</ul></section><section id="practical-usage-pattern" class="level4"><h4 class="anchored" data-anchor-id="practical-usage-pattern">Practical usage pattern</h4>
-<p>In day-to-day work, the recommended workflow is:</p>
-<ol type="1">
-<li>Start in <code>clean</code> mode for normal conversation.</li>
-<li>Switch to <code>inspect</code> when a turn uses tools and you want a concise explanation of what ran.</li>
-<li>Open the inspector overlay for the latest turn or a specific tool.</li>
-<li>Use <code>debug</code> only when developing providers, tools, or console behavior itself.</li>
-</ol></section></section></section><section id="next-steps" class="level2"><h2 class="anchored" data-anchor-id="next-steps">Next Steps</h2>
-<p>Explore the following vignettes for more advanced features:</p>
-<ul>
-<li>
-<a href="providers.html">Providers</a>: Configure models, connect via Custom Providers, and use AIHubMix advanced compatibility wrappers.</li>
-<li>
-<a href="agents.html">Agents</a>: Build specialized AI workers and multi-agent systems.</li>
-<li>
-<a href="tools.html">Tools</a>: Deep dive into the Tool system and Schema DSL.</li>
-<li>
-<a href="sessions.html">Sessions</a>: Advanced session management and persistence.</li>
-<li>
-<a href="console_chat.html">Console Chat</a>: Full guide to the terminal REPL, inspect/debug modes, and inspector overlay workflow.</li>
-<li>
-<a href="mcp.html">MCP</a>: Connect to external tools via the Model Context Protocol.</li>
-<li>
-<a href="skills.html">Skills</a>: Progressive knowledge loading for agents.</li>
-</ul>
+</header>
 
 
-</section></main><!-- /main --><script id="quarto-html-after-body" type="application/javascript">
+<p><code>aisdk</code> now treats image generation as a first-class model family, separate from language models.</p>
+<p>That separation matters because image-generation models return image artifacts, not chat completions.</p>
+<section id="core-apis" class="level2">
+<h2 class="anchored" data-anchor-id="core-apis">Core APIs</h2>
+<p>The main entry points are:</p>
+<ul>
+<li><code>generate_image()</code></li>
+<li><code>edit_image()</code></li>
+</ul>
+<p>Both APIs resolve an <code>ImageModelV1</code> object and return a <code>GenerateImageResult</code>.</p>
+</section>
+<section id="creating-an-image-model" class="level2">
+<h2 class="anchored" data-anchor-id="creating-an-image-model">Creating an image model</h2>
+<p>Use a provider’s <code>image_model()</code> constructor:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_gemini</span>()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gemini-3.1-flash-image-preview"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>OpenAI image models use the same pattern:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openai</span>()</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Other supported provider patterns:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-medium"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">create_openrouter</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-1"</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">create_aihubmix</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="provider-support-matrix" class="level2">
+<h2 class="anchored" data-anchor-id="provider-support-matrix">Provider support matrix</h2>
+<p>The current <code>aisdk</code> image-model support looks like this:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 23%">
+<col style="width: 23%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Provider</th>
+<th>Example model</th>
+<th style="text-align: right;"><code>generate_image()</code></th>
+<th style="text-align: right;"><code>edit_image()</code></th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Gemini</td>
+<td><code>gemini-3.1-flash-image-preview</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>Prompt-based edits; <code>mask</code> not yet exposed</td>
+</tr>
+<tr class="even">
+<td>OpenAI</td>
+<td><code>gpt-image-1</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td><code>mask</code> supported; local file path or data URI required for edits</td>
+</tr>
+<tr class="odd">
+<td>Volcengine</td>
+<td><code>doubao-seedream-5-0</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>Image-to-image reuses the generation endpoint with <code>image</code> input</td>
+</tr>
+<tr class="even">
+<td>xAI</td>
+<td><code>grok-2-image</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>JSON image generation and editing workflow</td>
+</tr>
+<tr class="odd">
+<td>Stepfun</td>
+<td><code>step-1x-medium</code> / <code>step-1x-edit</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>Editing currently requires <code>step-1x-edit</code></td>
+</tr>
+<tr class="even">
+<td>OpenRouter</td>
+<td><code>openai/gpt-image-1</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>Reuses OpenAI image-model path through the router</td>
+</tr>
+<tr class="odd">
+<td>AiHubMix</td>
+<td><code>gpt-image-1</code></td>
+<td style="text-align: right;">Yes</td>
+<td style="text-align: right;">Yes</td>
+<td>Reuses OpenAI image-model path through AiHubMix</td>
+</tr>
+</tbody>
+</table>
+<p>In practice, the easiest rule is:</p>
+<ul>
+<li>use a provider-native image model when one exists</li>
+<li>use <code>OpenRouter</code> or <code>AiHubMix</code> when you want routing flexibility over OpenAI-style image APIs</li>
+<li>use provider-specific docs if you need model naming or parameter hints</li>
+</ul>
+</section>
+<section id="text-to-image-generation" class="level2">
+<h2 class="anchored" data-anchor-id="text-to-image-generation">Text-to-image generation</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_gemini</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gemini-3.1-flash-image-preview"</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A studio product photo of a matte white ceramic mug on linen"</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>OpenAI works the same way:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A minimalist editorial photo of a cobalt blue mug on a white plinth"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Volcengine example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A sleek editorial photo of a cobalt blue ceramic mug"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>xAI example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>),</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A premium product shot of a blue mug on white marble"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stepfun example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-medium"</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A ceramic mug photographed in soft studio light"</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Generated images are materialized to disk automatically. By default, files are written to <code>tempdir()</code>, which is safer for package examples and scripts.</p>
+</section>
+<section id="image-editing" class="level2">
+<h2 class="anchored" data-anchor-id="image-editing">Image editing</h2>
+<p>Gemini image models can also perform image-to-image edits.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_gemini</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gemini-3.1-flash-image-preview"</span>),</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color from white to cobalt blue."</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In the current <code>aisdk</code> implementation:</p>
+<ul>
+<li><code>image</code> is required</li>
+<li><code>prompt</code> is optional but strongly recommended</li>
+<li><code>mask</code> is not yet implemented for Gemini</li>
+</ul>
+<p>OpenAI image models also support <code>edit_image()</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color from white to cobalt blue."</span>,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>In the current <code>aisdk</code> implementation, OpenAI image editing expects a local file path or data URI for the source image. <code>mask</code> is also supported when you want explicit localized edits.</p>
+<p>Volcengine image editing example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Turn this product photo into a watercolor illustration."</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>xAI image editing example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"https://example.com/source.png"</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Make this image look like a watercolor painting."</span>,</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stepfun image editing example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-edit"</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Current provider-specific caveats:</p>
+<ul>
+<li>Gemini: no <code>mask</code> support in <code>aisdk</code> yet</li>
+<li>OpenAI: source image for editing must be a local file path or data URI</li>
+<li>Volcengine: <code>mask</code> not yet exposed</li>
+<li>xAI: image editing currently uses JSON image inputs</li>
+<li>Stepfun: editing currently requires <code>step-1x-edit</code></li>
+</ul>
+</section>
+<section id="returned-image-artifacts" class="level2">
+<h2 class="anchored" data-anchor-id="returned-image-artifacts">Returned image artifacts</h2>
+<p>Each item in <code>result$images</code> is a list with fields such as:</p>
+<ul>
+<li><code>path</code></li>
+<li><code>media_type</code></li>
+<li><code>bytes</code></li>
+</ul>
+<p>This makes it easy to either keep images on disk or continue processing them in memory.</p>
+</section>
+<section id="choosing-a-provider" class="level2">
+<h2 class="anchored" data-anchor-id="choosing-a-provider">Choosing a provider</h2>
+<p>Use this rough decision guide:</p>
+<ul>
+<li><strong>Gemini</strong> when you want a clean provider-native path for both image understanding and image generation in the same SDK</li>
+<li><strong>OpenAI</strong> when you want the most standard OpenAI image workflow, including explicit edit and mask support</li>
+<li><strong>Volcengine</strong> when you want Doubao Seedream models hosted on Ark</li>
+<li><strong>xAI</strong> when you want Grok image APIs</li>
+<li><strong>Stepfun</strong> when you want Stepfun’s dedicated image generation and edit models</li>
+<li><strong>OpenRouter / AiHubMix</strong> when you want OpenAI-style image APIs behind a routing layer</li>
+</ul>
+</section>
+<section id="relationship-to-multimodal-language-models" class="level2">
+<h2 class="anchored" data-anchor-id="relationship-to-multimodal-language-models">Relationship to multimodal language models</h2>
+<p>Use the right API for the job:</p>
+<ul>
+<li>use <code>analyze_image()</code> or <code>generate_text()</code> when you want text output from an image</li>
+<li>use <code>generate_image()</code> or <code>edit_image()</code> when you want image output</li>
+</ul>
+<p>This split keeps the SDK architecture clean and makes it easier to add new providers with image-generation support later.</p>
+</section>
+<section id="provider-roadmap" class="level2">
+<h2 class="anchored" data-anchor-id="provider-roadmap">Provider roadmap</h2>
+<p>Gemini, OpenAI, and Volcengine all support dedicated <code>image_model()</code> workflows in <code>aisdk</code>.</p>
+<p>The same abstraction is designed to support future provider-specific image models without overloading <code>LanguageModelV1</code>.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     // Ensure there is a toggle, if there isn't float one in the top right
     if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
@@ -1065,4 +1142,5 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/get_started.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/YuLab-SMU/aisdk/edit/main/vignettes/image_generation.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/YuLab-SMU/aisdk/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
