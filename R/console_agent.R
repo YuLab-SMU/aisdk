@@ -280,6 +280,13 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
             recursive = recursive
         )
         if (!is.null(auto$paths)) {
+            if (identical(auto$strategy %||% "", "recent")) {
+                return(list(
+                    paths = auto$paths,
+                    strategy = auto$strategy,
+                    candidates = auto$candidates %||% NULL
+                ))
+            }
             return(list(
                 paths = lapply(auto$paths, resolve_console_path),
                 strategy = auto$strategy,

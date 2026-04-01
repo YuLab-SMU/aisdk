@@ -39,6 +39,7 @@
 ^plan$
 ^AGENTS\.md$
 ^agents\.md$
+^CHANGELOG\.md$
 ^\.aisdk$
 ^mtcars_.*\.(png|pdf)$
 ^cran-comments\.md$
