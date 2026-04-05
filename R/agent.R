@@ -32,6 +32,9 @@ Agent <- R6::R6Class(
     #' @field tools List of Tool objects this agent can use.
     tools = NULL,
 
+    #' @field skill_registry Optional registry of local skills available to the agent.
+    skill_registry = NULL,
+
     #' @field model Default model ID for this agent.
     model = NULL,
 
@@ -108,6 +111,7 @@ Agent <- R6::R6Class(
 
             # Create tools
             skill_tools <- create_skill_tools(registry)
+            self$skill_registry <- registry
           }
         }
       }

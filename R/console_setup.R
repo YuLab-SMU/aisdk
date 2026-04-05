@@ -202,6 +202,180 @@ discover_console_model_profiles <- function(project_path = ".Renviron",
 }
 
 #' @keywords internal
+read_console_rprofile_default_model <- function(path) {
+  path <- path.expand(path)
+  if (!file.exists(path)) {
+    return(list(path = path, model_id = ""))
+  }
+
+  lines <- readLines(path, warn = FALSE)
+  pattern <- "aisdk\\.console_default_model\\s*=\\s*(['\"])([^'\"]+)\\1"
+
+  for (line in rev(lines)) {
+    trimmed <- trimws(line)
+    if (!nzchar(trimmed) || startsWith(trimmed, "#")) {
+      next
+    }
+
+    matches <- regexec(pattern, trimmed, perl = TRUE)
+    captured <- regmatches(trimmed, matches)[[1]]
+    if (length(captured) >= 3) {
+      return(list(path = path, model_id = captured[[3]]))
+    }
+  }
+
+  list(path = path, model_id = "")
+}
+
+#' @keywords internal
+discover_console_default_model <- function(project_path = ".Rprofile",
+                                           global_path = "~/.Rprofile") {
+  sources <- list(
+    project = read_console_rprofile_default_model(project_path),
+    global = read_console_rprofile_default_model(global_path)
+  )
+
+  for (scope in names(sources)) {
+    src <- sources[[scope]]
+    model_id <- trimws(src$model_id %||% "")
+    if (nzchar(model_id)) {
+      return(list(
+        scope = scope,
+        path = src$path,
+        model_id = model_id,
+        source = "rprofile"
+      ))
+    }
+  }
+
+  option_model <- trimws(getOption("aisdk.console_default_model", "") %||% "")
+  if (nzchar(option_model)) {
+    return(list(
+      scope = "session",
+      path = NULL,
+      model_id = option_model,
+      source = "option"
+    ))
+  }
+
+  list(scope = NULL, path = NULL, model_id = "", source = NULL)
+}
+
+#' @keywords internal
+update_console_rprofile_default_model <- function(model_id, path = ".Rprofile") {
+  path <- path.expand(path)
+  lines <- if (file.exists(path)) readLines(path, warn = FALSE) else character(0)
+  pattern <- "^\\s*options\\(\\s*aisdk\\.console_default_model\\s*="
+  idx <- grep(pattern, lines, perl = TRUE)
+  new_line <- sprintf("options(aisdk.console_default_model = %s)", deparse(model_id))
+
+  if (length(idx) > 0) {
+    lines[idx[[1]]] <- new_line
+    if (length(idx) > 1) {
+      lines <- lines[-idx[-1]]
+    }
+  } else {
+    lines <- c(lines, new_line)
+  }
+
+  writeLines(lines, path)
+  options(aisdk.console_default_model = model_id)
+  invisible(TRUE)
+}
+
+#' @keywords internal
+remember_console_default_model <- function(model_id, path = NULL) {
+  options(aisdk.console_default_model = model_id)
+
+  if (!is.null(path) && nzchar(path %||% "")) {
+    update_console_rprofile_default_model(model_id, path = path)
+  }
+
+  invisible(model_id)
+}
+
+#' @keywords internal
+console_rprofile_path_for_scope <- function(scope,
+                                            project_path = ".Rprofile",
+                                            global_path = "~/.Rprofile") {
+  if (identical(scope, "global")) {
+    return(global_path)
+  }
+  project_path
+}
+
+#' @keywords internal
+find_console_profile_by_model_id <- function(model_id, profiles) {
+  if (is.null(model_id) || !nzchar(model_id) || length(profiles) == 0) {
+    return(NULL)
+  }
+
+  for (profile in profiles) {
+    if (identical(profile$model_id %||% "", model_id)) {
+      return(profile)
+    }
+  }
+
+  NULL
+}
+
+#' @keywords internal
+console_model_id_is_usable <- function(model_id, profile = NULL) {
+  model_id <- trimws(model_id %||% "")
+  if (!nzchar(model_id) || !grepl("^[^:]+:.+$", model_id)) {
+    return(FALSE)
+  }
+
+  provider <- sub(":.*$", "", model_id)
+  spec <- console_provider_specs()[[provider]]
+  if (is.null(spec)) {
+    return(FALSE)
+  }
+
+  if (!is.null(profile)) {
+    if (!nzchar(profile$api_key %||% "")) {
+      return(FALSE)
+    }
+    return(TRUE)
+  }
+
+  nzchar(Sys.getenv(spec$api_key_env, unset = ""))
+}
+
+#' @keywords internal
+resolve_console_startup_model <- function(project_path = ".Renviron",
+                                          global_path = "~/.Renviron",
+                                          project_rprofile_path = ".Rprofile",
+                                          global_rprofile_path = "~/.Rprofile",
+                                          apply_profile_fn = apply_console_profile) {
+  saved_default <- discover_console_default_model(
+    project_path = project_rprofile_path,
+    global_path = global_rprofile_path
+  )
+
+  model_id <- trimws(saved_default$model_id %||% "")
+  if (!nzchar(model_id)) {
+    return(list(model_id = NULL, source = "prompt", profile = NULL))
+  }
+
+  profiles <- discover_console_model_profiles(
+    project_path = project_path,
+    global_path = global_path
+  )
+  profile <- find_console_profile_by_model_id(model_id, profiles)
+
+  if (!is.null(profile) && is.function(apply_profile_fn)) {
+    apply_profile_fn(profile)
+  }
+
+  if (!console_model_id_is_usable(model_id, profile = profile)) {
+    return(list(model_id = NULL, source = "invalid_default", profile = profile))
+  }
+
+  list(model_id = model_id, source = saved_default$source %||% "default", profile = profile)
+}
+
+#' @keywords internal
 format_console_profile_choice <- function(profile) {
   scope_label <- if (identical(profile$scope, "project")) "project" else "global"
   model_label <- if (nzchar(profile$model_id %||% "")) profile$model_id else paste0(profile$provider, ":<unset>")
@@ -218,6 +392,7 @@ default_console_prompt_hooks <- function() {
     input = console_input,
     save = update_renviron,
     apply_profile = apply_console_profile,
+    remember_model = remember_console_default_model,
     model_choices = console_model_choices_for_provider
   )
 }
@@ -330,10 +505,20 @@ choose_console_model_id <- function(spec,
 }
 
 #' @keywords internal
-choose_console_save_target <- function(menu_fn, existing_profile = NULL, project_path = ".Renviron", global_path = "~/.Renviron") {
+choose_console_save_target <- function(menu_fn,
+                                       existing_profile = NULL,
+                                       project_path = ".Renviron",
+                                       global_path = "~/.Renviron",
+                                       project_rprofile_path = ".Rprofile",
+                                       global_rprofile_path = "~/.Rprofile") {
   if (!is.null(existing_profile)) {
     existing_scope <- existing_profile$scope %||% "project"
     existing_path <- if (identical(existing_scope, "project")) project_path else global_path
+    existing_rprofile_path <- console_rprofile_path_for_scope(
+      existing_scope,
+      project_path = project_rprofile_path,
+      global_path = global_rprofile_path
+    )
     selection <- menu_fn(
       "Save setup?",
       c(
@@ -348,10 +533,10 @@ choose_console_save_target <- function(menu_fn, existing_profile = NULL, project
     }
     return(switch(
       as.character(selection),
-      "1" = list(mode = "save", path = existing_path),
-      "2" = list(mode = "save", path = project_path),
-      "3" = list(mode = "save", path = global_path),
-      list(mode = "session", path = NULL)
+      "1" = list(mode = "save", path = existing_path, rprofile_path = existing_rprofile_path),
+      "2" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
+      "3" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
+      list(mode = "session", path = NULL, rprofile_path = NULL)
     ))
   }
 
@@ -364,9 +549,9 @@ choose_console_save_target <- function(menu_fn, existing_profile = NULL, project
   }
   switch(
     as.character(selection),
-    "1" = list(mode = "save", path = project_path),
-    "2" = list(mode = "save", path = global_path),
-    list(mode = "session", path = NULL)
+    "1" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
+    "2" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
+    list(mode = "session", path = NULL, rprofile_path = NULL)
   )
 }
 
@@ -376,19 +561,23 @@ finalize_console_profile <- function(spec,
                                      base_url,
                                      model,
                                      save_target,
-                                     save_fn) {
+                                     save_fn,
+                                     remember_model_fn) {
   updates <- stats::setNames(
     list(api_key, base_url, model),
     c(spec$api_key_env, spec$base_url_env, spec$model_env)
   )
 
+  model_id <- paste0(spec$id, ":", model)
   if (!is.null(save_target) && identical(save_target$mode, "save")) {
     save_fn(updates, path = save_target$path)
+    remember_model_fn(model_id, path = save_target$rprofile_path %||% NULL)
   } else {
     do.call(Sys.setenv, updates)
+    remember_model_fn(model_id, path = NULL)
   }
 
-  paste0(spec$id, ":", model)
+  model_id
 }
 
 #' @keywords internal
@@ -396,10 +585,13 @@ run_console_profile_setup <- function(spec,
                                       menu_fn,
                                       input_fn,
                                       save_fn,
+                                      remember_model_fn,
                                       model_choices_fn,
                                       existing_profile = NULL,
                                       project_path = ".Renviron",
-                                      global_path = "~/.Renviron") {
+                                      global_path = "~/.Renviron",
+                                      project_rprofile_path = ".Rprofile",
+                                      global_rprofile_path = "~/.Rprofile") {
   base_url <- choose_console_base_url(
     spec = spec,
     menu_fn = menu_fn,
@@ -437,7 +629,9 @@ run_console_profile_setup <- function(spec,
     menu_fn = menu_fn,
     existing_profile = existing_profile,
     project_path = project_path,
-    global_path = global_path
+    global_path = global_path,
+    project_rprofile_path = project_rprofile_path,
+    global_rprofile_path = global_rprofile_path
   )
   if (is.null(save_target)) {
     return(NULL)
@@ -449,7 +643,8 @@ run_console_profile_setup <- function(spec,
     base_url = base_url,
     model = model,
     save_target = save_target,
-    save_fn = save_fn
+    save_fn = save_fn,
+    remember_model_fn = remember_model_fn
   )
 }
 
@@ -567,6 +762,8 @@ format_console_token_compact <- function(tokens) {
 #' @keywords internal
 prompt_console_provider_profile <- function(project_path = ".Renviron",
                                             global_path = "~/.Renviron",
+                                            project_rprofile_path = ".Rprofile",
+                                            global_rprofile_path = "~/.Rprofile",
                                             prompt_hooks = default_console_prompt_hooks()) {
   specs <- console_provider_specs()
   profiles <- discover_console_model_profiles(project_path = project_path, global_path = global_path)
@@ -574,6 +771,7 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
   input_fn <- prompt_hooks$input %||% console_input
   save_fn <- prompt_hooks$save %||% update_renviron
   apply_profile_fn <- prompt_hooks$apply_profile %||% apply_console_profile
+  remember_model_fn <- prompt_hooks$remember_model %||% remember_console_default_model
   model_choices_fn <- prompt_hooks$model_choices %||% console_model_choices_for_provider
 
   if (length(profiles) > 0) {
@@ -586,6 +784,14 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
     if (!is.null(selection) && selection <= length(profiles)) {
       profile <- profiles[[selection]]
       apply_profile_fn(profile)
+      remember_model_fn(
+        profile$model_id,
+        path = console_rprofile_path_for_scope(
+          profile$scope %||% "project",
+          project_path = project_rprofile_path,
+          global_path = global_rprofile_path
+        )
+      )
       return(profile$model_id)
     }
     if (!is.null(selection) && identical(selection, length(profiles) + 1L)) {
@@ -604,10 +810,13 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
           menu_fn = menu_fn,
           input_fn = input_fn,
           save_fn = save_fn,
+          remember_model_fn = remember_model_fn,
           model_choices_fn = model_choices_fn,
           existing_profile = profile,
           project_path = project_path,
-          global_path = global_path
+          global_path = global_path,
+          project_rprofile_path = project_rprofile_path,
+          global_rprofile_path = global_rprofile_path
         )
       )
     }
@@ -625,9 +834,12 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
     menu_fn = menu_fn,
     input_fn = input_fn,
     save_fn = save_fn,
+    remember_model_fn = remember_model_fn,
     model_choices_fn = model_choices_fn,
     existing_profile = NULL,
     project_path = project_path,
-    global_path = global_path
+    global_path = global_path,
+    project_rprofile_path = project_rprofile_path,
+    global_rprofile_path = global_rprofile_path
   )
 }

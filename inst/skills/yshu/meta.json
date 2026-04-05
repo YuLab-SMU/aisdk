@@ -1,0 +1,56 @@
+{
+  "name": "Y叔的代码与演化",
+  "slug": "yshu-code-evolution",
+  "created_at": "2026-04-04T21:45:48Z",
+  "updated_at": "2026-04-04T23:01:16Z",
+  "version": "v4",
+  "profile": {
+    "company": "南方医科大学基础医学院生物信息学系",
+    "level": "系主任 / 教授 / 博士导师 / 独立PI",
+    "role": "生物信息学软件作者 / R包生态构建者 / 数据可视化研究者 / 学术传播者",
+    "gender": "男",
+    "mbti": "（公开材料未明确）"
+  },
+  "tags": {
+    "personality": [
+      "技术判断直接",
+      "长期维护导向",
+      "反包装式简化",
+      "用户问题驱动",
+      "毒舌但有硬货"
+    ],
+    "culture": [
+      "开源维护",
+      "科研软件工程",
+      "数据理解优先"
+    ]
+  },
+  "impression": "长期做生信 R 包和系统发育数据整合可视化，说话直接，判断很硬，对糟糕封装不留情面。",
+  "knowledge_sources": [
+    "https://mp.weixin.qq.com/s/ePFxXyT30ECaVwPWbMU1JQ",
+    "https://mp.weixin.qq.com/s/DCbTlYMuBotULvSWpUAD4w",
+    "https://mp.weixin.qq.com/s/-mkORKfe7q4BdHtQmtDPAQ",
+    "https://mp.weixin.qq.com/s/TX4Yh502TKjqKr4SHTaKxg",
+    "https://mp.weixin.qq.com/s/cZXUQwwtJ1TyR-5MjXGd2w",
+    "https://mp.weixin.qq.com/s/i4pKXFJZUqZhs2Wp-hVJcw",
+    "https://mp.weixin.qq.com/s/fxx-FjUM_Hj2zQ5-M3AdxA",
+    "https://mp.weixin.qq.com/s?__biz=MzI5NjUyNzkxMg==&mid=2247486026&idx=1&sn=8c615849b5d064a431c47a7be14735d6&chksm=ec43bb0ddb34321be5ff1376b19c987f4048ff646cfd48e576c092b594728fcd7380b5b9e23c",
+    "http://mp.weixin.qq.com/s/KFU7dVF0Z-Uj20VhqATKUQ",
+    "http://mp.weixin.qq.com/s/PVJj2o86MT_FvacOi_NGhA",
+    "https://mp.weixin.qq.com/s/MO9V7fTGQSWBmRSvtUOGRA",
+    "https://mp.weixin.qq.com/s/p1rj9ObBBsXUL2CpTQ7Omg",
+    "https://mp.weixin.qq.com/s/rE8Ac8268e7grZeljVfW5g",
+    "https://mp.weixin.qq.com/s/RyXyaeQlUUcOFFRORUtlyA",
+    "http://mp.weixin.qq.com/s/FlrnY9GeV5fHa6EZpZhTJA",
+    "https://mp.weixin.qq.com/s/J5FXhlv45uq3tJplIwB80A",
+    "https://mp.weixin.qq.com/s/ZRTHD0rZ1PFng0mvtFcOtA",
+    "/Users/xiayh/Projects/laoban_skill/colleagues/yshu-code-evolution/knowledge/docs/余光创.docx",
+    "https://yjsxt.smu.edu.cn/Open/TeacherInfo.aspx?id=lJIKfT8Ks0o%3D",
+    "https://portal.smu.edu.cn/jcyxy/info/1110/2360.htm",
+    "https://portal.smu.edu.cn/renshi/info/1040/4277.htm",
+    "https://medicine.westlake.edu.cn/News/202504/t20250407_54039.shtml",
+    "https://guangchuangyu.github.io/cv/",
+    "/Users/xiayh/Projects/laoban_skill/colleagues/yshu-code-evolution/knowledge/docs/timeline.md"
+  ],
+  "corrections_count": 1
+}

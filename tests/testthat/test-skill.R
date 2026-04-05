@@ -18,6 +18,68 @@ test_that("Skill can be created from valid SKILL.md", {
   expect_equal(skill$description, "A test skill for unit testing the Skills system")
 })
 
+test_that("Skill parses aliases from YAML frontmatter", {
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+  writeLines(c(
+    "---",
+    "name: alias_skill",
+    "description: skill with aliases",
+    "aliases:",
+    "  - foo",
+    "  - bar",
+    "---",
+    "Body"
+  ), file.path(tmp_dir, "SKILL.md"))
+
+  skill <- Skill$new(tmp_dir)
+
+  expect_equal(skill$aliases, c("foo", "bar"))
+})
+
+test_that("Skill parses when_to_use and paths from YAML frontmatter", {
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+  writeLines(c(
+    "---",
+    "name: routed_skill",
+    "description: skill with routing metadata",
+    "when_to_use: Use this when the user mentions RNA-seq or differential expression",
+    "paths:",
+    "  - data/*.csv",
+    "  - analysis/**/*.R",
+    "---",
+    "Body"
+  ), file.path(tmp_dir, "SKILL.md"))
+
+  skill <- Skill$new(tmp_dir)
+
+  expect_equal(skill$when_to_use, "Use this when the user mentions RNA-seq or differential expression")
+  expect_equal(skill$paths, c("data/*.csv", "analysis/**/*.R"))
+})
+
+test_that("Skill matches paths using glob-like patterns", {
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE))
+  writeLines(c(
+    "---",
+    "name: path_skill",
+    "description: path matching skill",
+    "paths:",
+    "  - scripts/*.R",
+    "---",
+    "Body"
+  ), file.path(tmp_dir, "SKILL.md"))
+
+  skill <- Skill$new(tmp_dir)
+
+  expect_true(skill$matches_paths(c("scripts/run.R"), cwd = tmp_dir))
+  expect_false(skill$matches_paths(c("data/run.R"), cwd = tmp_dir))
+})
+
 test_that("Skill$path is normalized", {
   skip_if_not(dir.exists(test_skill_path), "Test fixtures not found")
   

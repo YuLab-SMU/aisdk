@@ -71,6 +71,104 @@ test_that("apply_console_profile exports provider values into current env", {
   expect_equal(Sys.getenv("OPENAI_MODEL"), "gpt-5-mini")
 })
 
+test_that("read_console_rprofile_default_model parses saved model option", {
+  path <- tempfile(fileext = ".Rprofile")
+  writeLines(c(
+    "options(stringsAsFactors = FALSE)",
+    "options(aisdk.console_default_model = \"openai:gpt-5-mini\")"
+  ), path)
+
+  parsed <- aisdk:::read_console_rprofile_default_model(path)
+
+  expect_equal(parsed$model_id, "openai:gpt-5-mini")
+})
+
+test_that("update_console_rprofile_default_model writes and replaces saved model option", {
+  old_default <- getOption("aisdk.console_default_model")
+  on.exit(options(aisdk.console_default_model = old_default), add = TRUE)
+  path <- tempfile(fileext = ".Rprofile")
+  writeLines("options(aisdk.console_default_model = \"openai:gpt-4o\")", path)
+
+  aisdk:::update_console_rprofile_default_model("anthropic:claude-sonnet-4-20250514", path = path)
+
+  lines <- readLines(path, warn = FALSE)
+  expect_length(grep("aisdk\\.console_default_model", lines), 1)
+  expect_true(any(grepl("anthropic:claude-sonnet-4-20250514", lines, fixed = TRUE)))
+})
+
+test_that("resolve_console_startup_model uses saved default and matching profile", {
+  old_default <- getOption("aisdk.console_default_model")
+  on.exit(options(aisdk.console_default_model = old_default), add = TRUE)
+  options(aisdk.console_default_model = NULL)
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+  project_rprofile_path <- tempfile(fileext = ".Rprofile")
+  writeLines(c(
+    "OPENAI_API_KEY=sk-project",
+    "OPENAI_BASE_URL=https://api.openai.com/v1",
+    "OPENAI_MODEL=gpt-5-mini"
+  ), project_path)
+  writeLines(
+    "options(aisdk.console_default_model = \"openai:gpt-5-mini\")",
+    project_rprofile_path
+  )
+
+  applied <- NULL
+  resolved <- aisdk:::resolve_console_startup_model(
+    project_path = project_path,
+    global_path = global_path,
+    project_rprofile_path = project_rprofile_path,
+    global_rprofile_path = tempfile(fileext = ".Rprofile"),
+    apply_profile_fn = function(profile) {
+      applied <<- profile
+      profile
+    }
+  )
+
+  expect_equal(resolved$model_id, "openai:gpt-5-mini")
+  expect_equal(resolved$source, "rprofile")
+  expect_equal(applied$model_id, "openai:gpt-5-mini")
+})
+
+test_that("resolve_console_startup_model falls back when saved default is unusable", {
+  old_default <- getOption("aisdk.console_default_model")
+  on.exit(options(aisdk.console_default_model = old_default), add = TRUE)
+  options(aisdk.console_default_model = NULL)
+  old_key <- Sys.getenv("OPENAI_API_KEY", unset = "")
+  on.exit({
+    if (nzchar(old_key)) {
+      Sys.setenv(OPENAI_API_KEY = old_key)
+    } else {
+      Sys.unsetenv("OPENAI_API_KEY")
+    }
+  }, add = TRUE)
+  Sys.unsetenv("OPENAI_API_KEY")
+
+  resolved <- aisdk:::resolve_console_startup_model(
+    project_path = tempfile(fileext = ".Renviron"),
+    global_path = tempfile(fileext = ".Renviron"),
+    project_rprofile_path = tempfile(fileext = ".Rprofile"),
+    global_rprofile_path = tempfile(fileext = ".Rprofile"),
+    apply_profile_fn = function(profile) profile
+  )
+
+  expect_null(resolved$model_id)
+  expect_equal(resolved$source, "prompt")
+
+  path <- tempfile(fileext = ".Rprofile")
+  writeLines("options(aisdk.console_default_model = \"openai:gpt-5-mini\")", path)
+  resolved_invalid <- aisdk:::resolve_console_startup_model(
+    project_path = tempfile(fileext = ".Renviron"),
+    global_path = tempfile(fileext = ".Renviron"),
+    project_rprofile_path = path,
+    global_rprofile_path = tempfile(fileext = ".Rprofile"),
+    apply_profile_fn = function(profile) profile
+  )
+
+  expect_null(resolved_invalid$model_id)
+  expect_equal(resolved_invalid$source, "invalid_default")
+})
+
 test_that("console status line includes context metrics when available", {
   session <- aisdk::create_chat_session(model = "openai:gpt-5-mini")
   session$append_message("user", "hello world")
@@ -94,6 +192,7 @@ test_that("prompt_console_provider_profile can choose an existing profile", {
   ), project_path)
 
   applied <- NULL
+  remembered <- list()
   menu_answers <- c(1L)
   hooks <- list(
     menu = function(title, choices) {
@@ -104,17 +203,25 @@ test_that("prompt_console_provider_profile can choose an existing profile", {
     apply_profile = function(profile) {
       applied <<- profile
       profile
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
     }
   )
 
   model_id <- aisdk:::prompt_console_provider_profile(
     project_path = project_path,
     global_path = global_path,
+    project_rprofile_path = "project-test.Rprofile",
+    global_rprofile_path = "global-test.Rprofile",
     prompt_hooks = hooks
   )
 
   expect_equal(model_id, "openai:gpt-5-mini")
   expect_equal(applied$model_id, "openai:gpt-5-mini")
+  expect_equal(remembered$model_id, "openai:gpt-5-mini")
+  expect_equal(remembered$path, "project-test.Rprofile")
 })
 
 test_that("format_console_profile_choice uses compact labels", {
@@ -144,6 +251,7 @@ test_that("prompt_console_provider_profile supports manual setup and persistence
   )
   input_answers <- c("sk-manual")
   saved <- list()
+  remembered <- list()
 
   hooks <- list(
     menu = function(title, choices) {
@@ -162,12 +270,18 @@ test_that("prompt_console_provider_profile supports manual setup and persistence
     save = function(updates, path) {
       saved <<- list(updates = updates, path = path)
       TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
     }
   )
 
   model_id <- aisdk:::prompt_console_provider_profile(
     project_path = project_path,
     global_path = global_path,
+    project_rprofile_path = "project-default.Rprofile",
+    global_rprofile_path = "global-default.Rprofile",
     prompt_hooks = hooks
   )
 
@@ -176,6 +290,8 @@ test_that("prompt_console_provider_profile supports manual setup and persistence
   expect_equal(saved$updates$OPENAI_API_KEY, "sk-manual")
   expect_equal(saved$updates$OPENAI_BASE_URL, "https://api.openai.com/v1")
   expect_equal(saved$updates$OPENAI_MODEL, "gpt-5-mini")
+  expect_equal(remembered$model_id, "openai:gpt-5-mini")
+  expect_equal(remembered$path, "project-default.Rprofile")
 })
 
 test_that("prompt_console_provider_profile can edit and overwrite an existing profile", {
@@ -200,6 +316,7 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
     "sk-new"
   )
   saved <- list()
+  remembered <- list()
 
   hooks <- list(
     menu = function(title, choices) {
@@ -218,12 +335,18 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
     save = function(updates, path) {
       saved <<- list(updates = updates, path = path)
       TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
     }
   )
 
   model_id <- aisdk:::prompt_console_provider_profile(
     project_path = project_path,
     global_path = global_path,
+    project_rprofile_path = "project-edit.Rprofile",
+    global_rprofile_path = "global-edit.Rprofile",
     prompt_hooks = hooks
   )
 
@@ -232,4 +355,6 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
   expect_equal(saved$updates$OPENAI_API_KEY, "sk-new")
   expect_equal(saved$updates$OPENAI_BASE_URL, "https://proxy.example.com/v1")
   expect_equal(saved$updates$OPENAI_MODEL, "gpt-5-mini")
+  expect_equal(remembered$model_id, "openai:gpt-5-mini")
+  expect_equal(remembered$path, "project-edit.Rprofile")
 })

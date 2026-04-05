@@ -95,6 +95,7 @@ create_console_app_state <- function(session,
 console_app_sync_session <- function(state, session = state$session) {
   state$session <- session
   state$model_id <- session$get_model_id() %||% "(not set)"
+  state$persona_label <- console_persona_status_label(session)
   state$local_execution_enabled <- isTRUE(session$get_envir()$.local_mode)
   invisible(state)
 }
@@ -121,6 +122,7 @@ console_app_set_local_execution_enabled <- function(state, enabled) {
 console_app_status_snapshot <- function(state) {
   list(
     model_id = state$model_id %||% "(not set)",
+    persona_label = state$persona_label %||% console_default_persona_label(),
     sandbox_mode = state$sandbox_mode %||% "unknown",
     view_mode = state$view_mode %||% "clean",
     stream_enabled = isTRUE(state$stream_enabled),
@@ -169,6 +171,7 @@ build_console_status_segments <- function(state, compact = FALSE) {
   model_value <- if (compact) compact_text_preview(snapshot$model_id, width = 28) else snapshot$model_id
   c(
     sprintf("Model: %s", model_value),
+    sprintf(if (compact) "Persona: %s" else "Persona: %s", compact_text_preview(snapshot$persona_label, width = 20)),
     context_fields,
     sprintf(if (compact) "Sb: %s" else "Sandbox: %s", snapshot$sandbox_mode),
     sprintf(if (compact) "View: %s" else "View: %s", snapshot$view_mode),

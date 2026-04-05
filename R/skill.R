@@ -25,6 +25,15 @@ Skill <- R6::R6Class(
     
     #' @field description A brief description of the skill (from YAML frontmatter).
     description = NULL,
+
+    #' @field aliases Optional aliases that should also trigger this skill.
+    aliases = NULL,
+
+    #' @field when_to_use Optional triggering guidance for this skill.
+    when_to_use = NULL,
+
+    #' @field paths Optional file glob patterns that make this skill relevant.
+    paths = NULL,
     
     #' @field path The directory path containing the skill files.
     path = NULL,
@@ -51,6 +60,16 @@ Skill <- R6::R6Class(
       
       self$name <- parsed$frontmatter$name
       self$description <- parsed$frontmatter$description
+      self$aliases <- private$normalize_aliases(
+        parsed$frontmatter$aliases %||% parsed$frontmatter$alias %||% character(0)
+      )
+      self$when_to_use <- private$normalize_scalar_text(
+        parsed$frontmatter$when_to_use %||%
+          parsed$frontmatter$`when-to-use` %||%
+          parsed$frontmatter$whenToUse %||%
+          NULL
+      )
+      self$paths <- private$normalize_patterns(parsed$frontmatter$paths %||% NULL)
       private$.body <- parsed$body
       
       if (is.null(self$name) || self$name == "") {
@@ -65,6 +84,48 @@ Skill <- R6::R6Class(
     #' @return Character string containing the skill instructions.
     load = function() {
       private$.body
+    },
+
+    #' @description
+    #' Return concise metadata text used for routing and listing.
+    #' @return Character scalar.
+    metadata_text = function() {
+      parts <- c(self$description %||% "", self$when_to_use %||% "")
+      parts <- trimws(parts)
+      parts <- parts[nzchar(parts)]
+      paste(parts, collapse = " ")
+    },
+
+    #' @description
+    #' Check whether the skill's `paths` patterns match any provided file paths.
+    #' @param file_paths Character vector of file paths.
+    #' @param cwd Optional working directory used to relativize absolute paths.
+    #' @return Logical scalar.
+    matches_paths = function(file_paths = character(0), cwd = NULL) {
+      patterns <- self$paths %||% character(0)
+      if (length(patterns) == 0 || length(file_paths) == 0) {
+        return(FALSE)
+      }
+
+      normalized_files <- private$normalize_file_paths_for_matching(file_paths, cwd = cwd)
+      if (length(normalized_files) == 0) {
+        return(FALSE)
+      }
+
+      for (pattern in patterns) {
+        if (!nzchar(pattern)) {
+          next
+        }
+        if (identical(pattern, "**")) {
+          return(TRUE)
+        }
+        pattern_rx <- utils::glob2rx(pattern)
+        if (any(grepl(pattern_rx, normalized_files, perl = TRUE))) {
+          return(TRUE)
+        }
+      }
+
+      FALSE
     },
     
     #' @description
@@ -156,6 +217,15 @@ Skill <- R6::R6Class(
       cat("<Skill>\n")
       cat("  Name:", self$name, "\n")
       cat("  Description:", self$description %||% "(none)", "\n")
+      if (nzchar(self$when_to_use %||% "")) {
+        cat("  When to use:", self$when_to_use, "\n")
+      }
+      if (length(self$aliases %||% character(0)) > 0) {
+        cat("  Aliases:", paste(self$aliases, collapse = ", "), "\n")
+      }
+      if (length(self$paths %||% character(0)) > 0) {
+        cat("  Paths:", paste(self$paths, collapse = ", "), "\n")
+      }
       cat("  Path:", self$path, "\n")
       cat("  Scripts:", length(self$list_scripts()), "available\n")
       invisible(self)
@@ -164,6 +234,84 @@ Skill <- R6::R6Class(
   
   private = list(
     .body = NULL,
+
+    normalize_aliases = function(x) {
+      if (is.null(x) || length(x) == 0) {
+        return(character(0))
+      }
+
+      aliases <- unlist(x, use.names = FALSE)
+      aliases <- as.character(aliases)
+      aliases <- trimws(aliases)
+      aliases <- aliases[nzchar(aliases)]
+      unique(aliases)
+    },
+
+    normalize_scalar_text = function(x) {
+      if (is.null(x) || length(x) == 0) {
+        return(NULL)
+      }
+
+      value <- paste(as.character(unlist(x, use.names = FALSE)), collapse = "\n")
+      value <- trimws(value)
+      if (!nzchar(value)) {
+        return(NULL)
+      }
+      value
+    },
+
+    normalize_patterns = function(x) {
+      if (is.null(x) || length(x) == 0) {
+        return(character(0))
+      }
+
+      values <- unlist(x, use.names = FALSE)
+      values <- as.character(values)
+      values <- trimws(values)
+      values <- gsub("\\\\", "/", values)
+      values <- sub("^\\./", "", values)
+      values <- values[nzchar(values)]
+      unique(values)
+    },
+
+    escape_regex = function(x) {
+      gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
+    },
+
+    normalize_file_paths_for_matching = function(file_paths, cwd = NULL) {
+      if (length(file_paths) == 0) {
+        return(character(0))
+      }
+
+      cwd_norm <- NULL
+      if (!is.null(cwd) && nzchar(cwd)) {
+        cwd_norm <- normalizePath(cwd, winslash = "/", mustWork = FALSE)
+      }
+
+      normalized <- unique(vapply(file_paths, function(path) {
+        candidate <- trimws(as.character(path %||% ""))
+        if (!nzchar(candidate)) {
+          return(NA_character_)
+        }
+
+        candidate <- gsub("\\\\", "/", candidate)
+        if (grepl("^/|^[A-Za-z]:", candidate)) {
+          candidate <- normalizePath(candidate, winslash = "/", mustWork = FALSE)
+        }
+
+        if (!is.null(cwd_norm) && startsWith(candidate, paste0(cwd_norm, "/"))) {
+          candidate <- substr(candidate, nchar(cwd_norm) + 2L, nchar(candidate))
+        } else if (!is.null(cwd_norm) && identical(candidate, cwd_norm)) {
+          candidate <- "."
+        }
+
+        candidate <- sub("^\\./", "", candidate)
+        candidate
+      }, character(1)))
+
+      normalized <- normalized[!is.na(normalized)]
+      normalized[nzchar(normalized)]
+    },
     
     # Parse YAML frontmatter from SKILL.md content
     parse_frontmatter = function(lines) {
@@ -209,20 +357,6 @@ create_skill_tools <- function(registry) {
       execute = function(args) {
         skill_name <- args$skill_name
         
-        # Helper for fuzzy matching
-        find_closest_skill <- function(target, available) {
-          dists <- utils::adist(target, available, ignore.case = TRUE)
-          min_dist <- min(dists)
-          # Threshold: 3 edits or 30% of length, whichever is larger, but cap at 4
-          threshold <- min(4, max(3, nchar(target) * 0.3))
-          
-          if (min_dist <= threshold) {
-            closest <- available[which.min(dists)]
-            return(closest)
-          }
-          return(NULL)
-        }
-        
         if (is.null(skill_name) || !nzchar(skill_name)) {
           skills <- registry$list_skills()
           if (nrow(skills) == 1) {
@@ -231,15 +365,12 @@ create_skill_tools <- function(registry) {
             return("Error: skill_name is required")
           }
         }
-        skill <- registry$get_skill(skill_name)
+        resolved_name <- registry$resolve_skill_name(skill_name)
+        skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
         if (is.null(skill)) {
-          # Try fuzzy matching
-          available_skills <- registry$list_skills()$name
-          if (length(available_skills) > 0) {
-            suggestion <- find_closest_skill(skill_name, available_skills)
-            if (!is.null(suggestion)) {
-              return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
-            }
+          suggestion <- registry$find_closest_skill_name(skill_name)
+          if (!is.null(suggestion)) {
+            return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
           }
           return(paste0("Skill not found: ", skill_name))
         }
@@ -295,7 +426,8 @@ create_skill_tools <- function(registry) {
       ),
       execute = function(args) {
         skill_name <- args$skill_name
-        skill <- registry$get_skill(skill_name)
+        resolved_name <- registry$resolve_skill_name(skill_name)
+        skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
         if (is.null(skill)) return(paste0("Skill not found: ", skill_name))
         
         resources <- skill$list_resources()
@@ -318,7 +450,8 @@ create_skill_tools <- function(registry) {
       execute = function(args) {
         skill_name <- args$skill_name
         resource_name <- args$resource_name
-        skill <- registry$get_skill(skill_name)
+        resolved_name <- registry$resolve_skill_name(skill_name)
+        skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
         if (is.null(skill)) return(paste0("Skill not found: ", skill_name))
         
         tryCatch({
@@ -350,19 +483,12 @@ create_skill_tools <- function(registry) {
             return("Error: skill_name is required")
           }
         }
-        skill <- registry$get_skill(skill_name)
+        resolved_name <- registry$resolve_skill_name(skill_name)
+        skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
         if (is.null(skill)) {
-          # Try fuzzy matching (reusing logic if possible, but duplicating for tool isolation)
-          available_skills <- registry$list_skills()$name
-          if (length(available_skills) > 0) {
-             # Simple fuzzy match inline
-             dists <- utils::adist(skill_name, available_skills, ignore.case = TRUE)
-             min_dist <- min(dists)
-             threshold <- min(4, max(3, nchar(skill_name) * 0.3))
-             if (min_dist <= threshold) {
-               suggestion <- available_skills[which.min(dists)]
-               return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
-             }
+          suggestion <- registry$find_closest_skill_name(skill_name)
+          if (!is.null(suggestion)) {
+            return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
           }
           return(paste0("Skill not found: ", skill_name))
         }
@@ -421,18 +547,12 @@ create_skill_tools <- function(registry) {
             return("Error: skill_name is required")
           }
         }
-        skill <- registry$get_skill(skill_name)
+        resolved_name <- registry$resolve_skill_name(skill_name)
+        skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
         if (is.null(skill)) {
-           # Try fuzzy matching
-          available_skills <- registry$list_skills()$name
-          if (length(available_skills) > 0) {
-             dists <- utils::adist(skill_name, available_skills, ignore.case = TRUE)
-             min_dist <- min(dists)
-             threshold <- min(4, max(3, nchar(skill_name) * 0.3))
-             if (min_dist <= threshold) {
-               suggestion <- available_skills[which.min(dists)]
-               return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
-             }
+          suggestion <- registry$find_closest_skill_name(skill_name)
+          if (!is.null(suggestion)) {
+            return(paste0("Skill not found: ", skill_name, ". Did you mean: ", suggestion, "?"))
           }
           return(paste0("Skill not found: ", skill_name))
         }

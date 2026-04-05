@@ -82,6 +82,9 @@ test_that("SkillRegistry$list_skills returns data.frame", {
   expect_s3_class(skills, "data.frame")
   expect_true("name" %in% names(skills))
   expect_true("description" %in% names(skills))
+  expect_true("aliases" %in% names(skills))
+  expect_true("when_to_use" %in% names(skills))
+  expect_true("paths" %in% names(skills))
   expect_gte(nrow(skills), 1)
 })
 
@@ -113,6 +116,62 @@ test_that("SkillRegistry$generate_prompt_section returns empty string when empty
   prompt <- registry$generate_prompt_section()
   
   expect_equal(prompt, "")
+})
+
+test_that("SkillRegistry resolves aliases and fuzzy names", {
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+  dir.create(file.path(temp_dir, "mentor-skill"))
+  writeLines(c(
+    "---",
+    "name: mentor-skill",
+    "description: mentor skill",
+    "aliases:",
+    "  - yshu",
+    "  - Y叔",
+    "---",
+    "Body"
+  ), file.path(temp_dir, "mentor-skill", "SKILL.md"))
+
+  registry <- SkillRegistry$new(temp_dir)
+
+  expect_equal(registry$resolve_skill_name("yshu"), "mentor-skill")
+  expect_equal(registry$resolve_skill_name("Y叔"), "mentor-skill")
+  expect_equal(registry$find_closest_skill_name("menter-skill"), "mentor-skill")
+})
+
+test_that("SkillRegistry finds relevant skills from query and file paths", {
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  dir.create(file.path(temp_dir, "rna-skill"))
+  writeLines(c(
+    "---",
+    "name: rna-skill",
+    "description: RNA analysis helper",
+    "when_to_use: Use this when the user asks about differential expression or RNA-seq",
+    "paths:",
+    "  - counts/*.csv",
+    "---",
+    "Body"
+  ), file.path(temp_dir, "rna-skill", "SKILL.md"))
+
+  registry <- SkillRegistry$new(temp_dir)
+
+  by_query <- registry$find_relevant_skills(query = "我想做 differential expression", limit = 1L)
+  expect_equal(by_query$name[[1]], "rna-skill")
+  expect_true(grepl("when_to_use", by_query$matched_by[[1]], fixed = TRUE))
+
+  by_path <- registry$find_relevant_skills(
+    query = "",
+    file_paths = c("counts/sample.csv"),
+    cwd = temp_dir,
+    limit = 1L
+  )
+  expect_equal(by_path$name[[1]], "rna-skill")
+  expect_true(grepl("paths", by_path$matched_by[[1]], fixed = TRUE))
 })
 
 # === Tests for convenience functions ===

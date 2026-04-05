@@ -134,6 +134,55 @@ test_that("model current reports the active model without switching", {
   expect_equal(session$get_model_id(), "openai:gpt-4o")
 })
 
+test_that("persona commands update session persona state", {
+  session <- aisdk::create_chat_session()
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  set_result <- aisdk:::handle_command(
+    "/persona set You are a brutal but precise reviewer.",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    app_state = app_state
+  )
+  expect_true(set_result$refresh_status)
+  expect_equal(aisdk:::console_current_persona(session)$source, "manual")
+  expect_equal(aisdk:::console_current_persona(session)$label, "custom")
+
+  evolve_result <- aisdk:::handle_command(
+    "/persona evolve Stay extra concise.",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    app_state = app_state
+  )
+  expect_true(evolve_result$refresh_status)
+  expect_true(any(grepl("Stay extra concise.", aisdk:::console_current_persona(session)$notes, fixed = TRUE)))
+
+  reset_result <- aisdk:::handle_command(
+    "/persona default",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    app_state = app_state
+  )
+  expect_true(reset_result$refresh_status)
+  expect_equal(aisdk:::console_current_persona(session)$source, "default")
+})
+
+test_that("console status line includes persona label", {
+  session <- aisdk::create_chat_session(model = "openai:gpt-5-mini")
+  aisdk:::console_set_manual_persona(session, "You are a skeptical reviewer.", label = "skeptic", locked = TRUE)
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  line <- aisdk:::build_console_status_line(app_state)
+
+  expect_match(line, "Persona: skeptic:manual")
+})
+
 test_that("inspect commands open and close overlay state", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "inspect")

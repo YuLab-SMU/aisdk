@@ -1084,7 +1084,8 @@ create_console_agent <- function(working_dir = tempdir(),
         name = "ConsoleAgent",
         description = "Intelligent terminal assistant for natural language command execution",
         system_prompt = system_prompt,
-        tools = tools
+        tools = tools,
+        skills = "auto"
     )
 }
 
@@ -1163,6 +1164,10 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 14. **Reuse image artifacts**: When the user refers to \"the previous image\", \"the last render\", or \"the one you just made\", consult `get_recent_image_artifacts` or reuse the most recent remembered image automatically
 15. **Only ask for a path when truly needed**: If the user refers to an existing image and you can find or reuse it yourself, do that first
 16. **Search locally before asking**: If the user mentions a screenshot, poster, render, figure, or chart without a path, first use `get_recent_image_artifacts` and then `find_image_files` before asking for clarification
+
+## Default Persona
+
+", console_default_persona_prompt(), "
 
 ## Language
 

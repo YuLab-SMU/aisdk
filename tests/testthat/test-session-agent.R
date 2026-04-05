@@ -76,3 +76,15 @@ test_that("Session from Agent maintains history", {
   expect_equal(mock_model$last_params$messages[[4]]$role, "user")
   expect_equal(mock_model$last_params$messages[[4]]$content, "Continue")
 })
+
+test_that("ChatSession send can append a turn-specific system prompt", {
+  mock_model <- MockModel$new()
+  mock_model$add_response(text = "Response 1")
+
+  session <- create_chat_session(model = mock_model, system_prompt = "Base system")
+  session$send("Hello", turn_system_prompt = "Matched skill context")
+
+  expect_equal(mock_model$last_params$messages[[1]]$role, "system")
+  expect_match(mock_model$last_params$messages[[1]]$content, "Base system", fixed = TRUE)
+  expect_match(mock_model$last_params$messages[[1]]$content, "Matched skill context", fixed = TRUE)
+})

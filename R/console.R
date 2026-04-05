@@ -122,7 +122,16 @@ console_chat <- function(session = NULL,
 
   # Create or use existing session
   if (is.null(session)) {
-    model_id <- prompt_console_provider_profile()
+    startup_model <- resolve_console_startup_model()
+    model_id <- startup_model$model_id %||% NULL
+
+    if (is.null(model_id) || !nzchar(model_id)) {
+      if (identical(startup_model$source %||% "", "invalid_default")) {
+        cli::cli_alert_info("Saved default model is unavailable. Reopening model setup.")
+      }
+      model_id <- prompt_console_provider_profile()
+    }
+
     if (!is.null(model_id) && nzchar(model_id)) {
       session <- tryCatch(
         create_chat_session(
@@ -134,6 +143,16 @@ console_chat <- function(session = NULL,
         ),
         error = function(e) {
           cli::cli_alert_danger("Failed to set model: {conditionMessage(e)}")
+          fallback_model_id <- prompt_console_provider_profile()
+          if (!is.null(fallback_model_id) && nzchar(fallback_model_id)) {
+            return(create_chat_session(
+              model = fallback_model_id,
+              system_prompt = system_prompt,
+              tools = tools,
+              hooks = hooks,
+              agent = agent
+            ))
+          }
           cli::cli_alert_info("Use {.code /model <id>} to set a model later.")
           create_chat_session(
             system_prompt = system_prompt,
@@ -254,6 +273,8 @@ console_chat <- function(session = NULL,
     }
 
     # Send message to model
+    turn_system_prompt <- console_build_turn_system_prompt(session, input)
+    console_app_sync_session(app_state, session)
     console_app_start_turn(app_state, input)
     cli::cli_text("")
     cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
@@ -267,6 +288,7 @@ console_chat <- function(session = NULL,
               md_renderer <- create_markdown_stream_renderer()
               session$send_stream(
                 input,
+                turn_system_prompt = turn_system_prompt,
                 callback = function(text, done) {
                   if (isTRUE(done)) {
                     md_renderer$process_chunk(NULL, TRUE)
@@ -279,7 +301,7 @@ console_chat <- function(session = NULL,
             } else {
               # Non-streaming output
               md_renderer <- create_markdown_stream_renderer()
-              result <- session$send(input)
+              result <- session$send(input, turn_system_prompt = turn_system_prompt)
               if (!is.null(result$text)) {
                 console_app_append_assistant_text(app_state, result$text)
                 # Render as markdown
@@ -324,6 +346,111 @@ readline_multiline <- function() {
 }
 
 #' @keywords internal
+console_get_skill_registry <- function(session) {
+  if (is.null(session) || !inherits(session, "ChatSession")) {
+    return(NULL)
+  }
+
+  envir <- session$get_envir()
+  registry <- envir$.skill_registry %||% NULL
+  if (inherits(registry, "SkillRegistry")) {
+    return(registry)
+  }
+
+  NULL
+}
+
+#' @keywords internal
+console_extract_candidate_paths <- function(text) {
+  candidates <- tryCatch(channel_extract_local_paths(text), error = function(e) character(0))
+  relative_matches <- unique(unlist(regmatches(
+    text %||% "",
+    gregexpr("(?:\\./)?(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+|(?:\\./)?[A-Za-z0-9._-]+\\.[A-Za-z0-9._-]+", text %||% "", perl = TRUE)
+  )))
+
+  if (length(relative_matches) > 0) {
+    normalized <- unique(vapply(relative_matches, function(path) {
+      candidate <- sub("[,.;:!?]+$", "", path)
+      if (!file.exists(candidate)) {
+        return(NA_character_)
+      }
+      normalizePath(candidate, winslash = "/", mustWork = FALSE)
+    }, character(1)))
+    candidates <- unique(c(candidates, normalized[!is.na(normalized)]))
+  }
+
+  candidates
+}
+
+#' @keywords internal
+console_build_turn_system_prompt <- function(session, input) {
+  registry <- console_get_skill_registry(session)
+  local_paths <- console_extract_candidate_paths(input)
+  matched_skills <- character(0)
+  if (!is.null(registry)) {
+    matched <- registry$find_relevant_skills(
+      query = input,
+      file_paths = local_paths,
+      cwd = getwd(),
+      limit = 1L
+    )
+    if (nrow(matched) > 0) {
+      matched_skills <- matched$name
+    }
+  }
+
+  persona_section <- console_build_persona_section(session, matched_skill_names = matched_skills)
+  if (length(matched_skills) == 0) {
+    return(if (!is.null(persona_section) && nzchar(persona_section)) persona_section else NULL)
+  }
+
+  blocks <- c(
+    "[matched_skill_routing_begin]",
+    "The user referenced a local skill, persona, or file pattern that matches an available skill in this turn.",
+    "Use the matched skill for this reply instead of answering from the generic assistant behavior.",
+    "If the matched skill defines a persona or voice, adopt it for this turn.",
+    ""
+  )
+
+  for (skill_name in matched_skills) {
+    skill <- registry$get_skill(skill_name)
+    if (is.null(skill)) {
+      next
+    }
+    alias_text <- ""
+    if (length(skill$aliases %||% character(0)) > 0) {
+      alias_text <- paste0("Aliases: ", paste(skill$aliases, collapse = ", "))
+    }
+    when_text <- skill$when_to_use %||% ""
+    path_text <- if (length(skill$paths %||% character(0)) > 0) paste0("Paths: ", paste(skill$paths, collapse = ", ")) else ""
+    blocks <- c(
+      blocks,
+      "[matched_skill_begin]",
+      paste0("Skill: ", skill$name),
+      alias_text,
+      skill$description %||% "",
+      when_text,
+      path_text,
+      "",
+      skill$load(),
+      "[matched_skill_end]",
+      ""
+    )
+  }
+
+  skill_section <- c(blocks, "[matched_skill_routing_end]") |>
+    paste(collapse = "\n") |>
+    trimws()
+
+  sections <- c(persona_section %||% "", skill_section %||% "")
+  sections <- sections[nzchar(sections)]
+  if (length(sections) == 0) {
+    return(NULL)
+  }
+  paste(sections, collapse = "\n\n")
+}
+
+#' @keywords internal
 handle_command <- function(input,
                            session,
                            stream,
@@ -363,6 +490,11 @@ handle_command <- function(input,
         "{.code /model} - Open the provider/model chooser",
         "{.code /model <id>} - Switch model directly (e.g., openai:gpt-4o)",
         "{.code /model current} - Show the current model",
+        "{.code /persona} - Show the active persona",
+        "{.code /persona set <instructions>} - Set a custom session persona",
+        "{.code /persona skill <name>} - Lock to a skill-backed persona",
+        "{.code /persona evolve <note>} - Add an evolution note to the current persona",
+        "{.code /persona default} - Return to the built-in default persona",
         "{.code /feishu} - Launch the Feishu setup wizard",
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
@@ -461,6 +593,77 @@ handle_command <- function(input,
               cli::cli_alert_danger("Failed to switch model: {conditionMessage(e)}")
             }
           )
+        }
+      }
+    },
+    "/persona" = {
+      registry <- console_get_skill_registry(session)
+      state <- console_get_persona_state(session)
+      active <- state$active
+
+      if (length(args) == 0) {
+        cli::cli_h2("Persona")
+        cli::cli_text("Active: {.val {active$label %||% console_default_persona_label()}}")
+        cli::cli_text("Source: {.val {active$source %||% 'default'}}")
+        cli::cli_text("Locked: {.val {if (isTRUE(active$locked)) 'yes' else 'no'}}")
+        if (length(active$notes %||% character(0)) > 0) {
+          cli::cli_text("Evolution: {.val {paste(active$notes, collapse = ' | ')}}")
+        }
+      } else {
+        subcmd <- tolower(args[1] %||% "")
+        if (subcmd %in% c("default", "clear", "reset")) {
+          console_reset_persona(session)
+          if (!is.null(app_state)) {
+            console_app_sync_session(app_state, session)
+          }
+          result$refresh_status <- TRUE
+          cli::cli_alert_success("Persona reset to default.")
+        } else if (subcmd == "set") {
+          persona_text <- trimws(paste(args[-1], collapse = " "))
+          if (!nzchar(persona_text)) {
+            cli::cli_alert_danger("Usage: {.code /persona set <instructions>}")
+          } else {
+            console_set_manual_persona(session, persona_text, label = "custom", locked = TRUE)
+            if (!is.null(app_state)) {
+              console_app_sync_session(app_state, session)
+            }
+            result$refresh_status <- TRUE
+            cli::cli_alert_success("Custom persona activated.")
+          }
+        } else if (subcmd == "skill") {
+          skill_name <- trimws(paste(args[-1], collapse = " "))
+          if (!nzchar(skill_name)) {
+            cli::cli_alert_danger("Usage: {.code /persona skill <skill_name>}")
+          } else if (is.null(registry)) {
+            cli::cli_alert_danger("No skill registry is attached to this session.")
+          } else {
+            resolved_name <- registry$resolve_skill_name(skill_name)
+            skill <- if (!is.null(resolved_name)) registry$get_skill(resolved_name) else NULL
+            persona <- if (!is.null(skill)) console_lock_skill_persona(session, skill) else NULL
+            if (is.null(persona)) {
+              cli::cli_alert_danger("Skill persona not found or this skill does not provide persona.md.")
+            } else {
+              if (!is.null(app_state)) {
+                console_app_sync_session(app_state, session)
+              }
+              result$refresh_status <- TRUE
+              cli::cli_alert_success("Locked persona to {.val {persona$label}}.")
+            }
+          }
+        } else if (subcmd == "evolve") {
+          note <- trimws(paste(args[-1], collapse = " "))
+          if (!nzchar(note)) {
+            cli::cli_alert_danger("Usage: {.code /persona evolve <note>}")
+          } else {
+            persona <- console_evolve_persona(session, note)
+            if (!is.null(app_state)) {
+              console_app_sync_session(app_state, session)
+            }
+            result$refresh_status <- TRUE
+            cli::cli_alert_success("Persona evolved for {.val {persona$label %||% console_default_persona_label()}}.")
+          }
+        } else {
+          cli::cli_alert_danger("Usage: {.code /persona [set|skill|evolve|default]}")
         }
       }
     },

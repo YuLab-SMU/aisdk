@@ -5,6 +5,79 @@ test_that("create_console_agent creates valid agent", {
     expect_true(length(agent$tools) >= 12)
 })
 
+test_that("create_console_agent auto-loads local skill tools when available", {
+    agent <- create_console_agent()
+    tool_names <- sapply(agent$tools, function(t) t$name)
+
+    expect_true("load_skill" %in% tool_names)
+    expect_true("execute_skill_script" %in% tool_names)
+})
+
+test_that("console turn routing preloads explicitly referenced persona skill", {
+    agent <- create_console_agent()
+    session <- create_chat_session(model = "mock:test", agent = agent)
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "Y叔在吗？")
+
+    expect_true(nzchar(routed_prompt))
+    expect_true(grepl("\\[persona_begin\\]", routed_prompt))
+    expect_true(grepl("colleague-yshu-code-evolution", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Y叔", routed_prompt, fixed = TRUE))
+})
+
+test_that("manual persona produces turn persona prompt without skill match", {
+    session <- create_chat_session(model = "mock:test")
+    aisdk:::console_set_manual_persona(
+        session,
+        "You are a relentlessly skeptical reviewer.",
+        label = "skeptic",
+        locked = TRUE
+    )
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "帮我看看这个方案")
+
+    expect_true(grepl("\\[persona_begin\\]", routed_prompt))
+    expect_true(grepl("skeptic", routed_prompt, fixed = TRUE))
+    expect_true(grepl("relentlessly skeptical reviewer", routed_prompt, fixed = TRUE))
+})
+
+test_that("console turn routing can match custom skill by when_to_use and paths", {
+    skill_root <- tempfile("console-skill-")
+    dir.create(skill_root, recursive = TRUE)
+    dir.create(file.path(skill_root, "withdrawal_advisor"))
+    dir.create(file.path(skill_root, "cases"))
+    file.create(file.path(skill_root, "cases", "student-case.md"))
+    on.exit(unlink(skill_root, recursive = TRUE), add = TRUE)
+
+    writeLines(c(
+        "---",
+        "name: withdrawal_advisor",
+        "description: Handles withdrawal conversations",
+        "when_to_use: Use this when the user says they want to drop out, withdraw, 退学, or needs emotional support about leaving school",
+        "paths:",
+        "  - cases/*.md",
+        "---",
+        "Offer practical and emotionally steady advice."
+    ), file.path(skill_root, "withdrawal_advisor", "SKILL.md"))
+
+    agent <- create_agent(
+        name = "ConsoleWithCustomSkill",
+        description = "Console with targeted skills",
+        system_prompt = build_console_system_prompt(skill_root, "permissive", "auto"),
+        tools = create_console_tools(skill_root, "permissive"),
+        skills = skill_root
+    )
+    session <- create_chat_session(model = "mock:test", agent = agent)
+
+    query_prompt <- aisdk:::console_build_turn_system_prompt(session, "我要退学，想聊聊后果")
+    path_prompt <- withr::with_dir(skill_root, {
+        aisdk:::console_build_turn_system_prompt(session, paste("请看", file.path("cases", "student-case.md")))
+    })
+
+    expect_true(grepl("withdrawal_advisor", query_prompt, fixed = TRUE))
+    expect_true(grepl("withdrawal_advisor", path_prompt, fixed = TRUE))
+})
+
 test_that("create_console_tools includes all expected tools", {
     tools <- create_console_tools()
     tool_names <- sapply(tools, function(t) t$name)

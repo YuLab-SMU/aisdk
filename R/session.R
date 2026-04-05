@@ -71,6 +71,9 @@ ChatSession <- R6::R6Class(
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
       private$.envir <- if (is.null(envir)) new.env(parent = globalenv()) else envir
+      if (!is.null(agent) && inherits(agent, "Agent") && inherits(agent$skill_registry, "SkillRegistry")) {
+        assign(".skill_registry", agent$skill_registry, envir = private$.envir)
+      }
       private$.stats <- list(
         total_prompt_tokens = 0,
         total_completion_tokens = 0,
@@ -85,6 +88,10 @@ ChatSession <- R6::R6Class(
     #' @param ... Additional arguments passed to generate_text.
     #' @return The GenerateResult object from the model.
     send = function(prompt, ...) {
+      extra_args <- list(...)
+      turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
+      extra_args$turn_system_prompt <- NULL
+
       # Resolve model if needed
       model <- private$get_model()
 
@@ -95,15 +102,26 @@ ChatSession <- R6::R6Class(
       messages <- private$.history
 
       # Call generate_text with full history
-      result <- generate_text(
-        model = model,
-        prompt = messages,
-        system = private$.system_prompt,
-        tools = private$.tools,
-        max_steps = private$.max_steps,
-        hooks = private$.hooks,
-        registry = private$.registry,
-        ...
+      result <- do.call(
+        generate_text,
+        c(
+          list(
+            model = model,
+            prompt = messages,
+            system = if (is.null(turn_system_prompt) || !nzchar(turn_system_prompt)) {
+              private$.system_prompt
+            } else if (is.null(private$.system_prompt) || !nzchar(private$.system_prompt)) {
+              turn_system_prompt
+            } else {
+              paste(private$.system_prompt, "\n\n", turn_system_prompt, sep = "")
+            },
+            tools = private$.tools,
+            max_steps = private$.max_steps,
+            hooks = private$.hooks,
+            registry = private$.registry
+          ),
+          extra_args
+        )
       )
 
       # Append assistant response to history
@@ -127,6 +145,10 @@ ChatSession <- R6::R6Class(
     #' @param ... Additional arguments passed to stream_text.
     #' @return Invisible NULL (output is via callback).
     send_stream = function(prompt, callback, ...) {
+      extra_args <- list(...)
+      turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
+      extra_args$turn_system_prompt <- NULL
+
       model <- private$get_model()
 
       # Append user message
@@ -137,17 +159,28 @@ ChatSession <- R6::R6Class(
 
       # Let stream_text handle the entire tool execution loop
       # Pass max_steps to enable automatic tool execution
-      result <- stream_text(
-        model = model,
-        prompt = messages,
-        callback = callback,
-        system = private$.system_prompt,
-        registry = private$.registry,
-        tools = private$.tools,
-        max_steps = private$.max_steps,
-        session = self, # Pass session for shared environment
-        hooks = private$.hooks,
-        ...
+      result <- do.call(
+        stream_text,
+        c(
+          list(
+            model = model,
+            prompt = messages,
+            callback = callback,
+            system = if (is.null(turn_system_prompt) || !nzchar(turn_system_prompt)) {
+              private$.system_prompt
+            } else if (is.null(private$.system_prompt) || !nzchar(private$.system_prompt)) {
+              turn_system_prompt
+            } else {
+              paste(private$.system_prompt, "\n\n", turn_system_prompt, sep = "")
+            },
+            registry = private$.registry,
+            tools = private$.tools,
+            max_steps = private$.max_steps,
+            session = self,
+            hooks = private$.hooks
+          ),
+          extra_args
+        )
       )
 
       # Sync messages added during tool execution to session history
