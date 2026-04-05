@@ -63,11 +63,12 @@ test_that("console turn routing can match custom skill by when_to_use and paths"
     agent <- create_agent(
         name = "ConsoleWithCustomSkill",
         description = "Console with targeted skills",
-        system_prompt = build_console_system_prompt(skill_root, "permissive", "auto"),
-        tools = create_console_tools(skill_root, "permissive"),
+        system_prompt = build_console_system_prompt(skill_root, skill_root, "permissive", "auto"),
+        tools = create_console_tools(working_dir = skill_root, startup_dir = skill_root, sandbox_mode = "permissive"),
         skills = skill_root
     )
     session <- create_chat_session(model = "mock:test", agent = agent)
+    session$set_metadata("console_startup_dir", skill_root)
 
     query_prompt <- aisdk:::console_build_turn_system_prompt(session, "我要退学，想聊聊后果")
     path_prompt <- withr::with_dir(skill_root, {
@@ -75,6 +76,48 @@ test_that("console turn routing can match custom skill by when_to_use and paths"
     })
 
     expect_true(grepl("withdrawal_advisor", query_prompt, fixed = TRUE))
+    expect_true(grepl("withdrawal_advisor", path_prompt, fixed = TRUE))
+})
+
+test_that("console turn routing uses stored startup directory instead of current sandbox directory", {
+    startup_dir <- tempfile("console-startup-")
+    sandbox_dir <- tempfile("console-sandbox-")
+    dir.create(startup_dir, recursive = TRUE)
+    dir.create(sandbox_dir, recursive = TRUE)
+    dir.create(file.path(startup_dir, "withdrawal_advisor"))
+    dir.create(file.path(startup_dir, "cases"))
+    file.create(file.path(startup_dir, "cases", "student-case.md"))
+    on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
+    on.exit(unlink(sandbox_dir, recursive = TRUE), add = TRUE)
+
+    writeLines(c(
+        "---",
+        "name: withdrawal_advisor",
+        "description: Handles withdrawal conversations",
+        "when_to_use: Use this when the user says they want to drop out, withdraw, 退学, or needs emotional support about leaving school",
+        "paths:",
+        "  - cases/*.md",
+        "---",
+        "Offer practical and emotionally steady advice."
+    ), file.path(startup_dir, "withdrawal_advisor", "SKILL.md"))
+
+    agent <- create_agent(
+        name = "ConsoleWithSplitDirs",
+        description = "Console with separate startup and sandbox directories",
+        system_prompt = build_console_system_prompt(sandbox_dir, startup_dir, "permissive", "auto"),
+        tools = create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive"),
+        skills = startup_dir
+    )
+    session <- create_chat_session(model = "mock:test", agent = agent)
+    session$merge_metadata(list(
+        console_working_dir = sandbox_dir,
+        console_startup_dir = startup_dir
+    ))
+
+    path_prompt <- withr::with_dir(sandbox_dir, {
+        aisdk:::console_build_turn_system_prompt(session, paste("请看", file.path("cases", "student-case.md")))
+    })
+
     expect_true(grepl("withdrawal_advisor", path_prompt, fixed = TRUE))
 })
 
@@ -112,6 +155,29 @@ test_that("list_directory tool works", {
     expect_true(grepl("items", result))
 })
 
+test_that("console file discovery tools prefer startup directory for current project files", {
+    startup_dir <- tempfile("console-startup-files-")
+    sandbox_dir <- tempfile("console-sandbox-files-")
+    dir.create(startup_dir, recursive = TRUE)
+    dir.create(sandbox_dir, recursive = TRUE)
+    writeLines("tree-content", file.path(startup_dir, "demo_tree.nwk"))
+    on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
+    on.exit(unlink(sandbox_dir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive")
+    list_dir_tool <- tools[[which(sapply(tools, function(t) t$name) == "list_directory")]]
+    find_tool <- tools[[which(sapply(tools, function(t) t$name) == "find_files")]]
+    read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
+
+    listed <- list_dir_tool$run(list(path = "."))
+    found <- find_tool$run(list(pattern = "*.nwk", path = ".", recursive = FALSE))
+    content <- read_tool$run(list(path = "demo_tree.nwk"))
+
+    expect_true(grepl("demo_tree.nwk", listed, fixed = TRUE))
+    expect_true(grepl("demo_tree.nwk", found, fixed = TRUE))
+    expect_equal(content, "tree-content")
+})
+
 test_that("get_system_info tool works", {
     tools <- create_console_tools()
     sys_info_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_system_info")]]
@@ -120,6 +186,29 @@ test_that("get_system_info tool works", {
     expect_true(grepl("System Information", result))
     expect_true(grepl("R Version:", result))
     expect_true(grepl("Working Directory:", result))
+    expect_true(grepl("Startup Directory:", result))
+})
+
+test_that("execute_r_code exposes startup directory helpers while keeping sandbox working directory", {
+    startup_dir <- tempfile("console-startup-r-")
+    sandbox_dir <- tempfile("console-sandbox-r-")
+    dir.create(startup_dir, recursive = TRUE)
+    dir.create(sandbox_dir, recursive = TRUE)
+    writeLines("hello-tree", file.path(startup_dir, "demo_tree.nwk"))
+    on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
+    on.exit(unlink(sandbox_dir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive")
+    exec_tool <- tools[[which(sapply(tools, function(t) t$name) == "execute_r_code")]]
+
+    result <- exec_tool$run(list(code = paste(
+        "cat(basename(getwd()), '\\n')",
+        "cat(readLines(aisdk_resolve_startup_path('demo_tree.nwk')), '\\n')",
+        sep = "\n"
+    )))
+
+    expect_true(grepl(basename(sandbox_dir), result, fixed = TRUE))
+    expect_true(grepl("hello-tree", result, fixed = TRUE))
 })
 
 test_that("get_environment tool works", {
@@ -161,6 +250,7 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("Terminal Assistant", prompt))
     expect_true(grepl("bash", prompt))
     expect_true(grepl("Working Directory", prompt))
+    expect_true(grepl("R Startup Directory", prompt))
     expect_true(grepl("Safety", prompt))
     expect_true(grepl("setup_feishu_channel", prompt))
     expect_true(grepl("find_image_files", prompt))
@@ -170,6 +260,7 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("edit_image_asset", prompt))
     expect_true(grepl("Treat image work as a native capability", prompt, fixed = TRUE))
     expect_true(grepl("Search locally before asking", prompt, fixed = TRUE))
+    expect_true(grepl("Interpret 'current directory' as the R startup directory", prompt, fixed = TRUE))
 })
 
 test_that("find_image_files ranks relevant local image candidates", {

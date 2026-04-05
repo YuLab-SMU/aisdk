@@ -14,8 +14,9 @@ NULL
 #' plus additional console-specific tools.
 #'
 #'
-#' @param working_dir Working directory. Defaults to `tempdir()`.
+#' @param working_dir Working directory for sandboxed tool execution. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
+#' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
 #' @return A list of Tool objects.
 #' @export
 #' @examples
@@ -26,14 +27,26 @@ NULL
 #'     session <- create_chat_session(model = "openai:gpt-4o", tools = tools)
 #' }
 #' }
-create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permissive") {
+create_console_tools <- function(working_dir = tempdir(),
+                                 sandbox_mode = "permissive",
+                                 startup_dir = working_dir) {
+    working_dir <- normalizePath(working_dir, winslash = "/", mustWork = FALSE)
+    startup_dir <- normalizePath(startup_dir, winslash = "/", mustWork = FALSE)
+
     # Get base computer tools
-    computer_tools <- create_computer_tools(
+    computer <- Computer$new(
         working_dir = working_dir,
         sandbox_mode = sandbox_mode
     )
+    computer_tools <- create_computer_tools(
+        computer = computer
+    )
+    computer_tools <- Filter(
+        function(tool_obj) !tool_obj$name %in% c("read_file", "execute_r_code"),
+        computer_tools
+    )
 
-    resolve_console_path <- function(path) {
+    resolve_console_existing_path <- function(path) {
         if (is.null(path) || !nzchar(path)) {
             return(path)
         }
@@ -43,7 +56,50 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
         if (grepl("^/|^[A-Za-z]:", path)) {
             return(normalizePath(path, winslash = "/", mustWork = FALSE))
         }
-        normalizePath(file.path(working_dir, path), winslash = "/", mustWork = FALSE)
+
+        startup_candidate <- normalizePath(file.path(startup_dir, path), winslash = "/", mustWork = FALSE)
+        if (file.exists(startup_candidate)) {
+            return(startup_candidate)
+        }
+
+        working_candidate <- normalizePath(file.path(working_dir, path), winslash = "/", mustWork = FALSE)
+        if (file.exists(working_candidate)) {
+            return(working_candidate)
+        }
+
+        startup_candidate
+    }
+
+    resolve_console_search_root <- function(path = ".") {
+        if (is.null(path) || !nzchar(path) || identical(path, ".")) {
+            return(startup_dir)
+        }
+        if (grepl("^/|^[A-Za-z]:", path)) {
+            return(normalizePath(path, winslash = "/", mustWork = FALSE))
+        }
+        normalizePath(file.path(startup_dir, path), winslash = "/", mustWork = FALSE)
+    }
+
+    resolve_console_path <- function(path) {
+        resolve_console_existing_path(path)
+    }
+
+    console_r_prelude <- function() {
+        paste(
+            sprintf(".aisdk_working_dir <- %s", encodeString(working_dir, quote = "\"")),
+            sprintf(".aisdk_startup_dir <- %s", encodeString(startup_dir, quote = "\"")),
+            "options(",
+            "  aisdk.console_working_dir = .aisdk_working_dir,",
+            "  aisdk.console_startup_dir = .aisdk_startup_dir",
+            ")",
+            "aisdk_resolve_startup_path <- function(path = \".\") {",
+            "  normalizePath(file.path(.aisdk_startup_dir, path), winslash = \"/\", mustWork = FALSE)",
+            "}",
+            "aisdk_resolve_working_path <- function(path = \".\") {",
+            "  normalizePath(file.path(.aisdk_working_dir, path), winslash = \"/\", mustWork = FALSE)",
+            "}",
+            sep = "\n"
+        )
     }
 
     console_image_store <- function(envir) {
@@ -129,6 +185,16 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
         NULL
     }
 
+    annotate_artifacts <- function(text, paths = character(0)) {
+        out <- text
+        if (length(paths) > 0) {
+            attr(out, "aisdk_artifacts") <- lapply(paths, function(path) {
+                list(path = normalizePath(path, winslash = "/", mustWork = FALSE))
+            })
+        }
+        out
+    }
+
     annotate_console_tool_text <- function(text, messages = character(0), warnings = character(0)) {
         text <- text %||% ""
         attr(text, "aisdk_messages") <- unique(messages[nzchar(messages)])
@@ -171,11 +237,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
     }
 
     find_console_image_candidates <- function(path = ".", query = NULL, recursive = TRUE, limit = 10L) {
-        full_path <- if (grepl("^/|^[A-Za-z]:", path)) {
-            path
-        } else {
-            file.path(working_dir, path)
-        }
+        full_path <- resolve_console_search_root(path)
 
         if (!dir.exists(full_path)) {
             return(list(error = paste("Directory not found:", path)))
@@ -355,6 +417,72 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
 
     # Additional console-specific tools
     console_specific <- list(
+        tool(
+            name = "read_file",
+            description = paste(
+                "Read the contents of a file.",
+                "Relative paths prefer the R startup directory so requests about the user's current project work naturally.",
+                "Absolute paths are also allowed."
+            ),
+            parameters = z_object(
+                path = z_string("Path to the file to read")
+            ),
+            execute = function(path) {
+                result <- tryCatch(
+                    {
+                        full_path <- resolve_console_existing_path(path)
+                        if (!file.exists(full_path)) {
+                            return(list(error = TRUE, message = paste("File not found:", path)))
+                        }
+                        list(
+                            error = FALSE,
+                            content = paste(readLines(full_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+                        )
+                    },
+                    error = function(e) list(error = TRUE, message = conditionMessage(e))
+                )
+
+                if (isTRUE(result$error)) {
+                    result$message
+                } else {
+                    result$content
+                }
+            },
+            layer = "computer"
+        ),
+
+        tool(
+            name = "execute_r_code",
+            description = paste(
+                "Execute R code in an isolated sandboxed process.",
+                "Relative paths still resolve from the sandbox working directory.",
+                "Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` when you need files from the user's startup project directory."
+            ),
+            parameters = z_object(
+                code = z_string("R code to execute")
+            ),
+            execute = function(code) {
+                result <- computer$execute_r_code(paste(console_r_prelude(), code, sep = "\n\n"))
+                if (result$error) {
+                    paste("Error:", result$message)
+                } else {
+                    annotate_artifacts(
+                        structure(
+                            paste("Result:", paste(result$output, collapse = "\n")),
+                            aisdk_messages = c(
+                                result$messages %||% character(0),
+                                paste("Sandbox working directory:", working_dir),
+                                paste("Startup directory:", startup_dir)
+                            ),
+                            aisdk_warnings = result$warnings %||% character(0)
+                        ),
+                        result$created_files %||% character(0)
+                    )
+                }
+            },
+            layer = "computer"
+        ),
+
         # Interactive prompt: ask user questions mid-conversation
         tool(
             name = "ask_user",
@@ -457,11 +585,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 pattern = z_string("Optional glob pattern to filter results (e.g., '*.R')")
             ),
             execute = function(path = ".", pattern = NULL) {
-                full_path <- if (grepl("^/|^[A-Za-z]:", path)) {
-                    path
-                } else {
-                    file.path(working_dir, path)
-                }
+                full_path <- resolve_console_search_root(path)
 
                 if (!dir.exists(full_path)) {
                     return(paste("Directory not found:", path))
@@ -519,11 +643,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                 recursive = z_boolean("Search recursively in subdirectories (default: TRUE)")
             ),
             execute = function(pattern, path = ".", recursive = TRUE) {
-                full_path <- if (grepl("^/|^[A-Za-z]:", path)) {
-                    path
-                } else {
-                    file.path(working_dir, path)
-                }
+                full_path <- resolve_console_search_root(path)
 
                 if (!dir.exists(full_path)) {
                     return(paste("Directory not found:", path))
@@ -611,6 +731,7 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                     paste("User:", info["user"]),
                     paste("R Version:", r_info$version.string),
                     paste("Working Directory:", working_dir),
+                    paste("Startup Directory:", startup_dir),
                     paste("Home Directory:", Sys.getenv("HOME")),
                     paste("Temp Directory:", tempdir())
                 ), collapse = "\n")
@@ -690,8 +811,8 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
                     current_model = current_model,
                     app_id = args$app_id %||% NULL,
                     app_secret = args$app_secret %||% NULL,
-                    workdir = working_dir,
-                    session_root = file.path(working_dir, ".aisdk", "feishu")
+                    workdir = startup_dir,
+                    session_root = file.path(startup_dir, ".aisdk", "feishu")
                 )
 
                 result$summary %||% "Feishu setup finished."
@@ -1039,10 +1160,11 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
 #' natural language interaction.
 #'
 #'
-#' @param working_dir Working directory. Defaults to `tempdir()`.
+#' @param working_dir Working directory for sandboxed tool execution. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @param additional_tools Optional list of additional Tool objects to include.
 #' @param language Language for responses: "auto", "en", or "zh" (default: "auto").
+#' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
 #' @return An Agent object configured for console interaction.
 #' @export
 #' @examples
@@ -1061,13 +1183,16 @@ create_console_tools <- function(working_dir = tempdir(), sandbox_mode = "permis
 create_console_agent <- function(working_dir = tempdir(),
                                  sandbox_mode = "permissive",
                                  additional_tools = NULL,
-                                 language = "auto") {
+                                 language = "auto",
+                                 startup_dir = working_dir) {
     # Resolve working directory
-    working_dir <- normalizePath(working_dir, mustWork = FALSE)
+    working_dir <- normalizePath(working_dir, winslash = "/", mustWork = FALSE)
+    startup_dir <- normalizePath(startup_dir, winslash = "/", mustWork = FALSE)
 
     # Create console tools
     tools <- create_console_tools(
         working_dir = working_dir,
+        startup_dir = startup_dir,
         sandbox_mode = sandbox_mode
     )
 
@@ -1077,7 +1202,7 @@ create_console_agent <- function(working_dir = tempdir(),
     }
 
     # Build system prompt
-    system_prompt <- build_console_system_prompt(working_dir, sandbox_mode, language)
+    system_prompt <- build_console_system_prompt(working_dir, startup_dir, sandbox_mode, language)
 
     # Create agent
     Agent$new(
@@ -1092,12 +1217,13 @@ create_console_agent <- function(working_dir = tempdir(),
 
 #' @title Build Console System Prompt
 #' @description Build the system prompt for the console agent.
-#' @param working_dir Current working directory.
+#' @param working_dir Sandbox working directory for tool execution.
+#' @param startup_dir R session startup directory for project-aware context.
 #' @param sandbox_mode Sandbox mode setting.
 #' @param language Language preference.
 #' @return System prompt string.
 #' @keywords internal
-build_console_system_prompt <- function(working_dir, sandbox_mode, language) {
+build_console_system_prompt <- function(working_dir, startup_dir, sandbox_mode, language) {
     # Detect language preference
     lang_hint <- if (language == "auto") {
         "Respond in the same language as the user's message."
@@ -1164,6 +1290,8 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 14. **Reuse image artifacts**: When the user refers to \"the previous image\", \"the last render\", or \"the one you just made\", consult `get_recent_image_artifacts` or reuse the most recent remembered image automatically
 15. **Only ask for a path when truly needed**: If the user refers to an existing image and you can find or reuse it yourself, do that first
 16. **Search locally before asking**: If the user mentions a screenshot, poster, render, figure, or chart without a path, first use `get_recent_image_artifacts` and then `find_image_files` before asking for clarification
+17. **Interpret 'current directory' as the R startup directory**: For discovering existing project files, prefer the startup directory rather than the sandbox working directory
+18. **Use sandbox R helpers correctly**: Inside `execute_r_code`, relative paths still point at the sandbox working directory. Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` to read files from the user's project
 
 ## Default Persona
 
@@ -1191,8 +1319,13 @@ For destructive operations (delete, overwrite), always explain what will happen 
 ## Context
 
 - **Working Directory**: ", working_dir, "
+- **R Startup Directory**: ", startup_dir, "
 - **Operating System**: ", Sys.info()["sysname"], "
 - **R Version**: ", R.Version()$version.string, "
+
+Use the working directory for sandboxed execution and temporary generated files.
+Use the R startup directory as the user's project context when locating existing files,
+matching relative paths, or inferring which repository the user means.
 
 You are ready to help. What would you like to do?"
     )

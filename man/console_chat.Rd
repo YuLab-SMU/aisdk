@@ -14,7 +14,8 @@ console_chat(
   agent = "auto",
   working_dir = tempdir(),
   sandbox_mode = "permissive",
-  show_thinking = verbose
+  show_thinking = verbose,
+  startup_dir = getwd()
 )
 }
 \arguments{
@@ -38,12 +39,14 @@ thinking output. Defaults to \code{FALSE} for a cleaner console UI.}
 \item An Agent object: Use the provided custom agent
 }}
 
-\item{working_dir}{Working directory for the console agent. Defaults to \code{tempdir()}.}
+\item{working_dir}{Working directory for sandboxed console tools. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode for the console agent: "strict", "permissive" (default), or "none".}
 
 \item{show_thinking}{Logical. Whether to show model thinking blocks when the
 provider exposes them. Defaults to \code{verbose}.}
+
+\item{startup_dir}{R session startup directory used for project-aware context. Defaults to \code{getwd()}.}
 }
 \value{
 The ChatSession object (invisibly) when chat ends.

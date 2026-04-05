@@ -39,10 +39,11 @@ NULL
 #'   - `"auto"` (default): Use the built-in console agent with terminal tools
 #'   - `NULL`: Simple chat mode without tools
 #'   - An Agent object: Use the provided custom agent
-#' @param working_dir Working directory for the console agent. Defaults to `tempdir()`.
+#' @param working_dir Working directory for sandboxed console tools. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
 #' @param show_thinking Logical. Whether to show model thinking blocks when the
 #'   provider exposes them. Defaults to `verbose`.
+#' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
@@ -97,10 +98,22 @@ console_chat <- function(session = NULL,
                          agent = "auto",
                          working_dir = tempdir(),
                          sandbox_mode = "permissive",
-                         show_thinking = verbose) {
+                         show_thinking = verbose,
+                         startup_dir = getwd()) {
   # Ensure cli package is available
   if (!requireNamespace("cli", quietly = TRUE)) {
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
+  }
+
+  working_dir <- if (missing(working_dir) && inherits(session, "ChatSession")) {
+    console_session_directory(session, key = "console_working_dir", default = tempdir())
+  } else {
+    console_resolve_directory(working_dir, fallback = tempdir())
+  }
+  startup_dir <- if (missing(startup_dir) && inherits(session, "ChatSession")) {
+    console_session_directory(session, key = "console_startup_dir", default = getwd())
+  } else {
+    console_resolve_directory(startup_dir, fallback = getwd())
   }
 
   verbose <- isTRUE(verbose)
@@ -111,6 +124,7 @@ console_chat <- function(session = NULL,
   if (is.character(agent) && agent == "auto") {
     agent <- create_console_agent(
       working_dir = working_dir,
+      startup_dir = startup_dir,
       sandbox_mode = sandbox_mode,
       additional_tools = tools
     )
@@ -191,6 +205,12 @@ console_chat <- function(session = NULL,
     rlang::abort("session must be a ChatSession object, LanguageModelV1 object, or model string ID")
   }
 
+  session$merge_metadata(list(
+    console_working_dir = working_dir,
+    console_startup_dir = startup_dir
+  ))
+  assign(".console_working_dir", working_dir, envir = session$get_envir())
+  assign(".console_startup_dir", startup_dir, envir = session$get_envir())
   assign(".session_model_id", session$get_model_id() %||% "", envir = session$get_envir())
 
   view_mode <- if (isTRUE(verbose)) "debug" else "clean"
@@ -361,7 +381,8 @@ console_get_skill_registry <- function(session) {
 }
 
 #' @keywords internal
-console_extract_candidate_paths <- function(text) {
+console_extract_candidate_paths <- function(text, cwd = getwd()) {
+  cwd <- console_resolve_directory(cwd, fallback = getwd())
   candidates <- tryCatch(channel_extract_local_paths(text), error = function(e) character(0))
   relative_matches <- unique(unlist(regmatches(
     text %||% "",
@@ -371,10 +392,15 @@ console_extract_candidate_paths <- function(text) {
   if (length(relative_matches) > 0) {
     normalized <- unique(vapply(relative_matches, function(path) {
       candidate <- sub("[,.;:!?]+$", "", path)
-      if (!file.exists(candidate)) {
+      candidate_path <- if (grepl("^/|^[A-Za-z]:", candidate)) {
+        candidate
+      } else {
+        file.path(cwd, candidate)
+      }
+      if (!file.exists(candidate_path)) {
         return(NA_character_)
       }
-      normalizePath(candidate, winslash = "/", mustWork = FALSE)
+      normalizePath(candidate_path, winslash = "/", mustWork = FALSE)
     }, character(1)))
     candidates <- unique(c(candidates, normalized[!is.na(normalized)]))
   }
@@ -383,15 +409,44 @@ console_extract_candidate_paths <- function(text) {
 }
 
 #' @keywords internal
+console_resolve_directory <- function(path = NULL, fallback = getwd()) {
+  candidate <- path
+  if (is.null(candidate) || !nzchar(candidate)) {
+    candidate <- fallback
+  }
+
+  normalizePath(candidate, winslash = "/", mustWork = FALSE)
+}
+
+#' @keywords internal
+console_session_directory <- function(session = NULL, key, default = getwd()) {
+  fallback <- console_resolve_directory(default, fallback = default)
+
+  if (is.null(session) || !inherits(session, "ChatSession")) {
+    return(fallback)
+  }
+
+  candidate <- session$get_metadata(key, default = NULL)
+  env_name <- paste0(".", key)
+  if ((!is.character(candidate) || length(candidate) != 1 || !nzchar(candidate)) &&
+      exists(env_name, envir = session$get_envir(), inherits = FALSE)) {
+    candidate <- get(env_name, envir = session$get_envir(), inherits = FALSE)
+  }
+
+  console_resolve_directory(candidate, fallback = fallback)
+}
+
+#' @keywords internal
 console_build_turn_system_prompt <- function(session, input) {
   registry <- console_get_skill_registry(session)
-  local_paths <- console_extract_candidate_paths(input)
+  startup_dir <- console_session_directory(session, key = "console_startup_dir", default = getwd())
+  local_paths <- console_extract_candidate_paths(input, cwd = startup_dir)
   matched_skills <- character(0)
   if (!is.null(registry)) {
     matched <- registry$find_relevant_skills(
       query = input,
       file_paths = local_paths,
-      cwd = getwd(),
+      cwd = startup_dir,
       limit = 1L
     )
     if (nrow(matched) > 0) {
@@ -679,8 +734,12 @@ handle_command <- function(input,
             save = update_renviron
           ),
           current_model = session$get_model_id() %||% "",
-          workdir = getwd(),
-          session_root = file.path(getwd(), ".aisdk", "feishu")
+          workdir = console_session_directory(session, key = "console_startup_dir", default = getwd()),
+          session_root = file.path(
+            console_session_directory(session, key = "console_startup_dir", default = getwd()),
+            ".aisdk",
+            "feishu"
+          )
         )
         cli::cli_text("")
         cli::cli_alert_info(wizard_result$summary %||% "Feishu setup finished.")
