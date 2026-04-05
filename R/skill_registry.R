@@ -352,7 +352,7 @@ SkillRegistry <- R6::R6Class(
         return(character(0))
       }
 
-      matches <- regmatches(text, gregexpr("[A-Za-z][A-Za-z0-9_-]{2,}|[一-龥]{2,}", text, perl = TRUE))[[1]]
+      matches <- regmatches(text, gregexpr("[A-Za-z][A-Za-z0-9_-]{2,}|\\p{Han}{2,}", text, perl = TRUE))[[1]]
       matches <- unique(trimws(matches))
       matches <- matches[nzchar(matches)]
       matches[nchar(matches) <= max_chars]

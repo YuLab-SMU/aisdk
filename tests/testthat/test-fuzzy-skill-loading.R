@@ -8,8 +8,22 @@ test_that("fuzzy matching works", {
       data.frame(
         name = c("stock_analyzer", "data_analysis", "web_scraper"),
         description = c("Analyzes stocks", "Analyzes data", "Scrapes web"),
+        aliases = c("", "", ""),
+        when_to_use = c("", "", ""),
+        paths = c("", "", ""),
         stringsAsFactors = FALSE
       )
+    },
+    resolve_skill_name = function(name) {
+      available <- c("stock_analyzer", "data_analysis", "web_scraper")
+      if (name %in% available) name else NULL
+    },
+    find_closest_skill_name = function(name) {
+      available <- c("stock_analyzer", "data_analysis", "web_scraper")
+      dists <- utils::adist(name, available, ignore.case = TRUE)
+      min_dist <- min(dists)
+      threshold <- min(4, max(3, nchar(name) * 0.3))
+      if (min_dist <= threshold) available[[which.min(dists)]] else NULL
     },
     get_skill = function(name) {
       if (name %in% c("stock_analyzer", "data_analysis", "web_scraper")) {
