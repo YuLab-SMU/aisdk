@@ -39,6 +39,7 @@ inst/doc
 # Environment files
 .env
 .Renviron
+.Rprofile
 dev_logs/
 docs/
 .claude/
