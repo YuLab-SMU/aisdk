@@ -8,6 +8,27 @@ NULL
 # Private environment to store the default registry (avoids locked binding issues)
 .registry_env <- new.env(parent = emptyenv())
 
+#' @keywords internal
+create_env_custom_provider <- function() {
+  base_url <- Sys.getenv("AISDK_CUSTOM_BASE_URL", unset = "")
+  if (!nzchar(base_url)) {
+    rlang::abort("Custom provider is not configured. Set AISDK_CUSTOM_BASE_URL first.")
+  }
+
+  api_format <- Sys.getenv("AISDK_CUSTOM_API_FORMAT", unset = "chat_completions")
+  if (!api_format %in% c("chat_completions", "responses", "anthropic_messages")) {
+    api_format <- "chat_completions"
+  }
+
+  create_custom_provider(
+    provider_name = "custom",
+    base_url = base_url,
+    api_key = Sys.getenv("AISDK_CUSTOM_API_KEY", unset = ""),
+    api_format = api_format,
+    use_max_completion_tokens = tolower(Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "false")) %in% c("true", "1", "yes")
+  )
+}
+
 #' @title Provider Registry
 #' @description
 #' Manages registered providers and allows accessing models by ID.
@@ -167,6 +188,7 @@ get_default_registry <- function() {
         if (exists("create_bailian", mode = "function")) reg$register("bailian", function() suppressWarnings(create_bailian()))
         if (exists("create_openrouter", mode = "function")) reg$register("openrouter", function() suppressWarnings(create_openrouter()))
         if (exists("create_aihubmix", mode = "function")) reg$register("aihubmix", function() suppressWarnings(create_aihubmix()))
+        if (exists("create_custom_provider", mode = "function")) reg$register("custom", function() suppressWarnings(create_env_custom_provider()))
       },
       error = function(e) {}
     )

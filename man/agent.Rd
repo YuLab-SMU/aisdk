@@ -23,6 +23,8 @@ This is the "API" that the LLM Manager uses for semantic routing.}
 
 \item{\code{tools}}{List of Tool objects this agent can use.}
 
+\item{\code{skill_registry}}{Optional registry of local skills available to the agent.}
+
 \item{\code{model}}{Default model ID for this agent.}
 }
 \if{html}{\out{</div>}}

@@ -18,9 +18,12 @@ R6 class that manages a collection of skills. Provides methods to:
 \item \href{#method-SkillRegistry-new}{\code{SkillRegistry$new()}}
 \item \href{#method-SkillRegistry-scan_skills}{\code{SkillRegistry$scan_skills()}}
 \item \href{#method-SkillRegistry-get_skill}{\code{SkillRegistry$get_skill()}}
+\item \href{#method-SkillRegistry-resolve_skill_name}{\code{SkillRegistry$resolve_skill_name()}}
+\item \href{#method-SkillRegistry-find_closest_skill_name}{\code{SkillRegistry$find_closest_skill_name()}}
 \item \href{#method-SkillRegistry-has_skill}{\code{SkillRegistry$has_skill()}}
 \item \href{#method-SkillRegistry-list_skills}{\code{SkillRegistry$list_skills()}}
 \item \href{#method-SkillRegistry-count}{\code{SkillRegistry$count()}}
+\item \href{#method-SkillRegistry-find_relevant_skills}{\code{SkillRegistry$find_relevant_skills()}}
 \item \href{#method-SkillRegistry-generate_prompt_section}{\code{SkillRegistry$generate_prompt_section()}}
 \item \href{#method-SkillRegistry-print}{\code{SkillRegistry$print()}}
 \item \href{#method-SkillRegistry-clone}{\code{SkillRegistry$clone()}}
@@ -89,6 +92,46 @@ The Skill object, or NULL if not found.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SkillRegistry-resolve_skill_name"></a>}}
+\if{latex}{\out{\hypertarget{method-SkillRegistry-resolve_skill_name}{}}}
+\subsection{Method \code{resolve_skill_name()}}{
+Resolve a skill name or alias to its canonical name.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SkillRegistry$resolve_skill_name(name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{name}}{Skill name or alias.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Canonical skill name or NULL.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SkillRegistry-find_closest_skill_name"></a>}}
+\if{latex}{\out{\hypertarget{method-SkillRegistry-find_closest_skill_name}{}}}
+\subsection{Method \code{find_closest_skill_name()}}{
+Find the closest matching canonical skill name for fuzzy recovery.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SkillRegistry$find_closest_skill_name(name)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{name}}{Skill name or alias candidate.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Canonical skill name or NULL.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SkillRegistry-has_skill"></a>}}
 \if{latex}{\out{\hypertarget{method-SkillRegistry-has_skill}{}}}
 \subsection{Method \code{has_skill()}}{
@@ -132,6 +175,37 @@ Get the number of registered skills.
 
 \subsection{Returns}{
 Integer count of skills.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SkillRegistry-find_relevant_skills"></a>}}
+\if{latex}{\out{\hypertarget{method-SkillRegistry-find_relevant_skills}{}}}
+\subsection{Method \code{find_relevant_skills()}}{
+Find relevant skills for a user query and optional file paths.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SkillRegistry$find_relevant_skills(
+  query = NULL,
+  file_paths = character(0),
+  cwd = NULL,
+  limit = 3L
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{query}}{Optional user query text.}
+
+\item{\code{file_paths}}{Optional character vector of file paths.}
+
+\item{\code{cwd}}{Optional working directory for path matching.}
+
+\item{\code{limit}}{Maximum number of results to return.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Data frame of matching skills sorted by score.
 }
 }
 \if{html}{\out{<hr>}}

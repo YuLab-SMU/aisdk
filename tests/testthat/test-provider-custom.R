@@ -97,3 +97,33 @@ test_that("Custom provider integrates with Registry", {
     m <- registry$language_model("my_test:custom-model-abc")
     expect_s3_class(m, "OpenAILanguageModel")
 })
+
+test_that("Default registry resolves custom provider from environment", {
+    registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+    old_base <- Sys.getenv("AISDK_CUSTOM_BASE_URL", unset = "")
+    old_key <- Sys.getenv("AISDK_CUSTOM_API_KEY", unset = "")
+    old_format <- Sys.getenv("AISDK_CUSTOM_API_FORMAT", unset = "")
+    old_reasoning <- Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "")
+    old_default <- registry_env$default %||% NULL
+
+    on.exit({
+        if (nzchar(old_base)) Sys.setenv(AISDK_CUSTOM_BASE_URL = old_base) else Sys.unsetenv("AISDK_CUSTOM_BASE_URL")
+        if (nzchar(old_key)) Sys.setenv(AISDK_CUSTOM_API_KEY = old_key) else Sys.unsetenv("AISDK_CUSTOM_API_KEY")
+        if (nzchar(old_format)) Sys.setenv(AISDK_CUSTOM_API_FORMAT = old_format) else Sys.unsetenv("AISDK_CUSTOM_API_FORMAT")
+        if (nzchar(old_reasoning)) Sys.setenv(AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS = old_reasoning) else Sys.unsetenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS")
+        registry_env$default <- old_default
+    }, add = TRUE)
+
+    Sys.setenv(
+        AISDK_CUSTOM_BASE_URL = "https://api.custom-env.example/v1",
+        AISDK_CUSTOM_API_KEY = "sk-custom-env",
+        AISDK_CUSTOM_API_FORMAT = "chat_completions"
+    )
+    Sys.unsetenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS")
+    registry_env$default <- NULL
+
+    registry <- get_default_registry()
+    model <- registry$language_model("custom:test-model")
+
+    expect_s3_class(model, "OpenAILanguageModel")
+})

@@ -358,3 +358,62 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
   expect_equal(remembered$model_id, "openai:gpt-5-mini")
   expect_equal(remembered$path, "project-edit.Rprofile")
 })
+
+test_that("prompt_console_provider_profile supports custom API setup", {
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+
+  menu_answers <- c(
+    10L, # provider: Custom API
+    1L,  # api format: OpenAI Chat Completions
+    1L,  # select first fetched/static model
+    1L   # save to project
+  )
+  input_answers <- c(
+    "https://proxy.example.com/v1",
+    "sk-custom"
+  )
+  saved <- list()
+  remembered <- list()
+
+  hooks <- list(
+    menu = function(title, choices) {
+      answer <- menu_answers[[1]]
+      menu_answers <<- menu_answers[-1]
+      answer
+    },
+    input = function(prompt, default = NULL) {
+      answer <- input_answers[[1]]
+      input_answers <<- input_answers[-1]
+      answer %||% default
+    },
+    model_choices = function(provider, api_key = NULL, base_url = NULL) {
+      c("proxy-model", "backup-model")
+    },
+    save = function(updates, path) {
+      saved <<- list(updates = updates, path = path)
+      TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
+    }
+  )
+
+  model_id <- aisdk:::prompt_console_provider_profile(
+    project_path = project_path,
+    global_path = global_path,
+    project_rprofile_path = "project-custom.Rprofile",
+    global_rprofile_path = "global-custom.Rprofile",
+    prompt_hooks = hooks
+  )
+
+  expect_equal(model_id, "custom:proxy-model")
+  expect_equal(saved$path, project_path)
+  expect_equal(saved$updates$AISDK_CUSTOM_API_KEY, "sk-custom")
+  expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "https://proxy.example.com/v1")
+  expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "proxy-model")
+  expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
+  expect_equal(remembered$model_id, "custom:proxy-model")
+  expect_equal(remembered$path, "project-custom.Rprofile")
+})

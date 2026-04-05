@@ -19,6 +19,12 @@ A Skill consists of:
 
 \item{\code{description}}{A brief description of the skill (from YAML frontmatter).}
 
+\item{\code{aliases}}{Optional aliases that should also trigger this skill.}
+
+\item{\code{when_to_use}}{Optional triggering guidance for this skill.}
+
+\item{\code{paths}}{Optional file glob patterns that make this skill relevant.}
+
 \item{\code{path}}{The directory path containing the skill files.}
 }
 \if{html}{\out{</div>}}
@@ -28,6 +34,8 @@ A Skill consists of:
 \itemize{
 \item \href{#method-Skill-new}{\code{Skill$new()}}
 \item \href{#method-Skill-load}{\code{Skill$load()}}
+\item \href{#method-Skill-metadata_text}{\code{Skill$metadata_text()}}
+\item \href{#method-Skill-matches_paths}{\code{Skill$matches_paths()}}
 \item \href{#method-Skill-execute_script}{\code{Skill$execute_script()}}
 \item \href{#method-Skill-list_scripts}{\code{Skill$list_scripts()}}
 \item \href{#method-Skill-list_resources}{\code{Skill$list_resources()}}
@@ -68,6 +76,41 @@ Load the full SKILL.md body content (Level 2).
 
 \subsection{Returns}{
 Character string containing the skill instructions.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-metadata_text"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-metadata_text}{}}}
+\subsection{Method \code{metadata_text()}}{
+Return concise metadata text used for routing and listing.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$metadata_text()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Character scalar.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-matches_paths"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-matches_paths}{}}}
+\subsection{Method \code{matches_paths()}}{
+Check whether the skill's \code{paths} patterns match any provided file paths.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$matches_paths(file_paths = character(0), cwd = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{file_paths}}{Character vector of file paths.}
+
+\item{\code{cwd}}{Optional working directory used to relativize absolute paths.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Logical scalar.
 }
 }
 \if{html}{\out{<hr>}}

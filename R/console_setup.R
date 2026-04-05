@@ -90,6 +90,18 @@ console_provider_specs <- function() {
       model_env = "DASHSCOPE_MODEL",
       default_base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1",
       default_model = "qwen-plus"
+    ),
+    custom = list(
+      id = "custom",
+      label = "Custom API",
+      api_key_env = "AISDK_CUSTOM_API_KEY",
+      base_url_env = "AISDK_CUSTOM_BASE_URL",
+      model_env = "AISDK_CUSTOM_MODEL",
+      api_format_env = "AISDK_CUSTOM_API_FORMAT",
+      use_max_completion_tokens_env = "AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS",
+      default_base_url = "",
+      default_model = "",
+      default_api_format = "chat_completions"
     )
   )
 }
@@ -145,6 +157,9 @@ build_console_model_profile <- function(source, scope, values, spec) {
   api_key <- values[[spec$api_key_env]] %||% ""
   base_url <- values[[spec$base_url_env]] %||% spec$default_base_url
   model <- values[[spec$model_env]] %||% ""
+  api_format <- values[[spec$api_format_env %||% ""]] %||% spec$default_api_format %||% ""
+  use_max_completion_tokens <- values[[spec$use_max_completion_tokens_env %||% ""]] %||% ""
+  use_max_completion_tokens <- tolower(use_max_completion_tokens) %in% c("true", "1", "yes")
 
   if (!nzchar(api_key) && !nzchar(model)) {
     return(NULL)
@@ -161,14 +176,28 @@ build_console_model_profile <- function(source, scope, values, spec) {
     base_url = base_url,
     model = model,
     model_id = model_id,
+    api_format = api_format,
+    use_max_completion_tokens = use_max_completion_tokens,
     env = list(
       key = spec$api_key_env,
       base_url = spec$base_url_env,
-      model = spec$model_env
+      model = spec$model_env,
+      api_format = spec$api_format_env %||% NULL,
+      use_max_completion_tokens = spec$use_max_completion_tokens_env %||% NULL
     ),
     values = stats::setNames(
-      list(api_key, base_url, model),
-      c(spec$api_key_env, spec$base_url_env, spec$model_env)
+      c(
+        list(api_key, base_url, model),
+        if (!is.null(spec$api_format_env)) list(api_format) else list(),
+        if (!is.null(spec$use_max_completion_tokens_env)) list(if (isTRUE(use_max_completion_tokens)) "true" else "false") else list()
+      ),
+      c(
+        spec$api_key_env,
+        spec$base_url_env,
+        spec$model_env,
+        spec$api_format_env %||% character(0),
+        spec$use_max_completion_tokens_env %||% character(0)
+      )
     )
   )
 }
@@ -336,10 +365,18 @@ console_model_id_is_usable <- function(model_id, profile = NULL) {
     if (!nzchar(profile$api_key %||% "")) {
       return(FALSE)
     }
+    if (identical(spec$id, "custom") && !nzchar(profile$base_url %||% "")) {
+      return(FALSE)
+    }
     return(TRUE)
   }
 
-  nzchar(Sys.getenv(spec$api_key_env, unset = ""))
+  has_key <- nzchar(Sys.getenv(spec$api_key_env, unset = ""))
+  has_base <- nzchar(Sys.getenv(spec$base_url_env %||% "", unset = ""))
+  if (identical(spec$id, "custom")) {
+    return(has_key && has_base)
+  }
+  has_key
 }
 
 #' @keywords internal
@@ -410,6 +447,15 @@ resolve_console_provider_spec <- function(provider_id) {
 #' @keywords internal
 choose_console_base_url <- function(spec, menu_fn, input_fn, existing_base_url = NULL) {
   existing_base_url <- existing_base_url %||% ""
+  has_default <- nzchar(spec$default_base_url %||% "")
+
+  if (!has_default && !nzchar(existing_base_url)) {
+    base_url <- input_fn("Base URL")
+    if (is.null(base_url) || !nzchar(base_url)) {
+      return(NULL)
+    }
+    return(base_url)
+  }
 
   if (nzchar(existing_base_url)) {
     selection <- menu_fn(
@@ -449,6 +495,44 @@ choose_console_base_url <- function(spec, menu_fn, input_fn, existing_base_url =
 }
 
 #' @keywords internal
+choose_console_api_format <- function(spec, menu_fn, existing_api_format = NULL) {
+  if (is.null(spec$api_format_env)) {
+    return(spec$default_api_format %||% NULL)
+  }
+
+  api_formats <- c(
+    chat_completions = "OpenAI Chat Completions",
+    responses = "OpenAI Responses",
+    anthropic_messages = "Anthropic Messages"
+  )
+  current <- existing_api_format %||% spec$default_api_format %||% "chat_completions"
+  current_label <- api_formats[[current]] %||% current
+
+  if (!is.null(existing_api_format) && nzchar(existing_api_format)) {
+    selection <- menu_fn(
+      sprintf("%s API format", spec$label),
+      c(
+        paste("Keep current", sprintf("(%s)", current_label)),
+        unname(api_formats)
+      )
+    )
+    if (is.null(selection)) {
+      return(NULL)
+    }
+    if (identical(selection, 1L)) {
+      return(current)
+    }
+    return(names(api_formats)[[selection - 1L]])
+  }
+
+  selection <- menu_fn(sprintf("%s API format", spec$label), unname(api_formats))
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  names(api_formats)[[selection]]
+}
+
+#' @keywords internal
 choose_console_api_key <- function(spec, menu_fn, input_fn, existing_api_key = NULL) {
   existing_api_key <- existing_api_key %||% ""
 
@@ -479,9 +563,15 @@ choose_console_model_id <- function(spec,
                                     model_choices_fn,
                                     api_key,
                                     base_url,
+                                    api_format = NULL,
                                     existing_model = NULL) {
   existing_model <- existing_model %||% ""
-  model_choices <- unique(c(existing_model[nzchar(existing_model)], model_choices_fn(spec$id, api_key = api_key, base_url = base_url)))
+  provider_for_choices <- if (identical(spec$id, "custom")) {
+    if (identical(api_format %||% spec$default_api_format %||% "chat_completions", "anthropic_messages")) "anthropic" else "openai"
+  } else {
+    spec$id
+  }
+  model_choices <- unique(c(existing_model[nzchar(existing_model)], model_choices_fn(provider_for_choices, api_key = api_key, base_url = base_url)))
 
   if (length(model_choices) > 0) {
     selection <- menu_fn(
@@ -560,12 +650,21 @@ finalize_console_profile <- function(spec,
                                      api_key,
                                      base_url,
                                      model,
+                                     api_format = NULL,
                                      save_target,
                                      save_fn,
                                      remember_model_fn) {
   updates <- stats::setNames(
-    list(api_key, base_url, model),
-    c(spec$api_key_env, spec$base_url_env, spec$model_env)
+    c(
+      list(api_key, base_url, model),
+      if (!is.null(spec$api_format_env)) list(api_format %||% spec$default_api_format %||% "") else list()
+    ),
+    c(
+      spec$api_key_env,
+      spec$base_url_env,
+      spec$model_env,
+      spec$api_format_env %||% character(0)
+    )
   )
 
   model_id <- paste0(spec$id, ":", model)
@@ -592,6 +691,15 @@ run_console_profile_setup <- function(spec,
                                       global_path = "~/.Renviron",
                                       project_rprofile_path = ".Rprofile",
                                       global_rprofile_path = "~/.Rprofile") {
+  api_format <- choose_console_api_format(
+    spec = spec,
+    menu_fn = menu_fn,
+    existing_api_format = existing_profile$api_format %||% NULL
+  )
+  if (is.null(api_format) && !is.null(spec$api_format_env)) {
+    return(NULL)
+  }
+
   base_url <- choose_console_base_url(
     spec = spec,
     menu_fn = menu_fn,
@@ -619,6 +727,7 @@ run_console_profile_setup <- function(spec,
     model_choices_fn = model_choices_fn,
     api_key = api_key,
     base_url = base_url,
+    api_format = api_format,
     existing_model = existing_profile$model %||% NULL
   )
   if (is.null(model)) {
@@ -642,6 +751,7 @@ run_console_profile_setup <- function(spec,
     api_key = api_key,
     base_url = base_url,
     model = model,
+    api_format = api_format,
     save_target = save_target,
     save_fn = save_fn,
     remember_model_fn = remember_model_fn
