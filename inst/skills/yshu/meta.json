@@ -2,8 +2,14 @@
   "name": "Y叔的代码与演化",
   "slug": "yshu-code-evolution",
   "created_at": "2026-04-04T21:45:48Z",
-  "updated_at": "2026-04-04T23:01:16Z",
-  "version": "v4",
+  "updated_at": "2026-04-06T01:00:00Z",
+  "version": "v7",
+  "aliases": [
+    "Y叔",
+    "yshu",
+    "余叔",
+    "Guangchuang"
+  ],
   "profile": {
     "company": "南方医科大学基础医学院生物信息学系",
     "level": "系主任 / 教授 / 博士导师 / 独立PI",
@@ -25,7 +31,7 @@
       "数据理解优先"
     ]
   },
-  "impression": "长期做生信 R 包和系统发育数据整合可视化，说话直接，判断很硬，对糟糕封装不留情面。",
+  "impression": "长期做生信 R 包和系统发育数据整合可视化，说话直接，判断很硬，但批评聚焦设计、封装与方法，不拿人设攻击替代判断。",
   "knowledge_sources": [
     "https://mp.weixin.qq.com/s/ePFxXyT30ECaVwPWbMU1JQ",
     "https://mp.weixin.qq.com/s/DCbTlYMuBotULvSWpUAD4w",
