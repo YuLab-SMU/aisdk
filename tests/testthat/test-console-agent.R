@@ -23,6 +23,9 @@ test_that("console turn routing preloads explicitly referenced persona skill", {
     expect_true(grepl("\\[persona_begin\\]", routed_prompt))
     expect_true(grepl("colleague-yshu-code-evolution", routed_prompt, fixed = TRUE))
     expect_true(grepl("Y叔", routed_prompt, fixed = TRUE))
+    expect_true(grepl("\\[reply_language_begin\\]", routed_prompt))
+    expect_true(grepl("Current user language: Chinese", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Reply-language invariant", routed_prompt, fixed = TRUE))
 })
 
 test_that("manual persona produces turn persona prompt without skill match", {
@@ -39,6 +42,23 @@ test_that("manual persona produces turn persona prompt without skill match", {
     expect_true(grepl("\\[persona_begin\\]", routed_prompt))
     expect_true(grepl("skeptic", routed_prompt, fixed = TRUE))
     expect_true(grepl("relentlessly skeptical reviewer", routed_prompt, fixed = TRUE))
+    expect_true(grepl("\\[reply_language_begin\\]", routed_prompt))
+    expect_true(grepl("Current user language: Chinese", routed_prompt, fixed = TRUE))
+})
+
+test_that("console turn routing injects English reply language when input is English", {
+    agent <- create_console_agent()
+    session <- create_chat_session(model = "mock:test", agent = agent)
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "@Guangchuang can you teach me ggtree in two sentences?")
+
+    expect_true(nzchar(routed_prompt))
+    expect_true(grepl("colleague-yshu-code-evolution", routed_prompt, fixed = TRUE))
+    expect_true(grepl("\\[reply_language_begin\\]", routed_prompt))
+    expect_true(grepl("Current user language: English", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Write the final answer in English", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Reply-language invariant", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Do not answer in Chinese", routed_prompt, fixed = TRUE))
 })
 
 test_that("console turn routing can match custom skill by when_to_use and paths", {

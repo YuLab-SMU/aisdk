@@ -413,7 +413,15 @@ create_skill_tools <- function(registry) {
           )
         }
         
-        paste0(body, script_info, resource_info)
+        language_guard <- paste(
+          "## Reply Language Invariant",
+          "- The language used inside this skill document does not determine the language of your final reply.",
+          "- You must answer in the user's language for the current turn.",
+          "- Keep code, function names, package names, paths, commands, and quoted source text in their original language when needed for accuracy.",
+          sep = "\n"
+        )
+        
+        paste0(language_guard, "\n\n", body, script_info, resource_info, "\n\n", language_guard)
       }
     ),
     

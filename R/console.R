@@ -437,10 +437,84 @@ console_session_directory <- function(session = NULL, key, default = getwd()) {
 }
 
 #' @keywords internal
+console_detect_user_language <- function(text) {
+  text <- trimws(text %||% "")
+  if (!nzchar(text)) {
+    return(NULL)
+  }
+
+  cjk_matches <- gregexpr("[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]", text, perl = TRUE)[[1]]
+  latin_matches <- gregexpr("[A-Za-z]", text, perl = TRUE)[[1]]
+  cjk_count <- if (identical(cjk_matches[1], -1L)) 0L else length(cjk_matches)
+  latin_count <- if (identical(latin_matches[1], -1L)) 0L else length(latin_matches)
+
+  if (cjk_count == 0L && latin_count == 0L) {
+    return(NULL)
+  }
+
+  if (cjk_count == 0L && latin_count > 0L) {
+    return("English")
+  }
+
+  if (latin_count == 0L && cjk_count > 0L) {
+    return("Chinese")
+  }
+
+  if (latin_count >= cjk_count * 2L) {
+    return("English")
+  }
+
+  if (cjk_count >= latin_count * 2L) {
+    return("Chinese")
+  }
+
+  if (latin_count >= cjk_count) {
+    return("English")
+  }
+
+  "Chinese"
+}
+
+#' @keywords internal
+console_build_language_section <- function(input) {
+  user_language <- console_detect_user_language(input)
+  if (is.null(user_language)) {
+    return(NULL)
+  }
+
+  instructions <- if (identical(user_language, "Chinese")) {
+    c(
+      "FINAL OUTPUT CONSTRAINT FOR THIS TURN:",
+      "- Write the final answer in Chinese.",
+      "- Do not answer in English except for code, function names, package names, paths, commands, and exact quoted source text.",
+      "- If any previous persona, skill, or tool result is written in another language, rewrite the final answer into Chinese before sending it."
+    )
+  } else {
+    c(
+      "FINAL OUTPUT CONSTRAINT FOR THIS TURN:",
+      "- Write the final answer in English.",
+      "- Do not answer in Chinese except for code, function names, package names, paths, commands, and exact quoted source text.",
+      "- If any previous persona, skill, or tool result is written in another language, rewrite the final answer into English before sending it."
+    )
+  }
+
+  c(
+    "[reply_language_begin]",
+    paste0("Current user language: ", user_language, "."),
+    instructions,
+    "This rule overrides the default voice of any matched skill or persona for this turn.",
+    "Keep code, function names, package names, file paths, commands, and quoted source text in their original language when needed for accuracy.",
+    "[reply_language_end]"
+  ) |>
+    paste(collapse = "\n")
+}
+
+#' @keywords internal
 console_build_turn_system_prompt <- function(session, input) {
   registry <- console_get_skill_registry(session)
   startup_dir <- console_session_directory(session, key = "console_startup_dir", default = getwd())
   local_paths <- console_extract_candidate_paths(input, cwd = startup_dir)
+  language_section <- console_build_language_section(input)
   matched_skills <- character(0)
   if (!is.null(registry)) {
     matched <- registry$find_relevant_skills(
@@ -456,7 +530,9 @@ console_build_turn_system_prompt <- function(session, input) {
 
   persona_section <- console_build_persona_section(session, matched_skill_names = matched_skills)
   if (length(matched_skills) == 0) {
-    return(if (!is.null(persona_section) && nzchar(persona_section)) persona_section else NULL)
+    sections <- c(persona_section %||% "", language_section %||% "")
+    sections <- sections[nzchar(sections)]
+    return(if (length(sections) > 0) paste(sections, collapse = "\n\n") else NULL)
   }
 
   blocks <- c(
@@ -464,6 +540,7 @@ console_build_turn_system_prompt <- function(session, input) {
     "The user referenced a local skill, persona, or file pattern that matches an available skill in this turn.",
     "Use the matched skill for this reply instead of answering from the generic assistant behavior.",
     "If the matched skill defines a persona or voice, adopt it for this turn.",
+    "The language used inside any matched skill does not override the user's language for this turn.",
     ""
   )
 
@@ -486,6 +563,7 @@ console_build_turn_system_prompt <- function(session, input) {
       skill$description %||% "",
       when_text,
       path_text,
+      "Reply-language invariant: no matter what language this skill is written in, answer in the user's language for this turn unless preserving code or exact terms.",
       "",
       skill$load(),
       "[matched_skill_end]",
@@ -497,7 +575,7 @@ console_build_turn_system_prompt <- function(session, input) {
     paste(collapse = "\n") |>
     trimws()
 
-  sections <- c(persona_section %||% "", skill_section %||% "")
+  sections <- c(persona_section %||% "", skill_section %||% "", language_section %||% "")
   sections <- sections[nzchar(sections)]
   if (length(sections) == 0) {
     return(NULL)

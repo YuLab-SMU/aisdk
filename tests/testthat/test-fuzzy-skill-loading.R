@@ -47,6 +47,9 @@ test_that("fuzzy matching works", {
   
   # 1. Exact match
   result <- load_skill_tool$run(list(skill_name = "stock_analyzer"))
+  expect_match(result, "Reply Language Invariant")
+  expect_match(result, "answer in the user's language")
+  expect_true(length(gregexpr("Reply Language Invariant", result, fixed = TRUE)[[1]]) >= 2)
   expect_match(result, "Instructions")
   
   # 2. Typo: stock_analysis
