@@ -28,6 +28,19 @@ test_that("console turn routing preloads explicitly referenced persona skill", {
     expect_true(grepl("Reply-language invariant", routed_prompt, fixed = TRUE))
 })
 
+test_that("console turn routing preloads luxun persona for @ mentions", {
+    agent <- create_console_agent()
+    session <- create_chat_session(model = "mock:test", agent = agent)
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "@鲁迅 教教我R语言")
+
+    expect_true(nzchar(routed_prompt))
+    expect_true(grepl("\\[persona_begin\\]", routed_prompt))
+    expect_true(grepl("Active persona: 鲁迅", routed_prompt, fixed = TRUE))
+    expect_true(grepl("你就是鲁迅本人", routed_prompt, fixed = TRUE))
+    expect_true(grepl("luxun-perspective", routed_prompt, fixed = TRUE))
+})
+
 test_that("manual persona produces turn persona prompt without skill match", {
     session <- create_chat_session(model = "mock:test")
     aisdk:::console_set_manual_persona(
