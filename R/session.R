@@ -71,6 +71,13 @@ ChatSession <- R6::R6Class(
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
       private$.envir <- if (is.null(envir)) new.env(parent = globalenv()) else envir
+      if (!exists(".semantic_adapter_registry", envir = private$.envir, inherits = FALSE)) {
+        assign(
+          ".semantic_adapter_registry",
+          create_default_semantic_adapter_registry(),
+          envir = private$.envir
+        )
+      }
       if (!is.null(agent) && inherits(agent, "Agent") && inherits(agent$skill_registry, "SkillRegistry")) {
         assign(".skill_registry", agent$skill_registry, envir = private$.envir)
       }
@@ -117,6 +124,7 @@ ChatSession <- R6::R6Class(
             },
             tools = private$.tools,
             max_steps = private$.max_steps,
+            session = self,
             hooks = private$.hooks,
             registry = private$.registry
           ),

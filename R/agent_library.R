@@ -300,42 +300,7 @@ create_coder_agent <- function(name = "CoderAgent",
       }
 
       obj <- get(var_name, envir = env, inherits = TRUE)
-      lines <- c(paste0("Variable: ", var_name))
-      lines <- c(lines, paste0("Type: ", paste(class(obj), collapse = ", ")))
-      lines <- c(lines, paste0("Size: ", format(utils::object.size(obj), units = "auto")))
-
-      lines <- c(lines, "")
-
-      if (is.data.frame(obj)) {
-        lines <- c(lines, paste0("Dimensions: ", nrow(obj), " rows x ", ncol(obj), " columns"))
-        lines <- c(lines, "")
-        lines <- c(lines, "Column info:")
-        for (col in names(obj)) {
-          col_class <- class(obj[[col]])[1]
-          n_na <- sum(is.na(obj[[col]]))
-          lines <- c(lines, sprintf("  - %s (%s, %d NA)", col, col_class, n_na))
-        }
-        lines <- c(lines, "")
-        lines <- c(lines, paste0("First ", min(head_rows, nrow(obj)), " rows:"))
-        head_str <- utils::capture.output(print(utils::head(obj, head_rows)))
-        lines <- c(lines, head_str)
-      } else if (is.vector(obj) && !is.list(obj)) {
-        lines <- c(lines, paste0("Length: ", length(obj)))
-        if (is.numeric(obj)) {
-          lines <- c(lines, sprintf("Range: [%.4g, %.4g]", min(obj, na.rm = TRUE), max(obj, na.rm = TRUE)))
-          lines <- c(lines, sprintf("Mean: %.4g, SD: %.4g", mean(obj, na.rm = TRUE), stats::sd(obj, na.rm = TRUE)))
-        }
-        lines <- c(lines, paste0("NA count: ", sum(is.na(obj))))
-        lines <- c(lines, "")
-        lines <- c(lines, "Preview:")
-        lines <- c(lines, paste(utils::head(obj, 10), collapse = ", "))
-      } else {
-        lines <- c(lines, "Structure:")
-        str_output <- utils::capture.output(utils::str(obj, max.level = 3, list.len = 10))
-        lines <- c(lines, str_output)
-      }
-
-      paste(lines, collapse = "\n")
+      semantic_render_inspection(obj, name = var_name, envir = env, head_rows = head_rows)
     }
   )
 

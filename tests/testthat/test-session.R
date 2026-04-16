@@ -12,6 +12,24 @@ test_that("ChatSession initializes correctly", {
   expect_s3_class(session, "ChatSession")
   expect_equal(session$get_model_id(), openai_model_id)
   expect_equal(length(session$get_history()), 0)
+  expect_true(exists(".semantic_adapter_registry", envir = session$get_envir(), inherits = FALSE))
+  expect_s3_class(get(".semantic_adapter_registry", envir = session$get_envir()), "SemanticAdapterRegistry")
+})
+
+test_that("register_semantic_adapter adds adapters to the session registry", {
+  session <- ChatSession$new(model = openai_model_id)
+
+  adapter <- create_semantic_adapter(
+    name = "dummy-adapter",
+    supports = function(obj) inherits(obj, "dummy_semantic_class"),
+    capabilities = "identity",
+    render_summary = function(obj, name = NULL) "dummy"
+  )
+
+  register_semantic_adapter(adapter, session = session)
+  registry <- get_semantic_adapter_registry(session = session)
+
+  expect_true("dummy-adapter" %in% registry$list_adapters())
 })
 
 test_that("create_chat_session factory works", {

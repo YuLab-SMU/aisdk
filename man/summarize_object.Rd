@@ -4,7 +4,7 @@
 \alias{summarize_object}
 \title{Summarize Object}
 \usage{
-summarize_object(obj, name)
+summarize_object(obj, name, envir = NULL)
 }
 \arguments{
 \item{obj}{The object to summarize.}

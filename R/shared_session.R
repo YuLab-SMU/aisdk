@@ -51,7 +51,9 @@ SharedSession <- R6::R6Class(
       private$.trace_enabled <- trace_enabled
       private$.execution_trace <- list()
       private$.delegation_stack <- list()
-      private$.variable_scopes <- list(global = new.env(parent = baseenv()))
+      # Reuse ChatSession's canonical shared environment as the global scope.
+      # Additional scopes may layer on top, but live session state has one truth source.
+      private$.variable_scopes <- list(global = self$get_envir())
 
       private$.access_control <- list()
       private$.execution_context <- list(

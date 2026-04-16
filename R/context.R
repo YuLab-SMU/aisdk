@@ -29,7 +29,7 @@ get_r_context <- function(vars, envir = parent.frame()) {
     }
     
     obj <- get(var, envir = envir)
-    summary_text <- summarize_object(obj, name = var)
+    summary_text <- summarize_object(obj, name = var, envir = envir)
     paste0("### Variable: `", var, "`\n\n", summary_text, "\n")
   })
   
@@ -44,7 +44,12 @@ get_r_context <- function(vars, envir = parent.frame()) {
 #' @param name The name of the object (for display).
 #' @return A string summary suitable for LLM context.
 #' @keywords internal
-summarize_object <- function(obj, name) {
+summarize_object <- function(obj, name, envir = NULL) {
+  semantic_render_summary(obj, name = name, envir = envir)
+}
+
+#' @keywords internal
+summarize_object_legacy <- function(obj, name) {
   # Handle NULL
   if (is.null(obj)) {
     return("Value: NULL")

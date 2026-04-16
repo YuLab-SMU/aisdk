@@ -5,6 +5,9 @@ load_knitr_engine_test_env <- function() {
 
   files <- c(
     "utils_env.R",
+    "spec_model.R",
+    "model_defaults.R",
+    "semantic_adapter.R",
     "context.R",
     "session.R",
     "ai_review_contract.R",
@@ -79,6 +82,160 @@ test_that("summarize_object handles functions", {
   result <- summarize_object(my_func, "my_func")
   expect_match(result, "Function")
   expect_match(result, "x, y")
+})
+
+test_that("get_r_context can use a custom semantic adapter registry from the environment", {
+  custom_env <- new.env(parent = environment())
+  custom_obj <- structure(list(value = 1), class = "custom_semantic_class")
+  assign("custom_obj", custom_obj, envir = custom_env)
+
+  registry <- create_semantic_adapter_registry()
+  registry$register(
+    create_semantic_adapter(
+      name = "custom-test",
+      priority = 100,
+      supports = function(obj) inherits(obj, "custom_semantic_class"),
+      capabilities = c("identity", "schema"),
+      render_summary = function(obj, name = NULL) {
+        paste0("Custom adapter summary for ", name %||% "<unnamed>")
+      }
+    )
+  )
+  assign(".semantic_adapter_registry", registry, envir = custom_env)
+
+  ctx <- get_r_context("custom_obj", envir = custom_env)
+  expect_match(ctx, "Custom adapter summary for custom_obj", fixed = TRUE)
+})
+
+test_that("describe_semantic_object returns structured payload from a custom adapter", {
+  custom_env <- new.env(parent = environment())
+  custom_obj <- structure(list(value = 1), class = "custom_semantic_payload")
+
+  registry <- create_semantic_adapter_registry()
+  registry$register(
+    create_semantic_adapter(
+      name = "custom-payload",
+      priority = 100,
+      supports = function(obj) inherits(obj, "custom_semantic_payload"),
+      capabilities = c("identity", "schema", "semantics"),
+      describe_identity = function(obj) list(class = class(obj), primary_class = "custom_semantic_payload"),
+      describe_schema = function(obj) list(kind = "custom", fields = "value"),
+      describe_semantics = function(obj) list(summary = "Custom semantic payload object"),
+      list_accessors = function(obj) c("value")
+    )
+  )
+
+  payload <- describe_semantic_object(custom_obj, name = "custom_obj", registry = registry)
+  expect_equal(payload$adapter, "custom-payload")
+  expect_true("identity" %in% names(payload))
+  expect_equal(payload$identity$primary_class, "custom_semantic_payload")
+  expect_equal(payload$schema$kind, "custom")
+  expect_match(payload$semantics$summary, "Custom semantic payload object", fixed = TRUE)
+  expect_true("value" %in% payload$accessors)
+})
+
+test_that("workflow hints can be registered and resolved through the semantic registry", {
+  custom_obj <- structure(list(value = 1), class = "custom_workflow_semantic")
+  registry <- create_semantic_adapter_registry()
+
+  register_semantic_workflow_hint(
+    name = "custom-workflow",
+    supports = function(obj) inherits(obj, "custom_workflow_semantic"),
+    hint_fn = function(obj, goal = NULL) {
+      list(
+        workflow = "custom",
+        goal = goal,
+        steps = c("inspect", "summarize", "report")
+      )
+    },
+    registry = registry
+  )
+
+  hint <- get_semantic_workflow_hint(custom_obj, goal = "draft report", registry = registry)
+  expect_equal(hint$workflow, "custom")
+  expect_equal(hint$goal, "draft report")
+  expect_equal(hint$steps, c("inspect", "summarize", "report"))
+})
+
+test_that("default registry does not hard-wire domain-specific workflow hints", {
+  registry <- create_default_semantic_adapter_registry()
+
+  se_hint <- registry$resolve_workflow_hint(
+    structure(list(), class = "SummarizedExperiment"),
+    goal = "analyze counts"
+  )
+  expect_null(se_hint)
+
+  sce_hint <- registry$resolve_workflow_hint(
+    structure(list(), class = "SingleCellExperiment"),
+    goal = "annotate clusters"
+  )
+  expect_null(sce_hint)
+
+  gr_hint <- registry$resolve_workflow_hint(
+    structure(list(), class = "GRanges"),
+    goal = "annotate peaks"
+  )
+  expect_null(gr_hint)
+})
+
+test_that("get_r_context uses the generic S4 semantic adapter for S4 objects", {
+  class_name <- "AisdkSemanticS4Example"
+  if (!methods::isClass(class_name)) {
+    methods::setClass(class_name, slots = c(alpha = "numeric", beta = "character"))
+  }
+
+  s4_env <- new.env(parent = environment())
+  s4_obj <- methods::new(class_name, alpha = 1, beta = "x")
+  assign("s4_obj", s4_obj, envir = s4_env)
+
+  ctx <- get_r_context("s4_obj", envir = s4_env)
+  expect_match(ctx, "S4 Object", fixed = TRUE)
+  expect_match(ctx, "alpha", fixed = TRUE)
+  expect_match(ctx, "beta", fixed = TRUE)
+})
+
+test_that("default registry can be extended through explicit registrars", {
+  extension_obj <- structure(list(value = 1), class = "extension_semantic_class")
+
+  extension_registrar <- function(registry, include_workflow_hints = TRUE) {
+    registry$register(
+      create_semantic_adapter(
+        name = "extension-adapter",
+        priority = 200,
+        supports = function(obj) inherits(obj, "extension_semantic_class"),
+        capabilities = c("identity", "schema", "semantics"),
+        describe_identity = function(obj) list(primary_class = "extension_semantic_class"),
+        describe_schema = function(obj) list(kind = "extension", fields = "value"),
+        describe_semantics = function(obj) list(summary = "Extension-backed semantic object")
+      )
+    )
+
+    if (isTRUE(include_workflow_hints)) {
+      registry$register_workflow_hint(
+        name = "extension-default",
+        supports = function(obj) inherits(obj, "extension_semantic_class"),
+        priority = 100,
+        hint_fn = function(obj, goal = NULL) {
+          list(workflow = "extension_default", goal = goal, steps = c("inspect", "summarize", "report"))
+        }
+      )
+    }
+
+    registry
+  }
+
+  registry <- create_default_semantic_adapter_registry(
+    extension_registrars = list(extension_registrar)
+  )
+
+  payload <- describe_semantic_object(extension_obj, registry = registry)
+  expect_equal(payload$adapter, "extension-adapter")
+  expect_equal(payload$schema$kind, "extension")
+
+  hint <- get_semantic_workflow_hint(extension_obj, goal = "write report", registry = registry)
+  expect_equal(hint$workflow, "extension_default")
+  expect_equal(hint$goal, "write report")
 })
 
 # ============================================================================

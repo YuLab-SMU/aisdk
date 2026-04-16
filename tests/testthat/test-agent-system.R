@@ -38,6 +38,18 @@ test_that("SharedSession variable scoping works", {
   expect_equal(session$get_var("nonexistent", default = 99), 99)
 })
 
+test_that("SharedSession global scope is the canonical session environment", {
+  session <- SharedSession$new()
+  env <- session$get_envir()
+
+  session$set_var("from_scope", 10, scope = "global")
+  expect_true(exists("from_scope", envir = env, inherits = FALSE))
+  expect_equal(env$from_scope, 10)
+
+  assign("from_env", 20, envir = env)
+  expect_equal(session$get_var("from_env", scope = "global"), 20)
+})
+
 test_that("SharedSession code execution works", {
   session <- SharedSession$new(sandbox_mode = "permissive")
 
