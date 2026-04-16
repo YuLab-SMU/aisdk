@@ -33,6 +33,17 @@ You can install the development version of aisdk from [GitHub](https://github.co
 devtools::install_github("YuLab-SMU/aisdk")
 ```
 
+## Extension Packages
+
+`aisdk` now focuses on the runtime/core package surface. Domain and benchmark
+layers are being split into sibling extension packages:
+
+- `aisdk.bioc`: Bioconductor semantic adapters and workflow hints
+- `aisdk.bench`: semantic planning/task benchmarks and frozen benchmark artifacts
+
+If you need the old Bioconductor semantic layer or benchmark helpers, install
+the corresponding extension package in addition to `aisdk`.
+
 ## Quick Start
 
 ### Basic Text Generation

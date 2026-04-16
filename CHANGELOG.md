@@ -21,6 +21,9 @@
 - Improved console-agent prompt guidance so image tasks are handled as native autonomous agent capabilities.
 - Improved `list_directory` output for empty directories to keep console tool output stable.
 - Updated Feishu setup messaging and documentation bindings for package-check consistency.
+- Split Bioconductor semantic adapters into the new `aisdk.bioc` extension package.
+- Split semantic benchmark and agent benchmark surfaces into the new `aisdk.bench` extension package.
+- Changed the default semantic adapter registry so domain-specific adapters are loaded through explicit extension registrars instead of being hard-wired into `aisdk` core.
 
 ### Fixed
 - Fixed OpenAI Responses multimodal payload translation for image input.
