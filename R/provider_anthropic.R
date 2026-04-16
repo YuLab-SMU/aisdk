@@ -17,9 +17,11 @@ AnthropicLanguageModel <- R6::R6Class(
     get_headers = function() {
       h <- list(
         `Content-Type` = "application/json",
-        `x-api-key` = private$config$api_key,
         `anthropic-version` = private$config$api_version
       )
+      if (nzchar(private$config$api_key %||% "")) {
+        h$`x-api-key` <- private$config$api_key
+      }
 
       # Merge custom headers first so we can check if they override defaults
       if (!is.null(private$config$headers)) {

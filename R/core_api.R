@@ -4,6 +4,80 @@
 #' @name core_api
 NULL
 
+#' @keywords internal
+parse_tool_call_blocks <- function(text) {
+  if (is.null(text) || !nzchar(text)) {
+    return(list(tool_calls = NULL, text = text))
+  }
+
+  matches <- gregexpr("(?s)<tool_call>\\s*.*?\\s*</tool_call>", text, perl = TRUE)[[1]]
+  if (length(matches) == 1L && identical(matches[[1]], -1L)) {
+    return(list(tool_calls = NULL, text = text))
+  }
+
+  blocks <- regmatches(text, list(matches))[[1]]
+  tool_calls <- list()
+
+  for (i in seq_along(blocks)) {
+    inner <- sub("(?s)^\\s*<tool_call>\\s*", "", blocks[[i]], perl = TRUE)
+    inner <- sub("(?s)\\s*</tool_call>\\s*$", "", inner, perl = TRUE)
+    inner <- trimws(inner)
+    if (!nzchar(inner)) {
+      next
+    }
+
+    parsed <- tryCatch(
+      jsonlite::fromJSON(inner, simplifyVector = FALSE),
+      error = function(e) {
+        repaired <- repair_json_string(inner)
+        tryCatch(
+          jsonlite::fromJSON(repaired, simplifyVector = FALSE),
+          error = function(e2) NULL
+        )
+      }
+    )
+
+    if (is.null(parsed) || !is.list(parsed) || !nzchar(parsed$name %||% "")) {
+      next
+    }
+
+    tool_calls[[length(tool_calls) + 1L]] <- list(
+      id = parsed$id %||% sprintf("text_tool_call_%02d", i),
+      name = parsed$name,
+      arguments = parse_tool_arguments(parsed$arguments %||% list(), tool_name = parsed$name)
+    )
+  }
+
+  if (length(tool_calls) == 0) {
+    return(list(tool_calls = NULL, text = text))
+  }
+
+  cleaned_text <- text
+  regmatches(cleaned_text, list(matches)) <- list(rep("", length(blocks)))
+  cleaned_text <- trimws(cleaned_text)
+
+  list(tool_calls = tool_calls, text = cleaned_text)
+}
+
+#' @keywords internal
+recover_text_tool_calls <- function(result) {
+  if (!is.null(result$tool_calls) && length(result$tool_calls) > 0) {
+    return(result)
+  }
+
+  parsed <- parse_tool_call_blocks(result$text %||% "")
+  if (is.null(parsed$tool_calls) || length(parsed$tool_calls) == 0) {
+    return(result)
+  }
+
+  result$tool_calls <- parsed$tool_calls
+  result$text <- parsed$text
+  if (is.null(result$finish_reason) || !nzchar(result$finish_reason %||% "")) {
+    result$finish_reason <- "tool_calls"
+  }
+  result
+}
+
 #' @title Generate Text
 #' @description
 #' Generate text using a language model. This is the primary high-level function
@@ -148,6 +222,7 @@ generate_text <- function(model = NULL,
 
         # Call the model
         result <- model$do_generate(params)
+        result <- recover_text_tool_calls(result)
 
         if (isTRUE(getOption("aisdk.debug", FALSE))) {
           message("[DEBUG] generate_text step ", step, " | finish_reason: ", result$finish_reason)
@@ -450,6 +525,7 @@ stream_text <- function(model = NULL,
           }
           if (!is.null(callback)) callback(chunk, done)
         })
+        result <- recover_text_tool_calls(result)
 
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {

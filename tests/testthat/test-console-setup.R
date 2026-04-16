@@ -417,3 +417,65 @@ test_that("prompt_console_provider_profile supports custom API setup", {
   expect_equal(remembered$model_id, "custom:proxy-model")
   expect_equal(remembered$path, "project-custom.Rprofile")
 })
+
+test_that("prompt_console_provider_profile supports custom API setup without API key", {
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+
+  menu_answers <- c(
+    10L, # provider: Custom API
+    1L,  # api format: OpenAI Chat Completions
+    1L,  # select first fetched/static model
+    1L   # save to project
+  )
+  input_answers <- list(
+    "http://172.16.153.230:8010/v1",
+    NULL
+  )
+  saved <- list()
+  remembered <- list()
+
+  hooks <- list(
+    menu = function(title, choices) {
+      answer <- menu_answers[[1]]
+      menu_answers <<- menu_answers[-1]
+      answer
+    },
+    input = function(prompt, default = NULL) {
+      answer <- input_answers[[1]]
+      input_answers <<- input_answers[-1]
+      answer %||% default
+    },
+    model_choices = function(provider, api_key = NULL, base_url = NULL) {
+      expect_equal(provider, "openai")
+      expect_equal(api_key, "")
+      expect_equal(base_url, "http://172.16.153.230:8010/v1")
+      c("qwen3-8b-dflash")
+    },
+    save = function(updates, path) {
+      saved <<- list(updates = updates, path = path)
+      TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
+    }
+  )
+
+  model_id <- aisdk:::prompt_console_provider_profile(
+    project_path = project_path,
+    global_path = global_path,
+    project_rprofile_path = "project-custom-no-key.Rprofile",
+    global_rprofile_path = "global-custom-no-key.Rprofile",
+    prompt_hooks = hooks
+  )
+
+  expect_equal(model_id, "custom:qwen3-8b-dflash")
+  expect_equal(saved$path, project_path)
+  expect_equal(saved$updates$AISDK_CUSTOM_API_KEY, "")
+  expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "http://172.16.153.230:8010/v1")
+  expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "qwen3-8b-dflash")
+  expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
+  expect_equal(remembered$model_id, "custom:qwen3-8b-dflash")
+  expect_equal(remembered$path, "project-custom-no-key.Rprofile")
+})

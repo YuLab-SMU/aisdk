@@ -99,6 +99,7 @@ console_provider_specs <- function() {
       model_env = "AISDK_CUSTOM_MODEL",
       api_format_env = "AISDK_CUSTOM_API_FORMAT",
       use_max_completion_tokens_env = "AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS",
+      allow_empty_api_key = TRUE,
       default_base_url = "",
       default_model = "",
       default_api_format = "chat_completions"
@@ -535,10 +536,15 @@ choose_console_api_format <- function(spec, menu_fn, existing_api_format = NULL)
 #' @keywords internal
 choose_console_api_key <- function(spec, menu_fn, input_fn, existing_api_key = NULL) {
   existing_api_key <- existing_api_key %||% ""
+  key_prompt <- sprintf(
+    "%s API key%s",
+    spec$label,
+    if (isTRUE(spec$allow_empty_api_key)) " (optional)" else ""
+  )
 
   if (nzchar(existing_api_key)) {
     selection <- menu_fn(
-      sprintf("%s API key", spec$label),
+      key_prompt,
       c("Keep saved key", "Enter new key")
     )
     if (is.null(selection)) {
@@ -549,8 +555,11 @@ choose_console_api_key <- function(spec, menu_fn, input_fn, existing_api_key = N
     }
   }
 
-  api_key <- input_fn(sprintf("%s API key", spec$label))
+  api_key <- input_fn(key_prompt)
   if (is.null(api_key) || !nzchar(api_key)) {
+    if (isTRUE(spec$allow_empty_api_key)) {
+      return("")
+    }
     return(NULL)
   }
   api_key

@@ -15,10 +15,10 @@ OpenAILanguageModel <- R6::R6Class(
   private = list(
     config = NULL,
     get_headers = function() {
-      h <- list(
-        `Content-Type` = "application/json",
-        Authorization = paste("Bearer", private$config$api_key)
-      )
+      h <- list(`Content-Type` = "application/json")
+      if (nzchar(private$config$api_key %||% "")) {
+        h$Authorization <- paste("Bearer", private$config$api_key)
+      }
       if (!is.null(private$config$organization)) {
         h$`OpenAI-Organization` <- private$config$organization
       }
@@ -332,10 +332,10 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     config = NULL,
     last_response_id = NULL,
     get_headers = function() {
-      h <- list(
-        `Content-Type` = "application/json",
-        Authorization = paste("Bearer", private$config$api_key)
-      )
+      h <- list(`Content-Type` = "application/json")
+      if (nzchar(private$config$api_key %||% "")) {
+        h$Authorization <- paste("Bearer", private$config$api_key)
+      }
       if (!is.null(private$config$organization)) {
         h$`OpenAI-Organization` <- private$config$organization
       }
@@ -1052,9 +1052,10 @@ OpenAIImageModel <- R6::R6Class(
   private = list(
     config = NULL,
     get_headers = function(include_content_type = TRUE) {
-      h <- list(
-        Authorization = paste("Bearer", private$config$api_key)
-      )
+      h <- list()
+      if (nzchar(private$config$api_key %||% "")) {
+        h$Authorization <- paste("Bearer", private$config$api_key)
+      }
       if (include_content_type) {
         h$`Content-Type` <- "application/json"
       }

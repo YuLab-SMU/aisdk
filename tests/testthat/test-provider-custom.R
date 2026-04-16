@@ -68,8 +68,8 @@ test_that("Custom provider injects capabilities correctly", {
 })
 
 test_that("Custom provider overrides endpoint correctly", {
-    p <- create_custom_provider(
-        "test_endpoint",
+  p <- create_custom_provider(
+    "test_endpoint",
         "https://api.custom-endpoint.com/v1",
         api_key = "test-key"
     )
@@ -86,6 +86,49 @@ test_that("Custom provider overrides endpoint correctly", {
 
     expect_equal(payload$url, "https://api.custom-endpoint.com/v1/chat/completions")
     expect_equal(payload$headers[["Authorization"]], "Bearer test-key")
+})
+
+test_that("Custom provider omits auth headers when API key is blank", {
+    openai_provider <- create_custom_provider(
+        "no_key_openai",
+        "https://api.custom-endpoint.com/v1",
+        api_key = "",
+        api_format = "chat_completions"
+    )
+    openai_model <- openai_provider$language_model("test-model")
+    openai_payload <- openai_model$build_payload(list(
+        messages = list(list(role = "user", content = "test"))
+    ))
+
+    expect_null(openai_payload$headers[["Authorization"]])
+
+    anthropic_provider <- create_custom_provider(
+        "no_key_anthropic",
+        "https://api.custom-endpoint.com/v1",
+        api_key = "",
+        api_format = "anthropic_messages"
+    )
+    anthropic_model <- anthropic_provider$language_model("test-model")
+    captured_headers <- NULL
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_headers <<- headers
+            list(
+                content = list(list(type = "text", text = "ok")),
+                stop_reason = "end_turn",
+                usage = list(input_tokens = 1, output_tokens = 1)
+            )
+        }
+    )
+
+    anthropic_model$do_generate(list(
+        messages = list(list(role = "user", content = "test")),
+        max_tokens = 16
+    ))
+
+    expect_false("x-api-key" %in% names(captured_headers))
+    expect_equal(captured_headers[["Content-Type"]], "application/json")
 })
 
 test_that("Custom provider integrates with Registry", {

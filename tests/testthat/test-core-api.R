@@ -42,6 +42,43 @@ test_that("generate_text accepts a string model identifier", {
   )
 })
 
+test_that("generate_text recovers tool calls embedded in assistant text", {
+  tool_invocations <- list()
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) {
+      tool_invocations[[length(tool_invocations) + 1L]] <<- args$message
+      paste("Echo:", args$message)
+    }
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$add_response(
+    text = paste0(
+      "<tool_call>\n",
+      "{\"name\":\"echo\",\"arguments\":{\"message\":\"hello from text\"}}\n",
+      "</tool_call>"
+    ),
+    tool_calls = NULL
+  )
+  mock_model$add_response(text = "Tool execution worked.")
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Say hello",
+    tools = list(echo_tool),
+    max_steps = 3
+  )
+
+  expect_equal(result$text, "Tool execution worked.")
+  expect_equal(tool_invocations, list("hello from text"))
+  expect_length(result$all_tool_calls, 1)
+  expect_equal(result$all_tool_calls[[1]]$name, "echo")
+  expect_equal(result$all_tool_calls[[1]]$arguments$message, "hello from text")
+})
+
 # === Tests for ProviderRegistry ===
 
 test_that("ProviderRegistry registers and retrieves providers", {
