@@ -61,4 +61,24 @@ Build a semantic adapter that can describe and inspect domain-specific R objects
 Adapters are registered into a semantic adapter registry and selected by
 \code{supports(obj)} predicates at runtime.
 }
-\keyword{internal}
+\details{
+This constructor is part of the public semantic adapter authoring API for
+extension packages.
+
+Adapter callbacks are optional unless noted otherwise.
+
+\code{supports(obj)} should return a single \code{TRUE} or \code{FALSE} value and must not
+error for unsupported objects.
+
+The structured callbacks \code{describe_identity()}, \code{describe_schema()},
+\code{describe_semantics()}, \code{estimate_cost()}, and \code{provenance()} should return
+named lists when supplied.
+
+\code{list_accessors()} should return a character vector of recommended accessors.
+
+\code{validate_action()} should return a named list with fields such as \code{status},
+\code{reason}, \code{category}, and \code{expensive}.
+
+\code{render_summary()} and \code{render_inspection()} should return single character
+strings suitable for user-facing output.
+}

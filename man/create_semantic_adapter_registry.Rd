@@ -16,4 +16,12 @@ A \code{SemanticAdapterRegistry} object.
 Create a registry for semantic adapters. The registry resolves the highest
 priority adapter whose \code{supports(obj)} predicate matches an object.
 }
-\keyword{internal}
+\details{
+This constructor is part of the public semantic adapter authoring API for
+extension packages.
+
+The returned registry exposes \code{register()}, \code{unregister()},
+\code{get_adapter()}, \code{list_adapters()}, \code{register_workflow_hint()},
+\code{list_workflow_hints()}, \code{resolve_workflow_hint()}, and \code{resolve()}
+methods.
+}

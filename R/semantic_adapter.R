@@ -10,6 +10,9 @@ NULL
 #' Adapters are registered into a semantic adapter registry and selected by
 #' `supports(obj)` predicates at runtime.
 #'
+#' This constructor is part of the public semantic adapter authoring API for
+#' extension packages.
+#'
 #' @param name Adapter name.
 #' @param supports Function that returns `TRUE` when the adapter supports `obj`.
 #' @param capabilities Character vector of supported capabilities.
@@ -25,9 +28,25 @@ NULL
 #' @param validate_action Optional function for safety validation.
 #' @param render_summary Optional function returning a human-readable summary.
 #' @param render_inspection Optional function returning a human-readable inspection.
+#' @details
+#' Adapter callbacks are optional unless noted otherwise.
+#'
+#' `supports(obj)` should return a single `TRUE` or `FALSE` value and must not
+#' error for unsupported objects.
+#'
+#' The structured callbacks `describe_identity()`, `describe_schema()`,
+#' `describe_semantics()`, `estimate_cost()`, and `provenance()` should return
+#' named lists when supplied.
+#'
+#' `list_accessors()` should return a character vector of recommended accessors.
+#'
+#' `validate_action()` should return a named list with fields such as `status`,
+#' `reason`, `category`, and `expensive`.
+#'
+#' `render_summary()` and `render_inspection()` should return single character
+#' strings suitable for user-facing output.
 #' @return A `SemanticAdapter` object.
 #' @export
-#' @keywords internal
 create_semantic_adapter <- function(name,
                                     supports,
                                     capabilities = character(0),
@@ -77,10 +96,16 @@ create_semantic_adapter <- function(name,
 #' Create a registry for semantic adapters. The registry resolves the highest
 #' priority adapter whose `supports(obj)` predicate matches an object.
 #'
+#' This constructor is part of the public semantic adapter authoring API for
+#' extension packages.
+#'
 #' @param adapters Optional list of adapters to register on creation.
+#' @details The returned registry exposes `register()`, `unregister()`,
+#'   `get_adapter()`, `list_adapters()`, `register_workflow_hint()`,
+#'   `list_workflow_hints()`, `resolve_workflow_hint()`, and `resolve()`
+#'   methods.
 #' @return A `SemanticAdapterRegistry` object.
 #' @export
-#' @keywords internal
 create_semantic_adapter_registry <- function(adapters = list()) {
   state <- new.env(parent = emptyenv())
   state$adapters <- list()
@@ -343,7 +368,21 @@ apply_semantic_extension_registrars <- function(registry,
   registry
 }
 
-#' @keywords internal
+#' Create the Default Semantic Adapter Registry
+#'
+#' Build the package default semantic adapter registry used for semantic object
+#' inspection. The default registry includes built-in generic adapters and can
+#' optionally apply extension registrars.
+#'
+#' This function is safe for extension packages that want the standard `aisdk`
+#' registry baseline before registering additional adapters.
+#'
+#' @param include_workflow_hints Logical; whether extension registrars should
+#'   register workflow hints.
+#' @param extension_registrars Optional list of registrar functions. Each
+#'   registrar is called with `registry` and `include_workflow_hints`.
+#' @return A `SemanticAdapterRegistry` object.
+#' @export
 create_default_semantic_adapter_registry <- function(include_workflow_hints = TRUE,
                                                      extension_registrars = NULL) {
   registry <- create_semantic_adapter_registry(
@@ -360,7 +399,18 @@ create_default_semantic_adapter_registry <- function(include_workflow_hints = TR
   )
 }
 
-#' @keywords internal
+#' Get or Create a Semantic Adapter Registry
+#'
+#' Resolve the semantic adapter registry from an environment, or create and
+#' cache a default registry when one is not already present.
+#'
+#' This helper is safe for extension packages that need to share the active
+#' semantic registry through a session or custom environment.
+#'
+#' @param envir Optional environment that stores `.semantic_adapter_registry`.
+#'   When `NULL`, a new default registry is created and returned without caching.
+#' @return A `SemanticAdapterRegistry` object.
+#' @export
 get_or_create_semantic_adapter_registry <- function(envir = NULL) {
   target_envir <- envir
 
@@ -645,12 +695,32 @@ create_s4_semantic_adapter <- function() {
   )
 }
 
-#' @keywords internal
+#' Check Whether an Object Belongs to a Semantic Class
+#'
+#' Test class membership using S3 `inherits()` and S4 `methods::is()` fallback.
+#' This helper is intended for robust adapter `supports()` predicates.
+#'
+#' @param obj Object to test.
+#' @param class_name Class name to check.
+#' @return `TRUE` if `obj` matches `class_name`; otherwise `FALSE`.
+#' @export
 is_semantic_class <- function(obj, class_name) {
   inherits(obj, class_name) || tryCatch(methods::is(obj, class_name), error = function(e) FALSE)
 }
 
-#' @keywords internal
+#' Call an Object Accessor by Candidate Function Names
+#'
+#' Try accessor functions in order and return the first successful result.
+#' Useful for extension authors who need compatibility across optional
+#' dependency APIs.
+#'
+#' @param obj Object passed as the first argument to the accessor.
+#' @param fun_names Character vector of accessor function names to try.
+#' @param default Value returned when no accessor can be called successfully.
+#' @param package Optional package name to resolve accessors from first.
+#' @param args Optional named list of additional arguments passed to accessor.
+#' @return The accessor result or `default`.
+#' @export
 call_object_accessor <- function(obj, fun_names, default = NULL, package = NULL, args = list()) {
   fun_names <- fun_names %||% character(0)
   for (fun_name in fun_names) {
@@ -682,7 +752,15 @@ safe_rownames <- function(x) {
   tryCatch(rownames(x), error = function(e) NULL)
 }
 
-#' @keywords internal
+#' Render a Compact Preview String
+#'
+#' Convert common vector-like and tabular objects into a short text preview for
+#' summaries and inspection output.
+#'
+#' @param x Object to preview.
+#' @param max_items Maximum number of items or rows to include.
+#' @return A character string preview or `NULL` when no preview is available.
+#' @export
 as_preview_text <- function(x, max_items = 5) {
   if (is.null(x)) {
     return(NULL)
