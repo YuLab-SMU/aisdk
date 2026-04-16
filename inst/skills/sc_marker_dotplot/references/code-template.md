@@ -59,6 +59,9 @@ fac_levs <- c(
 )
 cells_sub$plot_group <- factor(cells_sub$newCellTypes, levels = rev(fac_levs))
 
+# If your current labels are anonymous integers, replace them with biologically
+# meaningful subtype names before plotting.
+
 # 4. Curated marker order
 top_repre_markers <- c(
   "KRT15", "KRT31", "COL17A1", "ASS1", "POSTN",
@@ -71,15 +74,22 @@ plot_marker <- DotPlot(
   cells_sub,
   features = top_repre_markers,
   group.by = "plot_group",
-  cols = c("white", "#cb181d"),
+  cols = c("#f2f2f2", "#cb181d"),
   dot.scale = 5,
   col.min = 0,
   dot.min = 0.1
 ) +
   labs(x = "", y = "") +
+  theme_bw() +
   theme(
-    axis.text.x = element_text(angle = 90, hjust = 1),
-    panel.border = element_rect(colour = "black", fill = NA)
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    axis.text.y = element_text(colour = "black"),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.6),
+    panel.grid.major = element_line(colour = "#e6e6e6", linewidth = 0.25),
+    panel.grid.minor = element_blank(),
+    legend.position = "right",
+    legend.box.margin = margin(l = 6, unit = "pt"),
+    plot.margin = margin(t = 34, r = 18, b = 6, l = 6, unit = "pt")
   )
 
 # 6. Group boundary positions for the top annotation strip
@@ -87,25 +97,23 @@ xPosition <- list(
   c(1, 6, 11),
   c(5, 10, 15)
 )
-yPosition <- 9
 pCol <- c("#7f7db6", "#9d9ac4", "#d2eac8")
 
 xmin <- xPosition[[1]] - 0.6
 xmax <- xPosition[[2]] + 0.2
-ymin <- yPosition - 0.1
-ymax <- yPosition + 0.4
+ymin <- length(fac_levs) + 0.62
+ymax <- length(fac_levs) + 0.84
 
 object <- plot_marker
-nPoints <- length(xmin)
 
-for (i in seq_len(nPoints)) {
+for (i in seq_along(xmin)) {
   object <- object +
     annotation_custom(
       grob = rectGrob(
         gp = gpar(
           col = "black",
           fill = pCol[i],
-          lwd = 1.3,
+          lwd = 0.9,
           lty = "solid",
           lineend = "square",
           alpha = 1
@@ -115,12 +123,17 @@ for (i in seq_len(nPoints)) {
       xmax = xmax[i],
       ymin = ymin,
       ymax = ymax
-    ) +
-    coord_cartesian(ylim = c(1, length(fac_levs)), clip = "off")
+    )
 }
 
 final_plot <- object +
-  theme(plot.margin = margin(t = 30, unit = "pt"))
+  coord_cartesian(
+    ylim = c(0.5, length(fac_levs) + 0.5),
+    clip = "off"
+  ) +
+  theme(
+    plot.margin = margin(t = 34, r = 18, b = 6, l = 6, unit = "pt")
+  )
 
 final_plot
 
@@ -143,4 +156,14 @@ save_fixed_plot(
 6. `panel_w` / `panel_h` in `save_fixed_plot()`
 
 The annotation positions must be updated whenever the marker grouping changes.
+The top annotation strip is intentionally anchored to the same x coordinate system as the bubbles.
 The fixed-export helper is most useful when you want the core plotting area to stay constant even if the legend, title, or number of facets changes.
+
+## Quick QA Checklist
+
+- The annotation strip sits above the panel, not on top of the first row.
+- The legend has visible breathing room on the right.
+- X labels are readable without turning your head.
+- Light-expression dots are still detectable.
+- Gridlines help alignment but do not dominate the marks.
+- Y labels are interpretable cell-type names, not unexplained numeric ids.

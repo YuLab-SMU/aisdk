@@ -39,7 +39,7 @@ The important idea is:
 2. define marker order explicitly
 3. define cluster order explicitly
 4. render `DotPlot()`
-5. add the top annotation strip with `annotation_custom()` and `grid::rectGrob()`
+5. add the top annotation strip with `annotation_custom()` so it stays locked to the same x coordinates as the gene columns
 6. export with fixed panel dimensions so layout stays stable across legend/facet changes
 7. optionally polish fonts and labels without disturbing the data mapping
 
@@ -120,9 +120,24 @@ plot_marker <- DotPlot(
 
 Prefer restrained defaults. Do not overdecorate the first pass.
 
+Before moving on, check these quality gates:
+- the top row of data is fully visible
+- the legend does not crowd the plotting region
+- x-axis labels are readable at a glance
+- low-expression dots are still visible against the background
+- gridlines do not compete with the bubbles
+- y-axis labels carry biological meaning rather than anonymous integers
+
 ### 5. Add the top annotation strip
 
 This is the distinctive part.
+
+Preferred approach:
+- keep the annotation strip in the same plot object
+- place it above the panel using `annotation_custom()`
+- keep it outside the data region with `clip = "off"` and sufficient top margin
+
+Do not create a second plot panel unless small x-alignment drift is acceptable.
 
 Define start/end x positions for each marker block, plus the colors:
 
@@ -141,37 +156,60 @@ ymin <- yPosition - 0.1
 ymax <- yPosition + 0.4
 ```
 
-Then loop over the rectangles:
+Then add the strip with `annotation_custom()`:
 
 ```r
 object <- plot_marker
-nPoints <- max(length(xmin), length(ymin))
 
-for (i in seq_len(nPoints)) {
+for (i in seq_along(xmin)) {
   object <- object +
-    ggplot2::annotation_custom(
+    annotation_custom(
       grob = grid::rectGrob(
         gp = grid::gpar(
           col = "black",
           fill = pCol[i],
-          lwd = 1.3,
-          lty = "solid",
-          lineend = "square",
-          alpha = 1
+          lwd = 0.9,
+          lty = "solid"
         )
       ),
       xmin = xmin[i],
       xmax = xmax[i],
-      ymin = ymin,
-      ymax = ymax
-    ) +
-    coord_cartesian(ylim = c(1, 8), clip = "off")
+      ymin = length(fac_levs) + 0.62,
+      ymax = length(fac_levs) + 0.84
+    )
 }
 
-object + theme(plot.margin = margin(t = 30, unit = "pt"))
+final_plot <- object +
+  coord_cartesian(
+    ylim = c(0.5, length(fac_levs) + 0.5),
+    clip = "off"
+  ) +
+  theme(plot.margin = margin(t = 34, r = 18, b = 6, l = 6, unit = "pt"))
 ```
 
-The key detail is `clip = "off"` plus top margin, otherwise the annotation strip gets cut off.
+This keeps the strip aligned to the exact same x coordinate system as the bubbles.
+
+If the strip overlaps the first data row, the figure is wrong.
+If the strip is misaligned with the marker columns, the figure is wrong.
+
+## Visual QA Rules
+
+Reject the figure and fix it if any of the following happens:
+
+- the top annotation bar covers any bubble or label
+- the legend feels pushed into the panel or too close to the plot edge
+- x-axis labels are harder to read than they need to be
+- the low end of the color scale is so pale that dots disappear into the background
+- gridlines dominate the bubble marks
+- y-axis labels are only numeric and the biological identity is not explained
+
+Default fixes:
+- keep the annotation strip in the same plot and place it beyond the panel top
+- add right margin when the legend is on the right
+- prefer 45 to 60 degree x-label rotation when the marker count allows it
+- use a higher-contrast low-end color than pure white
+- lighten or simplify gridlines
+- replace cluster indices with subtype labels whenever possible
 
 ### 6. Export with fixed panel size when figure size matters
 
