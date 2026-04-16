@@ -28,3 +28,25 @@ test_that("Telemetry hooks work", {
   expect_equal(log_entry$type, "tool_start")
   expect_equal(log_entry$tool_name, "my_tool")
 })
+
+test_that("Telemetry stores structured tool outcomes in memory", {
+  tel <- create_telemetry(trace_id = "memory-trace", emit = FALSE)
+  hooks <- tel$as_hooks()
+
+  hooks$trigger_tool_start(list(name = "check_design_column"), list(column = "design"))
+  hooks$trigger_tool_end(
+    list(name = "check_design_column"),
+    NULL,
+    success = FALSE,
+    error = "Unknown design column 'design'.",
+    args = list(column = "design")
+  )
+
+  events <- tel$get_events()
+  expect_length(events, 2)
+  expect_equal(events[[1]]$type, "tool_start")
+  expect_equal(events[[2]]$type, "tool_end")
+  expect_false(events[[2]]$success)
+  expect_equal(events[[2]]$error_type, "wrong_accessor")
+  expect_match(events[[2]]$argument_signature, "design")
+})

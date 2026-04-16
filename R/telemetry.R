@@ -13,6 +13,12 @@ Telemetry <- R6::R6Class(
   public = list(
     #' @field trace_id Current trace ID for the session.
     trace_id = NULL,
+
+    #' @field events Collected telemetry events for in-memory inspection.
+    events = NULL,
+
+    #' @field emit Logical; when TRUE, events are printed as JSON lines.
+    emit = TRUE,
     
     #' @field pricing_table Pricing for common models (USD per 1M tokens).
     pricing_table = list(
@@ -26,12 +32,15 @@ Telemetry <- R6::R6Class(
     
     #' @description Initialize Telemetry
     #' @param trace_id Optional trace ID. If NULL, generates a random one.
-    initialize = function(trace_id = NULL) {
+    #' @param emit Logical; when TRUE, events are printed as JSON lines.
+    initialize = function(trace_id = NULL, emit = TRUE) {
       if (is.null(trace_id)) {
         self$trace_id <- digest(runif(1), algo = "md5")
       } else {
         self$trace_id <- trace_id
       }
+      self$events <- list()
+      self$emit <- isTRUE(emit)
     },
     
     #' @description Log an event
@@ -44,9 +53,26 @@ Telemetry <- R6::R6Class(
         type = type,
         ...
       )
-      
-      # Determine output destination (currently stdout, could be file)
-      cat(jsonlite::toJSON(event, auto_unbox = TRUE), "\n")
+
+      self$events <- c(self$events, list(event))
+
+      if (isTRUE(self$emit)) {
+        cat(jsonlite::toJSON(event, auto_unbox = TRUE), "\n")
+      }
+      invisible(event)
+    },
+
+    #' @description Return collected telemetry events.
+    #' @return A list of event payloads.
+    get_events = function() {
+      self$events
+    },
+
+    #' @description Clear collected telemetry events.
+    #' @return Invisibly returns self.
+    clear_events = function() {
+      self$events <- list()
+      invisible(self)
     },
     
     #' @description Create hooks for telemetry
@@ -75,13 +101,20 @@ Telemetry <- R6::R6Class(
         on_tool_start = function(tool, args) {
           self$log_event(
             "tool_start",
-            tool_name = tool$name
+            tool_name = tool$name,
+            success = NULL,
+            error = NULL,
+            argument_signature = compact_tool_argument_signature(args)
           )
         },
-        on_tool_end = function(tool, result) {
+        on_tool_end = function(tool, result, success = TRUE, error = NULL, args = NULL) {
           self$log_event(
             "tool_end",
-            tool_name = tool$name
+            tool_name = tool$name,
+            success = isTRUE(success),
+            error = error %||% NULL,
+            error_type = classify_telemetry_error(error),
+            argument_signature = compact_tool_argument_signature(args)
           )
         }
       )
@@ -108,10 +141,48 @@ Telemetry <- R6::R6Class(
   )
 )
 
+#' @keywords internal
+compact_tool_argument_signature <- function(args, max_chars = 160) {
+  if (is.null(args)) {
+    return(NULL)
+  }
+
+  payload <- tryCatch(
+    safe_to_json(args, auto_unbox = TRUE),
+    error = function(e) NULL
+  )
+  if (is.null(payload)) {
+    return(NULL)
+  }
+  if (nchar(payload) > max_chars) {
+    payload <- paste0(substr(payload, 1, max_chars - 3L), "...")
+  }
+  payload
+}
+
+#' @keywords internal
+classify_telemetry_error <- function(error) {
+  if (is.null(error) || !nzchar(error)) {
+    return(NULL)
+  }
+  lower <- tolower(error)
+  if (grepl("unknown .*column|unknown .*assay|unknown .*field|unknown .*dimension|unknown .*seqlevel|missing .*column|does not exist|not found", lower)) {
+    return("wrong_accessor")
+  }
+  if (grepl("hallucinat|nonexistent", lower)) {
+    return("hallucinated_field")
+  }
+  if (grepl("materializ", lower)) {
+    return("materialization")
+  }
+  "tool_error"
+}
+
 #' @title Create Telemetry
 #' @param trace_id Optional trace ID.
+#' @param emit Logical; when TRUE, events are printed as JSON lines.
 #' @return A Telemetry object.
 #' @export
-create_telemetry <- function(trace_id = NULL) {
-  Telemetry$new(trace_id)
+create_telemetry <- function(trace_id = NULL, emit = TRUE) {
+  Telemetry$new(trace_id, emit = emit)
 }

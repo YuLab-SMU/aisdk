@@ -11,6 +11,10 @@ R6 class for logging events in a structured format (JSON).
 \describe{
 \item{\code{trace_id}}{Current trace ID for the session.}
 
+\item{\code{events}}{Collected telemetry events for in-memory inspection.}
+
+\item{\code{emit}}{Logical; when TRUE, events are printed as JSON lines.}
+
 \item{\code{pricing_table}}{Pricing for common models (USD per 1M tokens).}
 }
 \if{html}{\out{</div>}}
@@ -20,6 +24,8 @@ R6 class for logging events in a structured format (JSON).
 \itemize{
 \item \href{#method-Telemetry-new}{\code{Telemetry$new()}}
 \item \href{#method-Telemetry-log_event}{\code{Telemetry$log_event()}}
+\item \href{#method-Telemetry-get_events}{\code{Telemetry$get_events()}}
+\item \href{#method-Telemetry-clear_events}{\code{Telemetry$clear_events()}}
 \item \href{#method-Telemetry-as_hooks}{\code{Telemetry$as_hooks()}}
 \item \href{#method-Telemetry-calculate_cost}{\code{Telemetry$calculate_cost()}}
 \item \href{#method-Telemetry-clone}{\code{Telemetry$clone()}}
@@ -31,13 +37,15 @@ R6 class for logging events in a structured format (JSON).
 \subsection{Method \code{new()}}{
 Initialize Telemetry
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Telemetry$new(trace_id = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Telemetry$new(trace_id = NULL, emit = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{trace_id}}{Optional trace ID. If NULL, generates a random one.}
+
+\item{\code{emit}}{Logical; when TRUE, events are printed as JSON lines.}
 }
 \if{html}{\out{</div>}}
 }
@@ -59,6 +67,32 @@ Log an event
 \item{\code{...}}{Additional fields to log.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Telemetry-get_events"></a>}}
+\if{latex}{\out{\hypertarget{method-Telemetry-get_events}{}}}
+\subsection{Method \code{get_events()}}{
+Return collected telemetry events.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Telemetry$get_events()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of event payloads.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Telemetry-clear_events"></a>}}
+\if{latex}{\out{\hypertarget{method-Telemetry-clear_events}{}}}
+\subsection{Method \code{clear_events()}}{
+Clear collected telemetry events.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Telemetry$clear_events()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Invisibly returns self.
 }
 }
 \if{html}{\out{<hr>}}

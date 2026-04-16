@@ -66,9 +66,25 @@ HookHandler <- R6::R6Class(
     #' @description Trigger on_tool_end
     #' @param tool The tool object.
     #' @param result The result from the tool execution.
-    trigger_tool_end = function(tool, result) {
+    #' @param success Logical indicating whether execution succeeded.
+    #' @param error Optional error message when execution failed.
+    #' @param args Optional tool arguments for downstream telemetry.
+    trigger_tool_end = function(tool, result, success = TRUE, error = NULL, args = NULL) {
       if (!is.null(self$hooks$on_tool_end)) {
-        self$hooks$on_tool_end(tool, result)
+        fn <- self$hooks$on_tool_end
+        fmls <- names(formals(fn))
+        if (is.null(fmls)) {
+          fmls <- character(0)
+        }
+        if ("..." %in% fmls || length(fmls) >= 5) {
+          fn(tool, result, success, error, args)
+        } else if (length(fmls) >= 4) {
+          fn(tool, result, success, error)
+        } else if (length(fmls) >= 3) {
+          fn(tool, result, success)
+        } else {
+          fn(tool, result)
+        }
       }
     }
   )

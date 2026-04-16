@@ -860,7 +860,13 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
 
         # Trigger tool end hook only on success
         if (!is.null(hooks)) {
-          hooks$trigger_tool_end(tool_obj, result)
+          hooks$trigger_tool_end(
+            tool_obj,
+            result,
+            success = TRUE,
+            error = NULL,
+            args = tc$arguments
+          )
         }
 
         list(
@@ -880,6 +886,15 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
             arguments = tc$arguments
           )
           message("aisdk debug: tool_error=", safe_to_json(err_payload, auto_unbox = TRUE))
+        }
+        if (!is.null(hooks) && !is.null(tool_obj)) {
+          hooks$trigger_tool_end(
+            tool_obj,
+            NULL,
+            success = FALSE,
+            error = conditionMessage(e),
+            args = tc$arguments
+          )
         }
         list(
           id = tc$id,

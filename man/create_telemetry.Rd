@@ -4,10 +4,12 @@
 \alias{create_telemetry}
 \title{Create Telemetry}
 \usage{
-create_telemetry(trace_id = NULL)
+create_telemetry(trace_id = NULL, emit = TRUE)
 }
 \arguments{
 \item{trace_id}{Optional trace ID.}
+
+\item{emit}{Logical; when TRUE, events are printed as JSON lines.}
 }
 \value{
 A Telemetry object.

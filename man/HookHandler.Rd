@@ -111,7 +111,13 @@ Trigger on_tool_start
 \subsection{Method \code{trigger_tool_end()}}{
 Trigger on_tool_end
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HookHandler$trigger_tool_end(tool, result)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{HookHandler$trigger_tool_end(
+  tool,
+  result,
+  success = TRUE,
+  error = NULL,
+  args = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -120,6 +126,12 @@ Trigger on_tool_end
 \item{\code{tool}}{The tool object.}
 
 \item{\code{result}}{The result from the tool execution.}
+
+\item{\code{success}}{Logical indicating whether execution succeeded.}
+
+\item{\code{error}}{Optional error message when execution failed.}
+
+\item{\code{args}}{Optional tool arguments for downstream telemetry.}
 }
 \if{html}{\out{</div>}}
 }
