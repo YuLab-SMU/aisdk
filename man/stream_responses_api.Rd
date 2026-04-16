@@ -4,7 +4,17 @@
 \alias{stream_responses_api}
 \title{Stream from Responses API}
 \usage{
-stream_responses_api(url, headers, body, callback)
+stream_responses_api(
+  url,
+  headers,
+  body,
+  callback,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL
+)
 }
 \arguments{
 \item{url}{The API endpoint URL.}
@@ -14,6 +24,16 @@ stream_responses_api(url, headers, body, callback)
 \item{body}{The request body (will be converted to JSON).}
 
 \item{callback}{A function called for each event: callback(event_type, data, done).}
+
+\item{timeout_seconds}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{total_timeout_seconds}{Optional total stream timeout in seconds.}
+
+\item{first_byte_timeout_seconds}{Optional time-to-first-byte timeout in seconds.}
+
+\item{connect_timeout_seconds}{Optional connection-establishment timeout in seconds.}
+
+\item{idle_timeout_seconds}{Optional stall timeout in seconds.}
 }
 \description{
 Makes a streaming POST request to OpenAI Responses API and processes SSE events.

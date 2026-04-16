@@ -46,16 +46,31 @@ BailianProvider <- R6::R6Class(
         #' @param api_key DashScope API key. Defaults to DASHSCOPE_API_KEY env var.
         #' @param base_url Base URL. Defaults to https://dashscope.aliyuncs.com/compatible-mode/v1.
         #' @param headers Optional additional headers.
+        #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+        #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+        #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+        #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+        #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
         initialize = function(api_key = NULL,
                               base_url = NULL,
-                              headers = NULL) {
+                              headers = NULL,
+                              timeout_seconds = NULL,
+                              total_timeout_seconds = NULL,
+                              first_byte_timeout_seconds = NULL,
+                              connect_timeout_seconds = NULL,
+                              idle_timeout_seconds = NULL) {
             # Suppress parent class warning since we do our own check
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("DASHSCOPE_API_KEY"),
                     base_url = base_url %||% Sys.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
                     headers = headers,
-                    name = "bailian"
+                    name = "bailian",
+                    timeout_seconds = timeout_seconds,
+                    total_timeout_seconds = total_timeout_seconds,
+                    first_byte_timeout_seconds = first_byte_timeout_seconds,
+                    connect_timeout_seconds = connect_timeout_seconds,
+                    idle_timeout_seconds = idle_timeout_seconds
                 )
             )
 
@@ -92,6 +107,11 @@ BailianProvider <- R6::R6Class(
 #' @param api_key DashScope API key. Defaults to DASHSCOPE_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://dashscope.aliyuncs.com/compatible-mode/v1.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A BailianProvider object.
 #' @export
 #' @examples
@@ -114,10 +134,20 @@ BailianProvider <- R6::R6Class(
 #' }
 create_bailian <- function(api_key = NULL,
                            base_url = NULL,
-                           headers = NULL) {
+                           headers = NULL,
+                           timeout_seconds = NULL,
+                           total_timeout_seconds = NULL,
+                           first_byte_timeout_seconds = NULL,
+                           connect_timeout_seconds = NULL,
+                           idle_timeout_seconds = NULL) {
     BailianProvider$new(
         api_key = api_key,
         base_url = base_url,
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }

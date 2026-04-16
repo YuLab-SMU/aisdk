@@ -158,7 +158,12 @@ OpenAILanguageModel <- R6::R6Class(
       }
 
       # Pass through any extra parameters
-      handled_params <- c("messages", "temperature", "max_tokens", "max_completion_tokens", "tools", "stream", "model")
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "max_completion_tokens",
+        "tools", "stream", "model",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
@@ -173,9 +178,28 @@ OpenAILanguageModel <- R6::R6Class(
     #' @param url The API endpoint URL.
     #' @param headers A named list of HTTP headers.
     #' @param body The request body.
+    #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+    #' @param total_timeout_seconds Optional total request timeout override in seconds.
+    #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout override in seconds.
+    #' @param connect_timeout_seconds Optional connection timeout override in seconds.
+    #' @param idle_timeout_seconds Optional stall timeout override in seconds.
     #' @return The parsed API response.
-    execute_request = function(url, headers, body) {
-      post_to_api(url, headers, body)
+    execute_request = function(url, headers, body,
+                               timeout_seconds = NULL,
+                               total_timeout_seconds = NULL,
+                               first_byte_timeout_seconds = NULL,
+                               connect_timeout_seconds = NULL,
+                               idle_timeout_seconds = NULL) {
+      post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
     },
 
     #' @description Parse the API response into a GenerateResult.
@@ -211,7 +235,16 @@ OpenAILanguageModel <- R6::R6Class(
     #' @return A GenerateResult object.
     do_generate = function(params) {
       payload <- self$build_payload(params)
-      response <- self$execute_request(payload$url, payload$headers, payload$body)
+      response <- self$execute_request(
+        payload$url,
+        payload$headers,
+        payload$body,
+        timeout_seconds = params$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds
+      )
       self$parse_response(response)
     },
 
@@ -247,7 +280,12 @@ OpenAILanguageModel <- R6::R6Class(
       }
 
       # Pass through any extra parameters
-      handled_params <- c("messages", "temperature", "max_tokens", "max_completion_tokens", "tools", "stream", "model")
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "max_completion_tokens",
+        "tools", "stream", "model",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
@@ -283,9 +321,19 @@ OpenAILanguageModel <- R6::R6Class(
       payload <- self$build_stream_payload(params)
       agg <- SSEAggregator$new(callback)
 
-      stream_from_api(payload$url, payload$headers, payload$body, callback = function(data, done) {
-        map_openai_chunk(data, done, agg)
-      })
+      stream_from_api(
+        payload$url,
+        payload$headers,
+        payload$body,
+        callback = function(data, done) {
+          map_openai_chunk(data, done, agg)
+        },
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       agg$build_result()
     },
@@ -562,7 +610,12 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       }
 
       # Pass through extra parameters (e.g., reasoning effort, store)
-      handled_params <- c("messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens", "tools", "stream", "model")
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
+        "tools", "stream", "model",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
@@ -571,7 +624,16 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       # Remove NULL entries
       body <- body[!sapply(body, is.null)]
 
-      response <- post_to_api(url, headers, body)
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       # Update internal state with new response ID
       private$last_response_id <- response$id
@@ -666,7 +728,12 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       }
 
       # Pass through extra parameters
-      handled_params <- c("messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens", "tools", "stream", "model")
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
+        "tools", "stream", "model",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
@@ -685,201 +752,211 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       stream_state$response_id <- NULL
       stream_state$last_response <- NULL
 
-      stream_responses_api(url, headers, body, callback = function(event_type, data, done) {
-        if (done) {
-          if (stream_state$is_reasoning) {
-            callback("\n</think>\n\n", done = FALSE)
-            stream_state$is_reasoning <- FALSE
-          }
-          callback(NULL, done = TRUE)
-        } else {
-          stream_state$last_response <- data
+      stream_responses_api(
+        url,
+        headers,
+        body,
+        callback = function(event_type, data, done) {
+          if (done) {
+            if (stream_state$is_reasoning) {
+              callback("\n</think>\n\n", done = FALSE)
+              stream_state$is_reasoning <- FALSE
+            }
+            callback(NULL, done = TRUE)
+          } else {
+            stream_state$last_response <- data
 
-          # Debug: Print event type (enable with options(aisdk.debug = TRUE))
-          if (isTRUE(getOption("aisdk.debug", FALSE))) {
-            message("[DEBUG] Event: ", event_type, " | Data keys: ", paste(names(data), collapse = ", "))
-          }
+            # Debug: Print event type (enable with options(aisdk.debug = TRUE))
+            if (isTRUE(getOption("aisdk.debug", FALSE))) {
+              message("[DEBUG] Event: ", event_type, " | Data keys: ", paste(names(data), collapse = ", "))
+            }
 
-          # Handle different event types from Responses API
-          if (event_type == "response.created") {
-            stream_state$response_id <- data$response$id
-          } else if (event_type == "response.output_item.added") {
-            # New output item started
-            item <- data$item
-            if (!is.null(item) && item$type == "reasoning") {
-              if (!stream_state$is_reasoning) {
-                callback("<think>\n", done = FALSE)
-                stream_state$is_reasoning <- TRUE
-              }
-              # Some providers may include initial content in the added event
-              if (!is.null(item$content) && is.list(item$content)) {
-                for (block in item$content) {
-                  if (!is.null(block$text) && nchar(block$text) > 0) {
-                    stream_state$full_reasoning <- paste0(stream_state$full_reasoning, block$text)
-                    callback(block$text, done = FALSE)
-                  }
+            # Handle different event types from Responses API
+            if (event_type == "response.created") {
+              stream_state$response_id <- data$response$id
+            } else if (event_type == "response.output_item.added") {
+              # New output item started
+              item <- data$item
+              if (!is.null(item) && item$type == "reasoning") {
+                if (!stream_state$is_reasoning) {
+                  callback("<think>\n", done = FALSE)
+                  stream_state$is_reasoning <- TRUE
                 }
-              }
-              # Also check for summary field (Volcano Ark format)
-              if (!is.null(item$summary) && is.list(item$summary)) {
-                for (block in item$summary) {
-                  if (!is.null(block$text) && nchar(block$text) > 0) {
-                    stream_state$full_reasoning <- paste0(stream_state$full_reasoning, block$text)
-                    callback(block$text, done = FALSE)
-                  }
-                }
-              }
-            }
-          } else if (event_type == "response.content_part.delta" ||
-            event_type == "response.output_text.delta") {
-            # Text content delta
-            # Support both formats:
-            # - OpenAI: delta is object with text field
-            # - Volcano Ark: delta is string directly
-            delta_text <- NULL
-            if (is.character(data$delta)) {
-              delta_text <- data$delta
-            } else if (is.list(data$delta)) {
-              delta_text <- data$delta$text
-            }
-            if (!is.null(delta_text) && nchar(delta_text) > 0) {
-              if (stream_state$is_reasoning) {
-                callback("\n</think>\n\n", done = FALSE)
-                stream_state$is_reasoning <- FALSE
-              }
-              stream_state$full_text <- paste0(stream_state$full_text, delta_text)
-              callback(delta_text, done = FALSE)
-            }
-          } else if (event_type == "response.reasoning.delta" ||
-            event_type == "response.reasoning_summary_text.delta" ||
-            event_type == "response.reasoning_summary.delta" ||
-            event_type == "response.reasoning_content.delta") {
-            # Reasoning content delta
-            # Support multiple formats:
-            # - OpenAI: response.reasoning.delta (delta is object with text field)
-            # - Volcano Ark: response.reasoning_summary_text.delta (delta is string directly)
-            delta_reasoning <- NULL
-            if (is.character(data$delta)) {
-              # Volcano Ark format: delta is a string directly
-              delta_reasoning <- data$delta
-            } else if (is.list(data$delta)) {
-              # OpenAI format: delta is an object with text field
-              delta_reasoning <- data$delta$text %||% data$delta$summary_text
-            }
-            if (!is.null(delta_reasoning) && nchar(delta_reasoning) > 0) {
-              if (!stream_state$is_reasoning) {
-                callback("<think>\n", done = FALSE)
-                stream_state$is_reasoning <- TRUE
-              }
-              stream_state$full_reasoning <- paste0(stream_state$full_reasoning, delta_reasoning)
-              callback(delta_reasoning, done = FALSE)
-            }
-          } else if (grepl("^response\\.reasoning", event_type) && grepl("delta$", event_type)) {
-            # Catch-all for any other reasoning delta event types
-            delta_reasoning <- NULL
-            if (is.character(data$delta)) {
-              delta_reasoning <- data$delta
-            } else if (is.list(data$delta)) {
-              delta_reasoning <- data$delta$text %||% data$delta$summary_text
-            }
-            if (!is.null(delta_reasoning) && nchar(delta_reasoning) > 0) {
-              if (!stream_state$is_reasoning) {
-                callback("<think>\n", done = FALSE)
-                stream_state$is_reasoning <- TRUE
-              }
-              stream_state$full_reasoning <- paste0(stream_state$full_reasoning, delta_reasoning)
-              callback(delta_reasoning, done = FALSE)
-            }
-          } else if (event_type == "response.function_call_arguments.delta") {
-            # Tool call arguments streaming
-            idx <- (data$output_index %||% 0) + 1
-            if (length(stream_state$tool_calls_acc) < idx) {
-              stream_state$tool_calls_acc[[idx]] <- list(id = "", name = "", arguments = "")
-            }
-            if (!is.null(data$delta)) {
-              stream_state$tool_calls_acc[[idx]]$arguments <- paste0(
-                stream_state$tool_calls_acc[[idx]]$arguments,
-                data$delta
-              )
-            }
-          } else if (event_type == "response.output_item.done") {
-            # Output item completed
-            item <- data$item
-            if (!is.null(item)) {
-              if (item$type == "function_call") {
-                idx <- (data$output_index %||% 0) + 1
-                if (length(stream_state$tool_calls_acc) < idx) {
-                  stream_state$tool_calls_acc[[idx]] <- list(id = "", name = "", arguments = "")
-                }
-                stream_state$tool_calls_acc[[idx]]$id <- item$call_id %||% item$id %||% ""
-                stream_state$tool_calls_acc[[idx]]$name <- item$name %||% ""
-                if (!is.null(item$arguments) && is.character(item$arguments)) {
-                  stream_state$tool_calls_acc[[idx]]$arguments <- item$arguments
-                }
-              } else if (item$type == "reasoning") {
-                # Handle reasoning content from done event (Volcano Ark may send full content here)
-                # Only process if we haven't accumulated reasoning from delta events
-                if (nchar(stream_state$full_reasoning) == 0) {
-                  reasoning_text <- NULL
-                  # Try summary field first (Volcano Ark format)
-                  if (!is.null(item$summary) && is.list(item$summary)) {
-                    for (block in item$summary) {
-                      if (!is.null(block$text)) {
-                        reasoning_text <- paste0(reasoning_text %||% "", block$text)
-                      }
+                # Some providers may include initial content in the added event
+                if (!is.null(item$content) && is.list(item$content)) {
+                  for (block in item$content) {
+                    if (!is.null(block$text) && nchar(block$text) > 0) {
+                      stream_state$full_reasoning <- paste0(stream_state$full_reasoning, block$text)
+                      callback(block$text, done = FALSE)
                     }
                   }
-                  # Try content field (OpenAI format)
-                  if (is.null(reasoning_text) && !is.null(item$content) && is.list(item$content)) {
-                    for (block in item$content) {
-                      if (!is.null(block$text)) {
-                        reasoning_text <- paste0(reasoning_text %||% "", block$text)
-                      }
+                }
+                # Also check for summary field (Volcano Ark format)
+                if (!is.null(item$summary) && is.list(item$summary)) {
+                  for (block in item$summary) {
+                    if (!is.null(block$text) && nchar(block$text) > 0) {
+                      stream_state$full_reasoning <- paste0(stream_state$full_reasoning, block$text)
+                      callback(block$text, done = FALSE)
                     }
-                  }
-                  if (!is.null(reasoning_text) && nchar(reasoning_text) > 0) {
-                    if (!stream_state$is_reasoning) {
-                      callback("<think>\n", done = FALSE)
-                      stream_state$is_reasoning <- TRUE
-                    }
-                    stream_state$full_reasoning <- reasoning_text
-                    callback(reasoning_text, done = FALSE)
                   }
                 }
-                # End reasoning section when reasoning item is done
+              }
+            } else if (event_type == "response.content_part.delta" ||
+              event_type == "response.output_text.delta") {
+              # Text content delta
+              # Support both formats:
+              # - OpenAI: delta is object with text field
+              # - Volcano Ark: delta is string directly
+              delta_text <- NULL
+              if (is.character(data$delta)) {
+                delta_text <- data$delta
+              } else if (is.list(data$delta)) {
+                delta_text <- data$delta$text
+              }
+              if (!is.null(delta_text) && nchar(delta_text) > 0) {
                 if (stream_state$is_reasoning) {
                   callback("\n</think>\n\n", done = FALSE)
                   stream_state$is_reasoning <- FALSE
                 }
+                stream_state$full_text <- paste0(stream_state$full_text, delta_text)
+                callback(delta_text, done = FALSE)
               }
-            }
-          } else if (event_type == "response.completed" || event_type == "response.done") {
-            # Response completed - contains full response with output array
-            if (!is.null(data$response)) {
-              stream_state$response_id <- data$response$id
-              stream_state$finish_reason <- data$response$status
-              if (!is.null(data$response$usage)) {
-                stream_state$full_usage <- list(
-                  prompt_tokens = data$response$usage$input_tokens,
-                  completion_tokens = data$response$usage$output_tokens,
-                  total_tokens = data$response$usage$total_tokens
+            } else if (event_type == "response.reasoning.delta" ||
+              event_type == "response.reasoning_summary_text.delta" ||
+              event_type == "response.reasoning_summary.delta" ||
+              event_type == "response.reasoning_content.delta") {
+              # Reasoning content delta
+              # Support multiple formats:
+              # - OpenAI: response.reasoning.delta (delta is object with text field)
+              # - Volcano Ark: response.reasoning_summary_text.delta (delta is string directly)
+              delta_reasoning <- NULL
+              if (is.character(data$delta)) {
+                # Volcano Ark format: delta is a string directly
+                delta_reasoning <- data$delta
+              } else if (is.list(data$delta)) {
+                # OpenAI format: delta is an object with text field
+                delta_reasoning <- data$delta$text %||% data$delta$summary_text
+              }
+              if (!is.null(delta_reasoning) && nchar(delta_reasoning) > 0) {
+                if (!stream_state$is_reasoning) {
+                  callback("<think>\n", done = FALSE)
+                  stream_state$is_reasoning <- TRUE
+                }
+                stream_state$full_reasoning <- paste0(stream_state$full_reasoning, delta_reasoning)
+                callback(delta_reasoning, done = FALSE)
+              }
+            } else if (grepl("^response\\.reasoning", event_type) && grepl("delta$", event_type)) {
+              # Catch-all for any other reasoning delta event types
+              delta_reasoning <- NULL
+              if (is.character(data$delta)) {
+                delta_reasoning <- data$delta
+              } else if (is.list(data$delta)) {
+                delta_reasoning <- data$delta$text %||% data$delta$summary_text
+              }
+              if (!is.null(delta_reasoning) && nchar(delta_reasoning) > 0) {
+                if (!stream_state$is_reasoning) {
+                  callback("<think>\n", done = FALSE)
+                  stream_state$is_reasoning <- TRUE
+                }
+                stream_state$full_reasoning <- paste0(stream_state$full_reasoning, delta_reasoning)
+                callback(delta_reasoning, done = FALSE)
+              }
+            } else if (event_type == "response.function_call_arguments.delta") {
+              # Tool call arguments streaming
+              idx <- (data$output_index %||% 0) + 1
+              if (length(stream_state$tool_calls_acc) < idx) {
+                stream_state$tool_calls_acc[[idx]] <- list(id = "", name = "", arguments = "")
+              }
+              if (!is.null(data$delta)) {
+                stream_state$tool_calls_acc[[idx]]$arguments <- paste0(
+                  stream_state$tool_calls_acc[[idx]]$arguments,
+                  data$delta
                 )
               }
-              # If no text/reasoning accumulated from deltas, parse from full output
-              # Some providers (e.g., Volcano Ark) may not send delta events
-              if (nzchar(stream_state$full_text) == FALSE || nzchar(stream_state$full_reasoning) == FALSE) {
-                parsed <- private$parse_output(data$response)
-                if (nzchar(stream_state$full_text) == FALSE) {
-                  stream_state$full_text <- parsed$text
+            } else if (event_type == "response.output_item.done") {
+              # Output item completed
+              item <- data$item
+              if (!is.null(item)) {
+                if (item$type == "function_call") {
+                  idx <- (data$output_index %||% 0) + 1
+                  if (length(stream_state$tool_calls_acc) < idx) {
+                    stream_state$tool_calls_acc[[idx]] <- list(id = "", name = "", arguments = "")
+                  }
+                  stream_state$tool_calls_acc[[idx]]$id <- item$call_id %||% item$id %||% ""
+                  stream_state$tool_calls_acc[[idx]]$name <- item$name %||% ""
+                  if (!is.null(item$arguments) && is.character(item$arguments)) {
+                    stream_state$tool_calls_acc[[idx]]$arguments <- item$arguments
+                  }
+                } else if (item$type == "reasoning") {
+                  # Handle reasoning content from done event (Volcano Ark may send full content here)
+                  # Only process if we haven't accumulated reasoning from delta events
+                  if (nchar(stream_state$full_reasoning) == 0) {
+                    reasoning_text <- NULL
+                    # Try summary field first (Volcano Ark format)
+                    if (!is.null(item$summary) && is.list(item$summary)) {
+                      for (block in item$summary) {
+                        if (!is.null(block$text)) {
+                          reasoning_text <- paste0(reasoning_text %||% "", block$text)
+                        }
+                      }
+                    }
+                    # Try content field (OpenAI format)
+                    if (is.null(reasoning_text) && !is.null(item$content) && is.list(item$content)) {
+                      for (block in item$content) {
+                        if (!is.null(block$text)) {
+                          reasoning_text <- paste0(reasoning_text %||% "", block$text)
+                        }
+                      }
+                    }
+                    if (!is.null(reasoning_text) && nchar(reasoning_text) > 0) {
+                      if (!stream_state$is_reasoning) {
+                        callback("<think>\n", done = FALSE)
+                        stream_state$is_reasoning <- TRUE
+                      }
+                      stream_state$full_reasoning <- reasoning_text
+                      callback(reasoning_text, done = FALSE)
+                    }
+                  }
+                  # End reasoning section when reasoning item is done
+                  if (stream_state$is_reasoning) {
+                    callback("\n</think>\n\n", done = FALSE)
+                    stream_state$is_reasoning <- FALSE
+                  }
                 }
-                if (nzchar(stream_state$full_reasoning) == FALSE && !is.null(parsed$reasoning)) {
-                  stream_state$full_reasoning <- parsed$reasoning
+              }
+            } else if (event_type == "response.completed" || event_type == "response.done") {
+              # Response completed - contains full response with output array
+              if (!is.null(data$response)) {
+                stream_state$response_id <- data$response$id
+                stream_state$finish_reason <- data$response$status
+                if (!is.null(data$response$usage)) {
+                  stream_state$full_usage <- list(
+                    prompt_tokens = data$response$usage$input_tokens,
+                    completion_tokens = data$response$usage$output_tokens,
+                    total_tokens = data$response$usage$total_tokens
+                  )
+                }
+                # If no text/reasoning accumulated from deltas, parse from full output
+                # Some providers (e.g., Volcano Ark) may not send delta events
+                if (nzchar(stream_state$full_text) == FALSE || nzchar(stream_state$full_reasoning) == FALSE) {
+                  parsed <- private$parse_output(data$response)
+                  if (nzchar(stream_state$full_text) == FALSE) {
+                    stream_state$full_text <- parsed$text
+                  }
+                  if (nzchar(stream_state$full_reasoning) == FALSE && !is.null(parsed$reasoning)) {
+                    stream_state$full_reasoning <- parsed$reasoning
+                  }
                 }
               }
             }
           }
-        }
-      })
+        },
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       # Update internal state
       if (!is.null(stream_state$response_id)) {
@@ -941,11 +1018,30 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
 #' @param headers A named list of HTTP headers.
 #' @param body The request body (will be converted to JSON).
 #' @param callback A function called for each event: callback(event_type, data, done).
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total stream timeout in seconds.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds.
+#' @param idle_timeout_seconds Optional stall timeout in seconds.
 #' @keywords internal
-stream_responses_api <- function(url, headers, body, callback) {
+stream_responses_api <- function(url, headers, body, callback,
+                                 timeout_seconds = NULL,
+                                 total_timeout_seconds = NULL,
+                                 first_byte_timeout_seconds = NULL,
+                                 connect_timeout_seconds = NULL,
+                                 idle_timeout_seconds = NULL) {
+  timeout_config <- resolve_request_timeout_config(
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds,
+    request_type = "stream"
+  )
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
   req <- httr2::req_body_json(req, body)
+  req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE)
 
   resp <- httr2::req_perform_connection(req)
@@ -1032,7 +1128,16 @@ OpenAIEmbeddingModel <- R6::R6Class(
         input = value
       )
 
-      response <- post_to_api(url, headers, body)
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = private$config$timeout_seconds,
+        total_timeout_seconds = private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = private$config$connect_timeout_seconds,
+        idle_timeout_seconds = private$config$idle_timeout_seconds
+      )
 
       list(
         embeddings = lapply(response$data, function(x) x$embedding),
@@ -1081,7 +1186,12 @@ OpenAIImageModel <- R6::R6Class(
       if (!is.null(params$moderation)) body$moderation <- params$moderation
       if (!is.null(params$output_format)) body$output_format <- params$output_format
 
-      handled <- c("prompt", "output_dir", "response_format", "n", "size", "quality", "background", "moderation", "output_format")
+      handled <- c(
+        "prompt", "output_dir", "response_format", "n", "size", "quality",
+        "background", "moderation", "output_format",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra <- params[setdiff(names(params), handled)]
       if (length(extra) > 0) {
         body <- utils::modifyList(body, extra)
@@ -1111,7 +1221,12 @@ OpenAIImageModel <- R6::R6Class(
       if (!is.null(params$background)) body$background <- params$background
       if (!is.null(params$output_format)) body$output_format <- params$output_format
 
-      handled <- c("image", "mask", "prompt", "output_dir", "response_format", "n", "size", "quality", "background", "output_format")
+      handled <- c(
+        "image", "mask", "prompt", "output_dir", "response_format", "n",
+        "size", "quality", "background", "output_format",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra <- params[setdiff(names(params), handled)]
       if (length(extra) > 0) {
         body <- c(body, extra)
@@ -1174,7 +1289,16 @@ OpenAIImageModel <- R6::R6Class(
       url <- paste0(private$config$base_url, "/images/generations")
       headers <- private$get_headers(include_content_type = TRUE)
       body <- private$build_generation_body(params)
-      response <- post_to_api(url, headers, body)
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       GenerateImageResult$new(
         images = private$parse_image_response(
@@ -1198,7 +1322,16 @@ OpenAIImageModel <- R6::R6Class(
       url <- paste0(private$config$base_url, "/images/edits")
       headers <- private$get_headers(include_content_type = FALSE)
       body <- private$build_edit_body(params)
-      response <- post_multipart_to_api(url, headers, body)
+      response <- post_multipart_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       GenerateImageResult$new(
         images = private$parse_image_response(
@@ -1230,6 +1363,11 @@ OpenAIProvider <- R6::R6Class(
     #' @param project Optional OpenAI project ID.
     #' @param headers Optional additional headers.
     #' @param name Optional provider name override (for compatible APIs).
+    #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+    #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+    #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+    #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+    #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
     #' @param disable_stream_options Disable stream_options parameter (for providers that don't support it).
     initialize = function(api_key = NULL,
                           base_url = NULL,
@@ -1237,6 +1375,11 @@ OpenAIProvider <- R6::R6Class(
                           project = NULL,
                           headers = NULL,
                           name = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL,
                           disable_stream_options = FALSE) {
       private$config <- list(
         api_key = api_key %||% Sys.getenv("OPENAI_API_KEY"),
@@ -1245,6 +1388,11 @@ OpenAIProvider <- R6::R6Class(
         project = project,
         headers = headers,
         provider_name = name %||% "openai",
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds,
         disable_stream_options = disable_stream_options
       )
 
@@ -1354,6 +1502,11 @@ OpenAIProvider <- R6::R6Class(
 #' @param project Optional OpenAI project ID.
 #' @param headers Optional additional headers.
 #' @param name Optional provider name override (for compatible APIs).
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @param disable_stream_options Disable stream_options parameter (for providers like Volcengine that don't support it).
 #' @return An OpenAIProvider object.
 #' @export
@@ -1403,6 +1556,11 @@ create_openai <- function(api_key = NULL,
                           project = NULL,
                           headers = NULL,
                           name = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL,
                           disable_stream_options = FALSE) {
   OpenAIProvider$new(
     api_key = api_key,
@@ -1411,6 +1569,11 @@ create_openai <- function(api_key = NULL,
     project = project,
     headers = headers,
     name = name,
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds,
     disable_stream_options = disable_stream_options
   )
 }

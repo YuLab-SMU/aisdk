@@ -44,14 +44,29 @@ NvidiaProvider <- R6::R6Class(
     #' @param api_key NVIDIA API key. Defaults to NVIDIA_API_KEY env var.
     #' @param base_url Base URL. Defaults to https://integrate.api.nvidia.com/v1.
     #' @param headers Optional additional headers.
+    #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+    #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+    #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+    #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+    #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
     initialize = function(api_key = NULL,
                           base_url = NULL,
-                          headers = NULL) {
+                          headers = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL) {
       super$initialize(
         api_key = api_key %||% Sys.getenv("NVIDIA_API_KEY"),
         base_url = base_url %||% Sys.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
         headers = headers,
-        name = "nvidia"
+        name = "nvidia",
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
       )
 
       if (nchar(private$config$api_key) == 0) {
@@ -78,6 +93,11 @@ NvidiaProvider <- R6::R6Class(
 #' @param api_key NVIDIA API key. Defaults to NVIDIA_API_KEY env var.
 #' @param base_url Base URL. Defaults to "https://integrate.api.nvidia.com/v1".
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A NvidiaProvider object.
 #' @export
 #' @examples
@@ -95,10 +115,20 @@ NvidiaProvider <- R6::R6Class(
 #' }
 create_nvidia <- function(api_key = NULL,
                           base_url = NULL,
-                          headers = NULL) {
+                          headers = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL) {
   NvidiaProvider$new(
     api_key = api_key,
     base_url = base_url,
-    headers = headers
+    headers = headers,
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds
   )
 }

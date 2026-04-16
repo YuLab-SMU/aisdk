@@ -68,6 +68,101 @@ test_that("create_openai() warns when API key is missing", {
   )
 })
 
+test_that("OpenAI provider passes configured timeout_seconds to HTTP helper", {
+  provider <- suppressWarnings(create_openai(api_key = "test-key", timeout_seconds = 456))
+  model <- provider$language_model(openai_model)
+
+  captured_timeout <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
+      captured_timeout <<- timeout_seconds
+      list(
+        choices = list(list(
+          message = list(content = "ok"),
+          finish_reason = "stop"
+        )),
+        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
+      )
+    }
+  )
+
+  result <- model$do_generate(list(
+    messages = list(list(role = "user", content = "Hello"))
+  ))
+
+  expect_equal(result$text, "ok")
+  expect_equal(captured_timeout, 456)
+})
+
+test_that("OpenAI per-call timeout_seconds overrides provider default", {
+  provider <- suppressWarnings(create_openai(api_key = "test-key", timeout_seconds = 456))
+  model <- provider$language_model(openai_model)
+
+  captured_timeout <- NULL
+
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
+      captured_timeout <<- timeout_seconds
+      list(
+        choices = list(list(
+          message = list(content = "ok"),
+          finish_reason = "stop"
+        )),
+        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
+      )
+    }
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "Hello")),
+    timeout_seconds = 999
+  ))
+
+  expect_equal(captured_timeout, 999)
+})
+
+test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
+  provider <- suppressWarnings(create_openai(
+    api_key = "test-key",
+    first_byte_timeout_seconds = 222,
+    idle_timeout_seconds = 77
+  ))
+  model <- provider$language_model(openai_model)
+
+  captured <- list()
+
+  local_mocked_bindings(
+    stream_from_api = function(url, headers, body, callback,
+                               timeout_seconds = NULL,
+                               total_timeout_seconds = NULL,
+                               first_byte_timeout_seconds = NULL,
+                               connect_timeout_seconds = NULL,
+                               idle_timeout_seconds = NULL,
+                               ...) {
+      captured <<- list(
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
+      )
+      callback(NULL, done = TRUE)
+      invisible(NULL)
+    }
+  )
+
+  result <- model$do_stream(
+    list(messages = list(list(role = "user", content = "Hello"))),
+    callback = function(text, done) invisible(NULL)
+  )
+
+  expect_s3_class(result, "GenerateResult")
+  expect_equal(captured$first_byte_timeout_seconds, 222)
+  expect_equal(captured$idle_timeout_seconds, 77)
+  expect_null(captured$total_timeout_seconds)
+})
+
 # Live API tests (only run when API key is available)
 test_that("OpenAI provider can make real API calls", {
   skip_if_no_api_key("OpenAI")
@@ -159,7 +254,7 @@ test_that("OpenAI responses model translates multimodal content blocks", {
   captured <- NULL
 
   local_mocked_bindings(
-    post_to_api = function(url, headers, body) {
+    post_to_api = function(url, headers, body, ...) {
       captured <<- body
       fake_response
     }
@@ -387,7 +482,7 @@ test_that("OpenAI responses API translates multimodal input blocks", {
   captured_body <- NULL
 
   local_mocked_bindings(
-    post_to_api = function(url, headers, body) {
+    post_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
         id = "resp_test",

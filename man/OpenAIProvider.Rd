@@ -38,6 +38,11 @@ Initialize the OpenAI provider.
   project = NULL,
   headers = NULL,
   name = NULL,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL,
   disable_stream_options = FALSE
 )}\if{html}{\out{</div>}}
 }
@@ -56,6 +61,16 @@ Initialize the OpenAI provider.
 \item{\code{headers}}{Optional additional headers.}
 
 \item{\code{name}}{Optional provider name override (for compatible APIs).}
+
+\item{\code{timeout_seconds}}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{\code{total_timeout_seconds}}{Optional total request timeout in seconds for API calls.}
+
+\item{\code{first_byte_timeout_seconds}}{Optional time-to-first-byte timeout in seconds for API calls.}
+
+\item{\code{connect_timeout_seconds}}{Optional connection-establishment timeout in seconds for API calls.}
+
+\item{\code{idle_timeout_seconds}}{Optional stall timeout in seconds for API calls.}
 
 \item{\code{disable_stream_options}}{Disable stream_options parameter (for providers that don't support it).}
 }

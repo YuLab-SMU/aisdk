@@ -10,7 +10,12 @@ post_to_api(
   body,
   max_retries = 2,
   initial_delay_ms = 2000,
-  backoff_factor = 2
+  backoff_factor = 2,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL
 )
 }
 \arguments{
@@ -25,6 +30,27 @@ post_to_api(
 \item{initial_delay_ms}{Initial delay in milliseconds (default: 2000).}
 
 \item{backoff_factor}{Multiplier for delay on each retry (default: 2).}
+
+\item{timeout_seconds}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{total_timeout_seconds}{Optional total request timeout in seconds.
+Defaults to \code{getOption("aisdk.http_total_timeout_seconds")}, then
+\code{AISDK_HTTP_TOTAL_TIMEOUT_SECONDS}, then legacy
+\code{aisdk.http_timeout_seconds} / \code{AISDK_HTTP_TIMEOUT_SECONDS}. No total
+timeout is applied by default.}
+
+\item{first_byte_timeout_seconds}{Optional time-to-first-byte timeout in
+seconds. Defaults to \code{getOption("aisdk.http_first_byte_timeout_seconds")},
+then \code{AISDK_HTTP_FIRST_BYTE_TIMEOUT_SECONDS}, then 300.}
+
+\item{connect_timeout_seconds}{Optional connection-establishment timeout in
+seconds. Defaults to \code{getOption("aisdk.http_connect_timeout_seconds")},
+then \code{AISDK_HTTP_CONNECT_TIMEOUT_SECONDS}, then 10.}
+
+\item{idle_timeout_seconds}{Optional stall timeout in seconds. When set, the
+request is aborted only if transfer progress drops below 1 byte/second for
+the full interval. Defaults to \code{getOption("aisdk.http_idle_timeout_seconds")},
+then \code{AISDK_HTTP_IDLE_TIMEOUT_SECONDS}, then 120.}
 }
 \value{
 The parsed JSON response.

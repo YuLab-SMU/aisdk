@@ -231,7 +231,7 @@ test_that("Gemini parser preserves inline image parts on GenerateResult", {
     )
 
     local_mocked_bindings(
-        post_to_api = function(url, headers, body) response
+        post_to_api = function(url, headers, body, ...) response
     )
 
     result <- model$do_generate(list(
@@ -268,7 +268,7 @@ test_that("Gemini image model writes image artifacts", {
     )
 
     local_mocked_bindings(
-        post_to_api = function(url, headers, body) response
+        post_to_api = function(url, headers, body, ...) response
     )
 
     out_dir <- tempfile("gemini-image-out-")
@@ -308,7 +308,7 @@ test_that("Gemini image model saves inline image output to disk", {
 
     captured_body <- NULL
     local_mocked_bindings(
-        post_to_api = function(url, headers, body) {
+        post_to_api = function(url, headers, body, ...) {
             captured_body <<- body
             response
         }
@@ -350,7 +350,7 @@ test_that("Gemini image edit sends prompt plus source image and writes output", 
 
     captured_body <- NULL
     local_mocked_bindings(
-        post_to_api = function(url, headers, body) {
+        post_to_api = function(url, headers, body, ...) {
             captured_body <<- body
             response
         }
@@ -396,7 +396,7 @@ test_that("Gemini image model edit_image sends reference image content", {
     captured_body <- NULL
 
     local_mocked_bindings(
-        post_to_api = function(url, headers, body) {
+        post_to_api = function(url, headers, body, ...) {
             captured_body <<- body
             list(
                 candidates = list(list(

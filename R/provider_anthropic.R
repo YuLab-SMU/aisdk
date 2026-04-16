@@ -200,7 +200,12 @@ AnthropicLanguageModel <- R6::R6Class(
       }
 
       # NEW: Pass through any extra parameters
-      handled_params <- c("messages", "temperature", "max_tokens", "tools", "stream", "model", "system", "top_p", "stop_sequences")
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "tools", "stream", "model",
+        "system", "top_p", "stop_sequences",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
         body <- utils::modifyList(body, extra_params)
@@ -209,7 +214,16 @@ AnthropicLanguageModel <- R6::R6Class(
       # Remove NULL entries
       body <- body[!sapply(body, is.null)]
 
-      response <- post_to_api(url, headers, body)
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
 
       # Parse Anthropic response format
       # Response has: id, type, role, content (array), model, stop_reason, usage
@@ -295,7 +309,17 @@ AnthropicLanguageModel <- R6::R6Class(
       body <- body[!sapply(body, is.null)]
 
       # Anthropic uses different SSE event format
-      stream_anthropic(url, headers, body, callback)
+      stream_anthropic(
+        url,
+        headers,
+        body,
+        callback,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
     },
 
     #' @description Format a tool execution result for Anthropic's API.
@@ -345,12 +369,31 @@ is_empty_args <- function(args) {
 #' @param headers A named list of HTTP headers.
 #' @param body The request body (will be converted to JSON).
 #' @param callback A function called for each text delta.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total stream timeout in seconds.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds.
+#' @param idle_timeout_seconds Optional stall timeout in seconds.
 #' @return A GenerateResult object.
 #' @keywords internal
-stream_anthropic <- function(url, headers, body, callback) {
+stream_anthropic <- function(url, headers, body, callback,
+                             timeout_seconds = NULL,
+                             total_timeout_seconds = NULL,
+                             first_byte_timeout_seconds = NULL,
+                             connect_timeout_seconds = NULL,
+                             idle_timeout_seconds = NULL) {
+  timeout_config <- resolve_request_timeout_config(
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds,
+    request_type = "stream"
+  )
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
   req <- httr2::req_body_json(req, body)
+  req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
   # Establish connection
@@ -461,18 +504,33 @@ AnthropicProvider <- R6::R6Class(
     #' @param api_version Anthropic API version header. Defaults to "2023-06-01".
     #' @param headers Optional additional headers.
     #' @param name Optional provider name override.
+    #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+    #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+    #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+    #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+    #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
     initialize = function(api_key = NULL,
                           base_url = NULL,
                           api_version = NULL,
                           headers = NULL,
-                          name = NULL) {
+                          name = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL) {
       private$config <- list(
         api_key = api_key %||% Sys.getenv("ANTHROPIC_API_KEY"),
         base_url = sub("/$", "", base_url %||% Sys.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")),
         api_version = api_version %||% "2023-06-01",
         headers = headers,
         enable_caching = FALSE, # Default false
-        provider_name = name %||% "anthropic"
+        provider_name = name %||% "anthropic",
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
       )
 
       if (nchar(private$config$api_key) == 0) {
@@ -506,6 +564,11 @@ AnthropicProvider <- R6::R6Class(
 #' @param api_version Anthropic API version header. Defaults to "2023-06-01".
 #' @param headers Optional additional headers.
 #' @param name Optional provider name override.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return An AnthropicProvider object.
 #' @export
 #' @examples
@@ -519,12 +582,22 @@ create_anthropic <- function(api_key = NULL,
                              base_url = NULL,
                              api_version = NULL,
                              headers = NULL,
-                             name = NULL) {
+                             name = NULL,
+                             timeout_seconds = NULL,
+                             total_timeout_seconds = NULL,
+                             first_byte_timeout_seconds = NULL,
+                             connect_timeout_seconds = NULL,
+                             idle_timeout_seconds = NULL) {
   AnthropicProvider$new(
     api_key = api_key,
     base_url = base_url,
     api_version = api_version,
     headers = headers,
-    name = name
+    name = name,
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds
   )
 }

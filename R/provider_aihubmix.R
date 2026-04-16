@@ -99,15 +99,30 @@ AiHubMixProvider <- R6::R6Class(
         #' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
         #' @param base_url Base URL. Defaults to https://aihubmix.com/v1.
         #' @param headers Optional additional headers.
+        #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+        #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+        #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+        #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+        #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
         initialize = function(api_key = NULL,
                               base_url = NULL,
-                              headers = NULL) {
+                              headers = NULL,
+                              timeout_seconds = NULL,
+                              total_timeout_seconds = NULL,
+                              first_byte_timeout_seconds = NULL,
+                              connect_timeout_seconds = NULL,
+                              idle_timeout_seconds = NULL) {
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
                     base_url = base_url %||% Sys.getenv("AIHUBMIX_BASE_URL", "https://aihubmix.com/v1"),
                     headers = headers,
-                    name = "aihubmix"
+                    name = "aihubmix",
+                    timeout_seconds = timeout_seconds,
+                    total_timeout_seconds = total_timeout_seconds,
+                    first_byte_timeout_seconds = first_byte_timeout_seconds,
+                    connect_timeout_seconds = connect_timeout_seconds,
+                    idle_timeout_seconds = idle_timeout_seconds
                 )
             )
 
@@ -149,6 +164,11 @@ AiHubMixProvider <- R6::R6Class(
 #' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://aihubmix.com/v1.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return An AiHubMixProvider object.
 #' @export
 #' @examples
@@ -161,11 +181,21 @@ AiHubMixProvider <- R6::R6Class(
 #' }
 create_aihubmix <- function(api_key = NULL,
                             base_url = NULL,
-                            headers = NULL) {
+                            headers = NULL,
+                            timeout_seconds = NULL,
+                            total_timeout_seconds = NULL,
+                            first_byte_timeout_seconds = NULL,
+                            connect_timeout_seconds = NULL,
+                            idle_timeout_seconds = NULL) {
     AiHubMixProvider$new(
         api_key = api_key,
         base_url = base_url,
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }
 
@@ -182,6 +212,11 @@ create_aihubmix <- function(api_key = NULL,
 #' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
 #' @param extended_caching Logical. If TRUE, enables the 1-hour beta cache for Claude.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return An AnthropicProvider object configured for AiHubMix.
 #' @export
 #' @examples
@@ -195,7 +230,12 @@ create_aihubmix <- function(api_key = NULL,
 #' }
 create_aihubmix_anthropic <- function(api_key = NULL,
                                       extended_caching = FALSE,
-                                      headers = NULL) {
+                                      headers = NULL,
+                                      timeout_seconds = NULL,
+                                      total_timeout_seconds = NULL,
+                                      first_byte_timeout_seconds = NULL,
+                                      connect_timeout_seconds = NULL,
+                                      idle_timeout_seconds = NULL) {
     h <- headers %||% list()
     if (isTRUE(extended_caching)) {
         h$`anthropic-beta` <- "extended-cache-ttl-2025-04-11"
@@ -205,7 +245,12 @@ create_aihubmix_anthropic <- function(api_key = NULL,
         api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
         base_url = "https://aihubmix.com/v1",
         name = "aihubmix",
-        headers = h
+        headers = h,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
     # Enable caching automatically if using this native wrapper
     # since it's the primary reason to use it.
@@ -224,6 +269,11 @@ create_aihubmix_anthropic <- function(api_key = NULL,
 #'
 #' @param api_key AiHubMix API key. Defaults to AIHUBMIX_API_KEY env var.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A GeminiProvider object configured for AiHubMix.
 #' @export
 #' @examples
@@ -236,11 +286,21 @@ create_aihubmix_anthropic <- function(api_key = NULL,
 #' }
 #' }
 create_aihubmix_gemini <- function(api_key = NULL,
-                                   headers = NULL) {
+                                   headers = NULL,
+                                   timeout_seconds = NULL,
+                                   total_timeout_seconds = NULL,
+                                   first_byte_timeout_seconds = NULL,
+                                   connect_timeout_seconds = NULL,
+                                   idle_timeout_seconds = NULL) {
     create_gemini(
         api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
         base_url = "https://aihubmix.com/gemini/v1beta/models",
         name = "aihubmix",
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }

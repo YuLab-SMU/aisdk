@@ -201,15 +201,30 @@ XAIProvider <- R6::R6Class(
         #' @param api_key xAI API key. Defaults to XAI_API_KEY env var.
         #' @param base_url Base URL. Defaults to https://api.x.ai/v1.
         #' @param headers Optional additional headers.
+        #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+        #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+        #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+        #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+        #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
         initialize = function(api_key = NULL,
                               base_url = NULL,
-                              headers = NULL) {
+                              headers = NULL,
+                              timeout_seconds = NULL,
+                              total_timeout_seconds = NULL,
+                              first_byte_timeout_seconds = NULL,
+                              connect_timeout_seconds = NULL,
+                              idle_timeout_seconds = NULL) {
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("XAI_API_KEY"),
                     base_url = base_url %||% Sys.getenv("XAI_BASE_URL", "https://api.x.ai/v1"),
                     headers = headers,
-                    name = "xai"
+                    name = "xai",
+                    timeout_seconds = timeout_seconds,
+                    total_timeout_seconds = total_timeout_seconds,
+                    first_byte_timeout_seconds = first_byte_timeout_seconds,
+                    connect_timeout_seconds = connect_timeout_seconds,
+                    idle_timeout_seconds = idle_timeout_seconds
                 )
             )
 
@@ -254,6 +269,11 @@ XAIProvider <- R6::R6Class(
 #' @param api_key xAI API key. Defaults to XAI_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://api.x.ai/v1.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A XAIProvider object.
 #' @export
 #' @examples
@@ -266,10 +286,20 @@ XAIProvider <- R6::R6Class(
 #' }
 create_xai <- function(api_key = NULL,
                        base_url = NULL,
-                       headers = NULL) {
+                       headers = NULL,
+                       timeout_seconds = NULL,
+                       total_timeout_seconds = NULL,
+                       first_byte_timeout_seconds = NULL,
+                       connect_timeout_seconds = NULL,
+                       idle_timeout_seconds = NULL) {
     XAIProvider$new(
         api_key = api_key,
         base_url = base_url,
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }

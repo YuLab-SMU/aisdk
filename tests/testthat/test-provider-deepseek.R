@@ -46,15 +46,45 @@ test_that("create_deepseek() accepts custom base_url", {
 })
 
 test_that("create_deepseek() warns when API key is missing", {
-    # Temporarily unset API key
-    old_key <- Sys.getenv("DEEPSEEK_API_KEY")
-    Sys.setenv(DEEPSEEK_API_KEY = "")
-    on.exit(Sys.setenv(DEEPSEEK_API_KEY = old_key))
+  # Temporarily unset API key
+  old_key <- Sys.getenv("DEEPSEEK_API_KEY")
+  Sys.setenv(DEEPSEEK_API_KEY = "")
+  on.exit(Sys.setenv(DEEPSEEK_API_KEY = old_key))
 
     expect_warning(
         create_deepseek(),
-        "DeepSeek API key not set"
+    "DeepSeek API key not set"
+  )
+})
+
+test_that("DeepSeek provider forwards timeout_seconds to OpenAI-compatible requests", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key", timeout_seconds = 600))
+    model <- provider$language_model("deepseek-chat")
+
+    captured_timeout <- NULL
+
+    local_mocked_bindings(
+        post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
+            captured_timeout <<- timeout_seconds
+            list(
+                choices = list(list(
+                    message = list(
+                        content = "ok",
+                        reasoning_content = NULL
+                    ),
+                    finish_reason = "stop"
+                )),
+                usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
+            )
+        }
     )
+
+    result <- model$do_generate(list(
+        messages = list(list(role = "user", content = "Hello"))
+    ))
+
+    expect_equal(result$text, "ok")
+    expect_equal(captured_timeout, 600)
 })
 
 # Live API tests (only run when API key is available)

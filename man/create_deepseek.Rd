@@ -4,7 +4,16 @@
 \alias{create_deepseek}
 \title{Create DeepSeek Provider}
 \usage{
-create_deepseek(api_key = NULL, base_url = NULL, headers = NULL)
+create_deepseek(
+  api_key = NULL,
+  base_url = NULL,
+  headers = NULL,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL
+)
 }
 \arguments{
 \item{api_key}{DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.}
@@ -12,6 +21,16 @@ create_deepseek(api_key = NULL, base_url = NULL, headers = NULL)
 \item{base_url}{Base URL. Defaults to "https://api.deepseek.com".}
 
 \item{headers}{Optional additional headers.}
+
+\item{timeout_seconds}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{total_timeout_seconds}{Optional total request timeout in seconds for API calls.}
+
+\item{first_byte_timeout_seconds}{Optional time-to-first-byte timeout in seconds for API calls.}
+
+\item{connect_timeout_seconds}{Optional connection-establishment timeout in seconds for API calls.}
+
+\item{idle_timeout_seconds}{Optional stall timeout in seconds for API calls.}
 }
 \value{
 A DeepSeekProvider object.

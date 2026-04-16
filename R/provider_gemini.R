@@ -243,7 +243,16 @@ GeminiLanguageModel <- R6::R6Class(
         #' @return A GenerateResult object.
         do_generate = function(params) {
             payload <- self$build_payload_internal(params, stream = FALSE)
-            response <- post_to_api(payload$url, payload$headers, payload$body)
+            response <- post_to_api(
+                payload$url,
+                payload$headers,
+                payload$body,
+                timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+                total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+                first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+                connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+                idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+            )
 
             # Parse Gemini response format
             text_content <- ""
@@ -294,51 +303,61 @@ GeminiLanguageModel <- R6::R6Class(
             agg <- SSEAggregator$new(callback)
 
             # Gemini returns SSE events where `data` contains the JSON representation of GenerateContentResponse
-            stream_from_api(payload$url, payload$headers, payload$body, callback = function(data, done) {
-                if (done) {
-                    agg$on_done()
-                    return()
-                }
+            stream_from_api(
+                payload$url,
+                payload$headers,
+                payload$body,
+                callback = function(data, done) {
+                    if (done) {
+                        agg$on_done()
+                        return()
+                    }
 
-                # Each data chunk is a GenerateContentResponse
-                agg$on_raw_response(data)
+                    # Each data chunk is a GenerateContentResponse
+                    agg$on_raw_response(data)
 
-                if (!is.null(data$candidates) && length(data$candidates) > 0) {
-                    candidate <- data$candidates[[1]]
+                    if (!is.null(data$candidates) && length(data$candidates) > 0) {
+                        candidate <- data$candidates[[1]]
 
-                    if (!is.null(candidate$content) && !is.null(candidate$content$parts)) {
-                        for (part in candidate$content$parts) {
-                            if (!is.null(part$text) && nzchar(part$text)) {
-                                agg$on_text_delta(part$text)
-                            } else if (!is.null(part$functionCall)) {
-                                # Gemini doesn't chunk function calls the same way, it just sends the whole call
-                                # Mock an OpenAI tool call format to reuse SSEAggregator's tool tracking
-                                tc_mock <- list(list(
-                                    index = length(data$candidates) - 1,
-                                    id = paste0("call_", part$functionCall$name, "_", sample(10000:99999, 1)),
-                                    `function` = list(
-                                        name = part$functionCall$name,
-                                        arguments = jsonlite::toJSON(part$functionCall$args, auto_unbox = TRUE)
-                                    )
-                                ))
-                                agg$on_tool_call_delta(tc_mock)
+                        if (!is.null(candidate$content) && !is.null(candidate$content$parts)) {
+                            for (part in candidate$content$parts) {
+                                if (!is.null(part$text) && nzchar(part$text)) {
+                                    agg$on_text_delta(part$text)
+                                } else if (!is.null(part$functionCall)) {
+                                    # Gemini doesn't chunk function calls the same way, it just sends the whole call
+                                    # Mock an OpenAI tool call format to reuse SSEAggregator's tool tracking
+                                    tc_mock <- list(list(
+                                        index = length(data$candidates) - 1,
+                                        id = paste0("call_", part$functionCall$name, "_", sample(10000:99999, 1)),
+                                        `function` = list(
+                                            name = part$functionCall$name,
+                                            arguments = jsonlite::toJSON(part$functionCall$args, auto_unbox = TRUE)
+                                        )
+                                    ))
+                                    agg$on_tool_call_delta(tc_mock)
+                                }
                             }
+                        }
+
+                        if (!is.null(candidate$finishReason)) {
+                            agg$on_finish_reason(candidate$finishReason)
                         }
                     }
 
-                    if (!is.null(candidate$finishReason)) {
-                        agg$on_finish_reason(candidate$finishReason)
+                    if (!is.null(data$usageMetadata)) {
+                        agg$on_usage(list(
+                            prompt_tokens = data$usageMetadata$promptTokenCount,
+                            completion_tokens = data$usageMetadata$candidatesTokenCount,
+                            total_tokens = data$usageMetadata$totalTokenCount
+                        ))
                     }
-                }
-
-                if (!is.null(data$usageMetadata)) {
-                    agg$on_usage(list(
-                        prompt_tokens = data$usageMetadata$promptTokenCount,
-                        completion_tokens = data$usageMetadata$candidatesTokenCount,
-                        total_tokens = data$usageMetadata$totalTokenCount
-                    ))
-                }
-            })
+                },
+                timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+                total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+                first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+                connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+                idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+            )
 
             agg$build_result()
         },
@@ -460,7 +479,16 @@ GeminiImageModel <- R6::R6Class(
             }
 
             payload <- private$build_payload(params)
-            response <- post_to_api(payload$url, payload$headers, payload$body)
+            response <- post_to_api(
+                payload$url,
+                payload$headers,
+                payload$body,
+                timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+                total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+                first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+                connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+                idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+            )
 
             parsed_images <- list()
             text_content <- ""
@@ -551,15 +579,30 @@ GeminiProvider <- R6::R6Class(
         #' @param base_url Base URL for API calls. Defaults to https://generativelanguage.googleapis.com/v1beta/models.
         #' @param headers Optional additional headers.
         #' @param name Optional provider name override.
+        #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+        #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+        #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+        #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+        #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
         initialize = function(api_key = NULL,
                               base_url = NULL,
                               headers = NULL,
-                              name = NULL) {
+                              name = NULL,
+                              timeout_seconds = NULL,
+                              total_timeout_seconds = NULL,
+                              first_byte_timeout_seconds = NULL,
+                              connect_timeout_seconds = NULL,
+                              idle_timeout_seconds = NULL) {
             private$config <- list(
                 api_key = api_key %||% Sys.getenv("GEMINI_API_KEY"),
                 base_url = sub("/$", "", base_url %||% Sys.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/models")),
                 headers = headers,
-                provider_name = name %||% "gemini"
+                provider_name = name %||% "gemini",
+                timeout_seconds = timeout_seconds,
+                total_timeout_seconds = total_timeout_seconds,
+                first_byte_timeout_seconds = first_byte_timeout_seconds,
+                connect_timeout_seconds = connect_timeout_seconds,
+                idle_timeout_seconds = idle_timeout_seconds
             )
 
             if (nchar(private$config$api_key) == 0) {
@@ -593,6 +636,11 @@ GeminiProvider <- R6::R6Class(
 #' @param base_url Base URL for API calls. Defaults to https://generativelanguage.googleapis.com/v1beta/models.
 #' @param headers Optional additional headers.
 #' @param name Optional provider name override.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A GeminiProvider object.
 #' @export
 #' @examples
@@ -605,11 +653,21 @@ GeminiProvider <- R6::R6Class(
 create_gemini <- function(api_key = NULL,
                           base_url = NULL,
                           headers = NULL,
-                          name = NULL) {
+                          name = NULL,
+                          timeout_seconds = NULL,
+                          total_timeout_seconds = NULL,
+                          first_byte_timeout_seconds = NULL,
+                          connect_timeout_seconds = NULL,
+                          idle_timeout_seconds = NULL) {
     GeminiProvider$new(
         api_key = api_key,
         base_url = base_url,
         headers = headers,
-        name = name
+        name = name,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }

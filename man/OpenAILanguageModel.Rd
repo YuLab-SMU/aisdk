@@ -96,7 +96,16 @@ A list with url, headers, and body.
 \subsection{Method \code{execute_request()}}{
 Execute the API request.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$execute_request(url, headers, body)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{OpenAILanguageModel$execute_request(
+  url,
+  headers,
+  body,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -107,6 +116,16 @@ Execute the API request.
 \item{\code{headers}}{A named list of HTTP headers.}
 
 \item{\code{body}}{The request body.}
+
+\item{\code{timeout_seconds}}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{\code{total_timeout_seconds}}{Optional total request timeout override in seconds.}
+
+\item{\code{first_byte_timeout_seconds}}{Optional time-to-first-byte timeout override in seconds.}
+
+\item{\code{connect_timeout_seconds}}{Optional connection timeout override in seconds.}
+
+\item{\code{idle_timeout_seconds}}{Optional stall timeout override in seconds.}
 }
 \if{html}{\out{</div>}}
 }

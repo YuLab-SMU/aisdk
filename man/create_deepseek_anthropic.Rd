@@ -4,12 +4,30 @@
 \alias{create_deepseek_anthropic}
 \title{Create DeepSeek Provider (Anthropic API Format)}
 \usage{
-create_deepseek_anthropic(api_key = NULL, headers = NULL)
+create_deepseek_anthropic(
+  api_key = NULL,
+  headers = NULL,
+  timeout_seconds = NULL,
+  total_timeout_seconds = NULL,
+  first_byte_timeout_seconds = NULL,
+  connect_timeout_seconds = NULL,
+  idle_timeout_seconds = NULL
+)
 }
 \arguments{
 \item{api_key}{DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.}
 
 \item{headers}{Optional additional headers.}
+
+\item{timeout_seconds}{Legacy alias for \code{total_timeout_seconds}.}
+
+\item{total_timeout_seconds}{Optional total request timeout in seconds for API calls.}
+
+\item{first_byte_timeout_seconds}{Optional time-to-first-byte timeout in seconds for API calls.}
+
+\item{connect_timeout_seconds}{Optional connection-establishment timeout in seconds for API calls.}
+
+\item{idle_timeout_seconds}{Optional stall timeout in seconds for API calls.}
 }
 \value{
 An AnthropicProvider object configured for DeepSeek.

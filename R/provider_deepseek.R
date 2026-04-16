@@ -45,16 +45,31 @@ DeepSeekProvider <- R6::R6Class(
         #' @param api_key DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.
         #' @param base_url Base URL. Defaults to https://api.deepseek.com.
         #' @param headers Optional additional headers.
+        #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+        #' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+        #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+        #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+        #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
         initialize = function(api_key = NULL,
                               base_url = NULL,
-                              headers = NULL) {
+                              headers = NULL,
+                              timeout_seconds = NULL,
+                              total_timeout_seconds = NULL,
+                              first_byte_timeout_seconds = NULL,
+                              connect_timeout_seconds = NULL,
+                              idle_timeout_seconds = NULL) {
             # Suppress parent class warning since we do our own check
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("DEEPSEEK_API_KEY"),
                     base_url = base_url %||% Sys.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
                     headers = headers,
-                    name = "deepseek"
+                    name = "deepseek",
+                    timeout_seconds = timeout_seconds,
+                    total_timeout_seconds = total_timeout_seconds,
+                    first_byte_timeout_seconds = first_byte_timeout_seconds,
+                    connect_timeout_seconds = connect_timeout_seconds,
+                    idle_timeout_seconds = idle_timeout_seconds
                 )
             )
 
@@ -86,6 +101,11 @@ DeepSeekProvider <- R6::R6Class(
 #' @param api_key DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.
 #' @param base_url Base URL. Defaults to "https://api.deepseek.com".
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return A DeepSeekProvider object.
 #' @export
 #' @examples
@@ -111,11 +131,21 @@ DeepSeekProvider <- R6::R6Class(
 #' }
 create_deepseek <- function(api_key = NULL,
                             base_url = NULL,
-                            headers = NULL) {
+                            headers = NULL,
+                            timeout_seconds = NULL,
+                            total_timeout_seconds = NULL,
+                            first_byte_timeout_seconds = NULL,
+                            connect_timeout_seconds = NULL,
+                            idle_timeout_seconds = NULL) {
     DeepSeekProvider$new(
         api_key = api_key,
         base_url = base_url,
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }
 
@@ -133,6 +163,11 @@ create_deepseek <- function(api_key = NULL,
 #'
 #' @param api_key DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.
 #' @param headers Optional additional headers.
+#' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
+#' @param total_timeout_seconds Optional total request timeout in seconds for API calls.
+#' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds for API calls.
+#' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
+#' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @return An AnthropicProvider object configured for DeepSeek.
 #' @export
 #' @examples
@@ -148,11 +183,21 @@ create_deepseek <- function(api_key = NULL,
 #' }
 #' }
 create_deepseek_anthropic <- function(api_key = NULL,
-                                      headers = NULL) {
+                                      headers = NULL,
+                                      timeout_seconds = NULL,
+                                      total_timeout_seconds = NULL,
+                                      first_byte_timeout_seconds = NULL,
+                                      connect_timeout_seconds = NULL,
+                                      idle_timeout_seconds = NULL) {
     create_anthropic(
         api_key = api_key %||% Sys.getenv("DEEPSEEK_API_KEY"),
         base_url = "https://api.deepseek.com/anthropic",
         name = "deepseek",
-        headers = headers
+        headers = headers,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
     )
 }

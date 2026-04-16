@@ -149,7 +149,7 @@ test_that("Anthropic formatter translates multimodal content blocks", {
   captured <- NULL
 
   local_mocked_bindings(
-    post_to_api = function(url, headers, body) {
+    post_to_api = function(url, headers, body, ...) {
       captured <<- body
       fake_response
     }
@@ -182,7 +182,7 @@ test_that("Anthropic payload translates multimodal content blocks", {
   captured_body <- NULL
 
   local_mocked_bindings(
-    post_to_api = function(url, headers, body) {
+    post_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
         content = list(list(type = "text", text = "ok")),
