@@ -124,7 +124,7 @@ Success status
 \if{html}{\out{<a id="method-Computer-execute_r_code"></a>}}
 \if{latex}{\out{\hypertarget{method-Computer-execute_r_code}{}}}
 \subsection{Method \code{execute_r_code()}}{
-Execute R code
+Execute R code in an isolated \code{callr} process
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Computer$execute_r_code(code, timeout_ms = 30000, capture_output = TRUE)}\if{html}{\out{</div>}}
 }
@@ -141,7 +141,9 @@ Execute R code
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-List with result, output, error
+List with result, output, error, and \code{execution_mode}.
+\code{execution_mode} is always \code{"sandbox_exec"} for this computer-layer path,
+which does not persist values into a live \code{ChatSession$get_envir()}.
 }
 }
 \if{html}{\out{<hr>}}

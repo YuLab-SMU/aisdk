@@ -116,6 +116,7 @@ test_that("Computer.execute_r_code executes simple code", {
 
   expect_false(result$error)
   expect_true(result$result == 4)
+  expect_equal(result$execution_mode, "sandbox_exec")
 })
 
 test_that("Computer.execute_r_code handles errors", {
@@ -126,6 +127,7 @@ test_that("Computer.execute_r_code handles errors", {
 
   expect_true(result$error)
   expect_true(grepl("test error", result$message))
+  expect_equal(result$execution_mode, "sandbox_exec")
 })
 
 test_that("Computer.execute_r_code respects strict sandbox mode", {
@@ -137,6 +139,7 @@ test_that("Computer.execute_r_code respects strict sandbox mode", {
 
   expect_true(result$error)
   expect_true(grepl("Sandbox violation", result$message))
+  expect_equal(result$execution_mode, "sandbox_exec")
 })
 
 test_that("Computer maintains execution log", {
