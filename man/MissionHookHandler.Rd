@@ -20,8 +20,12 @@ planning -> step execution -> completion / stall / escalation.
 \itemize{
 \item \href{#method-MissionHookHandler-new}{\code{MissionHookHandler$new()}}
 \item \href{#method-MissionHookHandler-trigger_mission_start}{\code{MissionHookHandler$trigger_mission_start()}}
+\item \href{#method-MissionHookHandler-trigger_planner_start}{\code{MissionHookHandler$trigger_planner_start()}}
+\item \href{#method-MissionHookHandler-trigger_planner_done}{\code{MissionHookHandler$trigger_planner_done()}}
 \item \href{#method-MissionHookHandler-trigger_mission_planned}{\code{MissionHookHandler$trigger_mission_planned()}}
 \item \href{#method-MissionHookHandler-trigger_step_start}{\code{MissionHookHandler$trigger_step_start()}}
+\item \href{#method-MissionHookHandler-trigger_retry_start}{\code{MissionHookHandler$trigger_retry_start()}}
+\item \href{#method-MissionHookHandler-trigger_retry_success}{\code{MissionHookHandler$trigger_retry_success()}}
 \item \href{#method-MissionHookHandler-trigger_step_done}{\code{MissionHookHandler$trigger_step_done()}}
 \item \href{#method-MissionHookHandler-trigger_step_failed}{\code{MissionHookHandler$trigger_step_failed()}}
 \item \href{#method-MissionHookHandler-trigger_mission_stall}{\code{MissionHookHandler$trigger_mission_stall()}}
@@ -44,11 +48,18 @@ Initialize a MissionHookHandler.
 \item{\code{hooks_list}}{Named list of hook functions. Supported hooks:
 \itemize{
 \item on_mission_start(mission) - Called when a Mission begins running.
+\item on_planner_start(mission) - Called immediately before auto-planning starts.
+\item on_planner_done(mission) - Called after auto-planning produces steps.
 \item on_mission_planned(mission) - Called after LLM planning produces steps.
 \item on_step_start(step, attempt) - Called before each step attempt.
+\item on_retry_start(step, attempt) - Called before a retry attempt begins.
+\item on_retry_success(step, result, attempt) - Called when a retried step succeeds.
+\item on_step_success(step, result, attempt) - Alias hook for step success.
 \item on_step_done(step, result) - Called when a step succeeds.
+\item on_step_failure(step, error, attempt) - Alias hook for step failure.
 \item on_step_failed(step, error, attempt) - Called on each step failure.
 \item on_mission_stall(mission, step) - Called when a step exceeds max_retries.
+\item on_mission_end(mission) - Alias hook for mission completion.
 \item on_mission_done(mission) - Called when the Mission completes (succeeded or failed).
 }}
 }
@@ -68,6 +79,40 @@ Trigger on_mission_start.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{mission}}{The Mission object.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MissionHookHandler-trigger_planner_start"></a>}}
+\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_planner_start}{}}}
+\subsection{Method \code{trigger_planner_start()}}{
+Trigger on_planner_start.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_planner_start(mission)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mission}}{The Mission object.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MissionHookHandler-trigger_planner_done"></a>}}
+\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_planner_done}{}}}
+\subsection{Method \code{trigger_planner_done()}}{
+Trigger on_planner_done.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_planner_done(mission)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mission}}{The Mission object (steps are now populated).}
 }
 \if{html}{\out{</div>}}
 }
@@ -109,12 +154,31 @@ Trigger on_step_start.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MissionHookHandler-trigger_step_done"></a>}}
-\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_step_done}{}}}
-\subsection{Method \code{trigger_step_done()}}{
-Trigger on_step_done.
+\if{html}{\out{<a id="method-MissionHookHandler-trigger_retry_start"></a>}}
+\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_retry_start}{}}}
+\subsection{Method \code{trigger_retry_start()}}{
+Trigger on_retry_start.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_step_done(step, result)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_retry_start(step, attempt)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{The MissionStep object.}
+
+\item{\code{attempt}}{Integer attempt number.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MissionHookHandler-trigger_retry_success"></a>}}
+\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_retry_success}{}}}
+\subsection{Method \code{trigger_retry_success()}}{
+Trigger on_retry_success.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_retry_success(step, result, attempt)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -123,6 +187,29 @@ Trigger on_step_done.
 \item{\code{step}}{The MissionStep object.}
 
 \item{\code{result}}{The text result from the executor.}
+
+\item{\code{attempt}}{Integer attempt number.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MissionHookHandler-trigger_step_done"></a>}}
+\if{latex}{\out{\hypertarget{method-MissionHookHandler-trigger_step_done}{}}}
+\subsection{Method \code{trigger_step_done()}}{
+Trigger on_step_done.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MissionHookHandler$trigger_step_done(step, result, attempt = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{The MissionStep object.}
+
+\item{\code{result}}{The text result from the executor.}
+
+\item{\code{attempt}}{Integer attempt number.}
 }
 \if{html}{\out{</div>}}
 }

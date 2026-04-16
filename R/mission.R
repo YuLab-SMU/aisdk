@@ -28,6 +28,37 @@ default_stall_policy <- function() {
   )
 }
 
+#' @keywords internal
+format_mission_semantic_payload <- function(name, payload) {
+  identity <- payload$identity %||% list()
+  schema <- payload$schema %||% list()
+  semantics <- payload$semantics %||% list()
+  hint <- payload$workflow_hint %||% NULL
+
+  lines <- c(
+    paste0("- ", name, ": adapter=", payload$adapter %||% "unknown"),
+    if (!is.null(identity$primary_class)) paste0("  class: ", identity$primary_class)
+      else if (!is.null(identity$class)) paste0("  class: ", paste(identity$class, collapse = ", ")),
+    if (!is.null(semantics$summary)) paste0("  semantics: ", semantics$summary),
+    if (!is.null(schema$assays) && length(schema$assays) > 0) paste0("  assays: ", paste(schema$assays, collapse = ", ")),
+    if (!is.null(schema$reduced_dims) && length(schema$reduced_dims) > 0) paste0("  reduced_dims: ", paste(schema$reduced_dims, collapse = ", ")),
+    if (!is.null(schema$col_data_columns) && length(schema$col_data_columns) > 0) paste0("  colData: ", paste(schema$col_data_columns, collapse = ", ")),
+    if (!is.null(schema$metadata_columns) && length(schema$metadata_columns) > 0) paste0("  metadata columns: ", paste(schema$metadata_columns, collapse = ", ")),
+    if (!is.null(schema$seqlevels) && length(schema$seqlevels) > 0) paste0("  seqlevels: ", paste(utils::head(schema$seqlevels, 10), collapse = ", "))
+  )
+
+  if (is.list(hint) && length(hint) > 0) {
+    if (!is.null(hint$steps) && length(hint$steps) > 0) {
+      lines <- c(lines, paste0("  workflow hint: ", paste(hint$steps, collapse = " -> ")))
+    } else {
+      hint_text <- paste(utils::capture.output(str(hint, max.level = 1)), collapse = " ")
+      lines <- c(lines, paste0("  workflow hint: ", hint_text))
+    }
+  }
+
+  paste(lines[!is.na(lines) & nzchar(lines)], collapse = "\n")
+}
+
 # ---------------------------------------------------------------------------
 # MissionStep
 # ---------------------------------------------------------------------------
@@ -260,6 +291,7 @@ Mission <- R6::R6Class(
       if (is.null(effective_model)) {
         rlang::abort("No model specified. Provide 'model' to Mission$run() or set at initialize().")
       }
+      mission_started_at <- Sys.time()
 
       # Update session model if needed
       if (!is.null(self$session) && !is.null(effective_model)) {
@@ -276,15 +308,28 @@ Mission <- R6::R6Class(
       # Auto-plan: decompose goal into steps using LLM
       if (is.null(self$steps) && isTRUE(self$auto_plan)) {
         private$transition("planning")
+        if (!is.null(self$hooks)) self$hooks$trigger_planner_start(self)
+        private$log_event("planner_start")
+        planning_started_at <- Sys.time()
         tryCatch(
           private$plan(effective_model),
           error = function(e) {
             private$transition("failed", paste("Planning failed:", conditionMessage(e)))
-            private$log_event("planning_failed", list(error = conditionMessage(e)))
+            error_message <- conditionMessage(e)
+            private$log_event("planning_failed", list(
+              error_type = private$classify_error_type(error_message),
+              error_message = error_message,
+              duration_ms = private$duration_ms(planning_started_at)
+            ))
             rlang::abort(paste("Mission planning failed:", conditionMessage(e)))
           }
         )
+        if (!is.null(self$hooks)) self$hooks$trigger_planner_done(self)
         if (!is.null(self$hooks)) self$hooks$trigger_mission_planned(self)
+        private$log_event("planner_done", list(
+          duration_ms = private$duration_ms(planning_started_at),
+          n_steps = length(self$steps %||% list())
+        ))
         private$transition("running")
       }
 
@@ -307,7 +352,14 @@ Mission <- R6::R6Class(
       }
 
       if (!is.null(self$hooks)) self$hooks$trigger_mission_done(self)
-      private$log_event("mission_done", list(status = self$status))
+      private$log_event("mission_end", list(
+        status = self$status,
+        duration_ms = private$duration_ms(mission_started_at)
+      ))
+      private$log_event("mission_done", list(
+        status = self$status,
+        duration_ms = private$duration_ms(mission_started_at)
+      ))
 
       invisible(self)
     },
@@ -428,11 +480,119 @@ Mission <- R6::R6Class(
 
     # Append to audit log
     log_event = function(event_type, data = list()) {
-      entry <- c(
-        list(event = event_type, timestamp = Sys.time()),
-        data
+      entry <- utils::modifyList(
+        list(
+          event = event_type,
+          timestamp = Sys.time(),
+          step_id = NULL,
+          attempt = NULL,
+          error_type = NULL,
+          error_message = NULL,
+          duration_ms = NULL
+        ),
+        data,
+        keep.null = TRUE
       )
       self$audit_log <- c(self$audit_log, list(entry))
+    },
+
+    duration_ms = function(started_at) {
+      if (is.null(started_at)) {
+        return(NULL)
+      }
+      as.numeric(difftime(Sys.time(), started_at, units = "secs")) * 1000
+    },
+
+    classify_error_type = function(error_message) {
+      if (is.null(error_message) || !nzchar(error_message)) {
+        return(NULL)
+      }
+      lower <- tolower(error_message)
+      if (grepl("timeout|time limit", lower)) {
+        return("timeout")
+      }
+      if (grepl("permission denied|denied", lower)) {
+        return("permission")
+      }
+      if (grepl("not found|unknown|missing", lower)) {
+        return("missing_resource")
+      }
+      "execution_error"
+    },
+
+    build_planning_context = function(max_objects = 5L) {
+      session <- self$session
+      if (is.null(session) || !inherits(session, "ChatSession")) {
+        return(list(text = "", payload = list()))
+      }
+
+      env_vars <- session$list_envir()
+      env_vars <- env_vars[!grepl("^\\.", env_vars)]
+      if (length(env_vars) == 0) {
+        return(list(text = "", payload = list()))
+      }
+
+      env_vars <- env_vars[seq_len(min(length(env_vars), max_objects))]
+      payloads <- lapply(env_vars, function(var_name) {
+        obj <- get(var_name, envir = session$get_envir(), inherits = FALSE)
+        payload <- describe_semantic_object(
+          obj,
+          name = var_name,
+          session = session
+        )
+        payload$workflow_hint <- get_semantic_workflow_hint(
+          obj,
+          goal = self$goal,
+          session = session
+        )
+        payload
+      })
+
+      names(payloads) <- env_vars
+      payload_lines <- Map(format_mission_semantic_payload, env_vars, payloads)
+      payload_lines <- Filter(function(x) nzchar(x %||% ""), payload_lines)
+      workflow_hint_payload <- payloads[
+        names(Filter(function(x) {
+          is.list(x$workflow_hint) && length(x$workflow_hint) > 0
+        }, payloads))
+      ]
+      if (length(payload_lines) == 0) {
+        return(list(text = "", payload = payloads, workflow_hint_payload = workflow_hint_payload))
+      }
+
+      workflow_hint_text <- ""
+      if (length(workflow_hint_payload) > 0) {
+        workflow_hint_json <- jsonlite::toJSON(
+          lapply(names(workflow_hint_payload), function(var_name) {
+            list(
+              object = var_name,
+              workflow_hint = workflow_hint_payload[[var_name]]$workflow_hint
+            )
+          }),
+          auto_unbox = TRUE,
+          pretty = TRUE
+        )
+        workflow_hint_text <- paste0(
+          "\n[SESSION WORKFLOW HINTS JSON]\n",
+          workflow_hint_json,
+          "\n"
+        )
+      }
+
+      list(
+        text = paste0(
+          "[SESSION OBJECT SEMANTICS]\n",
+          "Use the following live-session object semantics and workflow hints when planning.\n",
+          paste(payload_lines, collapse = "\n\n"),
+          "\n",
+          workflow_hint_text
+        ),
+        payload = payloads,
+        workflow_hint_payload = workflow_hint_payload,
+        objects_with_hints = names(Filter(function(x) {
+          is.list(x$workflow_hint) && length(x$workflow_hint) > 0
+        }, payloads))
+      )
     },
 
     # LLM-driven planning: decompose goal into MissionSteps
@@ -444,9 +604,31 @@ Mission <- R6::R6Class(
         ))
       }
 
+      planning_context <- private$build_planning_context()
+      if (!is.null(self$session) && inherits(self$session, "ChatSession")) {
+        self$session$set_memory(
+          paste0("mission_", self$id, "_planning_semantics"),
+          planning_context$payload %||% list()
+        )
+        self$session$set_memory(
+          paste0("mission_", self$id, "_planning_hint_objects"),
+          planning_context$objects_with_hints %||% character(0)
+        )
+        self$session$set_memory(
+          paste0("mission_", self$id, "_planning_workflow_hints"),
+          planning_context$workflow_hint_payload %||% list()
+        )
+      }
+      private$log_event("planning_context_built", list(
+        n_objects = length(planning_context$payload %||% list()),
+        objects_with_hints = planning_context$objects_with_hints %||% character(0),
+        n_workflow_hints = length(planning_context$workflow_hint_payload %||% list())
+      ))
+
       plan_prompt <- paste0(
         "You are a mission planner. Break down the following goal into ",
         "concrete, sequential execution steps.\n\n",
+        if (nzchar(planning_context$text %||% "")) paste0(planning_context$text, "\n") else "",
         "Goal: ", self$goal, "\n\n",
         "Return ONLY a valid JSON array (no markdown, no explanation). ",
         "Each element must have:\n",
@@ -589,8 +771,12 @@ Mission <- R6::R6Class(
           step$status <- "done"
           step$result <- res$result
           self$session$set_memory(paste0("step_", step$id, "_result"), res$result)
-          if (!is.null(self$hooks)) self$hooks$trigger_step_done(step, res$result)
-          private$log_event("step_done", list(step_id = step$id))
+          if (!is.null(self$hooks)) self$hooks$trigger_step_done(step, res$result, attempt = 1L)
+          private$log_event("step_success", list(
+            step_id = step$id,
+            attempt = 1L
+          ))
+          private$log_event("step_done", list(step_id = step$id, attempt = 1L))
         } else {
           step$error_history <- c(step$error_history, list(list(
             attempt   = 1,
@@ -611,6 +797,7 @@ Mission <- R6::R6Class(
         attempt <- attempt + 1
         step$retry_count <- attempt - 1
         step$status      <- "running"
+        started_at <- Sys.time()
 
         if (!is.null(self$hooks)) self$hooks$trigger_step_start(step, attempt)
         private$log_event("step_start", list(step_id = step$id, attempt = attempt))
@@ -660,10 +847,20 @@ Mission <- R6::R6Class(
               if (!is.null(self$hooks)) {
                 self$hooks$trigger_step_failed(step, conditionMessage(e), attempt)
               }
+              private$log_event("step_failure", list(
+                step_id = step$id,
+                attempt = attempt,
+                error_type = private$classify_error_type(conditionMessage(e)),
+                error_message = conditionMessage(e),
+                duration_ms = private$duration_ms(started_at)
+              ))
               private$log_event("step_failed", list(
                 step_id = step$id,
                 attempt = attempt,
-                error   = conditionMessage(e)
+                error_type = private$classify_error_type(conditionMessage(e)),
+                error_message = conditionMessage(e),
+                error = conditionMessage(e),
+                duration_ms = private$duration_ms(started_at)
               ))
               NULL
             }
@@ -675,8 +872,27 @@ Mission <- R6::R6Class(
           step$status <- "done"
           step$result <- result_text
           self$session$set_memory(paste0("step_", step$id, "_result"), result_text)
-          if (!is.null(self$hooks)) self$hooks$trigger_step_done(step, result_text)
-          private$log_event("step_done", list(step_id = step$id))
+          if (!is.null(self$hooks)) self$hooks$trigger_step_done(step, result_text, attempt = attempt)
+          if (!is.null(self$hooks) && attempt > 1) {
+            self$hooks$trigger_retry_success(step, result_text, attempt)
+          }
+          private$log_event("step_success", list(
+            step_id = step$id,
+            attempt = attempt,
+            duration_ms = private$duration_ms(started_at)
+          ))
+          if (attempt > 1) {
+            private$log_event("retry_success", list(
+              step_id = step$id,
+              attempt = attempt,
+              duration_ms = private$duration_ms(started_at)
+            ))
+          }
+          private$log_event("step_done", list(
+            step_id = step$id,
+            attempt = attempt,
+            duration_ms = private$duration_ms(started_at)
+          ))
           return(invisible(result_text))
         }
 
@@ -690,6 +906,13 @@ Mission <- R6::R6Class(
         # Retry with exponential backoff
         step$status <- "retrying"
         delay_secs <- min(2^(attempt - 1), 30)
+        if (!is.null(self$hooks)) {
+          self$hooks$trigger_retry_start(step, attempt + 1L)
+        }
+        private$log_event("retry_start", list(
+          step_id = step$id,
+          attempt = attempt + 1L
+        ))
         Sys.sleep(delay_secs)
       }
     },
@@ -699,7 +922,12 @@ Mission <- R6::R6Class(
       policy <- self$stall_policy
 
       if (!is.null(self$hooks)) self$hooks$trigger_mission_stall(self, step)
-      private$log_event("mission_stall", list(step_id = step$id))
+      private$log_event("mission_stall", list(
+        step_id = step$id,
+        attempt = step$retry_count + 1L,
+        error_type = "max_retries",
+        error_message = "Mission stalled after max retries."
+      ))
 
       action <- policy$on_max_retries %||% "escalate"
 

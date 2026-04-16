@@ -91,6 +91,106 @@ test_that("Mission initializes with auto_plan = FALSE", {
   expect_false(m$auto_plan)
 })
 
+test_that("Mission planning prompt includes semantic object context and workflow hints", {
+  PlanningMockModel <- R6::R6Class(
+    "PlanningMockModel",
+    inherit = LanguageModelV1,
+    public = list(
+      provider = "mock",
+      model_id = "planning-mock",
+      last_params = NULL,
+      initialize = function() {
+        super$initialize(provider = "mock", model_id = "planning-mock")
+      },
+      do_generate = function(params) {
+        self$last_params <- params
+        list(
+          text = "[{\"id\":\"step_1\",\"description\":\"Inspect object\",\"can_parallel\":false}]",
+          tool_calls = NULL,
+          finish_reason = "stop",
+          usage = list(total_tokens = 10)
+        )
+      }
+    )
+  )
+
+  model <- PlanningMockModel$new()
+  session <- ChatSession$new(model = model)
+  obj <- structure(list(), class = "custom_plan_object")
+  assign("plan_obj", obj, envir = session$get_envir())
+
+  register_semantic_adapter(
+    create_semantic_adapter(
+      name = "custom-plan-adapter",
+      supports = function(x) inherits(x, "custom_plan_object"),
+      priority = 100,
+      capabilities = c("identity", "schema", "semantics"),
+      describe_identity = function(x) list(primary_class = "custom_plan_object"),
+      describe_schema = function(x) list(kind = "custom-plan", assays = c("counts")),
+      describe_semantics = function(x) list(summary = "Custom planning object")
+    ),
+    session = session
+  )
+
+  register_semantic_workflow_hint(
+    name = "custom-plan-hint",
+    supports = function(x) inherits(x, "custom_plan_object"),
+    hint_fn = function(x, goal = NULL) list(steps = c("inspect", "summarize", "report"), goal = goal),
+    session = session
+  )
+
+  mission <- create_mission(
+    goal = "Create a report for the custom object",
+    executor = function(task, session, context) "ok",
+    session = session,
+    auto_plan = TRUE
+  )
+
+  mission$run(model = model)
+
+  prompt_text <- model$last_params$messages[[2]]$content
+  expect_match(prompt_text, "[SESSION OBJECT SEMANTICS]", fixed = TRUE)
+  expect_match(prompt_text, "[SESSION WORKFLOW HINTS JSON]", fixed = TRUE)
+  expect_match(prompt_text, "plan_obj", fixed = TRUE)
+  expect_match(prompt_text, "custom_plan_object", fixed = TRUE)
+  expect_match(prompt_text, "Custom planning object", fixed = TRUE)
+  expect_match(prompt_text, "inspect -> summarize -> report", fixed = TRUE)
+
+  planning_semantics <- session$get_memory(paste0("mission_", mission$id, "_planning_semantics"))
+  expect_true("plan_obj" %in% names(planning_semantics))
+  expect_equal(planning_semantics$plan_obj$adapter, "custom-plan-adapter")
+  expect_equal(planning_semantics$plan_obj$workflow_hint$steps, c("inspect", "summarize", "report"))
+
+  hint_objects <- session$get_memory(paste0("mission_", mission$id, "_planning_hint_objects"))
+  expect_equal(hint_objects, "plan_obj")
+  workflow_hints <- session$get_memory(paste0("mission_", mission$id, "_planning_workflow_hints"))
+  expect_true("plan_obj" %in% names(workflow_hints))
+  expect_equal(workflow_hints$plan_obj$workflow_hint$steps, c("inspect", "summarize", "report"))
+
+  planning_events <- Filter(function(e) identical(e$event, "planning_context_built"), mission$audit_log)
+  expect_length(planning_events, 1)
+  expect_equal(planning_events[[1]]$n_objects, 1)
+  expect_equal(planning_events[[1]]$objects_with_hints, "plan_obj")
+  expect_equal(planning_events[[1]]$n_workflow_hints, 1)
+
+  trace <- get_mission_planning_trace(session, mission$id)
+  expect_true("plan_obj" %in% names(trace$semantics))
+  expect_equal(trace$hint_objects, "plan_obj")
+
+  trace_summary <- summarize_mission_planning_trace(session, mission$id)
+  expect_equal(trace_summary$n_objects, 1)
+  expect_equal(trace_summary$n_hint_objects, 1)
+  expect_equal(trace_summary$adapters, "custom-plan-adapter")
+  expect_equal(trace_summary$classes, "custom_plan_object")
+
+  trace_score <- score_mission_planning_trace(session, mission$id)
+  expect_equal(trace_score$n_objects, 1)
+  expect_equal(trace_score$n_hint_objects, 1)
+  expect_equal(trace_score$hint_coverage, 1)
+  expect_true(trace_score$semantic_context_present)
+  expect_true(trace_score$workflow_hint_present)
+})
+
 test_that("Mission state machine: step_summary returns correct statuses", {
   steps <- list(
     create_step("s1", "Step one",   executor = function(t, s, c) "r1"),
@@ -185,6 +285,20 @@ test_that("Mission retry: execute_step_with_retry retries on failure then succee
   expect_equal(step$result, "finally succeeded")
   expect_equal(attempt_count, 3)
   expect_length(step$error_history, 2)  # 2 failures recorded
+
+  retry_events <- Filter(function(e) identical(e$event, "retry_start"), m$audit_log)
+  expect_length(retry_events, 2)
+  expect_true(all(vapply(retry_events, function(e) "attempt" %in% names(e), logical(1))))
+
+  failure_events <- Filter(function(e) identical(e$event, "step_failure"), m$audit_log)
+  expect_length(failure_events, 2)
+  expect_true(all(vapply(failure_events, function(e) {
+    all(c("step_id", "attempt", "error_type", "error_message", "duration_ms") %in% names(e))
+  }, logical(1))))
+
+  success_events <- Filter(function(e) identical(e$event, "step_success"), m$audit_log)
+  expect_length(success_events, 1)
+  expect_equal(success_events[[1]]$attempt, 3)
 })
 
 test_that("Mission retry: escalates after max_retries exceeded", {
@@ -256,10 +370,12 @@ test_that("Mission save and resume preserves step state", {
 test_that("MissionHookHandler triggers correct hooks", {
   events <- character(0)
   step_done_results <- list()
+  retry_success <- character(0)
 
   hooks <- create_mission_hooks(
     on_mission_start = function(m)         events <<- c(events, "mission_start"),
     on_step_start    = function(s, attempt) events <<- c(events, paste0("step_start:", s$id)),
+    on_step_success  = function(s, result, attempt) retry_success <<- c(retry_success, paste0(s$id, ":", attempt)),
     on_step_done     = function(s, result)  step_done_results[[s$id]] <<- result,
     on_mission_done  = function(m)         events <<- c(events, "mission_done")
   )
@@ -279,12 +395,13 @@ test_that("MissionHookHandler triggers correct hooks", {
   # Manually trigger hooks as Mission would
   hooks$trigger_mission_start(m)
   hooks$trigger_step_start(step, 1)
-  hooks$trigger_step_done(step, "hook result")
+  hooks$trigger_step_done(step, "hook result", attempt = 1)
   hooks$trigger_mission_done(m)
 
   expect_true("mission_start" %in% events)
   expect_true("step_start:h1" %in% events)
   expect_equal(step_done_results[["h1"]], "hook result")
+  expect_equal(retry_success, "h1:1")
   expect_true("mission_done" %in% events)
 })
 

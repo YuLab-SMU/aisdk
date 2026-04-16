@@ -6,26 +6,47 @@
 \usage{
 create_mission_hooks(
   on_mission_start = NULL,
+  on_planner_start = NULL,
+  on_planner_done = NULL,
   on_mission_planned = NULL,
   on_step_start = NULL,
+  on_retry_start = NULL,
+  on_retry_success = NULL,
+  on_step_success = NULL,
   on_step_done = NULL,
+  on_step_failure = NULL,
   on_step_failed = NULL,
   on_mission_stall = NULL,
+  on_mission_end = NULL,
   on_mission_done = NULL
 )
 }
 \arguments{
 \item{on_mission_start}{Optional function(mission) called when a Mission begins.}
 
+\item{on_planner_start}{Optional function(mission) called before auto-planning starts.}
+
+\item{on_planner_done}{Optional function(mission) called after auto-planning produces steps.}
+
 \item{on_mission_planned}{Optional function(mission) called after LLM planning.}
 
 \item{on_step_start}{Optional function(step, attempt) called before each step attempt.}
 
+\item{on_retry_start}{Optional function(step, attempt) called before a retry attempt begins.}
+
+\item{on_retry_success}{Optional function(step, result, attempt) called when a retry succeeds.}
+
+\item{on_step_success}{Optional function(step, result, attempt) called on step success.}
+
 \item{on_step_done}{Optional function(step, result) called on step success.}
+
+\item{on_step_failure}{Optional function(step, error, attempt) called on step failure.}
 
 \item{on_step_failed}{Optional function(step, error, attempt) called on step failure.}
 
 \item{on_mission_stall}{Optional function(mission, step) called on stall detection.}
+
+\item{on_mission_end}{Optional function(mission) called when the Mission completes.}
 
 \item{on_mission_done}{Optional function(mission) called on Mission completion.}
 }
