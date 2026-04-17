@@ -576,6 +576,7 @@ Computer layer
 <span><span class="st">    theme_minimal()</span></span>
 <span><span class="st">"</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
+<p><code>Computer$execute_r_code()</code> always reports <code>execution_mode = "sandbox_exec"</code>. This path uses an isolated <code>callr</code> process and does not mutate a live <code>ChatSession$get_envir()</code>. If you need persistent session-scoped state across turns or agents, use the session runtime (<code>ChatSession</code> / <code>SharedSession</code>) instead of the computer abstraction.</p>
 </section></section><section id="using-computer-tools-in-agents" class="level3"><h3 class="anchored" data-anchor-id="using-computer-tools-in-agents">Using Computer Tools in Agents</h3>
 <p>Create agents with computer tools:</p>
 <div class="cell">
