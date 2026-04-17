@@ -41,7 +41,8 @@
 #' @importFrom rlang abort warn %||%
 #' @importFrom httr2 request req_headers req_body_json req_perform req_perform_stream resp_status resp_body_json resp_body_string resp_header
 #' @importFrom jsonlite fromJSON toJSON
-#' @importFrom utils head tail capture.output str flush.console
+#' @importFrom utils head tail capture.output str flush.console getFromNamespace
+#' @importFrom methods is slotNames slot
 #' @importFrom yaml yaml.load
 #' @importFrom callr r
 #' @importFrom processx process
