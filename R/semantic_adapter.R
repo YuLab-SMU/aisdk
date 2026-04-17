@@ -336,16 +336,6 @@ default_semantic_extension_registrars <- function() {
     registrars <- list(registrars)
   }
 
-  if (requireNamespace("aisdk.bioc", quietly = TRUE)) {
-    bioc_registrar <- tryCatch(
-      getFromNamespace("register_bioc_semantic_components", "aisdk.bioc"),
-      error = function(e) NULL
-    )
-    if (is.function(bioc_registrar)) {
-      registrars <- c(list(bioc_registrar), registrars)
-    }
-  }
-
   Filter(is.function, registrars)
 }
 
