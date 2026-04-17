@@ -137,6 +137,12 @@ result <- comp$execute_r_code("
 ")
 ```
 
+`Computer$execute_r_code()` always reports `execution_mode = "sandbox_exec"`.
+This path uses an isolated `callr` process and does not mutate a live
+`ChatSession$get_envir()`. If you need persistent session-scoped state across
+turns or agents, use the session runtime (`ChatSession` / `SharedSession`)
+instead of the computer abstraction.
+
 ### Using Computer Tools in Agents
 
 Create agents with computer tools:

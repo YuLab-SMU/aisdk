@@ -12,6 +12,7 @@
 - Added native console-agent image tools for analysis, extraction, generation, editing, artifact recall, and local image discovery.
 - Added session persistence for console image artifact memory.
 - Added new vignettes for multimodal input and image generation.
+- Added a semantic adapter stabilization checkpoint doc and dedicated semantic runtime session regression tests for canonical env invariants.
 
 ### Changed
 - Updated `content_text()` and `content_image()` to bridge into the provider-neutral multimodal block format.
@@ -30,6 +31,7 @@
 - Fixed Gemini multimodal input translation and image-output parsing.
 - Fixed package documentation generation issues around Feishu setup exports.
 - Fixed package-check portability issue caused by non-ASCII text in `R/channel_feishu_setup.R`.
+- Fixed `Computer$execute_r_code()` so isolated execution always reports `execution_mode = "sandbox_exec"`.
 
 ### Verification
 - Regenerated `NAMESPACE` and `man/` with `devtools::document()`.

@@ -201,11 +201,13 @@ Computer <- R6::R6Class("Computer",
     },
 
     #' @description
-    #' Execute R code
+    #' Execute R code in an isolated `callr` process
     #' @param code R code to execute
     #' @param timeout_ms Timeout in milliseconds (default: 30000)
     #' @param capture_output Whether to capture output (default: TRUE)
-    #' @return List with result, output, error
+    #' @return List with result, output, error, and `execution_mode`.
+    #'   `execution_mode` is always `"sandbox_exec"` for this computer-layer path,
+    #'   which does not persist values into a live `ChatSession$get_envir()`.
     execute_r_code = function(code, timeout_ms = 30000, capture_output = TRUE) {
       # Log execution
       private$log_execution("execute_r_code", list(code_length = nchar(code)))
@@ -219,7 +221,8 @@ Computer <- R6::R6Class("Computer",
             result = NULL,
             output = "",
             error = TRUE,
-            message = paste("Sandbox violation:", violation)
+            message = paste("Sandbox violation:", violation),
+            execution_mode = "sandbox_exec"
           ))
         }
       }
@@ -288,7 +291,8 @@ Computer <- R6::R6Class("Computer",
             result = NULL,
             output = "",
             error = TRUE,
-            message = conditionMessage(e)
+            message = conditionMessage(e),
+            execution_mode = "sandbox_exec"
           ))
         }
       )
@@ -317,7 +321,8 @@ Computer <- R6::R6Class("Computer",
           error = FALSE,
           messages = result$messages %||% character(0),
           warnings = result$warnings %||% character(0),
-          created_files = normalizePath(result$created_files %||% character(0), winslash = "/", mustWork = FALSE)
+          created_files = normalizePath(result$created_files %||% character(0), winslash = "/", mustWork = FALSE),
+          execution_mode = "sandbox_exec"
         )
       }
     },
@@ -528,6 +533,7 @@ create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sand
       name = "execute_r_code",
       description = paste(
         "Execute R code in an isolated process.",
+        "This always runs as sandbox_exec and does not mutate a live ChatSession environment.",
         "Use this to run data analysis, create plots, or perform computations.",
         "Returns the result and any output."
       ),
