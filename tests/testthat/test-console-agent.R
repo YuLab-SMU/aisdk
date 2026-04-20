@@ -164,6 +164,11 @@ test_that("create_console_tools includes all expected tools", {
     expect_true("read_file" %in% tool_names)
     expect_true("write_file" %in% tool_names)
     expect_true("execute_r_code" %in% tool_names)
+    expect_true("list_r_objects" %in% tool_names)
+    expect_true("inspect_r_object" %in% tool_names)
+    expect_true("inspect_r_function" %in% tool_names)
+    expect_true("get_r_documentation" %in% tool_names)
+    expect_true("get_r_source" %in% tool_names)
 
     # Check console-specific tools
     expect_true("list_directory" %in% tool_names)

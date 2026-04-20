@@ -9,6 +9,7 @@ load_knitr_engine_test_env <- function() {
     "model_defaults.R",
     "semantic_adapter.R",
     "context.R",
+    "context_budget.R",
     "session.R",
     "ai_review_contract.R",
     "ai_review_embedded_contract.R",

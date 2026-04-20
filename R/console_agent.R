@@ -45,6 +45,7 @@ create_console_tools <- function(working_dir = tempdir(),
         function(tool_obj) !tool_obj$name %in% c("read_file", "execute_r_code"),
         computer_tools
     )
+    r_context_tools <- create_r_context_tools()
 
     resolve_console_existing_path <- function(path) {
         if (is.null(path) || !nzchar(path)) {
@@ -1149,7 +1150,7 @@ create_console_tools <- function(working_dir = tempdir(),
     )
 
     # Combine all tools
-    c(computer_tools, console_specific)
+    c(computer_tools, r_context_tools, console_specific)
 }
 
 

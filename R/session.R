@@ -70,6 +70,9 @@ ChatSession <- R6::R6Class(
       # Multi-agent support: shared memory and environment
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
+      private$.metadata$context_state <- normalize_context_state(
+        private$.metadata$context_state %||% NULL
+      )
       private$.envir <- if (is.null(envir)) new.env(parent = globalenv()) else envir
       if (!exists(".semantic_adapter_registry", envir = private$.envir, inherits = FALSE)) {
         assign(
@@ -105,8 +108,7 @@ ChatSession <- R6::R6Class(
       # Append user message to history
       self$append_message("user", prompt)
 
-      # Build messages for API call (system prompt + history)
-      messages <- private$.history
+      prompt_payload <- private$build_prompt_payload(turn_system_prompt = turn_system_prompt)
 
       # Call generate_text with full history
       result <- do.call(
@@ -114,14 +116,8 @@ ChatSession <- R6::R6Class(
         c(
           list(
             model = model,
-            prompt = messages,
-            system = if (is.null(turn_system_prompt) || !nzchar(turn_system_prompt)) {
-              private$.system_prompt
-            } else if (is.null(private$.system_prompt) || !nzchar(private$.system_prompt)) {
-              turn_system_prompt
-            } else {
-              paste(private$.system_prompt, "\n\n", turn_system_prompt, sep = "")
-            },
+            prompt = prompt_payload$messages,
+            system = prompt_payload$system,
             tools = private$.tools,
             max_steps = private$.max_steps,
             session = self,
@@ -143,6 +139,7 @@ ChatSession <- R6::R6Class(
 
       # Update stats
       private$update_stats(result)
+      self$refresh_context_state(generation_result = result)
 
       result
     },
@@ -162,8 +159,7 @@ ChatSession <- R6::R6Class(
       # Append user message
       self$append_message("user", prompt)
 
-      # Build messages from current history
-      messages <- private$.history
+      prompt_payload <- private$build_prompt_payload(turn_system_prompt = turn_system_prompt)
 
       # Let stream_text handle the entire tool execution loop
       # Pass max_steps to enable automatic tool execution
@@ -172,15 +168,9 @@ ChatSession <- R6::R6Class(
         c(
           list(
             model = model,
-            prompt = messages,
+            prompt = prompt_payload$messages,
             callback = callback,
-            system = if (is.null(turn_system_prompt) || !nzchar(turn_system_prompt)) {
-              private$.system_prompt
-            } else if (is.null(private$.system_prompt) || !nzchar(private$.system_prompt)) {
-              turn_system_prompt
-            } else {
-              paste(private$.system_prompt, "\n\n", turn_system_prompt, sep = "")
-            },
+            system = prompt_payload$system,
             registry = private$.registry,
             tools = private$.tools,
             max_steps = private$.max_steps,
@@ -208,6 +198,7 @@ ChatSession <- R6::R6Class(
 
       # Update stats
       private$update_stats(result)
+      self$refresh_context_state(generation_result = result)
 
       invisible(NULL)
     },
@@ -471,6 +462,97 @@ ChatSession <- R6::R6Class(
       names(private$.metadata)
     },
 
+    #' @description Get the adaptive context state for this session.
+    #' @return A normalized context state list.
+    get_context_state = function() {
+      normalize_context_state(private$.metadata$context_state %||% NULL)
+    },
+
+    #' @description Store adaptive context state for this session.
+    #' @param state Context state list.
+    #' @return Invisible self for chaining.
+    set_context_state = function(state) {
+      private$.metadata$context_state <- normalize_context_state(state)
+      invisible(self)
+    },
+
+    #' @description Clear adaptive context state back to defaults.
+    #' @return Invisible self for chaining.
+    clear_context_state = function() {
+      private$.metadata$context_state <- create_context_state()
+      invisible(self)
+    },
+
+    #' @description Get the context management mode for this session.
+    #' @return One of "off", "basic", or "adaptive".
+    get_context_management_mode = function() {
+      get_session_context_management_mode(self)
+    },
+
+    #' @description Get the full adaptive context-management configuration.
+    #' @return A normalized context-management configuration list.
+    get_context_management_config = function() {
+      get_context_management_config_impl(self)
+    },
+
+    #' @description Override the context management mode for this session.
+    #' @param mode One of "off", "basic", or "adaptive".
+    #' @return Invisible self for chaining.
+    set_context_management_mode = function(mode) {
+      private$.metadata$context_management_mode <- normalize_context_management_mode(mode)
+      invisible(self)
+    },
+
+    #' @description Apply adaptive context-management configuration to this session.
+    #' @param config Optional config list created by `create_context_management_config()`.
+    #' @param ... Optional overrides forwarded to `set_context_management_config()`.
+    #' @return Invisible self for chaining.
+    set_context_management_config = function(config = NULL, ...) {
+      set_context_management_config_impl(self, config = config, ...)
+    },
+
+    #' @description Estimate current context metrics for this session.
+    #' @param turn_system_prompt Optional turn-specific system prompt to include in the estimate.
+    #' @return A list of context metrics, or NULL if no model metadata is available.
+    get_context_metrics = function(turn_system_prompt = NULL) {
+      get_session_context_metrics(
+        session = self,
+        system_prompt = private$combine_system_prompt(turn_system_prompt),
+        messages = private$.history
+      )
+    },
+
+    #' @description Build a budget-aware prompt payload from current session history.
+    #' @param turn_system_prompt Optional turn-specific system prompt.
+    #' @return A list with `messages`, `system`, `metrics`, and `state`.
+    assemble_messages = function(turn_system_prompt = NULL) {
+      private$build_prompt_payload(turn_system_prompt = turn_system_prompt)
+    },
+
+    #' @description Refresh the adaptive context state from current history.
+    #' @param generation_result Optional GenerateResult used to update tool/artifact digests.
+    #' @param turn_system_prompt Optional turn-specific system prompt for the snapshot.
+    #' @return The normalized context state list.
+    refresh_context_state = function(generation_result = NULL, turn_system_prompt = NULL) {
+      current_state <- self$get_context_state()
+      metrics <- self$get_context_metrics(turn_system_prompt = turn_system_prompt)
+      synthesized_state <- synthesize_context_state(
+        session = self,
+        state = current_state,
+        generation_result = generation_result,
+        metrics = metrics,
+        messages = private$.history
+      )
+      self$set_context_state(synthesized_state)
+      assembled <- assemble_session_messages(
+        session = self,
+        messages = private$.history,
+        system = private$combine_system_prompt(turn_system_prompt),
+        persist = TRUE
+      )
+      assembled$state
+    },
+
     #' @description Clear shared memory.
     #' @param keys Optional specific keys to clear. If NULL, clears all.
     #' @return Invisible self for chaining.
@@ -549,6 +631,48 @@ ChatSession <- R6::R6Class(
     .memory = NULL,
     .metadata = NULL,
     .envir = NULL,
+    combine_system_prompt = function(turn_system_prompt = NULL) {
+      if (is.null(turn_system_prompt) || !nzchar(turn_system_prompt)) {
+        return(private$.system_prompt)
+      }
+      if (is.null(private$.system_prompt) || !nzchar(private$.system_prompt)) {
+        return(turn_system_prompt)
+      }
+      paste(private$.system_prompt, "\n\n", turn_system_prompt, sep = "")
+    },
+    build_prompt_payload = function(turn_system_prompt = NULL) {
+      combined_system <- private$combine_system_prompt(turn_system_prompt)
+      if (identical(get_session_context_management_mode(self), "off")) {
+        state <- self$get_context_state()
+        metrics <- get_session_context_metrics(
+          session = self,
+          system_prompt = combined_system,
+          messages = private$.history
+        )
+        if (!is.null(metrics)) {
+          state$occupancy <- list(
+            estimated_prompt_tokens = metrics$used_tokens %||% NA_real_,
+            context_window = metrics$context_window %||% NA_real_,
+            ratio = metrics$ratio %||% NA_real_,
+            status = metrics$regime %||% "unknown"
+          )
+          self$set_context_state(state)
+        }
+        return(list(
+          messages = private$.history,
+          system = combined_system,
+          metrics = metrics,
+          state = state
+        ))
+      }
+
+      assemble_session_messages(
+        session = self,
+        messages = private$.history,
+        system = combined_system,
+        persist = TRUE
+      )
+    },
     get_model = function() {
       if (!is.null(private$.model)) {
         return(private$.model)

@@ -790,79 +790,17 @@ apply_console_profile <- function(profile) {
 
 #' @keywords internal
 estimate_console_context_tokens <- function(session) {
-  data <- tryCatch(session$as_list(), error = function(e) NULL)
-  if (is.null(data)) {
-    return(NA_real_)
-  }
-
-  system_prompt <- data$system_prompt %||% ""
-  history <- data$history %||% list()
-
-  message_chars <- 0
-  if (nzchar(system_prompt)) {
-    message_chars <- message_chars + nchar(system_prompt, type = "chars")
-  }
-
-  for (msg in history) {
-    message_chars <- message_chars + nchar(msg$content %||% "", type = "chars")
-    message_chars <- message_chars + nchar(msg$reasoning %||% "", type = "chars")
-  }
-
-  message_overhead <- length(history) * 8 + if (nzchar(system_prompt)) 12 else 0
-  ceiling(message_chars / 4) + message_overhead
+  estimate_session_context_tokens(session)
 }
 
 #' @keywords internal
 infer_console_context_window <- function(provider, model_id) {
-  model_id <- tolower(model_id %||% "")
-
-  if (provider == "openai" && grepl("^(gpt-4o|gpt-4\\.1|gpt-5)", model_id)) {
-    return(128000L)
-  }
-  if (provider == "anthropic" && grepl("^claude", model_id)) {
-    return(200000L)
-  }
-  if (provider == "gemini" && grepl("^gemini", model_id)) {
-    return(1000000L)
-  }
-  if (provider == "deepseek" && grepl("^deepseek", model_id)) {
-    return(64000L)
-  }
-
-  NA_integer_
+  infer_session_context_window(provider, model_id)
 }
 
 #' @keywords internal
 get_console_context_metrics <- function(session) {
-  model_ref <- tryCatch(session$get_model_id(), error = function(e) NULL)
-  if (is.null(model_ref) || !nzchar(model_ref)) {
-    return(NULL)
-  }
-
-  sep_pos <- regexpr(":", model_ref, fixed = TRUE)[1]
-  if (sep_pos <= 1) {
-    return(NULL)
-  }
-
-  provider <- substr(model_ref, 1L, sep_pos - 1L)
-  model_id <- substr(model_ref, sep_pos + 1L, nchar(model_ref))
-  info <- tryCatch(get_model_info(provider, model_id), error = function(e) NULL)
-
-  context_window <- info$context$context_window %||% infer_console_context_window(provider, model_id)
-  max_output <- info$context$max_output_tokens %||% NA_integer_
-  used_tokens <- estimate_console_context_tokens(session)
-  remaining_tokens <- if (!is.na(context_window) && !is.na(used_tokens)) max(context_window - used_tokens, 0) else NA_real_
-  is_estimated <- is.null(info) || is.null(info$context$context_window)
-
-  list(
-    provider = provider,
-    model_id = model_id,
-    context_window = context_window,
-    max_output = max_output,
-    used_tokens = used_tokens,
-    remaining_tokens = remaining_tokens,
-    estimated = is_estimated
-  )
+  get_session_context_metrics(session)
 }
 
 #' @keywords internal

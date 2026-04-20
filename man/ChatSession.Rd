@@ -32,6 +32,16 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-set_metadata}{\code{ChatSession$set_metadata()}}
 \item \href{#method-ChatSession-merge_metadata}{\code{ChatSession$merge_metadata()}}
 \item \href{#method-ChatSession-list_metadata}{\code{ChatSession$list_metadata()}}
+\item \href{#method-ChatSession-get_context_state}{\code{ChatSession$get_context_state()}}
+\item \href{#method-ChatSession-set_context_state}{\code{ChatSession$set_context_state()}}
+\item \href{#method-ChatSession-clear_context_state}{\code{ChatSession$clear_context_state()}}
+\item \href{#method-ChatSession-get_context_management_mode}{\code{ChatSession$get_context_management_mode()}}
+\item \href{#method-ChatSession-get_context_management_config}{\code{ChatSession$get_context_management_config()}}
+\item \href{#method-ChatSession-set_context_management_mode}{\code{ChatSession$set_context_management_mode()}}
+\item \href{#method-ChatSession-set_context_management_config}{\code{ChatSession$set_context_management_config()}}
+\item \href{#method-ChatSession-get_context_metrics}{\code{ChatSession$get_context_metrics()}}
+\item \href{#method-ChatSession-assemble_messages}{\code{ChatSession$assemble_messages()}}
+\item \href{#method-ChatSession-refresh_context_state}{\code{ChatSession$refresh_context_state()}}
 \item \href{#method-ChatSession-clear_memory}{\code{ChatSession$clear_memory()}}
 \item \href{#method-ChatSession-get_envir}{\code{ChatSession$get_envir()}}
 \item \href{#method-ChatSession-eval_in_session}{\code{ChatSession$eval_in_session()}}
@@ -454,6 +464,185 @@ List metadata keys.
 
 \subsection{Returns}{
 Character vector of metadata keys.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_context_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_context_state}{}}}
+\subsection{Method \code{get_context_state()}}{
+Get the adaptive context state for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_context_state()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A normalized context state list.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_context_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_context_state}{}}}
+\subsection{Method \code{set_context_state()}}{
+Store adaptive context state for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_context_state(state)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{state}}{Context state list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-clear_context_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-clear_context_state}{}}}
+\subsection{Method \code{clear_context_state()}}{
+Clear adaptive context state back to defaults.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$clear_context_state()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_context_management_mode"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_context_management_mode}{}}}
+\subsection{Method \code{get_context_management_mode()}}{
+Get the context management mode for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_context_management_mode()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+One of "off", "basic", or "adaptive".
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_context_management_config"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_context_management_config}{}}}
+\subsection{Method \code{get_context_management_config()}}{
+Get the full adaptive context-management configuration.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_context_management_config()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A normalized context-management configuration list.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_context_management_mode"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_context_management_mode}{}}}
+\subsection{Method \code{set_context_management_mode()}}{
+Override the context management mode for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_context_management_mode(mode)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mode}}{One of "off", "basic", or "adaptive".}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_context_management_config"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_context_management_config}{}}}
+\subsection{Method \code{set_context_management_config()}}{
+Apply adaptive context-management configuration to this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_context_management_config(config = NULL, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{config}}{Optional config list created by \code{create_context_management_config()}.}
+
+\item{\code{...}}{Optional overrides forwarded to \code{set_context_management_config()}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_context_metrics"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_context_metrics}{}}}
+\subsection{Method \code{get_context_metrics()}}{
+Estimate current context metrics for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_context_metrics(turn_system_prompt = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{turn_system_prompt}}{Optional turn-specific system prompt to include in the estimate.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list of context metrics, or NULL if no model metadata is available.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-assemble_messages"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-assemble_messages}{}}}
+\subsection{Method \code{assemble_messages()}}{
+Build a budget-aware prompt payload from current session history.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$assemble_messages(turn_system_prompt = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{turn_system_prompt}}{Optional turn-specific system prompt.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with \code{messages}, \code{system}, \code{metrics}, and \code{state}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-refresh_context_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-refresh_context_state}{}}}
+\subsection{Method \code{refresh_context_state()}}{
+Refresh the adaptive context state from current history.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$refresh_context_state(
+  generation_result = NULL,
+  turn_system_prompt = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{generation_result}}{Optional GenerateResult used to update tool/artifact digests.}
+
+\item{\code{turn_system_prompt}}{Optional turn-specific system prompt for the snapshot.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The normalized context state list.
 }
 }
 \if{html}{\out{<hr>}}
