@@ -374,7 +374,7 @@ extract_recent_message_candidates <- function(messages,
     if (!nzchar(trimws(content))) {
       next
     }
-    parts <- unlist(strsplit(content, "\n|(?<=[。！？!?;；])|(?<=[.?!;])\\s+", perl = TRUE), use.names = FALSE)
+    parts <- unlist(strsplit(content, "\n|(?<=[\u3002\uff01\uff1f!?;\uff1b])|(?<=[.?!;])\\s+", perl = TRUE), use.names = FALSE)
     parts <- trimws(parts)
     parts <- parts[nzchar(parts)]
     if (length(parts) == 0) {
@@ -457,7 +457,7 @@ build_active_facts <- function(session, state = NULL, messages = NULL, max_items
   }
 
   message_candidates <- extract_recent_message_candidates(messages, max_messages = 6L)
-  fact_patterns <- c("\\bmust\\b", "\\bshould\\b", "\\bavoid\\b", "\\bdo not\\b", "\\bdon't\\b", "必须", "需要", "不要", "避免")
+  fact_patterns <- c("\\bmust\\b", "\\bshould\\b", "\\bavoid\\b", "\\bdo not\\b", "\\bdon't\\b", "\u5fc5\u987b", "\u9700\u8981", "\u4e0d\u8981", "\u907f\u514d")
   for (candidate in message_candidates) {
     if (candidate_matches_any(candidate$text, fact_patterns)) {
       facts[[length(facts) + 1L]] <- list(
@@ -476,7 +476,7 @@ build_decisions <- function(messages = NULL, max_items = 5L) {
   decision_patterns <- c(
     "\\bwe will\\b", "\\bi will\\b", "\\blet's\\b", "\\buse\\b", "\\bprefer\\b",
     "\\badopt\\b", "\\brecommend\\b", "\\bchoose\\b", "\\bselected\\b", "\\bdecid",
-    "\\bplan\\b", "按计划", "采用", "选择", "决定", "开始实现", "下一步"
+    "\\bplan\\b", "\u6309\u8ba1\u5212", "\u91c7\u7528", "\u9009\u62e9", "\u51b3\u5b9a", "\u5f00\u59cb\u5b9e\u73b0", "\u4e0b\u4e00\u6b65"
   )
 
   decisions <- list()
@@ -514,7 +514,7 @@ build_open_loops <- function(state = NULL,
   candidates <- extract_recent_message_candidates(messages, max_messages = 8L)
   open_patterns <- c(
     "\\bneed to\\b", "\\bnext step\\b", "\\bfollow up\\b", "\\blater\\b", "\\bremaining\\b",
-    "\\bstill need\\b", "\\btodo\\b", "\\bto do\\b", "待", "后续", "还需要", "下一步", "TODO"
+    "\\bstill need\\b", "\\btodo\\b", "\\bto do\\b", "\u5f85", "\u540e\u7eed", "\u8fd8\u9700\u8981", "\u4e0b\u4e00\u6b65", "TODO"
   )
   for (candidate in candidates) {
     if (candidate_matches_any(candidate$text, open_patterns)) {
@@ -1312,7 +1312,7 @@ build_project_memory_query <- function(messages = NULL, state = NULL) {
 #' @keywords internal
 normalize_retrieval_query <- function(text) {
   text <- tolower(trimws(text %||% ""))
-  text <- gsub("[^[:alnum:]一-龥]+", " ", text, perl = TRUE)
+  text <- gsub("[^[:alnum:]\u4e00-\u9f8d]+", " ", text, perl = TRUE)
   tokens <- strsplit(text, "\\s+")[[1]]
   stopwords <- c(
     "the", "a", "an", "and", "or", "for", "with", "from", "that", "this",
