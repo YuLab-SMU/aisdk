@@ -1,0 +1,628 @@
+{
+  "template_type": "architecture",
+  "style": 1,
+  "width": 1360,
+  "height": 860,
+  "style_overrides": {
+    "title_align": "left"
+  },
+  "title": "aisdk 当前工程脉络与两条后续路线",
+  "subtitle": "The core package is already session-centric. The main priority question is runtime convergence vs. semantic-family expansion.",
+  "containers": [
+    {
+      "x": 40,
+      "y": 110,
+      "width": 820,
+      "height": 116,
+      "header_text": "01 // Current Surfaces",
+      "side_label": "Interface",
+      "side_label_x": 26,
+      "side_label_anchor": "start"
+    },
+    {
+      "x": 40,
+      "y": 252,
+      "width": 820,
+      "height": 214,
+      "header_text": "02 // Session-Centric Runtime Spine",
+      "side_label": "Runtime",
+      "side_label_x": 26,
+      "side_label_anchor": "start"
+    },
+    {
+      "x": 40,
+      "y": 492,
+      "width": 820,
+      "height": 206,
+      "header_text": "03 // Execution And Extension Primitives",
+      "side_label": "Capability",
+      "side_label_x": 26,
+      "side_label_anchor": "start"
+    },
+    {
+      "x": 40,
+      "y": 724,
+      "width": 820,
+      "height": 96,
+      "header_text": "04 // Foundations And Package Boundary",
+      "side_label": "Base",
+      "side_label_x": 26,
+      "side_label_anchor": "start"
+    },
+    {
+      "x": 900,
+      "y": 210,
+      "width": 420,
+      "height": 292,
+      "header_text": "Route A // Runtime Productization",
+      "preserve_case": true,
+      "side_label": "Recommended next",
+      "side_label_x": 916,
+      "side_label_anchor": "start",
+      "fill": "#f8fafc",
+      "stroke": "#93c5fd"
+    },
+    {
+      "x": 900,
+      "y": 530,
+      "width": 420,
+      "height": 272,
+      "header_text": "Route B // Semantic + Multimodal Expansion",
+      "preserve_case": true,
+      "side_label": "Second wave",
+      "side_label_x": 916,
+      "side_label_anchor": "start",
+      "fill": "#faf5ff",
+      "stroke": "#c4b5fd"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "r_api",
+      "kind": "rect",
+      "x": 70,
+      "y": 150,
+      "width": 140,
+      "height": 56,
+      "label": "R API",
+      "sublabel": "generate_text / agent",
+      "type_label": "ENTRY",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd",
+      "flat": true
+    },
+    {
+      "id": "console",
+      "kind": "rect",
+      "x": 250,
+      "y": 150,
+      "width": 180,
+      "height": 56,
+      "label": "Console Chat",
+      "sublabel": "inspect / overlay / REPL",
+      "type_label": "SURFACE",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd",
+      "flat": true
+    },
+    {
+      "id": "shiny",
+      "kind": "rect",
+      "x": 470,
+      "y": 150,
+      "width": 170,
+      "height": 56,
+      "label": "Shiny / Quarto",
+      "sublabel": "UI / knitr / docs",
+      "type_label": "SURFACE",
+      "fill": "#f0fdf4",
+      "stroke": "#86efac",
+      "flat": true
+    },
+    {
+      "id": "channel",
+      "kind": "rect",
+      "x": 680,
+      "y": 150,
+      "width": 150,
+      "height": 56,
+      "label": "Channel Runtime",
+      "sublabel": "Feishu / chats",
+      "type_label": "SURFACE",
+      "fill": "#fff7ed",
+      "stroke": "#fdba74",
+      "flat": true
+    },
+    {
+      "id": "session",
+      "kind": "double_rect",
+      "x": 130,
+      "y": 304,
+      "width": 290,
+      "height": 80,
+      "label": "ChatSession / SharedSession",
+      "sublabel": "history + env + metadata",
+      "type_label": "STATE",
+      "fill": "#ffffff",
+      "stroke": "#2563eb"
+    },
+    {
+      "id": "agent",
+      "kind": "double_rect",
+      "x": 476,
+      "y": 304,
+      "width": 310,
+      "height": 80,
+      "label": "Agent / Flow / Mission",
+      "sublabel": "delegation + orchestration",
+      "type_label": "CONTROL",
+      "fill": "#ffffff",
+      "stroke": "#7c3aed"
+    },
+    {
+      "id": "context",
+      "kind": "rect",
+      "x": 130,
+      "y": 416,
+      "width": 220,
+      "height": 60,
+      "label": "Context Budget",
+      "sublabel": "renderers + history trim",
+      "type_label": "CONTEXT",
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "flat": true
+    },
+    {
+      "id": "durable",
+      "kind": "cylinder",
+      "x": 430,
+      "y": 404,
+      "width": 166,
+      "height": 94,
+      "label": "Durable Memory",
+      "sublabel": "session store + SQLite",
+      "fill": "#ecfdf5",
+      "stroke": "#10b981"
+    },
+    {
+      "id": "ops",
+      "kind": "rect",
+      "x": 648,
+      "y": 416,
+      "width": 154,
+      "height": 60,
+      "label": "Hooks / Telemetry",
+      "sublabel": "traces + review data",
+      "type_label": "OPS",
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "flat": true
+    },
+    {
+      "id": "core",
+      "kind": "double_rect",
+      "x": 76,
+      "y": 548,
+      "width": 216,
+      "height": 72,
+      "label": "Core API",
+      "sublabel": "generate / stream / tools",
+      "type_label": "ENGINE",
+      "fill": "#ffffff",
+      "stroke": "#2563eb"
+    },
+    {
+      "id": "skills",
+      "kind": "rect",
+      "x": 336,
+      "y": 548,
+      "width": 192,
+      "height": 72,
+      "label": "Skills + DSL",
+      "sublabel": "SKILL.md -> tools",
+      "type_label": "TOOLS",
+      "fill": "#f0fdf4",
+      "stroke": "#86efac",
+      "flat": true
+    },
+    {
+      "id": "computer",
+      "kind": "rect",
+      "x": 572,
+      "y": 548,
+      "width": 246,
+      "height": 72,
+      "label": "Computer / Sandbox / MCP",
+      "sublabel": "R code + CLI + external servers",
+      "type_label": "EXEC",
+      "fill": "#fff7ed",
+      "stroke": "#fdba74",
+      "flat": true
+    },
+    {
+      "id": "semantic",
+      "kind": "rect",
+      "x": 76,
+      "y": 646,
+      "width": 216,
+      "height": 60,
+      "label": "Semantic Adapters",
+      "sublabel": "object-aware context",
+      "type_label": "SEMANTIC",
+      "fill": "#f0fdf4",
+      "stroke": "#86efac",
+      "flat": true
+    },
+    {
+      "id": "multimodal",
+      "kind": "rect",
+      "x": 336,
+      "y": 646,
+      "width": 192,
+      "height": 60,
+      "label": "Multimodal / Images",
+      "sublabel": "content blocks + image APIs",
+      "type_label": "MEDIA",
+      "fill": "#faf5ff",
+      "stroke": "#c4b5fd",
+      "flat": true
+    },
+    {
+      "id": "providers",
+      "kind": "rect",
+      "x": 572,
+      "y": 638,
+      "width": 246,
+      "height": 76,
+      "label": "Provider Layer",
+      "sublabel": "OpenAI / Anthropic / Gemini / OpenRouter / ...",
+      "type_label": "MODELS",
+      "fill": "#fef2f2",
+      "stroke": "#fca5a5",
+      "flat": true
+    },
+    {
+      "id": "spec",
+      "kind": "rect",
+      "x": 76,
+      "y": 748,
+      "width": 222,
+      "height": 56,
+      "label": "Spec + Schema",
+      "sublabel": "model defaults + contracts",
+      "type_label": "CONTRACT",
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "flat": true
+    },
+    {
+      "id": "base",
+      "kind": "rect",
+      "x": 340,
+      "y": 748,
+      "width": 198,
+      "height": 56,
+      "label": "Auth / Cache / Utils",
+      "sublabel": "shared plumbing",
+      "type_label": "BASE",
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "flat": true
+    },
+    {
+      "id": "boundary",
+      "kind": "rect",
+      "x": 580,
+      "y": 748,
+      "width": 238,
+      "height": 56,
+      "label": "Core Package Boundary",
+      "sublabel": "extensions split out",
+      "type_label": "PACKAGE",
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "flat": true
+    },
+    {
+      "id": "route_a1",
+      "kind": "rect",
+      "x": 940,
+      "y": 266,
+      "width": 340,
+      "height": 64,
+      "label": "Runtime Convergence",
+      "sublabel": "console + channel + durable sessions",
+      "type_label": "P1",
+      "fill": "#eff6ff",
+      "stroke": "#60a5fa",
+      "tags": [
+        {
+          "label": "NEXT",
+          "fill": "#dcfce7",
+          "stroke": "#86efac",
+          "text_fill": "#15803d"
+        }
+      ],
+      "flat": true
+    },
+    {
+      "id": "route_a2",
+      "kind": "rect",
+      "x": 940,
+      "y": 354,
+      "width": 340,
+      "height": 64,
+      "label": "Skill-first Assistant",
+      "sublabel": "durable operators + automation",
+      "type_label": "PRODUCT",
+      "fill": "#eff6ff",
+      "stroke": "#60a5fa",
+      "flat": true
+    },
+    {
+      "id": "route_a3",
+      "kind": "rect",
+      "x": 940,
+      "y": 442,
+      "width": 340,
+      "height": 64,
+      "label": "Observability / Review",
+      "sublabel": "startup, replay, status hardening",
+      "type_label": "HARDEN",
+      "fill": "#eff6ff",
+      "stroke": "#60a5fa",
+      "flat": true
+    },
+    {
+      "id": "route_b1",
+      "kind": "rect",
+      "x": 940,
+      "y": 578,
+      "width": 340,
+      "height": 64,
+      "label": "Semantic Families",
+      "sublabel": "expand in aisdk.bioc",
+      "type_label": "P2",
+      "fill": "#faf5ff",
+      "stroke": "#a78bfa",
+      "flat": true
+    },
+    {
+      "id": "route_b2",
+      "kind": "rect",
+      "x": 940,
+      "y": 666,
+      "width": 340,
+      "height": 64,
+      "label": "Multimodal Ergonomics",
+      "sublabel": "vision input + image output",
+      "type_label": "API",
+      "fill": "#faf5ff",
+      "stroke": "#a78bfa",
+      "flat": true
+    },
+    {
+      "id": "route_b3",
+      "kind": "rect",
+      "x": 940,
+      "y": 754,
+      "width": 340,
+      "height": 64,
+      "label": "Extension Contracts",
+      "sublabel": "workflow hints + bench surface",
+      "type_label": "ECOSYSTEM",
+      "fill": "#faf5ff",
+      "stroke": "#a78bfa",
+      "flat": true
+    }
+  ],
+  "arrows": [
+    {
+      "source": "r_api",
+      "target": "core",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "read",
+      "label": "call"
+    },
+    {
+      "source": "console",
+      "target": "session",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "read",
+      "label": "chat"
+    },
+    {
+      "source": "shiny",
+      "target": "session",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "read",
+      "route_points": [[555, 226], [555, 282], [275, 282]],
+      "label": "embed"
+    },
+    {
+      "source": "channel",
+      "target": "session",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "read",
+      "route_points": [[755, 226], [755, 286], [366, 286]],
+      "label": "route"
+    },
+    {
+      "source": "session",
+      "target": "agent",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "label": "shared state"
+    },
+    {
+      "source": "session",
+      "target": "context",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "write",
+      "dashed": true,
+      "label": "budget"
+    },
+    {
+      "source": "session",
+      "target": "durable",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "write",
+      "dashed": true,
+      "route_points": [[275, 396], [513, 396], [513, 404]],
+      "label": "persist"
+    },
+    {
+      "source": "agent",
+      "target": "ops",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "feedback",
+      "dashed": true,
+      "route_points": [[690, 396], [725, 396], [725, 416]],
+      "label": "trace"
+    },
+    {
+      "source": "agent",
+      "target": "core",
+      "source_port": "bottom",
+      "target_port": "top",
+      "flow": "control",
+      "route_points": [[631, 476], [184, 476], [184, 548]],
+      "label": "run"
+    },
+    {
+      "source": "core",
+      "target": "skills",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "read"
+    },
+    {
+      "source": "core",
+      "target": "computer",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "route_points": [[292, 632], [550, 632], [550, 584], [572, 584]]
+    },
+    {
+      "source": "core",
+      "target": "providers",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "read",
+      "route_points": [[292, 632], [548, 632], [548, 676], [572, 676]]
+    },
+    {
+      "source": "session",
+      "target": "semantic",
+      "source_port": "left",
+      "target_port": "left",
+      "flow": "data",
+      "route_points": [[90, 344], [90, 676], [76, 676]],
+      "label": "objects"
+    },
+    {
+      "source": "semantic",
+      "target": "core",
+      "source_port": "top",
+      "target_port": "bottom",
+      "flow": "data",
+      "route_points": [[184, 646], [184, 620]]
+    },
+    {
+      "source": "multimodal",
+      "target": "core",
+      "source_port": "top",
+      "target_port": "bottom",
+      "flow": "data",
+      "route_points": [[432, 646], [432, 632], [200, 632], [200, 620]]
+    },
+    {
+      "source": "session",
+      "target": "route_a1",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "route_points": [[420, 290], [880, 290], [880, 298], [940, 298]],
+      "label": "P1"
+    },
+    {
+      "source": "skills",
+      "target": "route_a2",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "route_points": [[528, 632], [880, 632], [880, 386], [940, 386]]
+    },
+    {
+      "source": "ops",
+      "target": "route_a3",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "route_points": [[802, 446], [900, 446], [940, 474]],
+      "label": "tighten"
+    },
+    {
+      "source": "semantic",
+      "target": "route_b1",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "async",
+      "dashed": true,
+      "route_points": [[292, 626], [880, 626], [880, 610], [940, 610]]
+    },
+    {
+      "source": "multimodal",
+      "target": "route_b2",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "async",
+      "dashed": true,
+      "route_points": [[528, 730], [900, 730], [900, 698], [940, 698]]
+    },
+    {
+      "source": "boundary",
+      "target": "route_b3",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "async",
+      "dashed": true,
+      "route_points": [[818, 786], [900, 786], [940, 786]]
+    }
+  ],
+  "legend": [
+    {
+      "flow": "read",
+      "label": "primary request / runtime path"
+    },
+    {
+      "flow": "control",
+      "label": "orchestration / next-step priority"
+    },
+    {
+      "flow": "write",
+      "label": "durable writeback"
+    },
+    {
+      "flow": "async",
+      "label": "second-wave expansion dependency"
+    }
+  ],
+  "legend_position": "bottom-left",
+  "legend_box": true,
+  "legend_y": 846,
+  "legend_box_fill": "#ffffff",
+  "footer": "Judgment: route A first, route B after the core boundary stays stable.",
+  "footer_position": "bottom-right",
+  "footer_y": 846
+}
