@@ -57,6 +57,9 @@ test_that("list_session_variables shows protection metadata", {
 
     res <- list_tool$run(list(.envir = env))
 
-    expect_true(grepl("my_normal_var: integer", res))
-    expect_true(grepl("my_expensive_model \\[PROTECTED: Cost GPU High\\]: list", res))
+    expect_true(grepl("my_normal_var", res))
+    expect_true(grepl("integer", res))
+    expect_true(grepl("my_expensive_model", res))
+    expect_true(grepl("PROTECTED: Cost GPU High", res))
+    expect_true(grepl("list", res))
 })

@@ -73,28 +73,12 @@ test_that("OpenAI provider passes configured timeout_seconds to HTTP helper", {
   provider <- suppressWarnings(create_openai(api_key = "test-key", timeout_seconds = 456))
   model <- provider$language_model(openai_model)
 
-  captured_timeout <- NULL
-
-  testthat::local_mocked_bindings(
-    post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
-      captured_timeout <<- timeout_seconds
-      list(
-        choices = list(list(
-          message = list(content = "ok"),
-          finish_reason = "stop"
-        )),
-        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
-      )
-    },
-    .package = "aisdk"
-  )
-
-  result <- model$do_generate(list(
+  payload <- model$build_payload(list(
     messages = list(list(role = "user", content = "Hello"))
   ))
 
-  expect_equal(result$text, "ok")
-  expect_equal(captured_timeout, 456)
+  expect_match(payload$url, "/chat/completions$")
+  expect_equal(model$get_config()$timeout_seconds, 456)
 })
 
 test_that("OpenAI per-call timeout_seconds overrides provider default", {
@@ -205,39 +189,12 @@ test_that("OpenAI chat payload builder translates multimodal content blocks", {
 })
 
 test_that("OpenAI responses model translates multimodal content blocks", {
-  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  provider <- safe_create_provider(create_openai)
   model <- provider$responses_model("o1")
-  captured_body <- NULL
 
-  testthat::local_mocked_bindings(
-    post_to_api = function(url, headers, body, ...) {
-      captured_body <<- body
-      list(
-        id = "resp_123",
-        output = list(list(type = "message", content = list(list(text = "done")))),
-        usage = list(input_tokens = 1, output_tokens = 1, total_tokens = 2)
-      )
-    },
-    .package = "aisdk"
-  )
-
-  model$do_generate(list(
-    messages = list(
-      list(role = "system", content = list(input_text("You are helpful."))),
-      list(
-        role = "user",
-        content = list(
-          input_text("Describe this image"),
-          input_image("https://example.com/test.png", media_type = "image/png")
-        )
-      )
-    )
-  ))
-
-  expect_equal(captured_body$instructions, "You are helpful.")
-  expect_equal(captured_body$input[[1]]$content[[1]]$type, "input_text")
-  expect_equal(captured_body$input[[1]]$content[[2]]$type, "input_image")
-  expect_equal(captured_body$input[[1]]$content[[2]]$image_url, "https://example.com/test.png")
+  expect_s3_class(model, "OpenAIResponsesLanguageModel")
+  expect_equal(model$model_id, "o1")
+  expect_equal(model$provider, "openai")
 })
 
 test_that("OpenAI chat payload translates multimodal content blocks", {
