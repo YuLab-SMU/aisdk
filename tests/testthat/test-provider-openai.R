@@ -257,11 +257,12 @@ test_that("OpenAI responses model translates multimodal content blocks", {
   )
   captured <- NULL
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, ...) {
       captured <<- body
       fake_response
-    }
+    },
+    .package = "aisdk"
   )
 
   model$do_generate(list(
@@ -485,7 +486,7 @@ test_that("OpenAI responses API translates multimodal input blocks", {
   model <- provider$responses_model("o1")
   captured_body <- NULL
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
@@ -495,7 +496,8 @@ test_that("OpenAI responses API translates multimodal input blocks", {
           content = list(list(text = "ok"))
         ))
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- model$do_generate(list(
@@ -585,7 +587,7 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
   model <- provider$image_model("gpt-image-1")
   captured_body <- NULL
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
@@ -595,7 +597,8 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
           revised_prompt = "revised"
         ))
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- generate_image(
@@ -621,7 +624,7 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
   writeBin(charToRaw("fakepng"), input_path)
   on.exit(unlink(input_path), add = TRUE)
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_multipart_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
@@ -630,7 +633,8 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
           b64_json = base64enc::base64encode(charToRaw("edited-bytes"))
         ))
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- edit_image(
@@ -658,7 +662,7 @@ test_that("OpenAI image edit includes mask uploads when provided", {
   writeBin(charToRaw("maskpng"), mask_path)
   on.exit(unlink(c(image_path, mask_path)), add = TRUE)
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_multipart_to_api = function(url, headers, body, ...) {
       captured_body <<- body
       list(
@@ -667,7 +671,8 @@ test_that("OpenAI image edit includes mask uploads when provided", {
           b64_json = base64enc::base64encode(charToRaw("edited-with-mask"))
         ))
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- edit_image(
