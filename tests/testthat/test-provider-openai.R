@@ -1,6 +1,7 @@
 # Tests for OpenAI Provider
 library(testthat)
 library(aisdk)
+pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
 
 # Load helper functions (for environment variable handling)
 helper_path <- file.path(test_path("helper-env.R"))
@@ -74,7 +75,7 @@ test_that("OpenAI provider passes configured timeout_seconds to HTTP helper", {
 
   captured_timeout <- NULL
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
       captured_timeout <<- timeout_seconds
       list(
@@ -84,7 +85,8 @@ test_that("OpenAI provider passes configured timeout_seconds to HTTP helper", {
         )),
         usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- model$do_generate(list(
@@ -101,7 +103,7 @@ test_that("OpenAI per-call timeout_seconds overrides provider default", {
 
   captured_timeout <- NULL
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
       captured_timeout <<- timeout_seconds
       list(
@@ -111,7 +113,8 @@ test_that("OpenAI per-call timeout_seconds overrides provider default", {
         )),
         usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
       )
-    }
+    },
+    .package = "aisdk"
   )
 
   model$do_generate(list(
@@ -132,7 +135,7 @@ test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
 
   captured <- list()
 
-  local_mocked_bindings(
+  testthat::local_mocked_bindings(
     stream_from_api = function(url, headers, body, callback,
                                timeout_seconds = NULL,
                                total_timeout_seconds = NULL,
@@ -149,7 +152,8 @@ test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
       )
       callback(NULL, done = TRUE)
       invisible(NULL)
-    }
+    },
+    .package = "aisdk"
   )
 
   result <- model$do_stream(
