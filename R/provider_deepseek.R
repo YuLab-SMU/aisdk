@@ -10,12 +10,34 @@ NULL
 #' @description
 #' Language model implementation for DeepSeek's chat completions API.
 #' Inherits from OpenAI model but adds support for DeepSeek-specific features
-#' like reasoning content extraction from `deepseek-reasoner` model.
+#' like reasoning content extraction and DeepSeek thinking-mode parameters.
 #' @keywords internal
 DeepSeekLanguageModel <- R6::R6Class(
     "DeepSeekLanguageModel",
     inherit = OpenAILanguageModel,
     public = list(
+        #' @description Initialize the DeepSeek language model.
+        #' @param model_id The model ID.
+        #' @param config Provider configuration.
+        initialize = function(model_id, config) {
+            is_reasoning_model <- grepl(
+                "deepseek-v4|deepseek-reasoner|(^|[-_])r1()|(^|[-_])thinking()",
+                model_id,
+                ignore.case = TRUE
+            )
+
+            super$initialize(
+                model_id = model_id,
+                config = config,
+                capabilities = list(
+                    is_reasoning_model = is_reasoning_model,
+                    reasoning = is_reasoning_model,
+                    function_call = TRUE,
+                    structured_output = TRUE
+                )
+            )
+        },
+
         #' @description Parse the API response into a GenerateResult.
         #' Overrides parent to extract DeepSeek-specific reasoning_content.
         #' @param response The parsed API response.
@@ -29,6 +51,44 @@ DeepSeekLanguageModel <- R6::R6Class(
             result$reasoning <- choice$message$reasoning_content
 
             result
+        },
+
+        #' @description Build request payload with DeepSeek-specific reasoning params.
+        #' @param params A list of call options.
+        #' @return A list with url, headers, and body.
+        build_payload = function(params) {
+            payload <- super$build_payload(params)
+
+            if (!is.null(params$thinking)) {
+                payload$body$thinking <- params$thinking
+            }
+            if (!is.null(params$thinking_budget)) {
+                payload$body$thinking_budget <- params$thinking_budget
+            }
+            if (!is.null(params$reasoning_effort)) {
+                payload$body$reasoning_effort <- params$reasoning_effort
+            }
+
+            payload
+        },
+
+        #' @description Build stream payload with DeepSeek-specific reasoning params.
+        #' @param params A list of call options.
+        #' @return A list with url, headers, and body.
+        build_stream_payload = function(params) {
+            payload <- super$build_stream_payload(params)
+
+            if (!is.null(params$thinking)) {
+                payload$body$thinking <- params$thinking
+            }
+            if (!is.null(params$thinking_budget)) {
+                payload$body$thinking_budget <- params$thinking_budget
+            }
+            if (!is.null(params$reasoning_effort)) {
+                payload$body$reasoning_effort <- params$reasoning_effort
+            }
+
+            payload
         }
     )
 )
@@ -79,7 +139,7 @@ DeepSeekProvider <- R6::R6Class(
         },
 
         #' @description Create a language model.
-        #' @param model_id The model ID (e.g., "deepseek-chat", "deepseek-reasoner").
+        #' @param model_id The model ID (e.g., "deepseek-chat", "deepseek-reasoner", or a `deepseek-v4*` model).
         #' @return A DeepSeekLanguageModel object.
         language_model = function(model_id = NULL) {
             model_id <- model_id %||% Sys.getenv("DEEPSEEK_MODEL", "deepseek-chat")
@@ -92,11 +152,18 @@ DeepSeekProvider <- R6::R6Class(
 #' @description
 #' Factory function to create a DeepSeek provider.
 #'
-#' DeepSeek offers two main models:
+#' DeepSeek supports classic aliases plus newer model families such as DeepSeek V4.
+#'
+#' Common model IDs include:
 #' \itemize{
-#'   \item \strong{deepseek-chat}: Standard chat model (DeepSeek-V3.2 non-thinking mode)
-#'   \item \strong{deepseek-reasoner}: Reasoning model with chain-of-thought (DeepSeek-V3.2 thinking mode)
+#'   \item \strong{deepseek-chat}: Chat alias provided by DeepSeek
+#'   \item \strong{deepseek-reasoner}: Reasoning alias provided by DeepSeek
+#'   \item \strong{deepseek-v4*}: DeepSeek V4 family model IDs exposed by the API
 #' }
+#'
+#' Additional DeepSeek-specific request fields such as `thinking`,
+#' `thinking_budget`, and `reasoning_effort` are passed through when supplied
+#' to `$generate()` or `$stream()`.
 #'
 #' @param api_key DeepSeek API key. Defaults to DEEPSEEK_API_KEY env var.
 #' @param base_url Base URL. Defaults to "https://api.deepseek.com".
@@ -116,11 +183,12 @@ DeepSeekProvider <- R6::R6Class(
 #' model <- deepseek$language_model("deepseek-chat")
 #' result <- generate_text(model, "Hello!")
 #'
-#' # Using deepseek-reasoner for chain-of-thought reasoning
+#' # Using a reasoning-capable model
 #' model_reasoner <- deepseek$language_model("deepseek-reasoner")
 #' result <- model_reasoner$generate(
 #'     messages = list(list(role = "user", content = "Solve: What is 15 * 23?")),
-#'     max_tokens = 500
+#'     max_tokens = 500,
+#'     thinking = TRUE
 #' )
 #' print(result$text) # Final answer
 #' print(result$reasoning) # Chain-of-thought reasoning

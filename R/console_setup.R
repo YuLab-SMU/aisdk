@@ -44,7 +44,7 @@ console_provider_specs <- function() {
       base_url_env = "DEEPSEEK_BASE_URL",
       model_env = "DEEPSEEK_MODEL",
       default_base_url = "https://api.deepseek.com",
-      default_model = "deepseek-chat"
+      default_model = "deepseek-v4"
     ),
     openrouter = list(
       id = "openrouter",

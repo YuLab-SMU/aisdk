@@ -38,11 +38,18 @@ A DeepSeekProvider object.
 \description{
 Factory function to create a DeepSeek provider.
 
-DeepSeek offers two main models:
+DeepSeek supports classic aliases plus newer model families such as DeepSeek V4.
+
+Common model IDs include:
 \itemize{
-\item \strong{deepseek-chat}: Standard chat model (DeepSeek-V3.2 non-thinking mode)
-\item \strong{deepseek-reasoner}: Reasoning model with chain-of-thought (DeepSeek-V3.2 thinking mode)
+\item \strong{deepseek-chat}: Chat alias provided by DeepSeek
+\item \strong{deepseek-reasoner}: Reasoning alias provided by DeepSeek
+\item \strong{deepseek-v4*}: DeepSeek V4 family model IDs exposed by the API
 }
+
+Additional DeepSeek-specific request fields such as \code{thinking},
+\code{thinking_budget}, and \code{reasoning_effort} are passed through when supplied
+to \verb{$generate()} or \verb{$stream()}.
 }
 \examples{
 \donttest{
@@ -52,11 +59,12 @@ deepseek <- create_deepseek()
 model <- deepseek$language_model("deepseek-chat")
 result <- generate_text(model, "Hello!")
 
-# Using deepseek-reasoner for chain-of-thought reasoning
+# Using a reasoning-capable model
 model_reasoner <- deepseek$language_model("deepseek-reasoner")
 result <- model_reasoner$generate(
     messages = list(list(role = "user", content = "Solve: What is 15 * 23?")),
-    max_tokens = 500
+    max_tokens = 500,
+    thinking = TRUE
 )
 print(result$text) # Final answer
 print(result$reasoning) # Chain-of-thought reasoning

@@ -6,7 +6,7 @@
 \description{
 Language model implementation for DeepSeek's chat completions API.
 Inherits from OpenAI model but adds support for DeepSeek-specific features
-like reasoning content extraction from \code{deepseek-reasoner} model.
+like reasoning content extraction and DeepSeek thinking-mode parameters.
 }
 \keyword{internal}
 \section{Super classes}{
@@ -15,7 +15,10 @@ like reasoning content extraction from \code{deepseek-reasoner} model.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
+\item \href{#method-DeepSeekLanguageModel-new}{\code{DeepSeekLanguageModel$new()}}
 \item \href{#method-DeepSeekLanguageModel-parse_response}{\code{DeepSeekLanguageModel$parse_response()}}
+\item \href{#method-DeepSeekLanguageModel-build_payload}{\code{DeepSeekLanguageModel$build_payload()}}
+\item \href{#method-DeepSeekLanguageModel-build_stream_payload}{\code{DeepSeekLanguageModel$build_stream_payload()}}
 \item \href{#method-DeepSeekLanguageModel-clone}{\code{DeepSeekLanguageModel$clone()}}
 }
 }
@@ -25,18 +28,34 @@ like reasoning content extraction from \code{deepseek-reasoner} model.
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-generate'><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-has_capability'><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-stream'><code>aisdk::LanguageModelV1$stream()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_payload"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-build_payload'><code>aisdk::OpenAILanguageModel$build_payload()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="build_stream_payload"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-build_stream_payload'><code>aisdk::OpenAILanguageModel$build_stream_payload()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_generate"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-do_generate'><code>aisdk::OpenAILanguageModel$do_generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="do_stream"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-do_stream'><code>aisdk::OpenAILanguageModel$do_stream()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="execute_request"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-execute_request'><code>aisdk::OpenAILanguageModel$execute_request()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="format_tool_result"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-format_tool_result'><code>aisdk::OpenAILanguageModel$format_tool_result()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_config"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-get_config'><code>aisdk::OpenAILanguageModel$get_config()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="get_history_format"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-get_history_format'><code>aisdk::OpenAILanguageModel$get_history_format()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAILanguageModel" data-id="initialize"><a href='../../aisdk/html/OpenAILanguageModel.html#method-OpenAILanguageModel-initialize'><code>aisdk::OpenAILanguageModel$initialize()</code></a></span></li>
 </ul>
 </details>
 }}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DeepSeekLanguageModel-new"></a>}}
+\if{latex}{\out{\hypertarget{method-DeepSeekLanguageModel-new}{}}}
+\subsection{Method \code{new()}}{
+Initialize the DeepSeek language model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DeepSeekLanguageModel$new(model_id, config)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID.}
+
+\item{\code{config}}{Provider configuration.}
+}
+\if{html}{\out{</div>}}
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DeepSeekLanguageModel-parse_response"></a>}}
 \if{latex}{\out{\hypertarget{method-DeepSeekLanguageModel-parse_response}{}}}
@@ -56,6 +75,46 @@ Overrides parent to extract DeepSeek-specific reasoning_content.
 }
 \subsection{Returns}{
 A GenerateResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DeepSeekLanguageModel-build_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-DeepSeekLanguageModel-build_payload}{}}}
+\subsection{Method \code{build_payload()}}{
+Build request payload with DeepSeek-specific reasoning params.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DeepSeekLanguageModel$build_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with url, headers, and body.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DeepSeekLanguageModel-build_stream_payload"></a>}}
+\if{latex}{\out{\hypertarget{method-DeepSeekLanguageModel-build_stream_payload}{}}}
+\subsection{Method \code{build_stream_payload()}}{
+Build stream payload with DeepSeek-specific reasoning params.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DeepSeekLanguageModel$build_stream_payload(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with url, headers, and body.
 }
 }
 \if{html}{\out{<hr>}}

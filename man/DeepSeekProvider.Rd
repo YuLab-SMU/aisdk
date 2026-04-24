@@ -79,7 +79,7 @@ Create a language model.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "deepseek-chat", "deepseek-reasoner").}
+\item{\code{model_id}}{The model ID (e.g., "deepseek-chat", "deepseek-reasoner", or a \verb{deepseek-v4*} model).}
 }
 \if{html}{\out{</div>}}
 }

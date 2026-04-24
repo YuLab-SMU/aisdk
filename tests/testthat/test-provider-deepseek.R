@@ -1,6 +1,7 @@
 # Tests for DeepSeek Provider
 library(testthat)
 library(aisdk)
+pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
 
 # Load helper functions (for environment variable handling)
 helper_path <- file.path(test_path("helper-env.R"))
@@ -35,6 +36,49 @@ test_that("DeepSeek provider uses default model when none specified", {
     expect_equal(model$model_id, "deepseek-chat")
 })
 
+test_that("DeepSeek v4 models are marked as reasoning-capable", {
+    provider <- safe_create_provider(create_deepseek)
+    model <- provider$language_model("deepseek-v4")
+
+    expect_true(isTRUE(model$capabilities$is_reasoning_model))
+    expect_true(isTRUE(model$capabilities$reasoning))
+})
+
+test_that("DeepSeek provider forwards thinking-mode parameters", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4")
+
+    payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        thinking = TRUE,
+        thinking_budget = 2048,
+        reasoning_effort = "low",
+        max_tokens = 1000
+    ))
+
+    expect_identical(payload$body$thinking, TRUE)
+    expect_equal(payload$body$thinking_budget, 2048)
+    expect_equal(payload$body$reasoning_effort, "low")
+    expect_equal(payload$body$max_completion_tokens, 1000)
+    expect_null(payload$body$max_tokens)
+})
+
+test_that("DeepSeek stream payload forwards thinking-mode parameters", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4")
+
+    payload <- model$build_stream_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        thinking = FALSE,
+        thinking_budget = 512,
+        reasoning_effort = "medium"
+    ))
+
+    expect_identical(payload$body$thinking, FALSE)
+    expect_equal(payload$body$thinking_budget, 512)
+    expect_equal(payload$body$reasoning_effort, "medium")
+})
+
 test_that("create_deepseek() accepts custom base_url", {
     provider <- safe_create_provider(create_deepseek,
         base_url = "https://custom.deepseek.com"
@@ -63,7 +107,7 @@ test_that("DeepSeek provider forwards timeout_seconds to OpenAI-compatible reque
 
     captured_timeout <- NULL
 
-    local_mocked_bindings(
+    testthat::local_mocked_bindings(
         post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
             captured_timeout <<- timeout_seconds
             list(
