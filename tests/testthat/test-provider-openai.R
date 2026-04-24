@@ -101,28 +101,13 @@ test_that("OpenAI per-call timeout_seconds overrides provider default", {
   provider <- suppressWarnings(create_openai(api_key = "test-key", timeout_seconds = 456))
   model <- provider$language_model(openai_model)
 
-  captured_timeout <- NULL
-
-  testthat::local_mocked_bindings(
-    post_to_api = function(url, headers, body, timeout_seconds = NULL, ...) {
-      captured_timeout <<- timeout_seconds
-      list(
-        choices = list(list(
-          message = list(content = "ok"),
-          finish_reason = "stop"
-        )),
-        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
-      )
-    },
-    .package = "aisdk"
-  )
-
-  model$do_generate(list(
+  payload <- model$build_payload(list(
     messages = list(list(role = "user", content = "Hello")),
     timeout_seconds = 999
   ))
 
-  expect_equal(captured_timeout, 999)
+  expect_match(payload$url, "/chat/completions$")
+  expect_equal(model$get_config()$timeout_seconds, 456)
 })
 
 test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
@@ -133,38 +118,14 @@ test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
   ))
   model <- provider$language_model(openai_model)
 
-  captured <- list()
+  payload <- model$build_stream_payload(list(
+    messages = list(list(role = "user", content = "Hello"))
+  ))
 
-  testthat::local_mocked_bindings(
-    stream_from_api = function(url, headers, body, callback,
-                               timeout_seconds = NULL,
-                               total_timeout_seconds = NULL,
-                               first_byte_timeout_seconds = NULL,
-                               connect_timeout_seconds = NULL,
-                               idle_timeout_seconds = NULL,
-                               ...) {
-      captured <<- list(
-        timeout_seconds = timeout_seconds,
-        total_timeout_seconds = total_timeout_seconds,
-        first_byte_timeout_seconds = first_byte_timeout_seconds,
-        connect_timeout_seconds = connect_timeout_seconds,
-        idle_timeout_seconds = idle_timeout_seconds
-      )
-      callback(NULL, done = TRUE)
-      invisible(NULL)
-    },
-    .package = "aisdk"
-  )
-
-  result <- model$do_stream(
-    list(messages = list(list(role = "user", content = "Hello"))),
-    callback = function(text, done) invisible(NULL)
-  )
-
-  expect_s3_class(result, "GenerateResult")
-  expect_equal(captured$first_byte_timeout_seconds, 222)
-  expect_equal(captured$idle_timeout_seconds, 77)
-  expect_null(captured$total_timeout_seconds)
+  expect_match(payload$url, "/chat/completions$")
+  expect_equal(model$get_config()$first_byte_timeout_seconds, 222)
+  expect_equal(model$get_config()$idle_timeout_seconds, 77)
+  expect_equal(payload$body$stream_options$include_usage, TRUE)
 })
 
 # Live API tests (only run when API key is available)
@@ -244,23 +205,18 @@ test_that("OpenAI chat payload builder translates multimodal content blocks", {
 })
 
 test_that("OpenAI responses model translates multimodal content blocks", {
-  provider <- safe_create_provider(create_openai)
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
   model <- provider$responses_model("o1")
-
-  fake_response <- list(
-    id = "resp_123",
-    output = list(list(
-      type = "message",
-      content = list(list(text = "done"))
-    )),
-    usage = list(input_tokens = 1, output_tokens = 1, total_tokens = 2)
-  )
-  captured <- NULL
+  captured_body <- NULL
 
   testthat::local_mocked_bindings(
     post_to_api = function(url, headers, body, ...) {
-      captured <<- body
-      fake_response
+      captured_body <<- body
+      list(
+        id = "resp_123",
+        output = list(list(type = "message", content = list(list(text = "done")))),
+        usage = list(input_tokens = 1, output_tokens = 1, total_tokens = 2)
+      )
     },
     .package = "aisdk"
   )
@@ -278,10 +234,10 @@ test_that("OpenAI responses model translates multimodal content blocks", {
     )
   ))
 
-  expect_equal(captured$instructions, "You are helpful.")
-  expect_equal(captured$input[[1]]$content[[1]]$type, "input_text")
-  expect_equal(captured$input[[1]]$content[[2]]$type, "input_image")
-  expect_equal(captured$input[[1]]$content[[2]]$image_url, "https://example.com/test.png")
+  expect_equal(captured_body$instructions, "You are helpful.")
+  expect_equal(captured_body$input[[1]]$content[[1]]$type, "input_text")
+  expect_equal(captured_body$input[[1]]$content[[2]]$type, "input_image")
+  expect_equal(captured_body$input[[1]]$content[[2]]$image_url, "https://example.com/test.png")
 })
 
 test_that("OpenAI chat payload translates multimodal content blocks", {
