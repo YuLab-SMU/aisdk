@@ -110,6 +110,8 @@ test_that("Stepfun provider can make real API calls", {
 })
 
 test_that("Stepfun image model generates images and edits with step-1x-edit", {
+    skip_on_cran()
+
     provider <- suppressWarnings(create_stepfun(api_key = "test_key"))
     gen_model <- provider$image_model("step-1x-medium")
     edit_model <- provider$image_model("step-1x-edit")

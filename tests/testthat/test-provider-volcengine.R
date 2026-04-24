@@ -83,6 +83,8 @@ test_that("Volcengine provider inherits responses_model and smart_model", {
 })
 
 test_that("Volcengine image model posts generation payload and parses images", {
+    skip_on_cran()
+
     provider <- safe_create_provider(create_volcengine)
     model <- provider$image_model("doubao-seedream-5-0")
     captured_body <- NULL
@@ -110,6 +112,8 @@ test_that("Volcengine image model posts generation payload and parses images", {
 })
 
 test_that("Volcengine image edit reuses generations endpoint with image inputs", {
+    skip_on_cran()
+
     provider <- safe_create_provider(create_volcengine)
     model <- provider$image_model("doubao-seedream-5-0")
     captured_body <- NULL

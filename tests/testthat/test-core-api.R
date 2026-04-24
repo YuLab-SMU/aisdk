@@ -12,34 +12,59 @@ openai_model_id <- paste0("openai:", openai_model)
 # === Tests for generate_text ===
 
 test_that("generate_text accepts a model object", {
-  skip_if_offline()
-  skip_on_cran()
-
-  # Force invalid key to ensure network error (401)
-  provider <- suppressWarnings(create_openai(api_key = "invalid"))
+  provider <- suppressWarnings(create_openai(api_key = "test-key"))
   model <- provider$language_model(openai_model)
+  captured_body <- NULL
 
-  # This will fail due to API key error (which is what we want to verify - that it attempts to call)
-  expect_error(
-    generate_text(model = model, prompt = "Hello")
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        choices = list(list(
+          message = list(content = "Mocked hello"),
+          finish_reason = "stop"
+        )),
+        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
+      )
+    },
+    .package = "aisdk"
   )
+
+  result <- generate_text(model = model, prompt = "Hello")
+
+  expect_equal(result$text, "Mocked hello")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$text, "Hello")
 })
 
 test_that("generate_text accepts a string model identifier", {
-  skip_if_offline()
-  skip_on_cran()
-
-  # Register a mock provider with invalid key
-  registry <- get_default_registry()
-  provider <- suppressWarnings(create_openai(api_key = "invalid"))
+  registry <- ProviderRegistry$new()
+  provider <- suppressWarnings(create_openai(api_key = "test-key"))
   registry$register("test-openai-fail", provider)
 
   model_id <- paste0("test-openai-fail:", openai_model)
+  captured_body <- NULL
 
-  # This will fail due to API key error
-  expect_error(
-    generate_text(model = model_id, prompt = "Hello")
+  local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        choices = list(list(
+          message = list(content = "Mocked via registry"),
+          finish_reason = "stop"
+        )),
+        usage = list(prompt_tokens = 1, completion_tokens = 1, total_tokens = 2)
+      )
+    },
+    .package = "aisdk"
   )
+
+  result <- generate_text(model = model_id, prompt = "Hello", registry = registry)
+
+  expect_equal(result$text, "Mocked via registry")
+  expect_equal(captured_body$model, openai_model)
+  expect_equal(captured_body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$text, "Hello")
 })
 
 test_that("generate_text recovers tool calls embedded in assistant text", {

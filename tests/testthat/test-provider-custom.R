@@ -119,7 +119,8 @@ test_that("Custom provider omits auth headers when API key is blank", {
                 stop_reason = "end_turn",
                 usage = list(input_tokens = 1, output_tokens = 1)
             )
-        }
+        },
+        .package = "aisdk"
     )
 
     anthropic_model$do_generate(list(

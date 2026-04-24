@@ -112,58 +112,73 @@ test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
   expect_equal(payload$body$stream_options$include_usage, TRUE)
 })
 
-# Live API tests (only run when API key is available)
-test_that("OpenAI provider can make real API calls", {
-  skip_if_no_api_key("OpenAI")
-  skip_on_cran()
-
-  provider <- create_openai()
+# Transport-free regression tests for generate() entrypoints
+test_that("OpenAI provider can generate text via mocked transport", {
+  provider <- safe_create_provider(create_openai, api_key = "test-key")
   model <- provider$language_model(openai_model)
+  captured_body <- NULL
 
-  # Make a simple API call (use higher max_tokens for reasoning models like gpt-5-mini)
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        choices = list(list(
+          message = list(content = "Hello from mock"),
+          finish_reason = "stop"
+        )),
+        usage = list(prompt_tokens = 3, completion_tokens = 4, total_tokens = 7)
+      )
+    },
+    .package = "aisdk"
+  )
+
   result <- model$generate(
-    messages = list(
-      list(role = "user", content = "Say 'Hello, World!'")
-    ),
+    messages = list(list(role = "user", content = "Say 'Hello, World!'")),
     max_tokens = 200
   )
 
-  # Check that we got a response (can be text or tool calls)
-  expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
-  # If it's just a text response, it should not be empty
-  if (is.null(result$tool_calls) || length(result$tool_calls) == 0) {
-    expect_true(nchar(result$text %||% "") > 0)
-  }
+  expect_equal(result$text, "Hello from mock")
+  expect_equal(captured_body$model, openai_model)
+  expect_equal(captured_body$messages[[1]]$content[[1]]$type, "text")
+  expect_equal(captured_body$messages[[1]]$content[[1]]$text, "Say 'Hello, World!'")
 })
 
 test_that("OpenAI provider handles tool calls", {
-  skip_if_no_api_key("OpenAI")
-  skip_on_cran()
-
-  provider <- create_openai()
+  provider <- safe_create_provider(create_openai, api_key = "test-key")
   model <- provider$language_model(openai_model)
 
-  # Create a simple test tool
-  test_tool <- Tool$new(
-    name = "get_time",
-    description = "Get the current time",
-    parameters = z_object(.dummy = z_string("Unused")),
-    execute = function(args) {
-      paste0("Current time: ", Sys.time())
-    }
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      list(
+        choices = list(list(
+          message = list(
+            content = NULL,
+            tool_calls = list(list(
+              id = "call_123",
+              type = "function",
+              `function` = list(
+                name = "get_time",
+                arguments = "{\"timezone\":\"UTC\"}"
+              )
+            ))
+          ),
+          finish_reason = "tool_calls"
+        )),
+        usage = list(prompt_tokens = 10, completion_tokens = 5, total_tokens = 15)
+      )
+    },
+    .package = "aisdk"
   )
 
-  # Call model with tool
   result <- model$generate(
-    messages = list(
-      list(role = "user", content = "What time is it?")
-    ),
-    tools = list(test_tool),
+    messages = list(list(role = "user", content = "What time is it?")),
     max_tokens = 50
   )
 
-  # Check response (can be text or tool calls)
-  expect_true(!is.null(result$text) || length(result$tool_calls) > 0)
+  expect_length(result$tool_calls, 1)
+  expect_equal(result$tool_calls[[1]]$id, "call_123")
+  expect_equal(result$tool_calls[[1]]$name, "get_time")
+  expect_equal(result$tool_calls[[1]]$arguments$timezone, "UTC")
 })
 
 test_that("OpenAI chat payload builder translates multimodal content blocks", {
@@ -496,6 +511,8 @@ test_that("OpenAI Responses API maintains conversation state", {
 })
 
 test_that("OpenAI image model posts JSON generation payload and parses images", {
+  skip_on_cran()
+
   provider <- safe_create_provider(create_openai)
   model <- provider$image_model("gpt-image-1")
   captured_body <- NULL
@@ -529,6 +546,8 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
 })
 
 test_that("OpenAI image model posts multipart edit payload and parses images", {
+  skip_on_cran()
+
   provider <- safe_create_provider(create_openai)
   model <- provider$image_model("gpt-image-1")
   captured_body <- NULL
@@ -565,6 +584,8 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
 })
 
 test_that("OpenAI image edit includes mask uploads when provided", {
+  skip_on_cran()
+
   provider <- safe_create_provider(create_openai)
   model <- provider$image_model("gpt-image-1")
   captured_body <- NULL

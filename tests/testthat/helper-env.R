@@ -85,6 +85,10 @@ skip_if_no_api_key <- function(provider = "API") {
 
   skip_if_offline()
 
+  if (nzchar(Sys.getenv("CI")) && toupper(Sys.getenv("AISDK_RUN_LIVE_API_TESTS_ON_CI")) != "TRUE") {
+    testthat::skip("Live API tests are disabled on CI unless AISDK_RUN_LIVE_API_TESTS_ON_CI=TRUE.")
+  }
+
   if (!aisdk::enable_api_tests()) {
     testthat::skip("API tests disabled: set ENABLE_API_TESTS=TRUE to run live API tests.")
   }

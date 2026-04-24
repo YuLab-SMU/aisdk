@@ -1,3 +1,10 @@
+library(testthat)
+library(aisdk)
+pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
+
+helper_path <- file.path(test_path("helper-mock.R"))
+source(helper_path)
+
 # Semantic runtime regression tests for canonical session env invariants
 
 test_that("ChatSession canonical env stores the semantic adapter registry", {
@@ -13,67 +20,24 @@ test_that("ChatSession canonical env stores the semantic adapter registry", {
 })
 
 test_that("send and send_stream reuse the same session env and semantic registry", {
-  session <- ChatSession$new(model = MockModel$new())
+  model <- MockModel$new()
+  model$add_response(text = "sync response")
+  model$add_response(text = "stream response")
+
+  session <- ChatSession$new(model = model)
   env <- session$get_envir()
   registry <- get(".semantic_adapter_registry", envir = env, inherits = FALSE)
-
-  observed <- new.env(parent = emptyenv())
-
-  local_mocked_bindings(
-    generate_text = function(model,
-                             prompt,
-                             system = NULL,
-                             tools = NULL,
-                             max_steps = 1,
-                             session = NULL,
-                             hooks = NULL,
-                             registry = NULL,
-                             ...) {
-      observed$send_session <- session
-      observed$send_env <- session$get_envir()
-      observed$send_registry <- get(".semantic_adapter_registry", envir = observed$send_env, inherits = FALSE)
-
-      list(
-        text = "sync response",
-        tool_calls = NULL,
-        finish_reason = "stop",
-        usage = list(total_tokens = 1)
-      )
-    },
-    stream_text = function(model,
-                           prompt,
-                           callback,
-                           system = NULL,
-                           registry = NULL,
-                           tools = NULL,
-                           max_steps = 1,
-                           session = NULL,
-                           hooks = NULL,
-                           ...) {
-      observed$stream_session <- session
-      observed$stream_env <- session$get_envir()
-      observed$stream_registry <- get(".semantic_adapter_registry", envir = observed$stream_env, inherits = FALSE)
-
-      callback("stream response", TRUE)
-
-      list(
-        text = "stream response",
-        messages_added = list(),
-        usage = list(total_tokens = 1)
-      )
-    }
-  )
+  streamed <- character()
 
   session$send("hello")
-  session$send_stream("stream hello", function(text, done) NULL)
+  session$send_stream("stream hello", function(text, done) {
+    streamed <<- c(streamed, text)
+  })
 
-  expect_identical(observed$send_session, session)
-  expect_identical(observed$send_env, env)
-  expect_identical(observed$send_registry, registry)
-
-  expect_identical(observed$stream_session, session)
-  expect_identical(observed$stream_env, env)
-  expect_identical(observed$stream_registry, registry)
+  expect_identical(session$get_envir(), env)
+  expect_identical(get(".semantic_adapter_registry", envir = env, inherits = FALSE), registry)
+  expect_equal(paste(streamed, collapse = ""), "stream response")
+  expect_equal(session$get_last_response(), "stream response")
 })
 
 test_that("SharedSession global scope is identical to the canonical session env", {

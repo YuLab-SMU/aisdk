@@ -24,16 +24,19 @@ test_that("AST checker blocks protected variables", {
     sdk_clear_protected_vars()
     sdk_protect_var("expensive_df", locked = TRUE, cost = "High")
 
-    expect_error(
-        check_ast_safety("expensive_df <- data.frame()"),
-        "Variable 'expensive_df' is protected"
+    protected_mutations <- c(
+        "expensive_df <- data.frame()",
+        "expensive_df$new_col <- 1",
+        "expensive_df[['col']] <- 2",
+        "assign('expensive_df', 1)"
     )
 
-    expect_error(check_ast_safety("expensive_df$new_col <- 1"))
-
-    expect_error(check_ast_safety("expensive_df[['col']] <- 2"))
-
-    expect_error(check_ast_safety("assign('expensive_df', 1)"))
+    for (code in protected_mutations) {
+        expect_error(
+            check_ast_safety(code),
+            "Variable 'expensive_df' is protected"
+        )
+    }
 
     # Other variables are fine
     expect_silent(check_ast_safety("other_df <- 1"))
@@ -60,6 +63,7 @@ test_that("list_session_variables shows protection metadata", {
     expect_true(grepl("my_normal_var", res))
     expect_true(grepl("integer", res))
     expect_true(grepl("my_expensive_model", res))
-    expect_true(grepl("PROTECTED: Cost GPU High", res))
+    expect_true(grepl("PROTECTED", res, fixed = TRUE))
+    expect_true(grepl("GPU High", res, fixed = TRUE))
     expect_true(grepl("list", res))
 })

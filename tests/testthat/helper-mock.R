@@ -11,23 +11,44 @@ MockModel <- R6::R6Class("MockModel",
       self$responses <- responses
     },
 
-    do_generate = function(params) {
-      self$last_params <- params # Capture params
-      
+    next_response = function(params) {
+      self$last_params <- params
+
       if (length(self$responses) == 0) {
-        return(list(text = "Mock response", tool_calls = NULL))
+        return(list(
+          text = "Mock response",
+          tool_calls = NULL,
+          finish_reason = "stop",
+          usage = list(total_tokens = 10)
+        ))
       }
-      
-      # Pop the first response
+
       resp <- self$responses[[1]]
       self$responses <- self$responses[-1]
-      
-      # Allow response to be a function of params
+
       if (is.function(resp)) {
         return(resp(params))
       }
-      
-      return(resp)
+
+      resp
+    },
+
+    do_generate = function(params) {
+      self$next_response(params)
+    },
+
+    do_stream = function(params, callback) {
+      resp <- self$next_response(params)
+      text <- resp$text %||% ""
+
+      if (nzchar(text)) {
+        callback(text, TRUE)
+      } else {
+        callback("", TRUE)
+      }
+
+      resp$messages_added <- resp$messages_added %||% list()
+      resp
     },
     
     add_response = function(text = NULL, tool_calls = NULL) {
