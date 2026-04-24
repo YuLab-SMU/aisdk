@@ -1,6 +1,5 @@
 library(testthat)
 library(aisdk)
-pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
 
 test_that("Variable Registry works", {
     # Clear registry

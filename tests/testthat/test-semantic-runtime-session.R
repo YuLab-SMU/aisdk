@@ -1,6 +1,5 @@
 library(testthat)
 library(aisdk)
-pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
 
 helper_path <- file.path(test_path("helper-mock.R"))
 source(helper_path)
