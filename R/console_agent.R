@@ -362,13 +362,13 @@ create_console_tools <- function(working_dir = tempdir(),
     default_console_image_model <- function(provider, purpose = c("generate", "edit")) {
         purpose <- match.arg(purpose)
         switch(provider %||% "",
-            openai = "openai:gpt-image-1",
+            openai = "openai:gpt-image-2",
             gemini = "gemini:gemini-3.1-flash-image-preview",
             volcengine = "volcengine:doubao-seedream-5-0",
             xai = "xai:grok-2-image",
             stepfun = if (purpose == "edit") "stepfun:step-1x-edit" else "stepfun:step-1x-medium",
-            openrouter = "openrouter:openai/gpt-image-1",
-            aihubmix = "aihubmix:gpt-image-1",
+            openrouter = "openrouter:openai/gpt-image-2",
+            aihubmix = "aihubmix:gpt-image-2",
             NULL
         )
     }

@@ -39,10 +39,10 @@ test_that("OpenAI provider creates embedding model correctly", {
 
 test_that("OpenAI provider creates image model correctly", {
   provider <- safe_create_provider(create_openai)
-  model <- provider$image_model("gpt-image-1")
+  model <- provider$image_model("gpt-image-2")
 
   expect_s3_class(model, "OpenAIImageModel")
-  expect_equal(model$model_id, "gpt-image-1")
+  expect_equal(model$model_id, "gpt-image-2")
   expect_equal(model$provider, "openai")
 })
 
@@ -522,7 +522,7 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
-  model <- provider$image_model("gpt-image-1")
+  model <- provider$image_model("gpt-image-2")
   captured_body <- NULL
 
   testthat::local_mocked_bindings(
@@ -545,7 +545,7 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
     output_dir = tempdir()
   )
 
-  expect_equal(captured_body$model, "gpt-image-1")
+  expect_equal(captured_body$model, "gpt-image-2")
   expect_equal(captured_body$prompt, "Draw a blue mug")
   expect_equal(captured_body$response_format, "b64_json")
   expect_equal(result$images[[1]]$media_type, "image/png")
@@ -553,12 +553,51 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
   expect_equal(result$images[[1]]$revised_prompt, "revised")
 })
 
+test_that("OpenAI image generation forwards latest image parameters", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-2")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        created = 123,
+        data = list(list(
+          b64_json = base64enc::base64encode(charToRaw("jpeg-bytes"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- generate_image(
+    model = model,
+    prompt = "Draw a blue mug",
+    output_dir = tempdir(),
+    background = "transparent",
+    output_format = "jpeg",
+    output_compression = 42,
+    moderation = "low"
+  )
+
+  expect_equal(captured_body$model, "gpt-image-2")
+  expect_equal(captured_body$background, "transparent")
+  expect_equal(captured_body$output_format, "jpeg")
+  expect_equal(captured_body$output_compression, 42)
+  expect_equal(captured_body$moderation, "low")
+  expect_equal(result$images[[1]]$media_type, "image/jpeg")
+})
+
 test_that("OpenAI image model posts multipart edit payload and parses images", {
   skip_on_ci()
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
-  model <- provider$image_model("gpt-image-1")
+  model <- provider$image_model("gpt-image-2")
   captured_body <- NULL
 
   input_path <- tempfile(fileext = ".png")
@@ -585,7 +624,7 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
     output_dir = tempdir()
   )
 
-  expect_equal(captured_body$model, "gpt-image-1")
+  expect_equal(captured_body$model, "gpt-image-2")
   expect_equal(captured_body$prompt, "Make it cobalt blue")
   expect_equal(captured_body$response_format, "b64_json")
   expect_true(!is.null(captured_body$image))
@@ -597,7 +636,7 @@ test_that("OpenAI image edit includes mask uploads when provided", {
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
-  model <- provider$image_model("gpt-image-1")
+  model <- provider$image_model("gpt-image-1.5")
   captured_body <- NULL
 
   image_path <- tempfile(fileext = ".png")
@@ -631,9 +670,79 @@ test_that("OpenAI image edit includes mask uploads when provided", {
   expect_equal(rawToChar(result$images[[1]]$bytes), "edited-with-mask")
 })
 
+test_that("OpenAI image edit supports multiple reference images and latest edit params", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$image_model("gpt-image-1.5")
+  captured_body <- NULL
+
+  image_paths <- c(tempfile(fileext = ".png"), tempfile(fileext = ".png"))
+  writeBin(charToRaw("fakepng-a"), image_paths[[1]])
+  writeBin(charToRaw("fakepng-b"), image_paths[[2]])
+  on.exit(unlink(image_paths), add = TRUE)
+
+  testthat::local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(
+        created = 456,
+        data = list(list(
+          b64_json = base64enc::base64encode(charToRaw("edited-multi"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- edit_image(
+    model = model,
+    image = image_paths,
+    prompt = "Combine both references into one product shot",
+    input_fidelity = "high",
+    output_format = "webp",
+    output_compression = 55,
+    output_dir = tempdir()
+  )
+
+  expect_equal(sum(names(captured_body) == "image[]"), 2)
+  expect_equal(captured_body$input_fidelity, "high")
+  expect_equal(captured_body$output_format, "webp")
+  expect_equal(captured_body$output_compression, 55)
+  expect_equal(result$images[[1]]$media_type, "image/webp")
+  expect_equal(rawToChar(result$images[[1]]$bytes), "edited-multi")
+})
+
+test_that("OpenAI image param validation enforces latest model constraints", {
+  provider <- safe_create_provider(create_openai)
+  image_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("fakepng"), image_path)
+  on.exit(unlink(image_path), add = TRUE)
+
+  expect_error(
+    edit_image(
+      model = provider$image_model("gpt-image-2"),
+      image = image_path,
+      prompt = "Edit this image",
+      input_fidelity = "high"
+    ),
+    "fixed for `gpt-image-2`"
+  )
+
+  expect_error(
+    generate_image(
+      model = provider$image_model("gpt-image-2"),
+      prompt = "Draw a mug",
+      output_compression = 40
+    ),
+    "requires `output_format = 'jpeg'` or `output_format = 'webp'`"
+  )
+})
+
 test_that("OpenAI image edit rejects remote URLs for uploaded source images", {
   provider <- safe_create_provider(create_openai)
-  model <- provider$image_model("gpt-image-1")
+  model <- provider$image_model("gpt-image-2")
 
   expect_error(
     edit_image(

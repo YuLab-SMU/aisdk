@@ -37,7 +37,7 @@ OpenAI image models use the same pattern:
 library(aisdk)
 
 provider <- create_openai()
-model <- provider$image_model("gpt-image-1")
+model <- provider$image_model("gpt-image-2")
 ```
 
 Other supported provider patterns:
@@ -46,8 +46,8 @@ Other supported provider patterns:
 create_volcengine()$image_model("doubao-seedream-5-0")
 create_xai()$image_model("grok-2-image")
 create_stepfun()$image_model("step-1x-medium")
-create_openrouter()$image_model("openai/gpt-image-1")
-create_aihubmix()$image_model("gpt-image-1")
+create_openrouter()$image_model("openai/gpt-image-2")
+create_aihubmix()$image_model("gpt-image-2")
 ```
 
 ## Provider support matrix
@@ -57,12 +57,12 @@ The current `aisdk` image-model support looks like this:
 | Provider | Example model | `generate_image()` | `edit_image()` | Notes |
 |---|---|---:|---:|---|
 | Gemini | `gemini-3.1-flash-image-preview` | Yes | Yes | Prompt-based edits; `mask` not yet exposed |
-| OpenAI | `gpt-image-1` | Yes | Yes | `mask` supported; local file path or data URI required for edits |
+| OpenAI | `gpt-image-2` / `gpt-image-1.5` | Yes | Yes | `mask` supported; local file path or data URI required for edits; `input_fidelity` and multiple reference images available on the latest family |
 | Volcengine | `doubao-seedream-5-0` | Yes | Yes | Image-to-image reuses the generation endpoint with `image` input |
 | xAI | `grok-2-image` | Yes | Yes | JSON image generation and editing workflow |
 | Stepfun | `step-1x-medium` / `step-1x-edit` | Yes | Yes | Editing currently requires `step-1x-edit` |
-| OpenRouter | `openai/gpt-image-1` | Yes | Yes | Reuses OpenAI image-model path through the router |
-| AiHubMix | `gpt-image-1` | Yes | Yes | Reuses OpenAI image-model path through AiHubMix |
+| OpenRouter | `openai/gpt-image-2` | Yes | Yes | Reuses OpenAI image-model path through the router |
+| AiHubMix | `gpt-image-2` | Yes | Yes | Reuses OpenAI image-model path through AiHubMix |
 
 In practice, the easiest rule is:
 
@@ -90,9 +90,12 @@ OpenAI works the same way:
 library(aisdk)
 
 result <- generate_image(
-  model = create_openai()$image_model("gpt-image-1"),
+  model = create_openai()$image_model("gpt-image-2"),
   prompt = "A minimalist editorial photo of a cobalt blue mug on a white plinth",
-  output_dir = tempdir()
+  output_dir = tempdir(),
+  background = "transparent",
+  output_format = "webp",
+  output_compression = 60
 )
 
 result$images[[1]]$path
@@ -171,7 +174,7 @@ OpenAI image models also support `edit_image()`:
 library(aisdk)
 
 result <- edit_image(
-  model = create_openai()$image_model("gpt-image-1"),
+  model = create_openai()$image_model("gpt-image-1.5"),
   image = "inst/extdata/product.png",
   prompt = "Change the mug color from white to cobalt blue.",
   output_dir = tempdir()
@@ -181,6 +184,27 @@ result$images[[1]]$path
 ```
 
 In the current `aisdk` implementation, OpenAI image editing expects a local file path or data URI for the source image. `mask` is also supported when you want explicit localized edits.
+
+For the latest OpenAI image models, `aisdk` also forwards:
+
+- `background`
+- `output_format`
+- `output_compression`
+- `input_fidelity` (editing only, for models that allow it)
+
+OpenAI edits can also use multiple reference images:
+
+```r
+result <- edit_image(
+  model = create_openai()$image_model("gpt-image-1.5"),
+  image = c("inst/extdata/product_front.png", "inst/extdata/product_side.png"),
+  prompt = "Combine both references into one premium catalog render.",
+  input_fidelity = "high",
+  output_format = "webp",
+  output_compression = 55,
+  output_dir = tempdir()
+)
+```
 
 Volcengine image editing example:
 
@@ -231,6 +255,7 @@ Current provider-specific caveats:
 
 - Gemini: no `mask` support in `aisdk` yet
 - OpenAI: source image for editing must be a local file path or data URI
+- OpenAI: `input_fidelity` is only valid for edit workflows and is fixed for some newer models such as `gpt-image-2`
 - Volcengine: `mask` not yet exposed
 - xAI: image editing currently uses JSON image inputs
 - Stepfun: editing currently requires `step-1x-edit`

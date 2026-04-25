@@ -100,7 +100,7 @@ Create an image model.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "openai/gpt-image-1").}
+\item{\code{model_id}}{The model ID (e.g., "openai/gpt-image-2").}
 }
 \if{html}{\out{</div>}}
 }

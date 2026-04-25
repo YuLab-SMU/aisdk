@@ -191,14 +191,14 @@ An OpenAIEmbeddingModel object.
 Create an image model.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$image_model(
-  model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+  model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{model_id}}{The model ID (e.g., "gpt-image-1").}
+\item{\code{model_id}}{The model ID (e.g., "gpt-image-2", "gpt-image-1.5").}
 }
 \if{html}{\out{</div>}}
 }

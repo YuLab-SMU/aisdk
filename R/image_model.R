@@ -164,3 +164,30 @@ normalize_image_input_to_url_like <- function(image) {
   encoded <- base64enc::base64encode(block$value)
   paste0("data:", block$media_type, ";base64,", encoded)
 }
+
+#' @keywords internal
+coerce_image_inputs <- function(images, arg = "`image`") {
+  if (is.null(images)) {
+    rlang::abort(paste0(arg, " must not be NULL."))
+  }
+
+  if (is.list(images) && is_content_block(images)) {
+    return(list(images))
+  }
+
+  if (is.character(images)) {
+    if (!length(images)) {
+      rlang::abort(paste0(arg, " must contain at least one image input."))
+    }
+    return(as.list(images))
+  }
+
+  if (is.list(images)) {
+    if (!length(images)) {
+      rlang::abort(paste0(arg, " must contain at least one image input."))
+    }
+    return(images)
+  }
+
+  rlang::abort(paste0(arg, " must be a local file path, data URI, URL, input_image() block, or a list of those values."))
+}

@@ -58,12 +58,15 @@ OpenAI image generation is exposed through a dedicated `image_model()` path rath
 library(aisdk)
 
 provider <- create_openai()
-image_model <- provider$image_model("gpt-image-1")
+image_model <- provider$image_model("gpt-image-2")
 
 result <- generate_image(
   model = image_model,
   prompt = "A clean product photo of a cobalt blue ceramic mug on linen",
-  output_dir = tempdir()
+  output_dir = tempdir(),
+  background = "transparent",
+  output_format = "webp",
+  output_compression = 60
 )
 
 result$images[[1]]$path
@@ -77,7 +80,7 @@ OpenAI image models also support image-to-image editing:
 library(aisdk)
 
 result <- edit_image(
-  model = create_openai()$image_model("gpt-image-1"),
+  model = create_openai()$image_model("gpt-image-1.5"),
   image = "inst/extdata/product.png",
   prompt = "Change the mug color to cobalt blue.",
   output_dir = tempdir()
@@ -87,3 +90,17 @@ result$images[[1]]$path
 ```
 
 In the current `aisdk` implementation, OpenAI image editing expects a local file path or data URI for the source image. Optional `mask` uploads are supported for localized edits.
+
+For the latest OpenAI image models, `aisdk` also forwards `background`, `output_format`, `output_compression`, and `input_fidelity` where supported. Multiple reference images are supported for edit workflows:
+
+```r
+result <- edit_image(
+  model = create_openai()$image_model("gpt-image-1.5"),
+  image = c("inst/extdata/product_front.png", "inst/extdata/product_side.png"),
+  prompt = "Combine both references into one premium product render.",
+  input_fidelity = "high",
+  output_format = "webp",
+  output_compression = 55,
+  output_dir = tempdir()
+)
+```

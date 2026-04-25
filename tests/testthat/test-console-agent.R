@@ -373,7 +373,7 @@ test_that("generate_image_asset stores recent image artifacts", {
 
     local_mocked_bindings(
         generate_image = function(model, prompt, output_dir, ...) {
-            expect_equal(model, "openai:gpt-image-1")
+            expect_equal(model, "openai:gpt-image-2")
             GenerateImageResult$new(
                 images = list(list(
                     path = file.path(output_dir, "generated.png"),
@@ -442,7 +442,7 @@ test_that("get_recent_image_artifacts summarizes remembered image outputs", {
     envir$.console_image_artifacts <- list(
         list(
             kind = "generated",
-            model = "openai:gpt-image-1",
+            model = "openai:gpt-image-2",
             prompt = "Generate a mug",
             artifacts = list(list(path = "/tmp/generated.png"))
         ),

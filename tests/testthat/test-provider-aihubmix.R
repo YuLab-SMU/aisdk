@@ -54,10 +54,10 @@ test_that("AiHubMix provider creates image model correctly", {
         base_url = "https://custom.aihubmix.com/v1"
     )
 
-    model <- provider$image_model("gpt-image-1")
+    model <- provider$image_model("gpt-image-2")
 
     expect_s3_class(model, "OpenAIImageModel")
-    expect_equal(model$model_id, "gpt-image-1")
+    expect_equal(model$model_id, "gpt-image-2")
     expect_equal(model$provider, "aihubmix")
 })
 

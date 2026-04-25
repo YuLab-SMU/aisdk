@@ -143,12 +143,12 @@ AiHubMixProvider <- R6::R6Class(
         },
 
         #' @description Create an image model.
-        #' @param model_id The model ID (e.g., "gpt-image-1").
+        #' @param model_id The model ID (e.g., "gpt-image-2").
         #' @return An OpenAIImageModel object.
         image_model = function(model_id = NULL) {
             model_id <- model_id %||% Sys.getenv("AIHUBMIX_IMAGE_MODEL", unset = "")
             if (is.null(model_id) || model_id == "") {
-                model_id <- "gpt-image-1"
+                model_id <- "gpt-image-2"
             }
             OpenAIImageModel$new(model_id, private$config)
         }

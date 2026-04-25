@@ -22,6 +22,7 @@
 -   **Tool System**: Turn any R function into an AI-callable tool with automatic schema generation.
 -   **Structured Outputs**: Generate type-safe JSON, data frames, and complex objects.
 -   **Chat Sessions**: Stateful conversation management with history tracking.
+-   **Image Generation**: Dedicated image-model APIs with OpenAI `gpt-image-2`, Gemini, Volcengine, xAI, Stepfun, OpenRouter, and AiHubMix support.
 -   **Enterprise Ops**: Telemetry, hooks, cost tracking, and MCP (Model Context Protocol) support.
 
 ## Installation
@@ -204,6 +205,42 @@ Useful commands:
 - `/inspect next`, `/inspect prev`, `/inspect close`
 - `/debug [on|off]`, `/stream [on|off]`
 - `/model <id>`, `/history`, `/stats`, `/clear`
+
+### Image Generation
+
+`aisdk` exposes image generation and editing through a dedicated `image_model()` path.
+
+```r
+library(aisdk)
+
+provider <- create_openai()
+image_model <- provider$image_model("gpt-image-2")
+
+result <- generate_image(
+  model = image_model,
+  prompt = "A clean editorial photo of a cobalt blue ceramic mug on white linen",
+  output_dir = tempdir(),
+  background = "transparent",
+  output_format = "webp",
+  output_compression = 60
+)
+
+result$images[[1]]$path
+```
+
+OpenAI image editing also supports local masks and, for the latest model family, richer edit controls such as multiple reference images and `input_fidelity`:
+
+```r
+result <- edit_image(
+  model = create_openai()$image_model("gpt-image-1.5"),
+  image = c("inst/extdata/product_front.png", "inst/extdata/product_side.png"),
+  prompt = "Combine both references into a single premium product shot.",
+  input_fidelity = "high",
+  output_format = "webp",
+  output_compression = 55,
+  output_dir = tempdir()
+)
+```
 
 ### Skills System
 

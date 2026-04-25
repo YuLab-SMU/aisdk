@@ -68,10 +68,10 @@ test_that("OpenRouter provider inherits responses_model and smart_model", {
 
 test_that("OpenRouter provider creates image model correctly", {
     provider <- safe_create_provider(create_openrouter)
-    model <- provider$image_model("openai/gpt-image-1")
+    model <- provider$image_model("openai/gpt-image-2")
 
     expect_s3_class(model, "OpenAIImageModel")
-    expect_equal(model$model_id, "openai/gpt-image-1")
+    expect_equal(model$model_id, "openai/gpt-image-2")
     expect_equal(model$provider, "openrouter")
 })
 

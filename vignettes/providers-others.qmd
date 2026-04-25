@@ -106,7 +106,7 @@ When the upstream model supports OpenAI-style image APIs, OpenRouter can be used
 
 ```r
 provider <- create_openrouter()
-image_model <- provider$image_model("openai/gpt-image-1")
+image_model <- provider$image_model("openai/gpt-image-2")
 ```
 
 ## AiHubMix
@@ -114,7 +114,7 @@ AiHubMix can route OpenAI-style image models through its unified API:
 
 ```r
 provider <- create_aihubmix()
-image_model <- provider$image_model("gpt-image-1")
+image_model <- provider$image_model("gpt-image-2")
 ```
 
 ## Nvidia

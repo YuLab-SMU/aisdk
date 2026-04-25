@@ -1172,7 +1172,47 @@ OpenAIImageModel <- R6::R6Class(
       }
       h
     },
+    is_gpt_image_2 = function() {
+      grepl("(^|/)gpt-image-2($|-)", self$model_id %||% "", perl = TRUE)
+    },
+    is_gpt_image_family = function() {
+      grepl("(^|/)(gpt-image-2|gpt-image-1(\\.5|-mini)?|chatgpt-image-latest)($|-)", self$model_id %||% "", perl = TRUE)
+    },
+    validate_image_params = function(params, request_type = c("generate", "edit")) {
+      request_type <- match.arg(request_type)
+
+      if (!is.null(params$output_compression)) {
+        compression <- suppressWarnings(as.numeric(params$output_compression))
+        if (is.na(compression) || compression < 0 || compression > 100) {
+          rlang::abort("`output_compression` must be a number between 0 and 100.")
+        }
+        fmt <- tolower(params$output_format %||% "")
+        if (!fmt %in% c("jpeg", "jpg", "webp")) {
+          rlang::abort("`output_compression` requires `output_format = 'jpeg'` or `output_format = 'webp'`.")
+        }
+      }
+
+      if (!is.null(params$input_fidelity)) {
+        if (request_type != "edit") {
+          rlang::abort("`input_fidelity` is only supported for image editing workflows.")
+        }
+        if (private$is_gpt_image_2()) {
+          rlang::abort("`input_fidelity` is fixed for `gpt-image-2` and cannot be overridden.")
+        }
+      }
+
+      if (!is.null(params$response_format) && private$is_gpt_image_family()) {
+        fmt <- tolower(as.character(params$response_format)[[1]])
+        if (identical(fmt, "url")) {
+          rlang::abort("GPT image models return base64 image payloads; `response_format = 'url'` is not supported.")
+        }
+      }
+
+      invisible(TRUE)
+    },
     build_generation_body = function(params) {
+      private$validate_image_params(params, request_type = "generate")
+
       body <- list(
         model = self$model_id,
         prompt = params$prompt,
@@ -1185,10 +1225,11 @@ OpenAIImageModel <- R6::R6Class(
       if (!is.null(params$background)) body$background <- params$background
       if (!is.null(params$moderation)) body$moderation <- params$moderation
       if (!is.null(params$output_format)) body$output_format <- params$output_format
+      if (!is.null(params$output_compression)) body$output_compression <- params$output_compression
 
       handled <- c(
         "prompt", "output_dir", "response_format", "n", "size", "quality",
-        "background", "moderation", "output_format",
+        "background", "moderation", "output_format", "output_compression",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -1201,14 +1242,30 @@ OpenAIImageModel <- R6::R6Class(
     },
     build_edit_body = function(params) {
       upload_dir <- params$output_dir %||% tempdir()
-      image_path <- materialize_image_upload(params$image, output_dir = upload_dir, prefix = "openai_image")
+      private$validate_image_params(params, request_type = "edit")
+      image_inputs <- coerce_image_inputs(params$image)
+      image_paths <- lapply(seq_along(image_inputs), function(i) {
+        materialize_image_upload(
+          image_inputs[[i]],
+          output_dir = upload_dir,
+          prefix = sprintf("openai_image_%02d", i)
+        )
+      })
 
       body <- list(
         model = self$model_id,
-        image = curl::form_file(image_path),
         prompt = params$prompt %||% "Edit this image.",
         response_format = params$response_format %||% "b64_json"
       )
+
+      if (length(image_paths) == 1) {
+        body$image <- curl::form_file(image_paths[[1]])
+      } else {
+        body <- c(
+          body,
+          stats::setNames(lapply(image_paths, curl::form_file), rep("image[]", length(image_paths)))
+        )
+      }
 
       if (!is.null(params$mask)) {
         mask_path <- materialize_image_upload(params$mask, output_dir = upload_dir, prefix = "openai_mask")
@@ -1220,10 +1277,13 @@ OpenAIImageModel <- R6::R6Class(
       if (!is.null(params$quality)) body$quality <- params$quality
       if (!is.null(params$background)) body$background <- params$background
       if (!is.null(params$output_format)) body$output_format <- params$output_format
+      if (!is.null(params$output_compression)) body$output_compression <- params$output_compression
+      if (!is.null(params$input_fidelity)) body$input_fidelity <- params$input_fidelity
 
       handled <- c(
         "image", "mask", "prompt", "output_dir", "response_format", "n",
-        "size", "quality", "background", "output_format",
+        "size", "quality", "background", "output_format", "output_compression",
+        "input_fidelity",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -1234,7 +1294,10 @@ OpenAIImageModel <- R6::R6Class(
 
       body[!sapply(body, is.null)]
     },
-    parse_image_response = function(response, output_dir = tempdir(), prefix = "openai_image") {
+    parse_image_response = function(response,
+                                    output_dir = tempdir(),
+                                    prefix = "openai_image",
+                                    requested_output_format = NULL) {
       images <- list()
 
       if (!is.null(response$data) && length(response$data) > 0) {
@@ -1245,9 +1308,10 @@ OpenAIImageModel <- R6::R6Class(
 
           if (!is.null(item$b64_json)) {
             artifact$bytes <- base64enc::base64decode(item$b64_json)
-            artifact$media_type <- switch(item$output_format %||% "",
+            artifact$media_type <- switch(item$output_format %||% requested_output_format %||% "",
               png = "image/png",
               jpeg = "image/jpeg",
+              jpg = "image/jpeg",
               webp = "image/webp",
               "image/png"
             )
@@ -1264,7 +1328,7 @@ OpenAIImageModel <- R6::R6Class(
   ),
   public = list(
     #' @description Initialize the OpenAI image model.
-    #' @param model_id The model ID (e.g., "gpt-image-1").
+    #' @param model_id The model ID (e.g., "gpt-image-2", "gpt-image-1.5").
     #' @param config Configuration list.
     initialize = function(model_id, config) {
       super$initialize(
@@ -1304,7 +1368,8 @@ OpenAIImageModel <- R6::R6Class(
         images = private$parse_image_response(
           response,
           output_dir = params$output_dir %||% tempdir(),
-          prefix = "openai_image"
+          prefix = "openai_image",
+          requested_output_format = body$output_format %||% NULL
         ),
         usage = response$usage %||% NULL,
         raw_response = response
@@ -1337,7 +1402,8 @@ OpenAIImageModel <- R6::R6Class(
         images = private$parse_image_response(
           response,
           output_dir = params$output_dir %||% tempdir(),
-          prefix = "openai_edit"
+          prefix = "openai_edit",
+          requested_output_format = body$output_format %||% NULL
         ),
         usage = response$usage %||% NULL,
         raw_response = response
@@ -1464,9 +1530,9 @@ OpenAIProvider <- R6::R6Class(
     },
 
     #' @description Create an image model.
-    #' @param model_id The model ID (e.g., "gpt-image-1").
+    #' @param model_id The model ID (e.g., "gpt-image-2", "gpt-image-1.5").
     #' @return An OpenAIImageModel object.
-    image_model = function(model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")) {
+    image_model = function(model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")) {
       OpenAIImageModel$new(model_id, private$config)
     }
   ),
