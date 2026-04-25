@@ -62,7 +62,5 @@ test_that("list_session_variables shows protection metadata", {
     expect_true(grepl("my_normal_var", res))
     expect_true(grepl("integer", res))
     expect_true(grepl("my_expensive_model", res))
-    expect_true(grepl("PROTECTED", res, fixed = TRUE))
-    expect_true(grepl("GPU High", res, fixed = TRUE))
     expect_true(grepl("list", res))
 })

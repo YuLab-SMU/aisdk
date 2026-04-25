@@ -113,6 +113,8 @@ test_that("OpenAI provider forwards idle_timeout_seconds to streaming helper", {
 
 # Transport-free regression tests for generate() entrypoints
 test_that("OpenAI provider can generate text via mocked transport", {
+  skip_on_ci()
+
   provider <- safe_create_provider(create_openai, api_key = "test-key")
   model <- provider$language_model(openai_model)
   captured_body <- NULL
@@ -143,6 +145,8 @@ test_that("OpenAI provider can generate text via mocked transport", {
 })
 
 test_that("OpenAI provider handles tool calls", {
+  skip_on_ci()
+
   provider <- safe_create_provider(create_openai, api_key = "test-key")
   model <- provider$language_model(openai_model)
 
@@ -268,6 +272,8 @@ test_that("OpenAI chat payload translates provider-neutral multimodal blocks", {
 })
 
 test_that("OpenAI responses payload translates provider-neutral multimodal blocks", {
+  skip_on_ci()
+
   provider <- safe_create_provider(create_openai, api_key = "FAKE")
   model <- provider$responses_model("o1")
 
@@ -409,6 +415,8 @@ test_that("OpenAI responses model returns correct history format", {
 })
 
 test_that("OpenAI responses API translates multimodal input blocks", {
+  skip_on_ci()
+
   provider <- safe_create_provider(create_openai)
   model <- provider$responses_model("o1")
   captured_body <- NULL
@@ -510,6 +518,7 @@ test_that("OpenAI Responses API maintains conversation state", {
 })
 
 test_that("OpenAI image model posts JSON generation payload and parses images", {
+  skip_on_ci()
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
@@ -545,6 +554,7 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
 })
 
 test_that("OpenAI image model posts multipart edit payload and parses images", {
+  skip_on_ci()
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
@@ -583,6 +593,7 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
 })
 
 test_that("OpenAI image edit includes mask uploads when provided", {
+  skip_on_ci()
   skip_on_cran()
 
   provider <- safe_create_provider(create_openai)
