@@ -522,13 +522,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">language_model</span>(<span class="st">"meta-llama/llama-3.1-405b"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>When the upstream model supports OpenAI-style image APIs, OpenRouter can be used through <code>image_model()</code> as well:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openrouter</span>()</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="aihubmix" class="level2">
 <h2 class="anchored" data-anchor-id="aihubmix">AiHubMix</h2>
 <p>AiHubMix can route OpenAI-style image models through its unified API:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_aihubmix</span>()</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="nvidia" class="level2">
 <h2 class="anchored" data-anchor-id="nvidia">Nvidia</h2>

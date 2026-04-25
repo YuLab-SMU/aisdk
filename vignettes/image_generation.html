@@ -472,13 +472,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openai</span>()</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Other supported provider patterns:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>)</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-medium"</span>)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">create_openrouter</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-1"</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">create_aihubmix</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">create_openrouter</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"openai/gpt-image-2"</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">create_aihubmix</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-2"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="provider-support-matrix" class="level2">
 <h2 class="anchored" data-anchor-id="provider-support-matrix">Provider support matrix</h2>
@@ -510,10 +510,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>OpenAI</td>
-<td><code>gpt-image-1</code></td>
+<td><code>gpt-image-2</code> / <code>gpt-image-1.5</code></td>
 <td style="text-align: right;">Yes</td>
 <td style="text-align: right;">Yes</td>
-<td><code>mask</code> supported; local file path or data URI required for edits</td>
+<td><code>mask</code> supported; local file path or data URI required for edits; <code>input_fidelity</code> and multiple reference images available on the latest family</td>
 </tr>
 <tr class="odd">
 <td>Volcengine</td>
@@ -538,14 +538,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>OpenRouter</td>
-<td><code>openai/gpt-image-1</code></td>
+<td><code>openai/gpt-image-2</code></td>
 <td style="text-align: right;">Yes</td>
 <td style="text-align: right;">Yes</td>
 <td>Reuses OpenAI image-model path through the router</td>
 </tr>
 <tr class="odd">
 <td>AiHubMix</td>
-<td><code>gpt-image-1</code></td>
+<td><code>gpt-image-2</code></td>
 <td style="text-align: right;">Yes</td>
 <td style="text-align: right;">Yes</td>
 <td>Reuses OpenAI image-model path through AiHubMix</td>
@@ -574,12 +574,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-2"</span>),</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A minimalist editorial photo of a cobalt blue mug on a white plinth"</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>(),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">background =</span> <span class="st">"transparent"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_format =</span> <span class="st">"webp"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_compression =</span> <span class="dv">60</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Volcengine example:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -635,7 +638,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1.5"</span>),</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
 <span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color from white to cobalt blue."</span>,</span>
 <span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
@@ -643,43 +646,61 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>In the current <code>aisdk</code> implementation, OpenAI image editing expects a local file path or data URI for the source image. <code>mask</code> is also supported when you want explicit localized edits.</p>
+<p>For the latest OpenAI image models, <code>aisdk</code> also forwards:</p>
+<ul>
+<li><code>background</code></li>
+<li><code>output_format</code></li>
+<li><code>output_compression</code></li>
+<li><code>input_fidelity</code> (editing only, for models that allow it)</li>
+</ul>
+<p>OpenAI edits can also use multiple reference images:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1.5"</span>),</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="fu">c</span>(<span class="st">"inst/extdata/product_front.png"</span>, <span class="st">"inst/extdata/product_side.png"</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Combine both references into one premium catalog render."</span>,</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">input_fidelity =</span> <span class="st">"high"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_format =</span> <span class="st">"webp"</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_compression =</span> <span class="dv">55</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Volcengine image editing example:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>),</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Turn this product photo into a watercolor illustration."</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>xAI image editing example:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>),</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"https://example.com/source.png"</span>,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Make this image look like a watercolor painting."</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_volcengine</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"doubao-seedream-5-0"</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Turn this product photo into a watercolor illustration."</span>,</span>
 <span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<p>Stepfun image editing example:</p>
+<p>xAI image editing example:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-edit"</span>),</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_xai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"grok-2-image"</span>),</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"https://example.com/source.png"</span>,</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Make this image look like a watercolor painting."</span>,</span>
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Stepfun image editing example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_stepfun</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"step-1x-edit"</span>),</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Current provider-specific caveats:</p>
 <ul>
 <li>Gemini: no <code>mask</code> support in <code>aisdk</code> yet</li>
 <li>OpenAI: source image for editing must be a local file path or data URI</li>
+<li>OpenAI: <code>input_fidelity</code> is only valid for edit workflows and is fixed for some newer models such as <code>gpt-image-2</code></li>
 <li>Volcengine: <code>mask</code> not yet exposed</li>
 <li>xAI: image editing currently uses JSON image inputs</li>
 <li>Stepfun: editing currently requires <code>step-1x-edit</code></li>

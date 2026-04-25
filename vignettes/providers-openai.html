@@ -489,15 +489,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>provider <span class="ot">&lt;-</span> <span class="fu">create_openai</span>()</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>image_model <span class="ot">&lt;-</span> provider<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-2"</span>)</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">generate_image</span>(</span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> image_model,</span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"A clean product photo of a cobalt blue ceramic mug on linen"</span>,</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>(),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">background =</span> <span class="st">"transparent"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_format =</span> <span class="st">"webp"</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_compression =</span> <span class="dv">60</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 <section id="image-editing" class="level3">
 <h3 class="anchored" data-anchor-id="image-editing">Image Editing</h3>
@@ -505,7 +508,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(aisdk)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1"</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1.5"</span>),</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="st">"inst/extdata/product.png"</span>,</span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Change the mug color to cobalt blue."</span>,</span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
@@ -513,6 +516,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>result<span class="sc">$</span>images[[<span class="dv">1</span>]]<span class="sc">$</span>path</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>In the current <code>aisdk</code> implementation, OpenAI image editing expects a local file path or data URI for the source image. Optional <code>mask</code> uploads are supported for localized edits.</p>
+<p>For the latest OpenAI image models, <code>aisdk</code> also forwards <code>background</code>, <code>output_format</code>, <code>output_compression</code>, and <code>input_fidelity</code> where supported. Multiple reference images are supported for edit workflows:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">edit_image</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="fu">create_openai</span>()<span class="sc">$</span><span class="fu">image_model</span>(<span class="st">"gpt-image-1.5"</span>),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">image =</span> <span class="fu">c</span>(<span class="st">"inst/extdata/product_front.png"</span>, <span class="st">"inst/extdata/product_side.png"</span>),</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prompt =</span> <span class="st">"Combine both references into one premium product render."</span>,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">input_fidelity =</span> <span class="st">"high"</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_format =</span> <span class="st">"webp"</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_compression =</span> <span class="dv">55</span>,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">output_dir =</span> <span class="fu">tempdir</span>()</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>
