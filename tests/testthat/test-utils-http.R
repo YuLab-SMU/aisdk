@@ -81,3 +81,30 @@ test_that("resolve_request_timeout_config prefers explicit layered settings over
   expect_equal(cfg$connect_timeout_seconds, 5)
   expect_equal(cfg$idle_timeout_seconds, 15)
 })
+
+test_that("http_error_classes detects compatibility errors", {
+  classes <- aisdk:::http_error_classes(
+    status = 400,
+    error_body = '{"error":{"message":"Unknown parameter: response_format","type":"invalid_request_error","param":"response_format","code":"unknown_parameter"}}'
+  )
+
+  expect_true("aisdk_api_compatibility_error" %in% classes)
+  expect_true("aisdk_api_error" %in% classes)
+})
+
+test_that("http_error_classes detects timeout errors", {
+  classes <- aisdk:::http_error_classes(
+    status = 504,
+    error_body = '{"error":{"message":"Request timed out"}}'
+  )
+
+  expect_true("aisdk_api_timeout_error" %in% classes)
+})
+
+test_that("request_error_classes separates timeout from generic network failures", {
+  timeout_err <- simpleError("Connection timed out after 30 seconds")
+  network_err <- simpleError("Could not resolve host")
+
+  expect_true("aisdk_api_timeout_error" %in% aisdk:::request_error_classes(timeout_err))
+  expect_true("aisdk_api_network_error" %in% aisdk:::request_error_classes(network_err))
+})

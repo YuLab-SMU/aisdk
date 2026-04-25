@@ -152,6 +152,90 @@ apply_request_timeout_config <- function(req, timeout_config) {
   req
 }
 
+safe_parse_api_error_body <- function(error_body) {
+  if (is.null(error_body) || !is.character(error_body) || !nzchar(trimws(error_body))) {
+    return(NULL)
+  }
+
+  tryCatch(
+    jsonlite::fromJSON(error_body, simplifyVector = FALSE),
+    error = function(...) NULL
+  )
+}
+
+http_error_classes <- function(status, error_body = "") {
+  payload <- safe_parse_api_error_body(error_body)
+  body_lower <- tolower(error_body %||% "")
+  message_text <- tolower(payload$error$message %||% payload$message %||% "")
+  param_text <- tolower(payload$error$param %||% "")
+  classes <- c("aisdk_api_error")
+
+  if (status %in% c(408, 504) || grepl("timeout|timed out", body_lower) || grepl("timeout|timed out", message_text)) {
+    classes <- c("aisdk_api_timeout_error", classes)
+  }
+
+  if (
+    status %in% c(400, 404, 422) &&
+      (
+        grepl("unknown parameter|unsupported parameter|unsupported field|invalid_request_error", body_lower) ||
+          grepl("unknown parameter|unsupported parameter|unsupported field", message_text) ||
+          grepl("unknown_parameter", body_lower) ||
+          nzchar(param_text)
+      )
+  ) {
+    classes <- c("aisdk_api_compatibility_error", classes)
+  }
+
+  if (status >= 500) {
+    classes <- c("aisdk_api_server_error", classes)
+  }
+
+  unique(classes)
+}
+
+request_error_classes <- function(error) {
+  msg <- tolower(conditionMessage(error) %||% "")
+  classes <- c("aisdk_api_error")
+
+  if (grepl("timeout|timed out|server_response_timeout|connecttimeout|deadline", msg)) {
+    classes <- c("aisdk_api_timeout_error", classes)
+  } else {
+    classes <- c("aisdk_api_network_error", classes)
+  }
+
+  unique(classes)
+}
+
+abort_http_api_error <- function(status, url, error_body) {
+  rlang::abort(
+    c(
+      paste0("API request failed with status ", status),
+      "i" = paste0("URL: ", url),
+      "x" = error_body
+    ),
+    class = http_error_classes(status, error_body)
+  )
+}
+
+abort_retry_api_error <- function(url, error) {
+  classes <- request_error_classes(error)
+  header <- if ("aisdk_api_timeout_error" %in% classes) {
+    "API request timed out after all retries"
+  } else {
+    "API request failed after all retries"
+  }
+
+  rlang::abort(
+    c(
+      header,
+      "i" = paste0("URL: ", url),
+      "x" = conditionMessage(error)
+    ),
+    class = classes,
+    parent = error
+  )
+}
+
 #' @title Post to API with Retry
 #' @description
 #' Makes a POST request to an API endpoint with automatic retry on failure.
@@ -256,11 +340,7 @@ post_to_api <- function(url, headers, body,
 
           if (!is_retryable || attempt > max_retries) {
             error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
-            rlang::abort(c(
-              paste0("API request failed with status ", status),
-              "i" = paste0("URL: ", url),
-              "x" = error_body
-            ), class = "aisdk_api_error")
+            abort_http_api_error(status = status, url = url, error_body = error_body)
           }
 
           # Get retry delay from headers if available
@@ -283,11 +363,7 @@ post_to_api <- function(url, headers, body,
           rlang::cnd_signal(e)
         }
         if (attempt > max_retries) {
-          rlang::abort(c(
-            "API request failed after all retries",
-            "i" = paste0("URL: ", url),
-            "x" = conditionMessage(e)
-          ), class = "aisdk_api_error", parent = e)
+          abort_retry_api_error(url = url, error = e)
         }
         message(sprintf("Network error, retrying in %d ms...", delay_ms))
         Sys.sleep(delay_ms / 1000)
@@ -378,11 +454,7 @@ post_multipart_to_api <- function(url, headers, body,
 
         if (!is_retryable || attempt > max_retries) {
           error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
-          rlang::abort(c(
-            paste0("API request failed with status ", status),
-            "i" = paste0("URL: ", url),
-            "x" = error_body
-          ), class = "aisdk_api_error")
+          abort_http_api_error(status = status, url = url, error_body = error_body)
         }
 
         retry_after <- httr2::resp_header(resp, "retry-after")
@@ -403,11 +475,7 @@ post_multipart_to_api <- function(url, headers, body,
           rlang::cnd_signal(e)
         }
         if (attempt > max_retries) {
-          rlang::abort(c(
-            "API request failed after all retries",
-            "i" = paste0("URL: ", url),
-            "x" = conditionMessage(e)
-          ), class = "aisdk_api_error", parent = e)
+          abort_retry_api_error(url = url, error = e)
         }
         message(sprintf("Network error, retrying in %d ms...", delay_ms))
         Sys.sleep(delay_ms / 1000)

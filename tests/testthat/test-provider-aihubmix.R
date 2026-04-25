@@ -61,6 +61,147 @@ test_that("AiHubMix provider creates image model correctly", {
     expect_equal(model$provider, "aihubmix")
 })
 
+test_that("AiHubMix image generation omits response_format for compatibility", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://custom.aihubmix.com/v1"
+    )
+    model <- provider$image_model("gpt-image-2")
+    captured_body <- NULL
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                created = 123,
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("png-bytes"))
+                ))
+            )
+        },
+        .package = "aisdk"
+    )
+
+    result <- generate_image(
+        model = model,
+        prompt = "Draw a blue mug",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_body$model, "gpt-image-2")
+    expect_false("response_format" %in% names(captured_body))
+    expect_equal(rawToChar(result$images[[1]]$bytes), "png-bytes")
+})
+
+test_that("AiHubMix image generation maps width and height into supported size", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://custom.aihubmix.com/v1"
+    )
+    model <- provider$image_model("gpt-image-2")
+    captured_body <- NULL
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                created = 123,
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("png-bytes"))
+                ))
+            )
+        },
+        .package = "aisdk"
+    )
+
+    result <- generate_image(
+        model = model,
+        prompt = "Draw a wide hero figure",
+        output_dir = tempdir(),
+        width = 1536,
+        height = 1024
+    )
+
+    expect_equal(captured_body$size, "1536x1024")
+    expect_false("width" %in% names(captured_body))
+    expect_false("height" %in% names(captured_body))
+    expect_equal(rawToChar(result$images[[1]]$bytes), "png-bytes")
+})
+
+test_that("AiHubMix image generation maps transparent_background into background", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://custom.aihubmix.com/v1"
+    )
+    model <- provider$image_model("gpt-image-2")
+    captured_body <- NULL
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                created = 123,
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("png-bytes"))
+                ))
+            )
+        },
+        .package = "aisdk"
+    )
+
+    result <- generate_image(
+        model = model,
+        prompt = "Draw a transparent icon",
+        output_dir = tempdir(),
+        width = 512,
+        height = 512,
+        transparent_background = TRUE
+    )
+
+    expect_equal(captured_body$size, "1024x1024")
+    expect_equal(captured_body$background, "transparent")
+    expect_false("transparent_background" %in% names(captured_body))
+    expect_equal(rawToChar(result$images[[1]]$bytes), "png-bytes")
+})
+
+test_that("AiHubMix image edit omits response_format for compatibility", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://custom.aihubmix.com/v1"
+    )
+    model <- provider$image_model("gpt-image-2")
+    captured_body <- NULL
+
+    image_path <- tempfile(fileext = ".png")
+    writeBin(charToRaw("fakepng"), image_path)
+    on.exit(unlink(image_path), add = TRUE)
+
+    testthat::local_mocked_bindings(
+        post_multipart_to_api = function(url, headers, body, ...) {
+            captured_body <<- body
+            list(
+                created = 456,
+                data = list(list(
+                    b64_json = base64enc::base64encode(charToRaw("edited-bytes"))
+                ))
+            )
+        },
+        .package = "aisdk"
+    )
+
+    result <- edit_image(
+        model = model,
+        image = image_path,
+        prompt = "Make it cobalt blue",
+        output_dir = tempdir()
+    )
+
+    expect_equal(captured_body$model, "gpt-image-2")
+    expect_false("response_format" %in% names(captured_body))
+    expect_true(!is.null(captured_body$image))
+    expect_equal(rawToChar(result$images[[1]]$bytes), "edited-bytes")
+})
+
 test_that("create_aihubmix() falls back to default base_url and model", {
     # Unset env vars
     old_key <- Sys.getenv("AIHUBMIX_API_KEY")

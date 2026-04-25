@@ -1172,6 +1172,67 @@ OpenAIImageModel <- R6::R6Class(
       }
       h
     },
+    supports_image_response_format = function() {
+      provider_name <- tolower(private$config$provider_name %||% "openai")
+      base_url <- tolower(private$config$base_url %||% "")
+      if (identical(provider_name, "aihubmix")) {
+        return(FALSE)
+      }
+      if (grepl("aihubmix\\.com", base_url)) {
+        return(FALSE)
+      }
+      TRUE
+    },
+    is_aihubmix_compatible = function() {
+      provider_name <- tolower(private$config$provider_name %||% "openai")
+      base_url <- tolower(private$config$base_url %||% "")
+      identical(provider_name, "aihubmix") || grepl("aihubmix\\.com", base_url)
+    },
+    aihubmix_size_from_dimensions = function(width = NULL, height = NULL) {
+      width <- suppressWarnings(as.numeric(width))
+      height <- suppressWarnings(as.numeric(height))
+      if (
+        length(width) != 1 || length(height) != 1 ||
+          is.na(width) || is.na(height) ||
+          width <= 0 || height <= 0
+      ) {
+        return(NULL)
+      }
+
+      ratio <- width / height
+      if (ratio > 1.15) {
+        return("1536x1024")
+      }
+      if (ratio < 0.87) {
+        return("1024x1536")
+      }
+      "1024x1024"
+    },
+    normalize_aihubmix_generation_params = function(params) {
+      if (!private$is_aihubmix_compatible()) {
+        return(params)
+      }
+
+      if (is.null(params$size)) {
+        params$size <- private$aihubmix_size_from_dimensions(
+          width = params$width %||% NULL,
+          height = params$height %||% NULL
+        )
+      }
+
+      if (!is.null(params$size) && identical(tolower(as.character(params$size)[[1]]), "auto")) {
+        params$size <- NULL
+      }
+
+      if (!is.null(params$transparent_background) && is.null(params$background)) {
+        params$background <- if (isTRUE(params$transparent_background)) "transparent" else "opaque"
+      }
+
+      params$width <- NULL
+      params$height <- NULL
+      params$transparent_background <- NULL
+      params
+    },
     is_gpt_image_2 = function() {
       grepl("(^|/)gpt-image-2($|-)", self$model_id %||% "", perl = TRUE)
     },
@@ -1211,13 +1272,16 @@ OpenAIImageModel <- R6::R6Class(
       invisible(TRUE)
     },
     build_generation_body = function(params) {
+      params <- private$normalize_aihubmix_generation_params(params)
       private$validate_image_params(params, request_type = "generate")
 
       body <- list(
         model = self$model_id,
-        prompt = params$prompt,
-        response_format = params$response_format %||% "b64_json"
+        prompt = params$prompt
       )
+      if (private$supports_image_response_format()) {
+        body$response_format <- params$response_format %||% "b64_json"
+      }
 
       if (!is.null(params$n)) body$n <- params$n
       if (!is.null(params$size)) body$size <- params$size
@@ -1254,9 +1318,11 @@ OpenAIImageModel <- R6::R6Class(
 
       body <- list(
         model = self$model_id,
-        prompt = params$prompt %||% "Edit this image.",
-        response_format = params$response_format %||% "b64_json"
+        prompt = params$prompt %||% "Edit this image."
       )
+      if (private$supports_image_response_format()) {
+        body$response_format <- params$response_format %||% "b64_json"
+      }
 
       if (length(image_paths) == 1) {
         body$image <- curl::form_file(image_paths[[1]])
