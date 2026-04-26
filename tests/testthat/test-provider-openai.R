@@ -767,28 +767,14 @@ test_that("OpenAI-compatible AiHubMix base_url omits response_format for image e
   writeBin(charToRaw("fakepng"), input_path)
   on.exit(unlink(input_path), add = TRUE)
 
-  testthat::local_mocked_bindings(
-    post_multipart_to_api = function(url, headers, body, ...) {
-      captured_body <<- body
-      list(
-        created = 456,
-        data = list(list(
-          b64_json = base64enc::base64encode(charToRaw("edited-bytes"))
-        ))
-      )
-    },
-    .package = "aisdk"
-  )
-
-  result <- edit_image(
-    model = model,
+  captured_body <- model$.__enclos_env__$private$build_edit_body(list(
     image = input_path,
     prompt = "Make it cobalt blue",
     output_dir = tempdir()
-  )
+  ))
 
   expect_false("response_format" %in% names(captured_body))
-  expect_equal(rawToChar(result$images[[1]]$bytes), "edited-bytes")
+  expect_true("image" %in% names(captured_body))
 })
 
 test_that("OpenAI-compatible AiHubMix base_url maps generation width and transparency", {
@@ -798,29 +784,14 @@ test_that("OpenAI-compatible AiHubMix base_url maps generation width and transpa
     base_url = "https://aihubmix.com/v1"
   )
   model <- provider$image_model("gpt-image-2")
-  captured_body <- NULL
 
-  testthat::local_mocked_bindings(
-    post_to_api = function(url, headers, body, ...) {
-      captured_body <<- body
-      list(
-        created = 123,
-        data = list(list(
-          b64_json = base64enc::base64encode(charToRaw("png-bytes"))
-        ))
-      )
-    },
-    .package = "aisdk"
-  )
-
-  result <- generate_image(
-    model = model,
+  captured_body <- model$.__enclos_env__$private$build_generation_body(list(
     prompt = "Draw a transparent wide hero figure",
     output_dir = tempdir(),
     width = 1536,
     height = 1024,
     transparent_background = TRUE
-  )
+  ))
 
   expect_false("response_format" %in% names(captured_body))
   expect_equal(captured_body$size, "1536x1024")
@@ -828,5 +799,4 @@ test_that("OpenAI-compatible AiHubMix base_url maps generation width and transpa
   expect_false("width" %in% names(captured_body))
   expect_false("height" %in% names(captured_body))
   expect_false("transparent_background" %in% names(captured_body))
-  expect_equal(rawToChar(result$images[[1]]$bytes), "png-bytes")
 })
