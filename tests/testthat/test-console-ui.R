@@ -134,6 +134,54 @@ test_that("model current reports the active model without switching", {
   expect_equal(session$get_model_id(), "openai:gpt-4o")
 })
 
+test_that("model command updates context and thinking settings", {
+  session <- aisdk::create_chat_session(model = "deepseek:deepseek-v4-flash")
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  context_result <- aisdk:::handle_command(
+    "/model context 512k",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    app_state = app_state
+  )
+  expect_true(context_result$refresh_status)
+  expect_equal(session$get_model_options()$context_window, 512000)
+
+  aisdk:::handle_command("/model output 64k", session, stream = TRUE, verbose = FALSE, show_thinking = FALSE, app_state = app_state)
+  aisdk:::handle_command("/model max-tokens 700", session, stream = TRUE, verbose = FALSE, show_thinking = FALSE, app_state = app_state)
+  aisdk:::handle_command("/model thinking on", session, stream = TRUE, verbose = FALSE, show_thinking = FALSE, app_state = app_state)
+  aisdk:::handle_command("/model effort high", session, stream = TRUE, verbose = FALSE, show_thinking = FALSE, app_state = app_state)
+  aisdk:::handle_command("/model budget 2k", session, stream = TRUE, verbose = FALSE, show_thinking = FALSE, app_state = app_state)
+
+  options <- session$get_model_options()
+  expect_equal(options$max_output_tokens, 64000)
+  expect_equal(options$call_options$max_tokens, 700)
+  expect_true(options$call_options$thinking)
+  expect_equal(options$call_options$reasoning_effort, "high")
+  expect_equal(options$call_options$thinking_budget, 2000)
+
+  line <- aisdk:::build_console_status_line(app_state)
+  expect_match(line, "Ctx\\(est\\): 512.0k")
+  expect_match(line, "Out: 64.0k")
+  expect_match(line, "Think: on")
+  expect_match(line, "Effort: high")
+  expect_match(line, "Budget: 2.0k")
+  expect_match(line, "Max: 700")
+
+  clear_result <- aisdk:::handle_command(
+    "/model thinking auto",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    app_state = app_state
+  )
+  expect_true(clear_result$refresh_status)
+  expect_null(aisdk:::list_get_exact(session$get_model_options()$call_options, "thinking"))
+})
+
 test_that("persona commands update session persona state", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")

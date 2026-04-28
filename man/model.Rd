@@ -4,10 +4,12 @@
 \alias{model}
 \title{Model Shortcut}
 \usage{
-model(new)
+model(new, ...)
 }
 \arguments{
 \item{new}{Optional model identifier string or \code{LanguageModelV1} object.}
+
+\item{...}{Runtime options forwarded to \code{set_model()}.}
 }
 \value{
 When \code{new} is missing, returns the current default model. Otherwise
@@ -16,7 +18,8 @@ invisibly returns the previous default model.
 \description{
 Shortcut for default model configuration. Call with no arguments to read the
 current default model, or pass a model to update it. This is equivalent to
-calling \code{get_model()} and \code{set_model()} directly.
+calling \code{get_model()} and \code{set_model()} directly. Runtime options can be
+supplied without \code{new} to update the current default model's options.
 }
 \examples{
 model()

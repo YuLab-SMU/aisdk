@@ -140,6 +140,12 @@ generate_text <- function(model = NULL,
                           hooks = NULL,
                           registry = NULL,
                           ...) {
+  default_call_options <- if (is.null(model) && is.null(session)) {
+    get_default_model_runtime_options()$call_options %||% list()
+  } else {
+    list()
+  }
+
   # Resolve model from string ID if needed
   model <- resolve_model(model, registry, type = "language")
 
@@ -190,11 +196,14 @@ generate_text <- function(model = NULL,
   validate_model_messages(model, messages)
 
   # Build base params (tools stay constant across steps)
-  base_params <- list(
-    temperature = temperature,
-    max_tokens = max_tokens,
-    tools = tools,
-    ...
+  base_params <- merge_call_options(
+    default_call_options,
+    list(
+      temperature = temperature,
+      max_tokens = max_tokens,
+      tools = tools,
+      ...
+    )
   )
 
   # Track all tool calls for debugging/logging
@@ -438,6 +447,12 @@ stream_text <- function(model = NULL,
                         hooks = NULL,
                         registry = NULL,
                         ...) {
+  default_call_options <- if (is.null(model) && is.null(session)) {
+    get_default_model_runtime_options()$call_options %||% list()
+  } else {
+    list()
+  }
+
   model <- resolve_model(model, registry, type = "language")
 
   # Handle skills parameter
@@ -486,11 +501,14 @@ stream_text <- function(model = NULL,
   validate_model_messages(model, messages)
 
   # Build base params
-  base_params <- list(
-    temperature = temperature,
-    max_tokens = max_tokens,
-    tools = tools,
-    ...
+  base_params <- merge_call_options(
+    default_call_options,
+    list(
+      temperature = temperature,
+      max_tokens = max_tokens,
+      tools = tools,
+      ...
+    )
   )
 
   all_tool_calls <- list()

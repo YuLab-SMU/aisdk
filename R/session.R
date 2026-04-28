@@ -70,6 +70,13 @@ ChatSession <- R6::R6Class(
       # Multi-agent support: shared memory and environment
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
+      if (is.null(model)) {
+        private$.metadata <- utils::modifyList(
+          model_runtime_session_metadata(get_default_model_runtime_options()),
+          private$.metadata,
+          keep.null = TRUE
+        )
+      }
       private$.metadata$context_state <- normalize_context_state(
         private$.metadata$context_state %||% NULL
       )
@@ -98,7 +105,7 @@ ChatSession <- R6::R6Class(
     #' @param ... Additional arguments passed to generate_text.
     #' @return The GenerateResult object from the model.
     send = function(prompt, ...) {
-      extra_args <- list(...)
+      extra_args <- merge_call_options(self$get_model_call_options(), list(...))
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
       extra_args$turn_system_prompt <- NULL
 
@@ -150,7 +157,7 @@ ChatSession <- R6::R6Class(
     #' @param ... Additional arguments passed to stream_text.
     #' @return Invisible NULL (output is via callback).
     send_stream = function(prompt, callback, ...) {
-      extra_args <- list(...)
+      extra_args <- merge_call_options(self$get_model_call_options(), list(...))
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
       extra_args$turn_system_prompt <- NULL
 
@@ -252,6 +259,88 @@ ChatSession <- R6::R6Class(
       } else {
         rlang::abort("model must be a string ID or LanguageModelV1 object")
       }
+      invisible(self)
+    },
+
+    #' @description Get model runtime options for this session.
+    #' @return A list with context overrides and call options.
+    get_model_options = function() {
+      compact_model_runtime_options(list(
+        context_window = private$.metadata$context_window_override %||% NULL,
+        max_output_tokens = private$.metadata$max_output_tokens_override %||% NULL,
+        call_options = private$.metadata$model_call_options %||% list()
+      ))
+    },
+
+    #' @description Get generation options applied to every model call.
+    #' @return A named list of call options.
+    get_model_call_options = function() {
+      private$.metadata$model_call_options %||% list()
+    },
+
+    #' @description Set runtime options for this session's model.
+    #' @param context_window Optional context-window override.
+    #' @param max_output_tokens Optional maximum output-token metadata override.
+    #' @param max_tokens Optional default generation token limit.
+    #' @param thinking Optional default thinking-mode value.
+    #' @param thinking_budget Optional default thinking budget.
+    #' @param reasoning_effort Optional default reasoning effort.
+    #' @param reset Logical. If TRUE, clears all model runtime options first.
+    #' @return Invisible self for chaining.
+    set_model_options = function(context_window = NULL,
+                                 max_output_tokens = NULL,
+                                 max_tokens = NULL,
+                                 thinking = NULL,
+                                 thinking_budget = NULL,
+                                 reasoning_effort = NULL,
+                                 reset = FALSE) {
+      base <- if (isTRUE(reset)) list() else self$get_model_options()
+      updates <- Filter(Negate(is.null), list(
+        context_window = context_window,
+        max_output_tokens = max_output_tokens,
+        max_tokens = max_tokens,
+        thinking = thinking,
+        thinking_budget = thinking_budget,
+        reasoning_effort = reasoning_effort
+      ))
+      merged <- compact_model_runtime_options(utils::modifyList(base, updates, keep.null = TRUE))
+      metadata <- model_runtime_session_metadata(merged)
+
+      if (isTRUE(reset) || !is.null(context_window)) {
+        private$.metadata$context_window_override <- metadata$context_window_override %||% NULL
+      }
+      if (isTRUE(reset) || !is.null(max_output_tokens)) {
+        private$.metadata$max_output_tokens_override <- metadata$max_output_tokens_override %||% NULL
+      }
+      if (isTRUE(reset) || any(names(updates) %in% c("max_tokens", "thinking", "thinking_budget", "reasoning_effort"))) {
+        private$.metadata$model_call_options <- metadata$model_call_options %||% list()
+      }
+
+      invisible(self)
+    },
+
+    #' @description Clear model runtime options for this session.
+    #' @param keys Optional option names to clear. If NULL, clears all.
+    #' @return Invisible self for chaining.
+    clear_model_options = function(keys = NULL) {
+      if (is.null(keys)) {
+        private$.metadata$context_window_override <- NULL
+        private$.metadata$max_output_tokens_override <- NULL
+        private$.metadata$model_call_options <- NULL
+        return(invisible(self))
+      }
+
+      call_options <- private$.metadata$model_call_options %||% list()
+      for (key in keys) {
+        if (key %in% c("context", "context_window", "context_window_override")) {
+          private$.metadata$context_window_override <- NULL
+        } else if (key %in% c("output", "max_output_tokens", "max_output_tokens_override")) {
+          private$.metadata$max_output_tokens_override <- NULL
+        } else if (key %in% c("max_tokens", "thinking", "thinking_budget", "reasoning_effort")) {
+          call_options[[key]] <- NULL
+        }
+      }
+      private$.metadata$model_call_options <- if (length(call_options) > 0) call_options else NULL
       invisible(self)
     },
 

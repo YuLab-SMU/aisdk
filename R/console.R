@@ -584,6 +584,88 @@ console_build_turn_system_prompt <- function(session, input) {
 }
 
 #' @keywords internal
+parse_console_token_setting <- function(value, label) {
+  value <- trimws(value %||% "")
+  if (!nzchar(value)) {
+    rlang::abort(sprintf("%s requires a token value or 'auto'.", label))
+  }
+  lower <- tolower(gsub(",", "", value, fixed = TRUE))
+  if (lower %in% c("auto", "default", "clear", "reset", "off")) {
+    return(list(clear = TRUE, value = NULL))
+  }
+
+  multiplier <- 1
+  if (grepl("k$", lower)) {
+    multiplier <- 1000
+    lower <- sub("k$", "", lower)
+  } else if (grepl("m$", lower)) {
+    multiplier <- 1000000
+    lower <- sub("m$", "", lower)
+  }
+
+  parsed <- suppressWarnings(as.numeric(lower))
+  if (is.na(parsed) || parsed <= 0) {
+    rlang::abort(sprintf("%s must be a positive number, optionally using k/m suffixes.", label))
+  }
+
+  list(clear = FALSE, value = parsed * multiplier)
+}
+
+#' @keywords internal
+format_console_thinking_value <- function(value) {
+  if (is.null(value)) {
+    return("auto")
+  }
+  if (is.logical(value)) {
+    return(if (isTRUE(value)) "on" else "off")
+  }
+  if (is.list(value)) {
+    type <- value$type %||% NULL
+    if (!is.null(type)) {
+      return(as.character(type))
+    }
+    return("custom")
+  }
+  as.character(value)
+}
+
+#' @keywords internal
+console_model_settings_lines <- function(session) {
+  options <- session$get_model_options()
+  call_options <- list_get_exact(options, "call_options", list())
+
+  c(
+    sprintf("Model: %s", session$get_model_id() %||% "(not set)"),
+    sprintf(
+      "Context window: %s",
+      if (!is.null(options$context_window)) format_console_token_compact(options$context_window) else "auto"
+    ),
+    sprintf(
+      "Max output: %s",
+      if (!is.null(options$max_output_tokens)) format_console_token_compact(options$max_output_tokens) else "auto"
+    ),
+    sprintf(
+      "Max tokens: %s",
+      if (!is.null(list_get_exact(call_options, "max_tokens"))) {
+        format_console_token_compact(list_get_exact(call_options, "max_tokens"))
+      } else {
+        "auto"
+      }
+    ),
+    sprintf("Thinking: %s", format_console_thinking_value(list_get_exact(call_options, "thinking"))),
+    sprintf("Reasoning effort: %s", list_get_exact(call_options, "reasoning_effort", "auto")),
+    sprintf(
+      "Thinking budget: %s",
+      if (!is.null(list_get_exact(call_options, "thinking_budget"))) {
+        format_console_token_compact(list_get_exact(call_options, "thinking_budget"))
+      } else {
+        "auto"
+      }
+    )
+  )
+}
+
+#' @keywords internal
 handle_command <- function(input,
                            session,
                            stream,
@@ -623,6 +705,13 @@ handle_command <- function(input,
         "{.code /model} - Open the provider/model chooser",
         "{.code /model <id>} - Switch model directly (e.g., openai:gpt-4o)",
         "{.code /model current} - Show the current model",
+        "{.code /model settings} - Show model runtime settings",
+        "{.code /model context <tokens|auto>} - Override context-window estimate",
+        "{.code /model output <tokens|auto>} - Override max output-token metadata",
+        "{.code /model max-tokens <tokens|auto>} - Set default generation token limit",
+        "{.code /model thinking <on|off|auto>} - Set default thinking mode",
+        "{.code /model effort <low|medium|high|auto>} - Set default reasoning effort",
+        "{.code /model budget <tokens|auto>} - Set default thinking budget",
         "{.code /persona} - Show the active persona",
         "{.code /persona set <instructions>} - Set a custom session persona",
         "{.code /persona skill <name>} - Lock to a skill-backed persona",
@@ -708,10 +797,134 @@ handle_command <- function(input,
           )
         }
       } else {
-        model_id <- args[1]
-        if (identical(tolower(model_id), "current")) {
+        subcmd <- tolower(args[1])
+        if (identical(subcmd, "current")) {
           cli::cli_text("Current model: {.val {session$get_model_id() %||% '(not set)'}}")
+        } else if (subcmd %in% c("settings", "config", "options")) {
+          cli::cli_h2("Model Settings")
+          cli::cli_ul(console_model_settings_lines(session))
+        } else if (subcmd %in% c("context", "ctx")) {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model context <tokens|auto>}")
+          } else {
+            tryCatch(
+              {
+                parsed <- parse_console_token_setting(args[2], "Context window")
+                if (isTRUE(parsed$clear)) {
+                  session$clear_model_options("context_window")
+                  cli::cli_alert_success("Context-window override cleared.")
+                } else {
+                  session$set_model_options(context_window = parsed$value)
+                  cli::cli_alert_success("Context-window override set to {.val {format_console_token_compact(parsed$value)}}.")
+                }
+                if (!is.null(app_state)) {
+                  console_app_sync_session(app_state, session)
+                }
+                result$refresh_status <- TRUE
+              },
+              error = function(e) cli::cli_alert_danger(conditionMessage(e))
+            )
+          }
+        } else if (subcmd %in% c("output", "max-output", "max_output")) {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model output <tokens|auto>}")
+          } else {
+            tryCatch(
+              {
+                parsed <- parse_console_token_setting(args[2], "Max output")
+                if (isTRUE(parsed$clear)) {
+                  session$clear_model_options("max_output_tokens")
+                  cli::cli_alert_success("Max output-token override cleared.")
+                } else {
+                  session$set_model_options(max_output_tokens = parsed$value)
+                  cli::cli_alert_success("Max output-token override set to {.val {format_console_token_compact(parsed$value)}}.")
+                }
+                if (!is.null(app_state)) {
+                  console_app_sync_session(app_state, session)
+                }
+                result$refresh_status <- TRUE
+              },
+              error = function(e) cli::cli_alert_danger(conditionMessage(e))
+            )
+          }
+        } else if (subcmd %in% c("max-tokens", "max_tokens", "tokens")) {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model max-tokens <tokens|auto>}")
+          } else {
+            tryCatch(
+              {
+                parsed <- parse_console_token_setting(args[2], "Max tokens")
+                if (isTRUE(parsed$clear)) {
+                  session$clear_model_options("max_tokens")
+                  cli::cli_alert_success("Default generation token limit cleared.")
+                } else {
+                  session$set_model_options(max_tokens = parsed$value)
+                  cli::cli_alert_success("Default generation token limit set to {.val {format_console_token_compact(parsed$value)}}.")
+                }
+                result$refresh_status <- TRUE
+              },
+              error = function(e) cli::cli_alert_danger(conditionMessage(e))
+            )
+          }
+        } else if (subcmd == "thinking") {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model thinking <on|off|auto>}")
+          } else {
+            value <- tolower(args[2])
+            if (value %in% c("auto", "default", "clear", "reset")) {
+              session$clear_model_options("thinking")
+              cli::cli_alert_success("Default thinking mode cleared.")
+              result$refresh_status <- TRUE
+            } else if (value %in% c("on", "true", "1", "yes", "enabled")) {
+              session$set_model_options(thinking = TRUE)
+              cli::cli_alert_success("Default thinking mode enabled.")
+              result$refresh_status <- TRUE
+            } else if (value %in% c("off", "false", "0", "no", "disabled")) {
+              session$set_model_options(thinking = FALSE)
+              cli::cli_alert_success("Default thinking mode disabled.")
+              result$refresh_status <- TRUE
+            } else {
+              cli::cli_alert_danger("Usage: {.code /model thinking <on|off|auto>}")
+            }
+          }
+        } else if (subcmd %in% c("effort", "reasoning-effort", "reasoning_effort")) {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model effort <low|medium|high|auto>}")
+          } else {
+            value <- tolower(args[2])
+            if (value %in% c("auto", "default", "clear", "reset")) {
+              session$clear_model_options("reasoning_effort")
+              cli::cli_alert_success("Default reasoning effort cleared.")
+              result$refresh_status <- TRUE
+            } else if (value %in% c("low", "medium", "high")) {
+              session$set_model_options(reasoning_effort = value)
+              cli::cli_alert_success("Default reasoning effort set to {.val {value}}.")
+              result$refresh_status <- TRUE
+            } else {
+              cli::cli_alert_danger("Usage: {.code /model effort <low|medium|high|auto>}")
+            }
+          }
+        } else if (subcmd %in% c("budget", "thinking-budget", "thinking_budget")) {
+          if (length(args) < 2) {
+            cli::cli_alert_danger("Usage: {.code /model budget <tokens|auto>}")
+          } else {
+            tryCatch(
+              {
+                parsed <- parse_console_token_setting(args[2], "Thinking budget")
+                if (isTRUE(parsed$clear)) {
+                  session$clear_model_options("thinking_budget")
+                  cli::cli_alert_success("Default thinking budget cleared.")
+                } else {
+                  session$set_model_options(thinking_budget = parsed$value)
+                  cli::cli_alert_success("Default thinking budget set to {.val {format_console_token_compact(parsed$value)}}.")
+                }
+                result$refresh_status <- TRUE
+              },
+              error = function(e) cli::cli_alert_danger(conditionMessage(e))
+            )
+          }
         } else {
+          model_id <- args[1]
           tryCatch(
             {
               session$switch_model(model_id)

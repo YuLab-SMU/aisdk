@@ -18,6 +18,10 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_last_response}{\code{ChatSession$get_last_response()}}
 \item \href{#method-ChatSession-clear_history}{\code{ChatSession$clear_history()}}
 \item \href{#method-ChatSession-switch_model}{\code{ChatSession$switch_model()}}
+\item \href{#method-ChatSession-get_model_options}{\code{ChatSession$get_model_options()}}
+\item \href{#method-ChatSession-get_model_call_options}{\code{ChatSession$get_model_call_options()}}
+\item \href{#method-ChatSession-set_model_options}{\code{ChatSession$set_model_options()}}
+\item \href{#method-ChatSession-clear_model_options}{\code{ChatSession$clear_model_options()}}
 \item \href{#method-ChatSession-get_model_id}{\code{ChatSession$get_model_id()}}
 \item \href{#method-ChatSession-stats}{\code{ChatSession$stats()}}
 \item \href{#method-ChatSession-save}{\code{ChatSession$save()}}
@@ -226,6 +230,92 @@ Switch to a different model.
 \item{\code{model}}{A LanguageModelV1 object or model string ID.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_model_options"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_model_options}{}}}
+\subsection{Method \code{get_model_options()}}{
+Get model runtime options for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_model_options()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list with context overrides and call options.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_model_call_options"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_model_call_options}{}}}
+\subsection{Method \code{get_model_call_options()}}{
+Get generation options applied to every model call.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_model_call_options()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A named list of call options.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_model_options"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_model_options}{}}}
+\subsection{Method \code{set_model_options()}}{
+Set runtime options for this session's model.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_model_options(
+  context_window = NULL,
+  max_output_tokens = NULL,
+  max_tokens = NULL,
+  thinking = NULL,
+  thinking_budget = NULL,
+  reasoning_effort = NULL,
+  reset = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{context_window}}{Optional context-window override.}
+
+\item{\code{max_output_tokens}}{Optional maximum output-token metadata override.}
+
+\item{\code{max_tokens}}{Optional default generation token limit.}
+
+\item{\code{thinking}}{Optional default thinking-mode value.}
+
+\item{\code{thinking_budget}}{Optional default thinking budget.}
+
+\item{\code{reasoning_effort}}{Optional default reasoning effort.}
+
+\item{\code{reset}}{Logical. If TRUE, clears all model runtime options first.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-clear_model_options"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-clear_model_options}{}}}
+\subsection{Method \code{clear_model_options()}}{
+Clear model runtime options for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$clear_model_options(keys = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{keys}}{Optional option names to clear. If NULL, clears all.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
 }
 }
 \if{html}{\out{<hr>}}

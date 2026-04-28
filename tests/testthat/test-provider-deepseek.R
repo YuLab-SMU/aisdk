@@ -80,6 +80,19 @@ test_that("DeepSeek thinking parameter accepts native API format", {
     expect_equal(payload$body$thinking, list(type = "enabled"))
 })
 
+test_that("DeepSeek thinking_budget does not partially match thinking", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4")
+
+    payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        thinking_budget = 2048
+    ))
+
+    expect_null(aisdk:::list_get_exact(payload$body, "thinking"))
+    expect_equal(payload$body$thinking_budget, 2048)
+})
+
 test_that("DeepSeek stream payload forwards thinking-mode parameters", {
     provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
     model <- provider$language_model("deepseek-v4")

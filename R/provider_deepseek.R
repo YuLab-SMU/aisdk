@@ -16,11 +16,9 @@ DeepSeekLanguageModel <- R6::R6Class(
     "DeepSeekLanguageModel",
     inherit = OpenAILanguageModel,
     private = list(
-        #' Normalize thinking parameter to DeepSeek API format.
-        #' DeepSeek expects {"type": "enabled"} or {"type": "disabled"}.
-        #' We auto-convert logical values for convenience.
-        #' @param thinking Raw thinking parameter from user.
-        #' @return Properly formatted thinking parameter.
+        # Normalize thinking parameter to DeepSeek API format.
+        # DeepSeek expects {"type": "enabled"} or {"type": "disabled"}.
+        # We auto-convert logical values for convenience.
         normalize_thinking = function(thinking) {
             if (is.logical(thinking)) {
                 if (isTRUE(thinking)) {
@@ -78,14 +76,18 @@ DeepSeekLanguageModel <- R6::R6Class(
         build_payload = function(params) {
             payload <- super$build_payload(params)
 
-            if (!is.null(params$thinking)) {
-                payload$body$thinking <- private$normalize_thinking(params$thinking)
+            thinking <- list_get_exact(params, "thinking")
+            thinking_budget <- list_get_exact(params, "thinking_budget")
+            reasoning_effort <- list_get_exact(params, "reasoning_effort")
+
+            if (!is.null(thinking)) {
+                payload$body$thinking <- private$normalize_thinking(thinking)
             }
-            if (!is.null(params$thinking_budget)) {
-                payload$body$thinking_budget <- params$thinking_budget
+            if (!is.null(thinking_budget)) {
+                payload$body$thinking_budget <- thinking_budget
             }
-            if (!is.null(params$reasoning_effort)) {
-                payload$body$reasoning_effort <- params$reasoning_effort
+            if (!is.null(reasoning_effort)) {
+                payload$body$reasoning_effort <- reasoning_effort
             }
 
             payload
@@ -97,14 +99,18 @@ DeepSeekLanguageModel <- R6::R6Class(
         build_stream_payload = function(params) {
             payload <- super$build_stream_payload(params)
 
-            if (!is.null(params$thinking)) {
-                payload$body$thinking <- private$normalize_thinking(params$thinking)
+            thinking <- list_get_exact(params, "thinking")
+            thinking_budget <- list_get_exact(params, "thinking_budget")
+            reasoning_effort <- list_get_exact(params, "reasoning_effort")
+
+            if (!is.null(thinking)) {
+                payload$body$thinking <- private$normalize_thinking(thinking)
             }
-            if (!is.null(params$thinking_budget)) {
-                payload$body$thinking_budget <- params$thinking_budget
+            if (!is.null(thinking_budget)) {
+                payload$body$thinking_budget <- thinking_budget
             }
-            if (!is.null(params$reasoning_effort)) {
-                payload$body$reasoning_effort <- params$reasoning_effort
+            if (!is.null(reasoning_effort)) {
+                payload$body$reasoning_effort <- reasoning_effort
             }
 
             payload

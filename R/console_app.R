@@ -168,11 +168,40 @@ build_console_status_segments <- function(state, compact = FALSE) {
     }
   }
 
+  model_option_fields <- character(0)
+  model_options <- tryCatch(state$session$get_model_options(), error = function(e) list())
+  call_options <- list_get_exact(model_options, "call_options", list())
+  if (!is.null(list_get_exact(call_options, "thinking"))) {
+    model_option_fields <- c(
+      model_option_fields,
+      sprintf("Think: %s", format_console_thinking_value(list_get_exact(call_options, "thinking")))
+    )
+  }
+  if (!is.null(list_get_exact(call_options, "reasoning_effort"))) {
+    model_option_fields <- c(
+      model_option_fields,
+      sprintf("Effort: %s", list_get_exact(call_options, "reasoning_effort"))
+    )
+  }
+  if (!is.null(list_get_exact(call_options, "thinking_budget"))) {
+    model_option_fields <- c(
+      model_option_fields,
+      sprintf("Budget: %s", format_console_token_compact(list_get_exact(call_options, "thinking_budget")))
+    )
+  }
+  if (!is.null(list_get_exact(call_options, "max_tokens"))) {
+    model_option_fields <- c(
+      model_option_fields,
+      sprintf("Max: %s", format_console_token_compact(list_get_exact(call_options, "max_tokens")))
+    )
+  }
+
   model_value <- if (compact) compact_text_preview(snapshot$model_id, width = 28) else snapshot$model_id
   c(
     sprintf("Model: %s", model_value),
     sprintf(if (compact) "Persona: %s" else "Persona: %s", compact_text_preview(snapshot$persona_label, width = 20)),
     context_fields,
+    model_option_fields,
     sprintf(if (compact) "Sb: %s" else "Sandbox: %s", snapshot$sandbox_mode),
     sprintf(if (compact) "View: %s" else "View: %s", snapshot$view_mode),
     sprintf(if (compact) "Strm: %s" else "Stream: %s", if (snapshot$stream_enabled) "on" else "off"),

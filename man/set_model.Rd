@@ -4,10 +4,36 @@
 \alias{set_model}
 \title{Set Default Model}
 \usage{
-set_model(new = NULL)
+set_model(
+  new = NULL,
+  context_window = NULL,
+  max_output_tokens = NULL,
+  max_tokens = NULL,
+  thinking = NULL,
+  thinking_budget = NULL,
+  reasoning_effort = NULL,
+  reset_options = FALSE
+)
 }
 \arguments{
 \item{new}{A model identifier string, a \code{LanguageModelV1} object, or \code{NULL}.}
+
+\item{context_window}{Optional context-window override used by sessions
+created from this default model.}
+
+\item{max_output_tokens}{Optional maximum output-token metadata override.}
+
+\item{max_tokens}{Optional default generation token limit.}
+
+\item{thinking}{Optional default thinking-mode value passed to providers that
+support it. Logical values are normalized by each provider.}
+
+\item{thinking_budget}{Optional default thinking budget.}
+
+\item{reasoning_effort}{Optional default reasoning effort (\code{"low"},
+\code{"medium"}, or \code{"high"}).}
+
+\item{reset_options}{Logical. If \code{TRUE}, clears default runtime options.}
 }
 \value{
 Invisibly returns the previous default model.
@@ -15,7 +41,8 @@ Invisibly returns the previous default model.
 \description{
 Sets the package-wide default language model. Pass \code{NULL} to restore the
 built-in default (\code{"openai:gpt-4o"} unless overridden with
-\code{options(aisdk.default_model = ...)}).
+\code{options(aisdk.default_model = ...)}). If \code{new} is omitted and runtime
+options are supplied, only the runtime options are updated.
 }
 \examples{
 old <- set_model("deepseek:deepseek-chat")
