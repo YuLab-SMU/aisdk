@@ -38,10 +38,12 @@ test_that("DeepSeek provider uses default model when none specified", {
 
 test_that("DeepSeek v4 models are marked as reasoning-capable", {
     provider <- safe_create_provider(create_deepseek)
-    model <- provider$language_model("deepseek-v4")
 
-    expect_true(isTRUE(model$capabilities$is_reasoning_model))
-    expect_true(isTRUE(model$capabilities$reasoning))
+    for (model_id in c("deepseek-v4", "deepseek-v4-flash", "deepseek-v4-pro")) {
+        model <- provider$language_model(model_id)
+        expect_true(isTRUE(model$capabilities$is_reasoning_model), info = model_id)
+        expect_true(isTRUE(model$capabilities$reasoning), info = model_id)
+    }
 })
 
 test_that("DeepSeek provider forwards thinking-mode parameters", {
@@ -56,11 +58,26 @@ test_that("DeepSeek provider forwards thinking-mode parameters", {
         max_tokens = 1000
     ))
 
-    expect_identical(payload$body$thinking, TRUE)
+    # logical TRUE is auto-converted to DeepSeek API format
+    expect_equal(payload$body$thinking, list(type = "enabled"))
     expect_equal(payload$body$thinking_budget, 2048)
     expect_equal(payload$body$reasoning_effort, "low")
     expect_equal(payload$body$max_completion_tokens, 1000)
     expect_null(payload$body$max_tokens)
+})
+
+test_that("DeepSeek thinking parameter accepts native API format", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4")
+
+    payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        thinking = list(type = "enabled"),
+        max_tokens = 1000
+    ))
+
+    # native list format is passed through as-is
+    expect_equal(payload$body$thinking, list(type = "enabled"))
 })
 
 test_that("DeepSeek stream payload forwards thinking-mode parameters", {
@@ -74,9 +91,82 @@ test_that("DeepSeek stream payload forwards thinking-mode parameters", {
         reasoning_effort = "medium"
     ))
 
-    expect_identical(payload$body$thinking, FALSE)
+    # logical FALSE is auto-converted to DeepSeek API format
+    expect_equal(payload$body$thinking, list(type = "disabled"))
     expect_equal(payload$body$thinking_budget, 512)
     expect_equal(payload$body$reasoning_effort, "medium")
+})
+
+test_that("DeepSeek tool turns preserve reasoning_content when thinking is enabled", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4-flash")
+
+    test_tool <- Tool$new(
+        name = "get_time",
+        description = "Get the current time",
+        parameters = z_object(.dummy = z_string("Unused")),
+        execute = function(args) "12:00"
+    )
+
+    calls <- 0
+    captured_bodies <- list()
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            calls <<- calls + 1
+            captured_bodies[[calls]] <<- body
+
+            if (calls == 1) {
+                return(list(
+                    choices = list(list(
+                        message = list(
+                            content = "",
+                            reasoning_content = "Need the time tool.",
+                            tool_calls = list(list(
+                                id = "call_1",
+                                type = "function",
+                                `function` = list(
+                                    name = "get_time",
+                                    arguments = "{\".dummy\":\"unused\"}"
+                                )
+                            ))
+                        ),
+                        finish_reason = "tool_calls"
+                    )),
+                    usage = list(prompt_tokens = 8, completion_tokens = 4, total_tokens = 12)
+                ))
+            }
+
+            list(
+                choices = list(list(
+                    message = list(
+                        content = "The current time is 12:00.",
+                        reasoning_content = NULL
+                    ),
+                    finish_reason = "stop"
+                )),
+                usage = list(prompt_tokens = 20, completion_tokens = 6, total_tokens = 26)
+            )
+        },
+        .package = "aisdk"
+    )
+
+    result <- generate_text(
+        model,
+        "What time is it?",
+        tools = list(test_tool),
+        max_steps = 2,
+        thinking = TRUE,
+        max_tokens = 100
+    )
+
+    expect_equal(result$text, "The current time is 12:00.")
+    expect_equal(calls, 2)
+
+    assistant_message <- captured_bodies[[2]]$messages[[2]]
+    expect_equal(assistant_message$role, "assistant")
+    expect_equal(assistant_message$reasoning_content, "Need the time tool.")
+    expect_length(assistant_message$tool_calls, 1)
 })
 
 test_that("create_deepseek() accepts custom base_url", {

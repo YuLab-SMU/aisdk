@@ -345,6 +345,11 @@ generate_text <- function(model = NULL,
                 )
               )
             })
+            if (isTRUE(model$capabilities$preserve_reasoning_content) &&
+                !is.null(result$reasoning) &&
+                nzchar(result$reasoning)) {
+              assistant_message$reasoning_content <- result$reasoning
+            }
           } else if (history_format == "anthropic") {
             # For Anthropic, tool_use blocks are part of the content
             assistant_message$content <- result$raw_response$content
@@ -633,6 +638,11 @@ stream_text <- function(model = NULL,
                 )
               )
             })
+            if (isTRUE(model$capabilities$preserve_reasoning_content) &&
+                !is.null(result$reasoning) &&
+                nzchar(result$reasoning)) {
+              assistant_message$reasoning_content <- result$reasoning
+            }
           } else if (history_format == "anthropic") {
             assistant_message$content <- result$raw_response$content
           }

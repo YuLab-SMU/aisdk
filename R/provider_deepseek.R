@@ -15,6 +15,24 @@ NULL
 DeepSeekLanguageModel <- R6::R6Class(
     "DeepSeekLanguageModel",
     inherit = OpenAILanguageModel,
+    private = list(
+        #' Normalize thinking parameter to DeepSeek API format.
+        #' DeepSeek expects {"type": "enabled"} or {"type": "disabled"}.
+        #' We auto-convert logical values for convenience.
+        #' @param thinking Raw thinking parameter from user.
+        #' @return Properly formatted thinking parameter.
+        normalize_thinking = function(thinking) {
+            if (is.logical(thinking)) {
+                if (isTRUE(thinking)) {
+                    return(list(type = "enabled"))
+                } else {
+                    return(list(type = "disabled"))
+                }
+            }
+            thinking
+        }
+    ),
+
     public = list(
         #' @description Initialize the DeepSeek language model.
         #' @param model_id The model ID.
@@ -32,6 +50,7 @@ DeepSeekLanguageModel <- R6::R6Class(
                 capabilities = list(
                     is_reasoning_model = is_reasoning_model,
                     reasoning = is_reasoning_model,
+                    preserve_reasoning_content = TRUE,
                     function_call = TRUE,
                     structured_output = TRUE
                 )
@@ -60,7 +79,7 @@ DeepSeekLanguageModel <- R6::R6Class(
             payload <- super$build_payload(params)
 
             if (!is.null(params$thinking)) {
-                payload$body$thinking <- params$thinking
+                payload$body$thinking <- private$normalize_thinking(params$thinking)
             }
             if (!is.null(params$thinking_budget)) {
                 payload$body$thinking_budget <- params$thinking_budget
@@ -79,7 +98,7 @@ DeepSeekLanguageModel <- R6::R6Class(
             payload <- super$build_stream_payload(params)
 
             if (!is.null(params$thinking)) {
-                payload$body$thinking <- params$thinking
+                payload$body$thinking <- private$normalize_thinking(params$thinking)
             }
             if (!is.null(params$thinking_budget)) {
                 payload$body$thinking_budget <- params$thinking_budget
