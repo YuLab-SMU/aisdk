@@ -19,6 +19,25 @@ test_that("get_session_context_metrics estimates occupancy for known models", {
   expect_equal(metrics$regime, "green")
 })
 
+test_that("get_session_context_metrics uses DeepSeek V4 million-token metadata", {
+  session <- aisdk::create_chat_session(model = "deepseek:deepseek-v4-flash")
+  session$append_message("user", "hello world")
+
+  metrics <- aisdk:::get_session_context_metrics(session)
+
+  expect_equal(metrics$provider, "deepseek")
+  expect_equal(metrics$model_id, "deepseek-v4-flash")
+  expect_equal(metrics$context_window, 1000000L)
+  expect_equal(metrics$max_output, 384000L)
+  expect_false(metrics$estimated)
+})
+
+test_that("DeepSeek V4 fallback context is one million tokens", {
+  expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4"), 1000000L)
+  expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4-pro"), 1000000L)
+  expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4-flash"), 1000000L)
+})
+
 test_that("ChatSession context state helpers round-trip", {
   session <- aisdk::create_chat_session(model = MockModel$new())
 

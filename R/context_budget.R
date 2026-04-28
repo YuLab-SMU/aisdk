@@ -144,6 +144,9 @@ infer_session_context_window <- function(provider, model_id) {
   if (provider == "gemini" && grepl("^gemini", model_id)) {
     return(1000000L)
   }
+  if (provider == "deepseek" && grepl("^deepseek-v4", model_id)) {
+    return(1000000L)
+  }
   if (provider == "deepseek" && grepl("^deepseek", model_id)) {
     return(64000L)
   }

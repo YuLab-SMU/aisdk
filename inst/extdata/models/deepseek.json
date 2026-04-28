@@ -1,0 +1,50 @@
+[
+  {
+    "id": "deepseek-v4-flash",
+    "type": "language",
+    "description": "DeepSeek V4 Flash hybrid-thinking model",
+    "family": "DeepSeek-V4",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 384000
+    },
+    "pricing": {
+      "input_cache_hit": 0.028,
+      "input": 0.14,
+      "output": 0.28,
+      "unit": "USD/M tokens"
+    }
+  },
+  {
+    "id": "deepseek-v4-pro",
+    "type": "language",
+    "description": "DeepSeek V4 Pro hybrid-thinking model",
+    "family": "DeepSeek-V4",
+    "capabilities": {
+      "reasoning": true,
+      "vision": false,
+      "audio_input": false,
+      "function_call": true,
+      "structured_output": true
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 384000
+    },
+    "pricing": {
+      "input_cache_hit": 0.145,
+      "input": 1.74,
+      "output": 3.48,
+      "unit": "USD/M tokens"
+    }
+  }
+]

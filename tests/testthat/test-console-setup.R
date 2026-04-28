@@ -182,6 +182,19 @@ test_that("console status line includes context metrics when available", {
   expect_match(line, "Left\\(est\\):")
 })
 
+test_that("console status line shows DeepSeek V4 million-token context", {
+  session <- aisdk::create_chat_session(model = "deepseek:deepseek-v4-flash")
+  session$append_message("user", "hello world")
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  line <- aisdk:::build_console_status_line(app_state)
+
+  expect_match(line, "Model: deepseek:deepseek-v4-flash")
+  expect_match(line, "Ctx: 1.0M")
+  expect_match(line, "Out: 384.0k")
+  expect_no_match(line, "Ctx\\(est\\): 64.0k")
+})
+
 test_that("prompt_console_provider_profile can choose an existing profile", {
   project_path <- tempfile(fileext = ".Renviron")
   global_path <- tempfile(fileext = ".Renviron")

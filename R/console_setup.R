@@ -809,7 +809,9 @@ format_console_token_compact <- function(tokens) {
     return("n/a")
   }
 
-  if (tokens >= 1000) {
+  if (tokens >= 1000000) {
+    sprintf("%.1fM", tokens / 1000000)
+  } else if (tokens >= 1000) {
     sprintf("%.1fk", tokens / 1000)
   } else {
     as.character(as.integer(round(tokens)))
