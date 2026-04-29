@@ -203,6 +203,23 @@ create_console_tools <- function(working_dir = tempdir(),
         text
     }
 
+    is_console_binary_file <- function(path) {
+        if (grepl("\\.(png|jpg|jpeg|webp|gif|bmp|tif|tiff|pdf|rds|rda|rdata)$", path, ignore.case = TRUE)) {
+            return(TRUE)
+        }
+
+        bytes <- tryCatch(readBin(path, what = "raw", n = 1024L), error = function(e) raw(0))
+        length(bytes) > 0 && any(bytes == as.raw(0))
+    }
+
+    console_binary_file_message <- function(path) {
+        paste(
+            "File appears to be binary or an image and cannot be read as UTF-8 text:",
+            path,
+            "Use a vision-capable model for image inspection, or provide text/OCR output."
+        )
+    }
+
     image_candidate_score <- function(path, query = NULL) {
         score <- 0
         name <- tolower(basename(path %||% ""))
@@ -392,6 +409,16 @@ create_console_tools <- function(working_dir = tempdir(),
         "openai:gpt-4o"
     }
 
+    console_vision_unavailable_message <- function(model_id) {
+        paste(
+            "The selected language model",
+            paste0("`", model_id, "`"),
+            "does not advertise multimodal image input support.",
+            "I cannot inspect image pixels with this model.",
+            "Switch to a vision-capable language model or provide a text description/OCR output."
+        )
+    }
+
     resolve_console_image_model_id <- function(envir, explicit_model = NULL, purpose = c("generate", "edit")) {
         purpose <- match.arg(purpose)
         explicit_model <- explicit_model %||% ""
@@ -433,12 +460,15 @@ create_console_tools <- function(working_dir = tempdir(),
                     {
                         full_path <- resolve_console_existing_path(path)
                         if (!file.exists(full_path)) {
-                            return(list(error = TRUE, message = paste("File not found:", path)))
+                            list(error = TRUE, message = paste("File not found:", path))
+                        } else if (is_console_binary_file(full_path)) {
+                            list(error = TRUE, message = console_binary_file_message(path))
+                        } else {
+                            list(
+                                error = FALSE,
+                                content = paste(readLines(full_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
+                            )
                         }
-                        list(
-                            error = FALSE,
-                            content = paste(readLines(full_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
-                        )
                     },
                     error = function(e) list(error = TRUE, message = conditionMessage(e))
                 )
@@ -838,6 +868,11 @@ create_console_tools <- function(working_dir = tempdir(),
                 .required = c("task")
             ),
             execute = function(args) {
+                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
+                if (model_capability_explicitly_unavailable(model_id, "vision_input")) {
+                    return(console_vision_unavailable_message(model_id))
+                }
+
                 resolved <- resolve_console_image_inputs(
                     path = args$path %||% NULL,
                     paths = args$paths %||% NULL,
@@ -854,7 +889,6 @@ create_console_tools <- function(working_dir = tempdir(),
                 }
 
                 image_paths <- unlist(resolved$paths %||% list(), use.names = FALSE)
-                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
                 result <- if (length(image_paths) <= 1) {
                     analyze_image(
                         model = model_id,
@@ -892,7 +926,8 @@ create_console_tools <- function(working_dir = tempdir(),
                     )
                 )
             },
-            layer = "computer"
+            layer = "computer",
+            meta = list(required_model_capabilities = c("vision_input"))
         ),
 
         tool(
@@ -913,6 +948,11 @@ create_console_tools <- function(working_dir = tempdir(),
                 .required = c("task")
             ),
             execute = function(args) {
+                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
+                if (model_capability_explicitly_unavailable(model_id, "vision_input")) {
+                    return(console_vision_unavailable_message(model_id))
+                }
+
                 resolved <- resolve_console_image_inputs(
                     path = args$path %||% NULL,
                     paths = args$paths %||% NULL,
@@ -929,7 +969,6 @@ create_console_tools <- function(working_dir = tempdir(),
                 }
 
                 image_paths <- unlist(resolved$paths %||% list(), use.names = FALSE)
-                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
 
                 result <- if (!is.null(args$schema_json) && nzchar(args$schema_json) && length(image_paths) == 1) {
                     parsed_schema <- jsonlite::fromJSON(args$schema_json, simplifyVector = FALSE)
@@ -1009,7 +1048,8 @@ create_console_tools <- function(working_dir = tempdir(),
                     )
                 )
             },
-            layer = "computer"
+            layer = "computer",
+            meta = list(required_model_capabilities = c("vision_input"))
         ),
 
         tool(
@@ -1253,8 +1293,8 @@ You have access to powerful tools to help users interact with their computer:
 - **get_system_info**: Get system and R environment information
 - **get_environment**: Check environment variables
 - **setup_feishu_channel**: Guided Feishu bot setup wizard for non-developer users
-- **analyze_image_file**: Analyze screenshots, charts, figures, and other images
-- **extract_from_image_file**: Extract OCR-like or structured data from images
+- **analyze_image_file**: Analyze screenshots, charts, figures, and other images when the active language model supports vision input
+- **extract_from_image_file**: Extract OCR-like or structured data from images when the active language model supports vision input
 - **generate_image_asset**: Generate new image assets with an image model
 - **edit_image_asset**: Modify an existing image asset with an image model
 - **get_recent_image_artifacts**: Recall recently generated or edited image paths
@@ -1282,17 +1322,18 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 9. **Default behavior first**: Reuse the current session model and keep advanced integration parameters at sensible defaults unless the user explicitly asks to customize them
 10. **When the user already pasted credentials**: Pass those values directly into `setup_feishu_channel` instead of asking for them again
 11. **After successful setup**: Do not ask the user a new menu of unrelated next steps. Tell them the connection is ready and instruct them to go to Feishu and send a test message now
-12. **Treat image work as a native capability**: When the user asks about screenshots, diagrams, OCR, posters, illustrations, hero images, edits, recoloring, or visual redesigns, proactively use the image tools instead of asking the user to manually call R helpers
+12. **Treat image work as a native capability when supported**: When the user asks about screenshots, diagrams, OCR, posters, illustrations, hero images, edits, recoloring, or visual redesigns, proactively use the compatible image tools instead of asking the user to manually call R helpers
 13. **Choose the right image path automatically**:
-    - use `analyze_image_file` for visual understanding
-    - use `extract_from_image_file` for OCR or structured extraction
+    - use `analyze_image_file` for visual understanding only when the active language model supports `vision_input`
+    - use `extract_from_image_file` for OCR or structured extraction only when the active language model supports `vision_input`
     - use `generate_image_asset` for creating a new image
     - use `edit_image_asset` for modifying an existing image
-14. **Reuse image artifacts**: When the user refers to \"the previous image\", \"the last render\", or \"the one you just made\", consult `get_recent_image_artifacts` or reuse the most recent remembered image automatically
-15. **Only ask for a path when truly needed**: If the user refers to an existing image and you can find or reuse it yourself, do that first
-16. **Search locally before asking**: If the user mentions a screenshot, poster, render, figure, or chart without a path, first use `get_recent_image_artifacts` and then `find_image_files` before asking for clarification
-17. **Interpret 'current directory' as the R startup directory**: For discovering existing project files, prefer the startup directory rather than the sandbox working directory
-18. **Use sandbox R helpers correctly**: Inside `execute_r_code`, relative paths still point at the sandbox working directory. Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` to read files from the user's project
+14. **Respect model modality limits**: If the active language model does not advertise `vision_input`, do not claim to inspect images and do not call vision-analysis tools. Say that the current model cannot inspect image pixels, then ask for a vision-capable model or a textual description/OCR output
+15. **Reuse image artifacts**: When the user refers to \"the previous image\", \"the last render\", or \"the one you just made\", consult `get_recent_image_artifacts` or reuse the most recent remembered image automatically
+16. **Only ask for a path when truly needed**: If the user refers to an existing image and you can find or reuse it yourself, do that first
+17. **Search locally before asking**: If the user mentions a screenshot, poster, render, figure, or chart without a path, first use `get_recent_image_artifacts` and then `find_image_files` before asking for clarification
+18. **Interpret 'current directory' as the R startup directory**: For discovering existing project files, prefer the startup directory rather than the sandbox working directory
+19. **Use sandbox R helpers correctly**: Inside `execute_r_code`, relative paths still point at the sandbox working directory. Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` to read files from the user's project
 
 ## Default Persona
 

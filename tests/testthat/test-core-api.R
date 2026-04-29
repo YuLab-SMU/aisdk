@@ -104,6 +104,36 @@ test_that("generate_text recovers tool calls embedded in assistant text", {
   expect_equal(result$all_tool_calls[[1]]$arguments$message, "hello from text")
 })
 
+test_that("generate_text hides tools that require unavailable model capabilities", {
+  vision_tool <- tool(
+    name = "inspect_image",
+    description = "Inspect image pixels",
+    parameters = z_object(path = z_string("Image path")),
+    execute = function(path) "inspected",
+    meta = list(required_model_capabilities = c("vision_input"))
+  )
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message")),
+    execute = function(message) message
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(vision_input = FALSE)
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Hello",
+    tools = list(vision_tool, echo_tool)
+  )
+
+  tool_names <- vapply(mock_model$last_params$tools, function(t) t$name, character(1))
+  expect_equal(result$text, "Mock response")
+  expect_false("inspect_image" %in% tool_names)
+  expect_true("echo" %in% tool_names)
+})
+
 # === Tests for ProviderRegistry ===
 
 test_that("ProviderRegistry registers and retrieves providers", {

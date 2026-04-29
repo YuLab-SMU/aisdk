@@ -74,6 +74,16 @@ test_that("console turn routing injects English reply language when input is Eng
     expect_true(grepl("Do not answer in Chinese", routed_prompt, fixed = TRUE))
 })
 
+test_that("console turn routing injects non-vision model limits", {
+    session <- create_chat_session(model = "deepseek:deepseek-v4-flash")
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "帮我看看这个图")
+
+    expect_true(grepl("Model registry: vision_input = false.", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Do not call `analyze_image_file` or `extract_from_image_file`", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Current user language: Chinese", routed_prompt, fixed = TRUE))
+})
+
 test_that("console turn routing can match custom skill by when_to_use and paths", {
     skill_root <- tempfile("console-skill-")
     dir.create(skill_root, recursive = TRUE)
@@ -216,6 +226,22 @@ test_that("console file discovery tools prefer startup directory for current pro
     expect_equal(content, "tree-content")
 })
 
+test_that("read_file reports image files instead of reading binary bytes", {
+    workdir <- tempfile("console-binary-read-")
+    dir.create(workdir, recursive = TRUE)
+    image_path <- file.path(workdir, "plot.png")
+    writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x00)), image_path)
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir, startup_dir = workdir, sandbox_mode = "permissive")
+    read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
+
+    result <- read_tool$run(list(path = "plot.png"))
+
+    expect_true(grepl("binary or an image", result, fixed = TRUE))
+    expect_true(grepl("cannot be read as UTF-8 text", result, fixed = TRUE))
+})
+
 test_that("get_system_info tool works", {
     tools <- create_console_tools()
     sys_info_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_system_info")]]
@@ -343,6 +369,27 @@ test_that("analyze_image_file can auto-select a likely local image candidate", {
 
     expect_true(grepl("Looks fine.", result, fixed = TRUE))
     expect_true(any(grepl("Selection strategy:", attr(result, "aisdk_messages", exact = TRUE))))
+})
+
+test_that("analyze_image_file refuses configured non-vision current model", {
+    tools <- create_console_tools()
+    analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "deepseek:deepseek-v4-flash"
+
+    local_mocked_bindings(
+        analyze_image = function(...) {
+            stop("analyze_image should not be called for a configured non-vision model")
+        }
+    )
+
+    result <- analyze_tool$run(
+        list(task = "Review the screenshot"),
+        envir = envir
+    )
+
+    expect_true(grepl("does not advertise multimodal image input support", result, fixed = TRUE))
+    expect_true(grepl("cannot inspect image pixels", result, fixed = TRUE))
 })
 
 test_that("analyze_image_file reports ambiguity when multiple candidates are similarly relevant", {

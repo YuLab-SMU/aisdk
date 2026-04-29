@@ -510,11 +510,38 @@ console_build_language_section <- function(input) {
 }
 
 #' @keywords internal
+console_build_model_capability_section <- function(session) {
+  if (is.null(session) || !inherits(session, "ChatSession")) {
+    return(NULL)
+  }
+
+  model_id <- session$get_model_id() %||% ""
+  if (!nzchar(model_id)) {
+    return(NULL)
+  }
+
+  if (!model_capability_explicitly_unavailable(model_id, "vision_input")) {
+    return(NULL)
+  }
+
+  c(
+    "[model_capabilities_begin]",
+    paste0("Current model: ", model_id),
+    "Model registry: vision_input = false.",
+    "This model cannot inspect image pixels. Do not call `analyze_image_file` or `extract_from_image_file`, and do not claim visual understanding from an image.",
+    "If the user asks about an image, say the current model lacks vision input and ask them to switch to a vision-capable model or provide a text description/OCR output.",
+    "[model_capabilities_end]"
+  ) |>
+    paste(collapse = "\n")
+}
+
+#' @keywords internal
 console_build_turn_system_prompt <- function(session, input) {
   registry <- console_get_skill_registry(session)
   startup_dir <- console_session_directory(session, key = "console_startup_dir", default = getwd())
   local_paths <- console_extract_candidate_paths(input, cwd = startup_dir)
   language_section <- console_build_language_section(input)
+  capability_section <- console_build_model_capability_section(session)
   matched_skills <- character(0)
   if (!is.null(registry)) {
     matched <- registry$find_relevant_skills(
@@ -530,7 +557,7 @@ console_build_turn_system_prompt <- function(session, input) {
 
   persona_section <- console_build_persona_section(session, matched_skill_names = matched_skills)
   if (length(matched_skills) == 0) {
-    sections <- c(persona_section %||% "", language_section %||% "")
+    sections <- c(persona_section %||% "", capability_section %||% "", language_section %||% "")
     sections <- sections[nzchar(sections)]
     return(if (length(sections) > 0) paste(sections, collapse = "\n\n") else NULL)
   }
@@ -575,7 +602,7 @@ console_build_turn_system_prompt <- function(session, input) {
     paste(collapse = "\n") |>
     trimws()
 
-  sections <- c(persona_section %||% "", skill_section %||% "", language_section %||% "")
+  sections <- c(persona_section %||% "", skill_section %||% "", capability_section %||% "", language_section %||% "")
   sections <- sections[nzchar(sections)]
   if (length(sections) == 0) {
     return(NULL)

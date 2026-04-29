@@ -22,3 +22,14 @@ test_that("validate_model_messages only rejects explicit non-vision models", {
     "does not advertise multimodal image input support"
   )
 })
+
+test_that("configured non-vision model metadata is enforced for image prompts", {
+  expect_error(
+    analyze_image(
+      model = "deepseek:deepseek-v4-flash",
+      image = "https://example.com/test.png",
+      prompt = "Describe this image."
+    ),
+    "deepseek:deepseek-v4-flash.*does not advertise multimodal image input support"
+  )
+})

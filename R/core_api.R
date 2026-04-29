@@ -172,6 +172,8 @@ generate_text <- function(model = NULL,
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
 
+  tools <- filter_tools_for_model_capabilities(tools, model)
+
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
     parent_env <- if (!is.null(session)) session$get_envir() else NULL
@@ -477,6 +479,8 @@ stream_text <- function(model = NULL,
     skill_tools <- create_skill_tools(skill_registry)
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
+
+  tools <- filter_tools_for_model_capabilities(tools, model)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -806,7 +810,110 @@ resolve_model <- function(model, registry = NULL, type = c("language", "embeddin
     rlang::abort(paste0("Expected a ", expected_class, " object."))
   }
 
+  if (identical(type, "language")) {
+    model <- enrich_language_model_capabilities(model)
+  }
+
   model
+}
+
+#' @keywords internal
+enrich_language_model_capabilities <- function(model) {
+  if (!inherits(model, "LanguageModelV1")) {
+    return(model)
+  }
+
+  provider <- model$provider %||% NULL
+  model_id <- model$model_id %||% NULL
+  if (is.null(provider) || is.null(model_id) || !nzchar(provider) || !nzchar(model_id)) {
+    return(model)
+  }
+
+  info <- tryCatch(
+    get_model_info(provider, model_id),
+    error = function(e) NULL
+  )
+  config_caps <- info$capabilities %||% list()
+  if (length(config_caps) == 0) {
+    return(model)
+  }
+
+  model$capabilities <- utils::modifyList(
+    config_caps,
+    model$capabilities %||% list(),
+    keep.null = TRUE
+  )
+  model
+}
+
+#' @keywords internal
+model_capability_value <- function(model, capability, registry = NULL) {
+  if (inherits(model, "LanguageModelV1")) {
+    model <- enrich_language_model_capabilities(model)
+    caps <- model$capabilities %||% list()
+    return(caps[[capability]] %||% NULL)
+  }
+
+  if (!is.character(model) || length(model) == 0 || !nzchar(model[[1]])) {
+    return(NULL)
+  }
+
+  model_id <- model[[1]]
+  sep_pos <- regexpr(":", model_id, fixed = TRUE)
+  if (sep_pos < 1) {
+    return(NULL)
+  }
+
+  provider <- substr(model_id, 1, sep_pos - 1)
+  provider_model <- substr(model_id, sep_pos + 1, nchar(model_id))
+  info <- tryCatch(
+    get_model_info(provider, provider_model),
+    error = function(e) NULL
+  )
+  caps <- info$capabilities %||% list()
+  caps[[capability]] %||% NULL
+}
+
+#' @keywords internal
+model_capability_explicitly_unavailable <- function(model, capability, registry = NULL) {
+  identical(model_capability_value(model, capability, registry = registry), FALSE)
+}
+
+#' @keywords internal
+tool_required_model_capabilities <- function(tool_obj) {
+  if (is.null(tool_obj) || is.null(tool_obj$meta) || !is.list(tool_obj$meta)) {
+    return(character(0))
+  }
+
+  req <- tool_obj$meta$required_model_capabilities %||%
+    tool_obj$meta$requires_model_capabilities %||%
+    character(0)
+  unique(as.character(req))
+}
+
+#' @keywords internal
+filter_tools_for_model_capabilities <- function(tools, model) {
+  if (is.null(tools) || length(tools) == 0) {
+    return(tools)
+  }
+
+  filtered <- Filter(function(tool_obj) {
+    req <- tool_required_model_capabilities(tool_obj)
+    if (length(req) == 0) {
+      return(TRUE)
+    }
+
+    !any(vapply(
+      req,
+      function(capability) model_capability_explicitly_unavailable(model, capability),
+      logical(1)
+    ))
+  }, tools)
+
+  if (length(filtered) == 0) {
+    return(list())
+  }
+  filtered
 }
 
 #' @keywords internal
