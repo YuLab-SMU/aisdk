@@ -11,26 +11,10 @@ NULL
 #' @return A list representing the parsed JSON of models per provider.
 #' @keywords internal
 load_models_config <- function() {
-    config_dir <- system.file("extdata", "models", package = "aisdk")
-    if (config_dir == "" || !dir.exists(config_dir)) {
-        # Fallback for development/devtools mode
-        if (dir.exists("inst/extdata/models")) {
-            config_dir <- "inst/extdata/models"
-        } else if (dir.exists(file.path("..", "inst", "extdata", "models"))) {
-            config_dir <- file.path("..", "inst", "extdata", "models")
-        } else {
-            # Last resort: search for the directory
-            possible_paths <- c(
-                file.path(getwd(), "inst/extdata/models"),
-                file.path(getwd(), "extdata/models")
-            )
-            for (p in possible_paths) {
-                if (dir.exists(p)) {
-                    config_dir <- p
-                    break
-                }
-            }
-        }
+    config_dir <- find_source_models_config_dir()
+
+    if (is.null(config_dir)) {
+        config_dir <- system.file("extdata", "models", package = "aisdk")
     }
 
     if (config_dir == "" || !dir.exists(config_dir)) {
@@ -50,6 +34,33 @@ load_models_config <- function() {
     }
 
     config
+}
+
+find_source_models_config_dir <- function(start = getwd()) {
+    current <- normalizePath(start, mustWork = FALSE)
+
+    repeat {
+        desc_path <- file.path(current, "DESCRIPTION")
+        config_dir <- file.path(current, "inst", "extdata", "models")
+
+        if (file.exists(desc_path) && dir.exists(config_dir)) {
+            package <- tryCatch(
+                read.dcf(desc_path, fields = "Package")[[1]],
+                error = function(e) NA_character_
+            )
+            if (identical(package, "aisdk")) {
+                return(config_dir)
+            }
+        }
+
+        parent <- dirname(current)
+        if (identical(parent, current)) {
+            break
+        }
+        current <- parent
+    }
+
+    NULL
 }
 
 # --- Helper to safely extract nested fields ---

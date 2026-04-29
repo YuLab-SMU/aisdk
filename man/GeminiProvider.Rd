@@ -94,7 +94,7 @@ A GeminiLanguageModel object.
 Create an image model.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{GeminiProvider$image_model(
-  model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview")
+  model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
 )}\if{html}{\out{</div>}}
 }
 

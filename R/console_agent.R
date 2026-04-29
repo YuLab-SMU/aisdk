@@ -380,7 +380,7 @@ create_console_tools <- function(working_dir = tempdir(),
         purpose <- match.arg(purpose)
         switch(provider %||% "",
             openai = "openai:gpt-image-2",
-            gemini = "gemini:gemini-3.1-flash-image-preview",
+            gemini = "gemini:gemini-2.5-flash-image",
             volcengine = "volcengine:doubao-seedream-5-0",
             xai = "xai:grok-2-image",
             stepfun = if (purpose == "edit") "stepfun:step-1x-edit" else "stepfun:step-1x-medium",
@@ -440,7 +440,7 @@ create_console_tools <- function(working_dir = tempdir(),
             ""
         }
 
-        default_console_image_model(provider, purpose = purpose) %||% "gemini:gemini-3.1-flash-image-preview"
+        default_console_image_model(provider, purpose = purpose) %||% "gemini:gemini-2.5-flash-image"
     }
 
     # Additional console-specific tools

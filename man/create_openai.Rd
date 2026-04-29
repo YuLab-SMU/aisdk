@@ -53,22 +53,22 @@ Factory function to create an OpenAI provider.
 \section{Supported Models}{
 
 \itemize{
-\item \strong{gpt-5.5}: OpenAI's latest flagship (April 2026). First full retrain since GPT-4.5. Agentic coding, 1M context, computer use. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-5.5-pro}: Research-grade variant of GPT-5.5 with maximum accuracy. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-5.4}: Previous flagship (March 2026). Codex genes, native Computer Use, Tool Search. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-5.4-mini}: Faster GPT-5.4 variant optimized for coding, computer use, and subagents. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-5.4-nano}: Smallest and cheapest GPT-5.4 for lightweight tasks. (Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-5.3-codex}: Agentic coding specialist. Terminal-Bench 77.3\%. General tasks supported. (Reasoning, Vision, Tools, Structured) | ctx: 200k
-\item \strong{gpt-4.1}: Production workhorse with 1M token context window. (Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-4.1-mini}: Long-context budget model with 1M token window. (Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-4.1-nano}: Ultra-low-cost model for classification, routing, and simple tasks. (Vision, Tools, Structured) | ctx: 1000k
-\item \strong{gpt-4o}: Legacy flagship multimodal model with wide ecosystem support. (Vision, Tools, Structured) | ctx: 128k
-\item \strong{gpt-4o-mini}: Budget-friendly general-purpose model. (Vision, Tools, Structured) | ctx: 128k
-\item \strong{o3}: Advanced reasoning model for multi-step problem solving. (Reasoning, Vision, Tools, Structured) | ctx: 200k
-\item \strong{o4-mini}: Budget reasoning model for math, logic, and code review. (Reasoning, Vision, Tools, Structured) | ctx: 200k
-\item \strong{o3-mini}: Lightweight reasoning model for moderate reasoning tasks. (Reasoning, Vision, Tools, Structured) | ctx: 200k
-\item \strong{o1}: Premium reasoning model for research-grade problem solving. (Reasoning, Vision, Structured) | ctx: 200k
-\item \emph{... and 2 more models. Use \code{list_models("openai")} to see all.}
+\item \strong{gpt-5.5}: Latest OpenAI frontier model for complex reasoning, coding, and professional workflows. (Reasoning, Vision, Tools, Structured) | ctx: 1050k
+\item \strong{gpt-5.5-pro}: Higher-compute GPT-5.5 variant for the hardest professional and reasoning tasks. (Reasoning, Vision, Tools, Structured) | ctx: 1050k
+\item \strong{gpt-5.4}: Frontier model for coding and professional work with 1.05M context. (Reasoning, Vision, Tools, Structured) | ctx: 1050k
+\item \strong{gpt-5.4-pro}: Higher-compute GPT-5.4 variant for more precise responses on difficult tasks. (Reasoning, Vision, Tools, Structured) | ctx: 1050k
+\item \strong{gpt-5.4-mini}: Strong mini model for coding, computer use, and subagents. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-5.4-nano}: Lowest-cost GPT-5.4-class model for high-volume classification, extraction, ranking, and subagents. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-5.3-codex}: Agentic coding model optimized for Codex-like environments. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-5}: Reasoning model for coding and agentic tasks across domains. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-5-mini}: Cost-sensitive, low-latency GPT-5 model for well-defined tasks and precise prompts. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-5-nano}: Fastest and lowest-cost GPT-5 model for summarization, classification, and routing. (Reasoning, Vision, Tools, Structured) | ctx: 400k
+\item \strong{gpt-4.1}: Smart non-reasoning model with strong instruction following and tool calling. (Vision, Tools, Structured) | ctx: 1048k
+\item \strong{gpt-4.1-mini}: Smaller, faster GPT-4.1 model with long-context support. (Vision, Tools, Structured) | ctx: 1048k
+\item \strong{gpt-4.1-nano}: Fastest and lowest-cost GPT-4.1 model for simple tasks. (Vision, Tools, Structured) | ctx: 1048k
+\item \strong{gpt-4o}: Legacy multimodal GPT model with broad ecosystem support. (Vision, Tools, Structured) | ctx: 128k
+\item \strong{gpt-4o-mini}: Fast, affordable GPT-4o model for focused tasks. (Vision, Tools, Structured) | ctx: 128k
+\item \emph{... and 6 more models. Use \code{list_models("openai")} to see all.}
 }
 }
 

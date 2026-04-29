@@ -231,6 +231,44 @@ test_that("context token fields are valid positive integers when present", {
   }
 })
 
+test_that("OpenAI model token limits match documented current values", {
+  models <- .all_models()[["openai"]]
+  by_id <- setNames(models, vapply(models, function(m) m$id, character(1)))
+
+  expect_equal(by_id[["gpt-5.5"]]$context$context_window, 1050000)
+  expect_equal(by_id[["gpt-5.5"]]$context$max_output_tokens, 128000)
+
+  expect_equal(by_id[["gpt-5.4-mini"]]$context$context_window, 400000)
+  expect_equal(by_id[["gpt-5.4-mini"]]$context$max_output_tokens, 128000)
+
+  expect_equal(by_id[["gpt-5-mini"]]$context$context_window, 400000)
+  expect_equal(by_id[["gpt-5-mini"]]$context$max_output_tokens, 128000)
+
+  expect_equal(by_id[["gpt-4.1"]]$context$context_window, 1047576)
+  expect_equal(by_id[["gpt-4.1"]]$context$max_output_tokens, 32768)
+})
+
+test_that("Gemini model token limits match documented current values", {
+  models <- .all_models()[["gemini"]]
+  by_id <- setNames(models, vapply(models, function(m) m$id, character(1)))
+
+  expect_null(by_id[["gemini-3-pro"]])
+  expect_null(by_id[["gemini-3.1-pro-preview"]])
+  expect_null(by_id[["gemini-3.1-flash-lite-preview"]])
+
+  expect_equal(by_id[["gemini-3-pro-preview"]]$context$context_window, 1048576)
+  expect_equal(by_id[["gemini-3-pro-preview"]]$context$max_output_tokens, 65536)
+
+  expect_equal(by_id[["gemini-3-flash-preview"]]$context$context_window, 1048576)
+  expect_equal(by_id[["gemini-3-flash-preview"]]$context$max_output_tokens, 65536)
+
+  expect_equal(by_id[["gemini-2.5-flash"]]$context$context_window, 1048576)
+  expect_equal(by_id[["gemini-2.5-flash"]]$context$max_output_tokens, 65536)
+
+  expect_equal(by_id[["gemini-2.0-flash"]]$context$context_window, 1048576)
+  expect_equal(by_id[["gemini-2.0-flash"]]$context$max_output_tokens, 8192)
+})
+
 # ---- 7. Pricing validation ---------------------------------------------------
 
 test_that("pricing fields are valid when present", {

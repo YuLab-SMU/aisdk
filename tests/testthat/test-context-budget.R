@@ -14,7 +14,7 @@ test_that("get_session_context_metrics estimates occupancy for known models", {
 
   expect_equal(metrics$provider, "openai")
   expect_equal(metrics$model_id, "gpt-5-mini")
-  expect_equal(metrics$context_window, 128000L)
+  expect_equal(metrics$context_window, 400000L)
   expect_true(metrics$used_tokens > 0)
   expect_equal(metrics$regime, "green")
 })
@@ -36,6 +36,11 @@ test_that("DeepSeek V4 fallback context is one million tokens", {
   expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4"), 1000000L)
   expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4-pro"), 1000000L)
   expect_equal(aisdk:::infer_session_context_window("deepseek", "deepseek-v4-flash"), 1000000L)
+})
+
+test_that("Gemini fallback context uses exact million-token metadata", {
+  expect_equal(aisdk:::infer_session_context_window("gemini", "gemini-3-pro-preview"), 1048576L)
+  expect_equal(aisdk:::infer_session_context_window("gemini", "gemini-2.5-flash"), 1048576L)
 })
 
 test_that("ChatSession context state helpers round-trip", {

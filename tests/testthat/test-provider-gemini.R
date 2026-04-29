@@ -55,10 +55,10 @@ test_that("Gemini provider creates language model correctly", {
 
 test_that("Gemini provider creates image model correctly", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     expect_s3_class(model, "GeminiImageModel")
-    expect_equal(model$model_id, "gemini-3.1-flash-image-preview")
+    expect_equal(model$model_id, "gemini-2.5-flash-image")
     expect_equal(model$provider, "gemini")
 })
 
@@ -247,7 +247,7 @@ test_that("Gemini parser preserves inline image parts on GenerateResult", {
 
 test_that("Gemini image model writes image artifacts", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     response <- list(
         candidates = list(list(
@@ -285,7 +285,7 @@ test_that("Gemini image model writes image artifacts", {
 
 test_that("Gemini image model saves inline image output to disk", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     png_bytes <- as.raw(c(137, 80, 78, 71, 13, 10, 26, 10))
     response <- list(
@@ -332,7 +332,7 @@ test_that("Gemini image model saves inline image output to disk", {
 
 test_that("Gemini image edit sends prompt plus source image and writes output", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     png_bytes <- as.raw(c(137, 80, 78, 71, 13, 10, 26, 10))
     response <- list(
@@ -377,7 +377,7 @@ test_that("Gemini image edit sends prompt plus source image and writes output", 
 
 test_that("Gemini image edit rejects masks for now", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     expect_error(
         edit_image(
@@ -392,7 +392,7 @@ test_that("Gemini image edit rejects masks for now", {
 
 test_that("Gemini image model edit_image sends reference image content", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
     captured_body <- NULL
 
     local_mocked_bindings(
@@ -428,7 +428,7 @@ test_that("Gemini image model edit_image sends reference image content", {
 
 test_that("Gemini image model edit_image rejects masks for now", {
     provider <- safe_create_provider(create_gemini, api_key = "FAKE")
-    model <- provider$image_model("gemini-3.1-flash-image-preview")
+    model <- provider$image_model("gemini-2.5-flash-image")
 
     expect_error(
         model$edit_image(

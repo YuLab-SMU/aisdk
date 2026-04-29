@@ -620,7 +620,7 @@ GeminiProvider <- R6::R6Class(
         #' @description Create an image model.
         #' @param model_id The model ID for image generation.
         #' @return A GeminiImageModel object.
-        image_model = function(model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview")) {
+        image_model = function(model_id = Sys.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")) {
             GeminiImageModel$new(model_id, private$config)
         }
     ),
@@ -650,7 +650,7 @@ GeminiProvider <- R6::R6Class(
 #' \donttest{
 #' if (interactive()) {
 #'     gemini <- create_gemini(api_key = "AIza...")
-#'     model <- gemini$language_model("gemini-1.5-pro")
+#'     model <- gemini$language_model("gemini-2.5-flash")
 #' }
 #' }
 create_gemini <- function(api_key = NULL,

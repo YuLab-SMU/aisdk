@@ -451,7 +451,7 @@ test_that("edit_image_asset reuses the latest image artifact when image_path is 
     envir$.console_image_artifacts <- list(
         list(
             kind = "generated",
-            model = "gemini:gemini-3.1-flash-image-preview",
+            model = "gemini:gemini-2.5-flash-image",
             prompt = "Generate a mug",
             artifacts = list(list(path = file.path(tempdir(), "last.png")))
         )
@@ -459,7 +459,7 @@ test_that("edit_image_asset reuses the latest image artifact when image_path is 
 
     local_mocked_bindings(
         edit_image = function(model, image, prompt, mask, output_dir, ...) {
-            expect_equal(model, "gemini:gemini-3.1-flash-image-preview")
+            expect_equal(model, "gemini:gemini-2.5-flash-image")
             expect_equal(image, file.path(tempdir(), "last.png"))
             expect_null(mask)
             GenerateImageResult$new(
@@ -495,7 +495,7 @@ test_that("get_recent_image_artifacts summarizes remembered image outputs", {
         ),
         list(
             kind = "edited",
-            model = "gemini:gemini-3.1-flash-image-preview",
+            model = "gemini:gemini-2.5-flash-image",
             prompt = "Change the color",
             artifacts = list(list(path = "/tmp/edited.png"))
         )

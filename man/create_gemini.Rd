@@ -44,14 +44,16 @@ Factory function to create a Gemini provider.
 \section{Supported Models}{
 
 \itemize{
-\item \strong{gemini-3.1-pro}: Google's most capable multimodal model with 1M context and advanced reasoning. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-3.1-pro-preview}: Preview release of Gemini 3.1 Pro with 1M context. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-3.1-flash-lite-preview}: Ultra-fast and cost-efficient variant of Gemini 3.1. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-2.5-pro}: Mature flagship model with tiered pricing based on context length. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-2.5-flash}: Fast multimodal model with 1M context and native audio support. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-2.5-flash-lite}: Most cost-efficient Gemini model for high-volume tasks. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-2.5-flash-native-audio}: Gemini 2.5 Flash with native audio input and output. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
-\item \strong{gemini-2.0-flash}: Previous generation fast model, still widely used. (Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-3-pro-preview}: Preview Gemini 3 Pro model for advanced reasoning, coding, multimodal understanding, and agentic workflows. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-3-pro-preview-customtools}: Gemini 3 Pro Preview endpoint tuned for agentic workflows that combine bash-like and custom tools. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-3-flash-preview}: Preview Gemini 3 Flash model for frontier-class performance at lower latency and cost. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-2.5-pro}: Stable Gemini 2.5 Pro model for complex reasoning, coding, STEM, and long-context analysis. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-2.5-flash}: Stable Gemini 2.5 Flash model for price-performance, low-latency, high-volume, and agentic tasks. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-2.5-flash-lite}: Stable Gemini 2.5 Flash-Lite model for cost-efficient high-throughput multimodal tasks. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-2.0-flash}: Deprecated Gemini 2.0 Flash model with 1M context; migrate to Gemini 3 Flash Preview or a newer model. (Vision, Tools, Audio, Structured, Search) | ctx: 1049k
+\item \strong{gemini-2.0-flash-lite}: Deprecated Gemini 2.0 Flash-Lite model; migrate to Gemini 2.5 Flash-Lite or a newer model. (Vision, Tools, Audio, Structured) | ctx: 1049k
+\item \strong{gemini-3-pro-image-preview}: Preview Gemini 3 Pro image generation and editing model for professional-grade visuals and accurate text rendering. (Reasoning, Vision, Image-Out, Image-Edit, Structured, Search) | ctx: 66k
+\item \strong{gemini-2.5-flash-image}: Stable Gemini 2.5 Flash image generation and conversational editing model for high-volume creative workflows. (Vision, Image-Out, Image-Edit, Structured) | ctx: 66k
 }
 }
 
@@ -59,7 +61,7 @@ Factory function to create a Gemini provider.
 \donttest{
 if (interactive()) {
     gemini <- create_gemini(api_key = "AIza...")
-    model <- gemini$language_model("gemini-1.5-pro")
+    model <- gemini$language_model("gemini-2.5-flash")
 }
 }
 }
