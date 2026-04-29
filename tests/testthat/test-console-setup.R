@@ -177,9 +177,10 @@ test_that("console status line includes context metrics when available", {
   line <- aisdk:::build_console_status_line(app_state)
 
   expect_match(line, "Model: openai:gpt-5-mini")
-  expect_match(line, "Ctx\\(est\\): 128.0k")
-  expect_match(line, "Used\\(est\\):")
-  expect_match(line, "Left\\(est\\):")
+  expect_match(line, "Ctx: 400.0k")
+  expect_match(line, "Used:")
+  expect_match(line, "Left:")
+  expect_match(line, "Out: 128.0k")
 })
 
 test_that("console status line shows DeepSeek V4 million-token context", {

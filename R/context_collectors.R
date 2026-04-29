@@ -174,7 +174,7 @@ collect_runtime_state <- function(session = NULL) {
   }, error = function(e) list())
 
   state$graphics_devices <- tryCatch({
-    devs <- dev.list()
+    devs <- grDevices::dev.list()
     if (length(devs) == 0) {
       list()
     } else {
