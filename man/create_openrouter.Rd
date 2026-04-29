@@ -40,14 +40,22 @@ Factory function to create an OpenRouter provider.
 }
 \section{Supported Models}{
 
-OpenRouter provides access to hundreds of models from many providers:
 \itemize{
-\item \strong{OpenAI}: "openai/gpt-4o", "openai/o1"
-\item \strong{Anthropic}: "anthropic/claude-sonnet-4-20250514"
-\item \strong{Google}: "google/gemini-2.5-pro"
-\item \strong{DeepSeek}: "deepseek/deepseek-r1", "deepseek/deepseek-chat-v3-0324"
-\item \strong{Meta}: "meta-llama/llama-4-maverick"
-\item And many more at https://openrouter.ai/models
+\item \strong{openai/gpt-5.5}: OpenAI's latest frontier model via OpenRouter. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{openai/gpt-5.4}: OpenAI's previous flagship with computer use and 1M context. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{anthropic/claude-opus-4-7}: Anthropic's most capable model via OpenRouter. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{anthropic/claude-sonnet-4-6}: Balanced Claude model with 1M context and strong coding. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{google/gemini-3.1-pro}: Google's most capable multimodal model via OpenRouter. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{google/gemini-2.5-flash}: Fast and cost-efficient Gemini with 1M context. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{xai/grok-4.1-fast}: xAI's fastest model with 2M context at aggressive pricing. (Reasoning, Vision, Tools, Structured, Search) | ctx: 2000k
+\item \strong{xai/grok-4}: xAI frontier model with always-on reasoning. (Reasoning, Vision, Tools, Structured, Search) | ctx: 256k
+\item \strong{deepseek/deepseek-chat}: DeepSeek's general-purpose chat model. (Vision, Tools, Structured) | ctx: 64k
+\item \strong{deepseek/deepseek-reasoner}: DeepSeek's reasoning specialist (R1). (Reasoning, Tools, Structured) | ctx: 64k
+\item \strong{meta-llama/llama-4-maverick}: Meta's open-weight frontier model with 10M context (Scout). (Reasoning, Vision, Tools, Structured) | ctx: 10000k
+\item \strong{qwen/qwen3.6-plus}: Alibaba's latest Qwen flagship with 1M context. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{moonshotai/kimi-k2}: Moonshot's agentic swarm model with 256K context. (Reasoning, Vision, Tools, Structured) | ctx: 256k
+\item \strong{openai/gpt-4.1}: OpenAI's production workhorse with 1M context. (Vision, Tools, Structured) | ctx: 1000k
+\item \strong{anthropic/claude-haiku-4-5}: Fast and cost-effective Claude for simple tasks. (Vision, Tools, Structured) | ctx: 200k
 }
 }
 

@@ -85,42 +85,30 @@ update_provider_models <- function(provider) {
     }
 
     # --- Process and merge ---
+    fetched_ids <- vapply(data$data, function(m) m$id %||% "", character(1))
+    existing_ids <- names(existing)
+    new_ids <- setdiff(fetched_ids, existing_ids)
+    removed_ids <- setdiff(existing_ids, fetched_ids)
+    preserved_count <- length(intersect(fetched_ids, existing_ids))
+
     models <- lapply(data$data, function(m) {
         id <- m$id
         old <- existing[[id]]
 
-        # Auto-infer basic capabilities from model ID
-        is_vision <- grepl("v|-v|-vision|vision", tolower(id))
-        is_reasoning <- grepl("o1|o3|r1|reason|think", tolower(id))
-        is_audio <- grepl("audio|asr|tts", tolower(id))
-
-        # Infer type
-        inferred_type <- if (is_audio) "audio" else "language"
-
         # Build new entry, merging with existing enriched data
         new_entry <- list(id = id)
-
-        # Preserve or infer type
-        new_entry$type <- if (!is.null(old$type)) old$type else inferred_type
 
         # Preserve or auto-generate description
         new_entry$description <- if (!is.null(old$description)) old$description else paste0("Model: ", id)
 
-        # Preserve family
+        # Preserve type and family
+        if (!is.null(old$type)) new_entry$type <- old$type
         if (!is.null(old$family)) new_entry$family <- old$family
 
-        # Merge capabilities: preserve existing, fill gaps with inference
-        old_caps <- old$capabilities %||% list()
-        new_entry$capabilities <- list(
-            reasoning = old_caps$reasoning %||% is_reasoning,
-            vision = old_caps$vision %||% is_vision,
-            audio_input = old_caps$audio_input %||% is_audio,
-            function_call = old_caps$function_call %||% NULL,
-            structured_output = old_caps$structured_output %||% NULL,
-            search = old_caps$search %||% NULL
-        )
-        # Remove NULL entries from capabilities
-        new_entry$capabilities <- Filter(Negate(is.null), new_entry$capabilities)
+        # Preserve existing capabilities entirely if they exist
+        if (!is.null(old$capabilities)) {
+            new_entry$capabilities <- old$capabilities
+        }
 
         # Preserve enriched fields entirely if they exist
         if (!is.null(old$context)) new_entry$context <- old$context
@@ -136,9 +124,13 @@ update_provider_models <- function(provider) {
     json_data <- jsonlite::toJSON(models, auto_unbox = TRUE, pretty = TRUE)
     writeLines(json_data, file_path)
 
+    change_log <- sprintf(
+        "new: %d, removed: %d, preserved: %d",
+        length(new_ids), length(removed_ids), preserved_count
+    )
     message(sprintf(
-        "Updated %d models for '%s' -> %s (merged %d existing entries)",
-        length(models), provider, file_path, length(existing)
+        "Updated %d models for '%s' -> %s (change_log: %s)",
+        length(models), provider, file_path, change_log
     ))
     invisible(TRUE)
 }

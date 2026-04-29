@@ -6,9 +6,14 @@
     "family": "step-1",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
       "audio_input": false,
-      "function_call": true
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": false,
+      "web_search": false
     },
     "context": {
       "context_window": 32000,
@@ -16,9 +21,14 @@
       "max_output_tokens": 8000
     },
     "pricing": {
-      "input": 5.0,
-      "output": 15.0,
+      "input": 5,
+      "output": 15,
       "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -28,9 +38,14 @@
     "family": "step-1v",
     "capabilities": {
       "reasoning": false,
-      "vision": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
       "audio_input": false,
-      "function_call": true
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": false,
+      "web_search": false
     },
     "context": {
       "context_window": 32000,
@@ -38,9 +53,14 @@
       "max_output_tokens": 8000
     },
     "pricing": {
-      "input": 15.0,
-      "output": 45.0,
+      "input": 15,
+      "output": 45,
       "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -49,8 +69,19 @@
     "description": "Model: step-1-8k",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -59,8 +90,19 @@
     "description": "Model: step-1-256k",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -69,8 +111,19 @@
     "description": "Model: step-1v-8k",
     "capabilities": {
       "reasoning": false,
-      "vision": true,
-      "audio_input": false
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -79,8 +132,19 @@
     "description": "Model: step-2-16k",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -89,8 +153,19 @@
     "description": "Model: step-1x-medium",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -99,8 +174,19 @@
     "description": "Model: step-tts-mini",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -109,8 +195,19 @@
     "description": "Model: step-2-16k-202411",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -119,8 +216,19 @@
     "description": "Model: step-asr",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -129,8 +237,19 @@
     "description": "Model: step-1o-vision-32k",
     "capabilities": {
       "reasoning": false,
-      "vision": true,
-      "audio_input": false
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -139,8 +258,19 @@
     "description": "Model: step-2-mini",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -149,8 +279,19 @@
     "description": "Model: step-2-16k-exp",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -159,8 +300,19 @@
     "description": "Model: step-1o-turbo-vision",
     "capabilities": {
       "reasoning": false,
-      "vision": true,
-      "audio_input": false
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -169,8 +321,19 @@
     "description": "Model: step-1o-audio",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -179,8 +342,19 @@
     "description": "Model: step-r1-v-mini",
     "capabilities": {
       "reasoning": true,
-      "vision": true,
-      "audio_input": false
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -189,8 +363,19 @@
     "description": "Model: step-tts-vivid",
     "capabilities": {
       "reasoning": false,
-      "vision": true,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -199,8 +384,19 @@
     "description": "Model: step-1x-edit",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -209,8 +405,19 @@
     "description": "Model: step-1f-audio",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -219,8 +426,19 @@
     "description": "Model: step-2x-large",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -229,8 +447,19 @@
     "description": "Model: step-3",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -239,8 +468,19 @@
     "description": "Model: step-audio-2",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -249,8 +489,19 @@
     "description": "Model: step-audio-2-mini",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -259,8 +510,19 @@
     "description": "Model: step-audio-2-mini-think",
     "capabilities": {
       "reasoning": true,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -269,8 +531,19 @@
     "description": "Model: step-audio-2-think",
     "capabilities": {
       "reasoning": true,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -279,8 +552,19 @@
     "description": "Model: step-tts-2",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -289,8 +573,19 @@
     "description": "Model: dr-search-api",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -299,8 +594,19 @@
     "description": "Model: step-gui",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -309,8 +615,19 @@
     "description": "Model: step-3-agent-lite",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -319,8 +636,19 @@
     "description": "Model: step-audio-r1.1",
     "capabilities": {
       "reasoning": true,
-      "vision": false,
-      "audio_input": true
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -329,8 +657,19 @@
     "description": "Model: step-3.5-flash",
     "capabilities": {
       "reasoning": false,
-      "vision": false,
-      "audio_input": false
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   }
 ]

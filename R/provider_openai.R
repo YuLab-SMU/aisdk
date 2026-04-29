@@ -1611,6 +1611,8 @@ OpenAIProvider <- R6::R6Class(
 #' @description
 #' Factory function to create an OpenAI provider.
 #'
+#' @eval generate_model_docs("openai")
+#'
 #' @section Token Limit Parameters:
 #' The SDK provides a unified `max_tokens` parameter that automatically maps to the
 #' correct API field based on the model and API type:

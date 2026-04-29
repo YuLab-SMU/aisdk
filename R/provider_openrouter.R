@@ -106,16 +106,7 @@ OpenRouterProvider <- R6::R6Class(
 #' @description
 #' Factory function to create an OpenRouter provider.
 #'
-#' @section Supported Models:
-#' OpenRouter provides access to hundreds of models from many providers:
-#' \itemize{
-#'   \item \strong{OpenAI}: "openai/gpt-4o", "openai/o1"
-#'   \item \strong{Anthropic}: "anthropic/claude-sonnet-4-20250514"
-#'   \item \strong{Google}: "google/gemini-2.5-pro"
-#'   \item \strong{DeepSeek}: "deepseek/deepseek-r1", "deepseek/deepseek-chat-v3-0324"
-#'   \item \strong{Meta}: "meta-llama/llama-4-maverick"
-#'   \item And many more at https://openrouter.ai/models
-#' }
+#' @eval generate_model_docs("openrouter")
 #'
 #' @param api_key OpenRouter API key. Defaults to OPENROUTER_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://openrouter.ai/api/v1.

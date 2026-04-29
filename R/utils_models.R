@@ -88,8 +88,14 @@ list_models <- function(provider = NULL) {
                     family = .safe(m$family, NA_character_),
                     description = .safe(m$description, NA_character_),
                     reasoning = .safe(caps$reasoning, .safe(m$reasoning, FALSE)),
-                    vision = .safe(caps$vision, .safe(m$vision, FALSE)),
+                    vision_input = .safe(caps$vision_input, .safe(caps$vision, .safe(m$vision, FALSE))),
+                    image_output = .safe(caps$image_output, FALSE),
+                    image_edit = .safe(caps$image_edit, FALSE),
+                    audio_input = .safe(caps$audio_input, FALSE),
+                    audio_output = .safe(caps$audio_output, FALSE),
                     function_call = .safe(caps$function_call, NA),
+                    structured_output = .safe(caps$structured_output, FALSE),
+                    web_search = .safe(caps$web_search, FALSE),
                     context_window = .safe(ctx$context_window, NA_integer_),
                     max_output = .safe(ctx$max_output_tokens, NA_integer_),
                     input_price = .safe(price$input, NA_real_),
@@ -161,9 +167,13 @@ generate_model_docs <- function(provider, max_items = 15) {
         caps <- m$capabilities %||% list()
         tags <- c()
         if (isTRUE(caps$reasoning) || isTRUE(m$reasoning)) tags <- c(tags, "Reasoning")
-        if (isTRUE(caps$vision) || isTRUE(m$vision)) tags <- c(tags, "Vision")
+        if (isTRUE(caps$vision_input) || isTRUE(caps$vision) || isTRUE(m$vision)) tags <- c(tags, "Vision")
         if (isTRUE(caps$function_call)) tags <- c(tags, "Tools")
-        if (isTRUE(caps$audio_input)) tags <- c(tags, "Audio")
+        if (isTRUE(caps$audio_input) || isTRUE(caps$audio_output)) tags <- c(tags, "Audio")
+        if (isTRUE(caps$image_output)) tags <- c(tags, "Image-Out")
+        if (isTRUE(caps$image_edit)) tags <- c(tags, "Image-Edit")
+        if (isTRUE(caps$structured_output)) tags <- c(tags, "Structured")
+        if (isTRUE(caps$web_search)) tags <- c(tags, "Search")
 
         tag_str <- if (length(tags) > 0) sprintf(" (%s)", paste(tags, collapse = ", ")) else ""
 

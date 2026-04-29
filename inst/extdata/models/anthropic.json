@@ -1,0 +1,226 @@
+[
+  {
+    "id": "claude-opus-4-7",
+    "type": "language",
+    "family": "Claude-Opus-4",
+    "description": "Anthropic's most capable model for complex reasoning and coding.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 5,
+      "output": 25,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-opus-4-6",
+    "type": "language",
+    "family": "Claude-Opus-4",
+    "description": "Previous generation of Claude Opus with 1M context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 5,
+      "output": 25,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-opus-4-5",
+    "type": "language",
+    "family": "Claude-Opus-4",
+    "description": "Claude Opus 4.5 with 200K context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 5,
+      "output": 25,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-sonnet-4-6",
+    "type": "language",
+    "family": "Claude-Sonnet-4",
+    "description": "Balanced model for coding and agentic workflows with 1M context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 3,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-sonnet-4-5",
+    "type": "language",
+    "family": "Claude-Sonnet-4",
+    "description": "Claude Sonnet 4.5 with 200K context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 3,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-sonnet-4",
+    "type": "language",
+    "family": "Claude-Sonnet-4",
+    "description": "Original Claude Sonnet 4 with 200K context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 3,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "claude-haiku-4-5",
+    "type": "language",
+    "family": "Claude-Haiku-4",
+    "description": "Fast and cost-effective model for simple tasks and chatbots.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 1,
+      "output": 5,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified": "2026-04-29"
+    }
+  }
+]

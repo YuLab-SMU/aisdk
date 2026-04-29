@@ -40,14 +40,17 @@ Factory function to create an Alibaba Cloud Bailian provider using the DashScope
 }
 \section{Supported Models}{
 
-DashScope platform hosts Qwen series and other models:
 \itemize{
-\item \strong{qwen-plus}: Balanced performance model
-\item \strong{qwen-turbo}: Fast & cost-effective model
-\item \strong{qwen-max}: Most capable model
-\item \strong{qwq-32b}: Reasoning model with chain-of-thought
-\item \strong{qwen-vl-plus}: Vision-language model
-\item Other third-party models available on the platform
+\item \strong{qwen3.6-plus}: Latest Qwen flagship with 1M context. Strong reasoning and multimodal capabilities. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{qwen3.5-plus}: Balanced model with excellent reasoning at ultra-low cost. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{qwen-plus}: Most popular general-purpose model. Good balance of capability and cost. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{qwen-max}: Previous generation premium model for complex reasoning and analysis. (Reasoning, Vision, Tools, Structured) | ctx: 128k
+\item \strong{qwen-turbo}: Fast and cost-efficient model for high-volume simple tasks. (Vision, Tools, Structured) | ctx: 128k
+\item \strong{qwen-coder-plus}: Coding specialist optimized for agentic software engineering. (Reasoning, Tools, Structured) | ctx: 128k
+\item \strong{qwq-32b}: 32B parameter reasoning model with strong math and logic capabilities. (Reasoning, Tools, Structured) | ctx: 128k
+\item \strong{qwen-vl-plus}: Vision-language model for image understanding and visual reasoning. (Vision, Tools, Structured) | ctx: 32k
+\item \strong{qwen3.5-omni-plus}: Multimodal model supporting text, image, video, and audio input. (Reasoning, Vision, Tools, Audio, Structured) | ctx: 32k
+\item \strong{text-embedding-v3}: Text embedding model for similarity search and retrieval. | ctx: 8k
 }
 }
 

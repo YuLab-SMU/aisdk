@@ -41,6 +41,20 @@ A GeminiProvider object.
 \description{
 Factory function to create a Gemini provider.
 }
+\section{Supported Models}{
+
+\itemize{
+\item \strong{gemini-3.1-pro}: Google's most capable multimodal model with 1M context and advanced reasoning. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-3.1-pro-preview}: Preview release of Gemini 3.1 Pro with 1M context. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-3.1-flash-lite-preview}: Ultra-fast and cost-efficient variant of Gemini 3.1. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-2.5-pro}: Mature flagship model with tiered pricing based on context length. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-2.5-flash}: Fast multimodal model with 1M context and native audio support. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-2.5-flash-lite}: Most cost-efficient Gemini model for high-volume tasks. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-2.5-flash-native-audio}: Gemini 2.5 Flash with native audio input and output. (Reasoning, Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+\item \strong{gemini-2.0-flash}: Previous generation fast model, still widely used. (Vision, Tools, Audio, Structured, Search) | ctx: 1000k
+}
+}
+
 \examples{
 \donttest{
 if (interactive()) {

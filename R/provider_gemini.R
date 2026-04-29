@@ -632,6 +632,9 @@ GeminiProvider <- R6::R6Class(
 #' @title Create Gemini Provider
 #' @description
 #' Factory function to create a Gemini provider.
+#'
+#' @eval generate_model_docs("gemini")
+#'
 #' @param api_key Gemini API key. Defaults to GEMINI_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://generativelanguage.googleapis.com/v1beta/models.
 #' @param headers Optional additional headers.

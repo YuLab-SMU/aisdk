@@ -93,16 +93,7 @@ BailianProvider <- R6::R6Class(
 #' @description
 #' Factory function to create an Alibaba Cloud Bailian provider using the DashScope API.
 #'
-#' @section Supported Models:
-#' DashScope platform hosts Qwen series and other models:
-#' \itemize{
-#'   \item \strong{qwen-plus}: Balanced performance model
-#'   \item \strong{qwen-turbo}: Fast & cost-effective model
-#'   \item \strong{qwen-max}: Most capable model
-#'   \item \strong{qwq-32b}: Reasoning model with chain-of-thought
-#'   \item \strong{qwen-vl-plus}: Vision-language model
-#'   \item Other third-party models available on the platform
-#' }
+#' @eval generate_model_docs("bailian")
 #'
 #' @param api_key DashScope API key. Defaults to DASHSCOPE_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://dashscope.aliyuncs.com/compatible-mode/v1.

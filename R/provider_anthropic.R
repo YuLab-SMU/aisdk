@@ -559,6 +559,9 @@ AnthropicProvider <- R6::R6Class(
 #' @title Create Anthropic Provider
 #' @description
 #' Factory function to create an Anthropic provider.
+#'
+#' @eval generate_model_docs("anthropic")
+#'
 #' @param api_key Anthropic API key. Defaults to ANTHROPIC_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://api.anthropic.com/v1.
 #' @param api_version Anthropic API version header. Defaults to "2023-06-01".

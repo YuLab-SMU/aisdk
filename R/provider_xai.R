@@ -261,10 +261,7 @@ XAIProvider <- R6::R6Class(
 #' @description
 #' Factory function to create an xAI provider.
 #'
-#' xAI provides Grok models:
-#' \itemize{
-#'   \item \strong{Grok}: "grok-3", "grok-4", "grok-beta", "grok-2-1212", etc.
-#' }
+#' @eval generate_model_docs("xai")
 #'
 #' @param api_key xAI API key. Defaults to XAI_API_KEY env var.
 #' @param base_url Base URL for API calls. Defaults to https://api.x.ai/v1.

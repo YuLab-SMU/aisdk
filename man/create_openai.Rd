@@ -50,6 +50,28 @@ An OpenAIProvider object.
 \description{
 Factory function to create an OpenAI provider.
 }
+\section{Supported Models}{
+
+\itemize{
+\item \strong{gpt-5.5}: OpenAI's latest flagship (April 2026). First full retrain since GPT-4.5. Agentic coding, 1M context, computer use. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-5.5-pro}: Research-grade variant of GPT-5.5 with maximum accuracy. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-5.4}: Previous flagship (March 2026). Codex genes, native Computer Use, Tool Search. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-5.4-mini}: Faster GPT-5.4 variant optimized for coding, computer use, and subagents. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-5.4-nano}: Smallest and cheapest GPT-5.4 for lightweight tasks. (Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-5.3-codex}: Agentic coding specialist. Terminal-Bench 77.3\%. General tasks supported. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{gpt-4.1}: Production workhorse with 1M token context window. (Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-4.1-mini}: Long-context budget model with 1M token window. (Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-4.1-nano}: Ultra-low-cost model for classification, routing, and simple tasks. (Vision, Tools, Structured) | ctx: 1000k
+\item \strong{gpt-4o}: Legacy flagship multimodal model with wide ecosystem support. (Vision, Tools, Structured) | ctx: 128k
+\item \strong{gpt-4o-mini}: Budget-friendly general-purpose model. (Vision, Tools, Structured) | ctx: 128k
+\item \strong{o3}: Advanced reasoning model for multi-step problem solving. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{o4-mini}: Budget reasoning model for math, logic, and code review. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{o3-mini}: Lightweight reasoning model for moderate reasoning tasks. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{o1}: Premium reasoning model for research-grade problem solving. (Reasoning, Vision, Structured) | ctx: 200k
+\item \emph{... and 2 more models. Use \code{list_models("openai")} to see all.}
+}
+}
+
 \section{Token Limit Parameters}{
 
 The SDK provides a unified \code{max_tokens} parameter that automatically maps to the

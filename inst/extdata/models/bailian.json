@@ -1,0 +1,322 @@
+[
+  {
+    "id": "qwen3.6-plus",
+    "type": "language",
+    "family": "Qwen3.6",
+    "description": "Latest Qwen flagship with 1M context. Strong reasoning and multimodal capabilities.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 2,
+      "output": 12,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen3.5-plus",
+    "type": "language",
+    "family": "Qwen3.5",
+    "description": "Balanced model with excellent reasoning at ultra-low cost.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 4.8,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen-plus",
+    "type": "language",
+    "family": "Qwen",
+    "description": "Most popular general-purpose model. Good balance of capability and cost.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1000000,
+      "max_input_tokens": 1000000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen-max",
+    "type": "language",
+    "family": "Qwen",
+    "description": "Previous generation premium model for complex reasoning and analysis.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 2.4,
+      "output": 7.2,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen-turbo",
+    "type": "language",
+    "family": "Qwen",
+    "description": "Fast and cost-efficient model for high-volume simple tasks.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.3,
+      "output": 0.6,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen-coder-plus",
+    "type": "language",
+    "family": "Qwen-Coder",
+    "description": "Coding specialist optimized for agentic software engineering.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.12,
+      "output": 0.75,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwq-32b",
+    "type": "language",
+    "family": "Qwen-Reasoning",
+    "description": "32B parameter reasoning model with strong math and logic capabilities.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.8,
+      "output": 2,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen-vl-plus",
+    "type": "language",
+    "family": "Qwen-VL",
+    "description": "Vision-language model for image understanding and visual reasoning.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 4096
+    },
+    "pricing": {
+      "input": 0.216,
+      "output": 0.646,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "qwen3.5-omni-plus",
+    "type": "language",
+    "family": "Qwen-Omni",
+    "description": "Multimodal model supporting text, image, video, and audio input.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": true,
+      "audio_output": true,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 32000,
+      "max_input_tokens": 32000,
+      "max_output_tokens": 4096
+    },
+    "pricing": {
+      "input": 7,
+      "output": 40,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "text-embedding-v3",
+    "type": "embedding",
+    "family": "Qwen-Embedding",
+    "description": "Text embedding model for similarity search and retrieval.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 8192,
+      "max_input_tokens": 8192,
+      "max_output_tokens": 1
+    },
+    "pricing": {
+      "input": 0.1,
+      "output": 0,
+      "unit": "CNY/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+      "last_verified": "2026-04-29"
+    }
+  }
+]

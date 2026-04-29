@@ -44,6 +44,19 @@ An AnthropicProvider object.
 \description{
 Factory function to create an Anthropic provider.
 }
+\section{Supported Models}{
+
+\itemize{
+\item \strong{claude-opus-4-7}: Anthropic's most capable model for complex reasoning and coding. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{claude-opus-4-6}: Previous generation of Claude Opus with 1M context. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{claude-opus-4-5}: Claude Opus 4.5 with 200K context. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{claude-sonnet-4-6}: Balanced model for coding and agentic workflows with 1M context. (Reasoning, Vision, Tools, Structured) | ctx: 1000k
+\item \strong{claude-sonnet-4-5}: Claude Sonnet 4.5 with 200K context. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{claude-sonnet-4}: Original Claude Sonnet 4 with 200K context. (Reasoning, Vision, Tools, Structured) | ctx: 200k
+\item \strong{claude-haiku-4-5}: Fast and cost-effective model for simple tasks and chatbots. (Vision, Tools, Structured) | ctx: 200k
+}
+}
+
 \examples{
 \donttest{
 if (interactive()) {

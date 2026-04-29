@@ -6,10 +6,14 @@
     "family": "DeepSeek-V4",
     "capabilities": {
       "reasoning": true,
-      "vision": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
       "audio_input": false,
+      "audio_output": false,
       "function_call": true,
-      "structured_output": true
+      "structured_output": true,
+      "web_search": false
     },
     "context": {
       "context_window": 1000000,
@@ -21,6 +25,11 @@
       "input": 0.14,
       "output": 0.28,
       "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   },
   {
@@ -30,10 +39,14 @@
     "family": "DeepSeek-V4",
     "capabilities": {
       "reasoning": true,
-      "vision": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
       "audio_input": false,
+      "audio_output": false,
       "function_call": true,
-      "structured_output": true
+      "structured_output": true,
+      "web_search": false
     },
     "context": {
       "context_window": 1000000,
@@ -45,6 +58,11 @@
       "input": 1.74,
       "output": 3.48,
       "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": null,
+      "last_verified": "2026-04-29"
     }
   }
 ]

@@ -1,0 +1,162 @@
+[
+  {
+    "id": "grok-4",
+    "type": "language",
+    "family": "Grok-4",
+    "description": "xAI frontier model with always-on reasoning and multi-agent architecture.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": true
+    },
+    "context": {
+      "context_window": 256000,
+      "max_input_tokens": 256000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 3,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.x.ai/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "grok-4.1-fast",
+    "type": "language",
+    "family": "Grok-4.1",
+    "description": "High-throughput production model with 2M context. Best default for most workloads.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": true
+    },
+    "context": {
+      "context_window": 2000000,
+      "max_input_tokens": 2000000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.2,
+      "output": 0.5,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.x.ai/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "grok-3",
+    "type": "language",
+    "family": "Grok-3",
+    "description": "Legacy enterprise-grade model optimized for data extraction and summarization.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": true
+    },
+    "context": {
+      "context_window": 131072,
+      "max_input_tokens": 131072,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 3,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.x.ai/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "grok-3-mini",
+    "type": "language",
+    "family": "Grok-3",
+    "description": "Lightweight low-latency option with reasoning capabilities.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": true
+    },
+    "context": {
+      "context_window": 131072,
+      "max_input_tokens": 131072,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 0.3,
+      "output": 0.5,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.x.ai/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "grok-2-image",
+    "type": "image",
+    "family": "Grok-2",
+    "description": "Image generation model via xAI API.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": true,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 32768,
+      "max_input_tokens": 32768,
+      "max_output_tokens": 8192
+    },
+    "pricing": {
+      "input": 2,
+      "output": 10,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://docs.x.ai/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  }
+]

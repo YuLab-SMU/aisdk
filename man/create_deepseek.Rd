@@ -37,7 +37,8 @@ A DeepSeekProvider object.
 }
 \description{
 Factory function to create a DeepSeek provider.
-
+}
+\details{
 DeepSeek supports classic aliases plus newer model families such as DeepSeek V4.
 
 Common model IDs include:
@@ -51,6 +52,14 @@ Additional DeepSeek-specific request fields such as \code{thinking},
 \code{thinking_budget}, and \code{reasoning_effort} are passed through when supplied
 to \verb{$generate()} or \verb{$stream()}.
 }
+\section{Supported Models}{
+
+\itemize{
+\item \strong{deepseek-v4-flash}: DeepSeek V4 Flash hybrid-thinking model (Reasoning, Tools, Structured) | ctx: 1000k
+\item \strong{deepseek-v4-pro}: DeepSeek V4 Pro hybrid-thinking model (Reasoning, Tools, Structured) | ctx: 1000k
+}
+}
+
 \examples{
 \donttest{
 if (interactive()) {
