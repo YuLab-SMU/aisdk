@@ -390,10 +390,17 @@ create_console_tools <- function(working_dir = tempdir(),
         )
     }
 
-    resolve_console_vision_model_id <- function(envir, explicit_model = NULL) {
+    resolve_console_vision_model <- function(envir, explicit_model = NULL) {
         explicit_model <- explicit_model %||% ""
         if (nzchar(explicit_model)) {
             return(explicit_model)
+        }
+
+        envir_routes <- normalize_capability_model_routes(envir$.capability_models %||% list())
+        routed <- envir_routes[["vision.inspect"]]$model %||%
+            get_capability_model("vision.inspect", default = NULL)
+        if (!is.null(routed)) {
+            return(routed)
         }
 
         current <- envir$.session_model_id %||% ""
@@ -409,7 +416,8 @@ create_console_tools <- function(working_dir = tempdir(),
         "openai:gpt-4o"
     }
 
-    console_vision_unavailable_message <- function(model_id) {
+    console_vision_unavailable_message <- function(model) {
+        model_id <- capability_model_label(model)
         paste(
             "The selected language model",
             paste0("`", model_id, "`"),
@@ -419,11 +427,19 @@ create_console_tools <- function(working_dir = tempdir(),
         )
     }
 
-    resolve_console_image_model_id <- function(envir, explicit_model = NULL, purpose = c("generate", "edit")) {
+    resolve_console_image_model <- function(envir, explicit_model = NULL, purpose = c("generate", "edit")) {
         purpose <- match.arg(purpose)
         explicit_model <- explicit_model %||% ""
         if (nzchar(explicit_model)) {
             return(explicit_model)
+        }
+
+        capability <- if (purpose == "edit") "image.edit" else "image.generate"
+        envir_routes <- normalize_capability_model_routes(envir$.capability_models %||% list())
+        routed <- envir_routes[[capability]]$model %||%
+            get_capability_model(capability, default = NULL)
+        if (!is.null(routed)) {
+            return(routed)
         }
 
         opt_name <- if (purpose == "edit") "aisdk.console_image_edit_model" else "aisdk.console_image_model"
@@ -868,9 +884,10 @@ create_console_tools <- function(working_dir = tempdir(),
                 .required = c("task")
             ),
             execute = function(args) {
-                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
-                if (model_capability_explicitly_unavailable(model_id, "vision_input")) {
-                    return(console_vision_unavailable_message(model_id))
+                model_ref <- resolve_console_vision_model(args$.envir, explicit_model = args$model %||% NULL)
+                model_label <- capability_model_label(model_ref)
+                if (model_ref_capability_explicitly_unavailable(model_ref, "vision_input")) {
+                    return(console_vision_unavailable_message(model_ref))
                 }
 
                 resolved <- resolve_console_image_inputs(
@@ -891,13 +908,13 @@ create_console_tools <- function(working_dir = tempdir(),
                 image_paths <- unlist(resolved$paths %||% list(), use.names = FALSE)
                 result <- if (length(image_paths) <= 1) {
                     analyze_image(
-                        model = model_id,
+                        model = model_ref,
                         image = image_paths[[1]],
                         prompt = args$task
                     )
                 } else {
                     generate_text(
-                        model = model_id,
+                        model = model_ref,
                         prompt = list(list(
                             role = "user",
                             content = c(
@@ -912,7 +929,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     args$.envir,
                     artifacts = lapply(image_paths, function(p) list(path = p)),
                     kind = "analysis_input",
-                    model_id = model_id,
+                    model_id = model_label,
                     prompt = args$task,
                     source_path = paste(image_paths, collapse = ", ")
                 )
@@ -920,14 +937,17 @@ create_console_tools <- function(working_dir = tempdir(),
                 annotate_console_tool_text(
                     result$text %||% "Image analysis completed.",
                     messages = c(
-                        paste("Vision model:", model_id),
+                        paste("Vision model:", model_label),
                         paste("Images:", paste(image_paths, collapse = ", ")),
                         paste("Selection strategy:", resolved$strategy %||% "unknown")
                     )
                 )
             },
             layer = "computer",
-            meta = list(required_model_capabilities = c("vision_input"))
+            meta = list(
+                required_model_capabilities = c("vision_input"),
+                model_capability_route = "vision.inspect"
+            )
         ),
 
         tool(
@@ -948,9 +968,10 @@ create_console_tools <- function(working_dir = tempdir(),
                 .required = c("task")
             ),
             execute = function(args) {
-                model_id <- resolve_console_vision_model_id(args$.envir, explicit_model = args$model %||% NULL)
-                if (model_capability_explicitly_unavailable(model_id, "vision_input")) {
-                    return(console_vision_unavailable_message(model_id))
+                model_ref <- resolve_console_vision_model(args$.envir, explicit_model = args$model %||% NULL)
+                model_label <- capability_model_label(model_ref)
+                if (model_ref_capability_explicitly_unavailable(model_ref, "vision_input")) {
+                    return(console_vision_unavailable_message(model_ref))
                 }
 
                 resolved <- resolve_console_image_inputs(
@@ -973,7 +994,7 @@ create_console_tools <- function(working_dir = tempdir(),
                 result <- if (!is.null(args$schema_json) && nzchar(args$schema_json) && length(image_paths) == 1) {
                     parsed_schema <- jsonlite::fromJSON(args$schema_json, simplifyVector = FALSE)
                     generate_text(
-                        model = model_id,
+                        model = model_ref,
                         prompt = list(list(
                             role = "user",
                             content = list(
@@ -987,7 +1008,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     parsed_schema <- jsonlite::fromJSON(args$schema_json, simplifyVector = FALSE)
                     objects <- lapply(image_paths, function(p) {
                         generate_text(
-                            model = model_id,
+                            model = model_ref,
                             prompt = list(list(
                                 role = "user",
                                 content = list(
@@ -1002,7 +1023,7 @@ create_console_tools <- function(working_dir = tempdir(),
                 } else {
                     if (length(image_paths) == 1) {
                         analyze_image(
-                            model = model_id,
+                            model = model_ref,
                             image = image_paths[[1]],
                             prompt = paste(
                                 args$task,
@@ -1012,7 +1033,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     } else {
                         responses <- lapply(image_paths, function(p) {
                             analyze_image(
-                                model = model_id,
+                                model = model_ref,
                                 image = p,
                                 prompt = paste(
                                     args$task,
@@ -1028,7 +1049,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     args$.envir,
                     artifacts = lapply(image_paths, function(p) list(path = p)),
                     kind = "extraction_input",
-                    model_id = model_id,
+                    model_id = model_label,
                     prompt = args$task,
                     source_path = paste(image_paths, collapse = ", ")
                 )
@@ -1042,14 +1063,17 @@ create_console_tools <- function(working_dir = tempdir(),
                 annotate_console_tool_text(
                     out,
                     messages = c(
-                        paste("Vision model:", model_id),
+                        paste("Vision model:", model_label),
                         paste("Images:", paste(image_paths, collapse = ", ")),
                         paste("Selection strategy:", resolved$strategy %||% "unknown")
                     )
                 )
             },
             layer = "computer",
-            meta = list(required_model_capabilities = c("vision_input"))
+            meta = list(
+                required_model_capabilities = c("vision_input"),
+                model_capability_route = "vision.inspect"
+            )
         ),
 
         tool(
@@ -1065,10 +1089,11 @@ create_console_tools <- function(working_dir = tempdir(),
                 output_dir = z_string("Optional output directory", nullable = TRUE)
             ),
             execute = function(args) {
-                model_id <- resolve_console_image_model_id(args$.envir, explicit_model = args$model %||% NULL, purpose = "generate")
+                model_ref <- resolve_console_image_model(args$.envir, explicit_model = args$model %||% NULL, purpose = "generate")
+                model_label <- capability_model_label(model_ref)
                 output_dir <- args$output_dir %||% tempdir()
                 result <- generate_image(
-                    model = model_id,
+                    model = model_ref,
                     prompt = args$prompt,
                     output_dir = output_dir
                 )
@@ -1077,7 +1102,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     args$.envir,
                     artifacts = result$images,
                     kind = "generated",
-                    model_id = model_id,
+                    model_id = model_label,
                     prompt = args$prompt
                 )
 
@@ -1088,7 +1113,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     paths
                 ), collapse = "\n"),
                 messages = c(
-                    paste("Image model:", model_id),
+                    paste("Image model:", model_label),
                     if (length(paths) > 0) paste("Artifacts:", paste(paths, collapse = ", ")) else character(0)
                 ))
             },
@@ -1132,10 +1157,11 @@ create_console_tools <- function(working_dir = tempdir(),
                     mask_path <- NULL
                 }
 
-                model_id <- resolve_console_image_model_id(args$.envir, explicit_model = args$model %||% NULL, purpose = "edit")
+                model_ref <- resolve_console_image_model(args$.envir, explicit_model = args$model %||% NULL, purpose = "edit")
+                model_label <- capability_model_label(model_ref)
                 output_dir <- args$output_dir %||% tempdir()
                 result <- edit_image(
-                    model = model_id,
+                    model = model_ref,
                     image = source_path,
                     prompt = args$prompt,
                     mask = mask_path,
@@ -1146,7 +1172,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     args$.envir,
                     artifacts = result$images,
                     kind = "edited",
-                    model_id = model_id,
+                    model_id = model_label,
                     prompt = args$prompt,
                     source_path = source_path
                 )
@@ -1159,7 +1185,7 @@ create_console_tools <- function(working_dir = tempdir(),
                     paths
                 ), collapse = "\n"),
                 messages = c(
-                    paste("Image model:", model_id),
+                    paste("Image model:", model_label),
                     paste("Source image:", source_path),
                     paste("Selection strategy:", resolved$strategy %||% "unknown"),
                     if (length(paths) > 0) paste("Artifacts:", paste(paths, collapse = ", ")) else character(0)

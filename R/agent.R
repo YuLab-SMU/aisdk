@@ -38,6 +38,9 @@ Agent <- R6::R6Class(
     #' @field model Default model ID for this agent.
     model = NULL,
 
+    #' @field capability_models Optional capability-specific model routes.
+    capability_models = NULL,
+
     #' @description Initialize a new Agent.
     #' @param name Unique name for this agent (e.g., "DataCleaner", "Visualizer").
     #' @param description A clear description of what this agent does.
@@ -47,13 +50,15 @@ Agent <- R6::R6Class(
     #' @param skills Optional character vector of skill paths or "auto" to discover skills.
     #'   When provided, this automatically loads skills, creates tools, and updates the system prompt.
     #' @param model Optional default model ID for this agent.
+    #' @param capability_models Optional named list of capability-specific model routes.
     #' @return An Agent object.
     initialize = function(name,
                           description,
                           system_prompt = NULL,
                           tools = NULL,
                           skills = NULL,
-                          model = NULL) {
+                          model = NULL,
+                          capability_models = NULL) {
       if (missing(name) || !is.character(name) || nchar(name) == 0) {
         rlang::abort("Agent 'name' is required and must be a non-empty string.")
       }
@@ -64,55 +69,24 @@ Agent <- R6::R6Class(
       self$name <- name
       self$description <- description
       self$model <- model
+      self$capability_models <- normalize_capability_model_routes(capability_models %||% list())
 
       # Handle skills
       skill_prompt <- NULL
       skill_tools <- list()
 
       if (!is.null(skills)) {
-        # Resolve skill paths
-        if (identical(skills, "auto")) {
-          # Check standard locations
-          candidates <- c(
-            file.path(Sys.getenv("HOME"), "aisdk", "skills"),
-            file.path(getwd(), "aisdk", "skills"),
-            file.path(getwd(), "skills"),
-            file.path(getwd(), "inst", "skills"),
-            system.file("skills", package = "aisdk")
-          )
-          # Remove duplicates and empty strings
-          candidates <- unique(candidates[nzchar(candidates)])
-          skills <- candidates[dir.exists(candidates)]
+        registry <- coerce_skill_registry(skills, recursive = TRUE, project_dir = getwd())
 
-          if (length(skills) == 0 && identical(skills, "auto")) {
-            # Non-blocking: only warn if explicitly requested but not found
-            # warning("skills='auto' specified but no skill directories found.")
-          }
+        if (registry$count() > 0) {
+          # Generate prompt section
+          skill_prompt <- registry$generate_prompt_section()
         }
 
-        # Load skills from paths
-        if (length(skills) > 0) {
-          # Create a merged registry for all paths
-          registry <- SkillRegistry$new()
-          for (path in skills) {
-            tryCatch(
-              {
-                registry$scan_skills(path, recursive = TRUE)
-              },
-              error = function(e) {
-                warning(paste("Failed to scan skills at", path, ":", conditionMessage(e)))
-              }
-            )
-          }
-
-          if (registry$count() > 0) {
-            # Generate prompt section
-            skill_prompt <- registry$generate_prompt_section()
-
-            # Create tools
-            skill_tools <- create_skill_tools(registry)
-            self$skill_registry <- registry
-          }
+        if (registry$count() > 0 || nrow(registry$list_roots()) > 0) {
+          # Create tools
+          skill_tools <- create_skill_tools(registry)
+          self$skill_registry <- registry
         }
       }
 
@@ -369,6 +343,7 @@ Agent <- R6::R6Class(
 #' @param tools Optional list of Tool objects the agent can use.
 #' @param skills Optional character vector of skill paths or "auto".
 #' @param model Optional default model ID for this agent.
+#' @param capability_models Optional named list of capability-specific model routes.
 #' @return An Agent object.
 #' @export
 #' @examples
@@ -392,14 +367,21 @@ Agent <- R6::R6Class(
 #'   )
 #' }
 #' }
-create_agent <- function(name, description, system_prompt = NULL, tools = NULL, skills = NULL, model = NULL) {
+create_agent <- function(name,
+                         description,
+                         system_prompt = NULL,
+                         tools = NULL,
+                         skills = NULL,
+                         model = NULL,
+                         capability_models = NULL) {
   Agent$new(
     name = name,
     description = description,
     system_prompt = system_prompt,
     tools = tools,
     skills = skills,
-    model = model
+    model = model,
+    capability_models = capability_models
   )
 }
 

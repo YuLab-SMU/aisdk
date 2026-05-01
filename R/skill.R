@@ -571,6 +571,58 @@ create_skill_tools <- function(registry) {
           paste0("Available scripts: ", paste(scripts, collapse = ", "))
         }
       }
+    ),
+
+    # Tool 4: List currently available skills
+    tool(
+      name = "list_available_skills",
+      description = "List currently available skills from the live skill registry.",
+      parameters = z_empty_object(),
+      execute = function(args) {
+        skills <- registry$list_skills()
+        if (nrow(skills) == 0) {
+          return("No skills are currently available.")
+        }
+
+        lines <- c("Available skills:")
+        for (i in seq_len(nrow(skills))) {
+          extras <- character(0)
+          if (nzchar(skills$aliases[[i]] %||% "")) {
+            extras <- c(extras, paste0("aliases=", skills$aliases[[i]]))
+          }
+          if (nzchar(skills$path[[i]] %||% "")) {
+            extras <- c(extras, paste0("path=", skills$path[[i]]))
+          }
+          suffix <- if (length(extras) > 0) paste0(" [", paste(extras, collapse = "; "), "]") else ""
+          lines <- c(lines, paste0("- ", skills$name[[i]], ": ", skills$description[[i]], suffix))
+        }
+        paste(lines, collapse = "\n")
+      }
+    ),
+
+    # Tool 5: Refresh registry from disk
+    tool(
+      name = "reload_skills",
+      description = "Reload skill metadata from remembered skill roots so newly added or edited skills become available.",
+      parameters = z_empty_object(),
+      execute = function(args) {
+        roots <- registry$list_roots()
+        if (nrow(roots) == 0) {
+          return("No skill roots are remembered for this registry. Recreate the agent with skills='auto' or an explicit skill path.")
+        }
+
+        before <- registry$count()
+        registry$refresh(clear = TRUE)
+        after <- registry$count()
+        root_lines <- paste0("- ", roots$path, ifelse(roots$recursive, " (recursive)", ""))
+        skill_names <- registry$list_skills()$name
+        paste(c(
+          sprintf("Reloaded skills: %d -> %d.", before, after),
+          "Skill roots:",
+          root_lines,
+          if (length(skill_names) > 0) c("Current skills:", paste0("- ", skill_names)) else "Current skills: none"
+        ), collapse = "\n")
+      }
     )
   )
 }

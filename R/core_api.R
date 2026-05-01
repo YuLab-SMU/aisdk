@@ -152,14 +152,7 @@ generate_text <- function(model = NULL,
   # Handle skills parameter
   skill_registry <- NULL
   if (!is.null(skills)) {
-    if (is.character(skills)) {
-      # skills is a path, scan for skills
-      skill_registry <- create_skill_registry(skills)
-    } else if (inherits(skills, "SkillRegistry")) {
-      skill_registry <- skills
-    } else {
-      rlang::abort("skills must be a path string or SkillRegistry object.")
-    }
+    skill_registry <- coerce_skill_registry(skills, recursive = TRUE, project_dir = getwd())
 
     # Inject skill summaries into system prompt
     skill_prompt <- skill_registry$generate_prompt_section()
@@ -172,7 +165,7 @@ generate_text <- function(model = NULL,
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
 
-  tools <- filter_tools_for_model_capabilities(tools, model)
+  tools <- filter_tools_for_model_capabilities(tools, model, session = session)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -460,14 +453,7 @@ stream_text <- function(model = NULL,
   # Handle skills parameter
   skill_registry <- NULL
   if (!is.null(skills)) {
-    if (is.character(skills)) {
-      # skills is a path, scan for skills
-      skill_registry <- create_skill_registry(skills)
-    } else if (inherits(skills, "SkillRegistry")) {
-      skill_registry <- skills
-    } else {
-      rlang::abort("skills must be a path string or SkillRegistry object.")
-    }
+    skill_registry <- coerce_skill_registry(skills, recursive = TRUE, project_dir = getwd())
 
     # Inject skill summaries into system prompt
     skill_prompt <- skill_registry$generate_prompt_section()
@@ -480,7 +466,7 @@ stream_text <- function(model = NULL,
     tools <- if (is.null(tools)) skill_tools else c(tools, skill_tools)
   }
 
-  tools <- filter_tools_for_model_capabilities(tools, model)
+  tools <- filter_tools_for_model_capabilities(tools, model, session = session)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -892,7 +878,48 @@ tool_required_model_capabilities <- function(tool_obj) {
 }
 
 #' @keywords internal
-filter_tools_for_model_capabilities <- function(tools, model) {
+tool_model_capability_route <- function(tool_obj) {
+  if (is.null(tool_obj) || is.null(tool_obj$meta) || !is.list(tool_obj$meta)) {
+    return(NULL)
+  }
+
+  route <- tool_obj$meta$model_capability_route %||%
+    tool_obj$meta$capability_model_route %||%
+    tool_obj$meta$model_route %||%
+    NULL
+
+  if (is.null(route) || !is.character(route) || length(route) != 1 || !nzchar(trimws(route))) {
+    return(NULL)
+  }
+  normalize_capability_name(route)
+}
+
+#' @keywords internal
+tool_has_compatible_capability_route <- function(tool_obj, required_model_capabilities, session = NULL) {
+  route <- tool_model_capability_route(tool_obj)
+  if (is.null(route)) {
+    return(FALSE)
+  }
+
+  selected <- select_model_ref_for_capability(
+    capability = route,
+    session = session,
+    fallback_model = NULL,
+    default_model = NULL
+  )
+  if (is.null(selected$model)) {
+    return(FALSE)
+  }
+
+  !any(vapply(
+    required_model_capabilities,
+    function(capability) model_ref_capability_explicitly_unavailable(selected$model, capability),
+    logical(1)
+  ))
+}
+
+#' @keywords internal
+filter_tools_for_model_capabilities <- function(tools, model, session = NULL) {
   if (is.null(tools) || length(tools) == 0) {
     return(tools)
   }
@@ -903,11 +930,17 @@ filter_tools_for_model_capabilities <- function(tools, model) {
       return(TRUE)
     }
 
-    !any(vapply(
+    unavailable <- vapply(
       req,
       function(capability) model_capability_explicitly_unavailable(model, capability),
       logical(1)
-    ))
+    )
+
+    if (!any(unavailable)) {
+      return(TRUE)
+    }
+
+    tool_has_compatible_capability_route(tool_obj, req, session = session)
   }, tools)
 
   if (length(filtered) == 0) {

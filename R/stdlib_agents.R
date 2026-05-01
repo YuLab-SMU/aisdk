@@ -973,21 +973,7 @@ if (!exists("%||%")) {
 create_skill_architect_agent <- function(name = "SkillArchitect", registry = NULL, model = NULL) {
   # Initialize registry if not provided
   if (is.null(registry)) {
-    # Check standard locations (same as Agent auto-discovery)
-    candidates <- c(
-      file.path(Sys.getenv("HOME"), "aisdk", "skills"),
-      file.path(getwd(), "aisdk", "skills"),
-      file.path(getwd(), "skills"),
-      file.path(getwd(), "inst", "skills"),
-      system.file("skills", package = "aisdk")
-    )
-    candidates <- unique(candidates[nzchar(candidates)])
-    skills_paths <- candidates[dir.exists(candidates)]
-
-    registry <- SkillRegistry$new()
-    for (p in skills_paths) {
-      registry$scan_skills(p)
-    }
+    registry <- create_auto_skill_registry(project_dir = getwd(), recursive = TRUE)
   }
 
   # Ensure the skill-creator skill is available

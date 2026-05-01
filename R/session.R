@@ -70,6 +70,13 @@ ChatSession <- R6::R6Class(
       # Multi-agent support: shared memory and environment
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
+      if (!is.null(agent) && inherits(agent, "Agent") && length(agent$capability_models %||% list()) > 0) {
+        private$.metadata$capability_models <- utils::modifyList(
+          agent$capability_models,
+          private$.metadata$capability_models %||% list(),
+          keep.null = TRUE
+        )
+      }
       if (is.null(model)) {
         private$.metadata <- utils::modifyList(
           model_runtime_session_metadata(get_default_model_runtime_options()),
@@ -81,6 +88,7 @@ ChatSession <- R6::R6Class(
         private$.metadata$context_state %||% NULL
       )
       private$.envir <- if (is.null(envir)) new.env(parent = globalenv()) else envir
+      assign(".capability_models", private$.metadata$capability_models %||% list(), envir = private$.envir)
       if (!exists(".semantic_adapter_registry", envir = private$.envir, inherits = FALSE)) {
         assign(
           ".semantic_adapter_registry",
@@ -344,6 +352,104 @@ ChatSession <- R6::R6Class(
       invisible(self)
     },
 
+    #' @description Set a model route for a session capability.
+    #' @param capability Capability route name, such as "vision.inspect".
+    #' @param model Model ID string or model object. Passing NULL clears the route.
+    #' @param type Model type: "auto", "language", "embedding", or "image".
+    #' @param required_model_capabilities Optional required model capability flags.
+    #' @return Invisible self for chaining.
+    set_capability_model = function(capability,
+                                    model,
+                                    type = "auto",
+                                    required_model_capabilities = NULL) {
+      capability <- normalize_capability_name(capability)
+      routes <- normalize_capability_model_routes(private$.metadata$capability_models %||% list())
+
+      if (missing(model)) {
+        rlang::abort("`model` is required.")
+      }
+      if (is.null(model)) {
+        routes[[capability]] <- NULL
+      } else {
+        routes[[capability]] <- create_capability_model_route(
+          model = model,
+          type = type,
+          required_model_capabilities = required_model_capabilities
+        )
+      }
+
+      private$.metadata$capability_models <- routes
+      if (!is.null(private$.envir) && is.environment(private$.envir)) {
+        assign(".capability_models", routes, envir = private$.envir)
+      }
+      invisible(self)
+    },
+
+    #' @description Get the configured model for a session capability.
+    #' @param capability Capability route name.
+    #' @param default Value returned when no route is configured.
+    #' @return A model ID string, model object, or default.
+    get_capability_model = function(capability, default = NULL) {
+      capability <- normalize_capability_name(capability)
+      routes <- normalize_capability_model_routes(private$.metadata$capability_models %||% list())
+      route <- routes[[capability]]
+      if (is.null(route)) {
+        return(default)
+      }
+      route$model %||% default
+    },
+
+    #' @description List session capability model routes.
+    #' @return A data frame of configured session routes.
+    list_capability_models = function() {
+      routes <- normalize_capability_model_routes(private$.metadata$capability_models %||% list())
+      if (length(routes) == 0) {
+        return(data.frame(
+          capability = character(0),
+          model = character(0),
+          type = character(0),
+          required_model_capabilities = character(0),
+          stringsAsFactors = FALSE
+        ))
+      }
+
+      data.frame(
+        capability = names(routes),
+        model = vapply(routes, function(route) capability_model_label(route$model), character(1)),
+        type = vapply(routes, function(route) route$type %||% "auto", character(1)),
+        required_model_capabilities = vapply(
+          routes,
+          function(route) paste(route$required_model_capabilities %||% character(0), collapse = ", "),
+          character(1)
+        ),
+        row.names = NULL,
+        stringsAsFactors = FALSE
+      )
+    },
+
+    #' @description Clear one or all session capability model routes.
+    #' @param capability Optional route name. If NULL, clears all routes.
+    #' @return Invisible self for chaining.
+    clear_capability_model = function(capability = NULL) {
+      if (is.null(capability)) {
+        private$.metadata$capability_models <- list()
+        if (!is.null(private$.envir) && is.environment(private$.envir)) {
+          assign(".capability_models", list(), envir = private$.envir)
+        }
+        return(invisible(self))
+      }
+
+      routes <- normalize_capability_model_routes(private$.metadata$capability_models %||% list())
+      for (name in as.character(capability)) {
+        routes[[normalize_capability_name(name)]] <- NULL
+      }
+      private$.metadata$capability_models <- routes
+      if (!is.null(private$.envir) && is.environment(private$.envir)) {
+        assign(".capability_models", routes, envir = private$.envir)
+      }
+      invisible(self)
+    },
+
     #' @description Get current model identifier.
     #' @return Model ID string.
     get_model_id = function() {
@@ -541,6 +647,11 @@ ChatSession <- R6::R6Class(
       }
       for (key in names(values)) {
         private$.metadata[[key]] <- values[[key]]
+      }
+      if ("capability_models" %in% names(values) &&
+          !is.null(private$.envir) &&
+          is.environment(private$.envir)) {
+        assign(".capability_models", private$.metadata$capability_models %||% list(), envir = private$.envir)
       }
       invisible(self)
     },

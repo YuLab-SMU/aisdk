@@ -134,6 +134,71 @@ test_that("generate_text hides tools that require unavailable model capabilities
   expect_true("echo" %in% tool_names)
 })
 
+test_that("generate_text keeps routed tools when a compatible capability model is configured", {
+  old_routes <- aisdk:::get_capability_model_routes()
+  withr::defer(aisdk:::store_capability_model_routes(old_routes))
+  clear_capability_model()
+  set_capability_model("vision.inspect", "openai:gpt-4o", type = "language")
+
+  vision_tool <- tool(
+    name = "inspect_image",
+    description = "Inspect image pixels",
+    parameters = z_object(path = z_string("Image path")),
+    execute = function(path) "inspected",
+    meta = list(
+      required_model_capabilities = c("vision_input"),
+      model_capability_route = "vision.inspect"
+    )
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(vision_input = FALSE)
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Hello",
+    tools = list(vision_tool)
+  )
+
+  tool_names <- vapply(mock_model$last_params$tools, function(t) t$name, character(1))
+  expect_equal(result$text, "Mock response")
+  expect_true("inspect_image" %in% tool_names)
+})
+
+test_that("generate_text keeps routed tools from session capability models", {
+  old_routes <- aisdk:::get_capability_model_routes()
+  withr::defer(aisdk:::store_capability_model_routes(old_routes))
+  clear_capability_model()
+
+  vision_tool <- tool(
+    name = "inspect_image",
+    description = "Inspect image pixels",
+    parameters = z_object(path = z_string("Image path")),
+    execute = function(path) "inspected",
+    meta = list(
+      required_model_capabilities = c("vision_input"),
+      model_capability_route = "vision.inspect"
+    )
+  )
+
+  session <- create_chat_session(model = "mock:chat")
+  session$set_capability_model("vision.inspect", "openai:gpt-4o", type = "language")
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(vision_input = FALSE)
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Hello",
+    tools = list(vision_tool),
+    session = session
+  )
+
+  tool_names <- vapply(mock_model$last_params$tools, function(t) t$name, character(1))
+  expect_equal(result$text, "Mock response")
+  expect_true("inspect_image" %in% tool_names)
+})
+
 # === Tests for ProviderRegistry ===
 
 test_that("ProviderRegistry registers and retrieves providers", {

@@ -22,6 +22,10 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_model_call_options}{\code{ChatSession$get_model_call_options()}}
 \item \href{#method-ChatSession-set_model_options}{\code{ChatSession$set_model_options()}}
 \item \href{#method-ChatSession-clear_model_options}{\code{ChatSession$clear_model_options()}}
+\item \href{#method-ChatSession-set_capability_model}{\code{ChatSession$set_capability_model()}}
+\item \href{#method-ChatSession-get_capability_model}{\code{ChatSession$get_capability_model()}}
+\item \href{#method-ChatSession-list_capability_models}{\code{ChatSession$list_capability_models()}}
+\item \href{#method-ChatSession-clear_capability_model}{\code{ChatSession$clear_capability_model()}}
 \item \href{#method-ChatSession-get_model_id}{\code{ChatSession$get_model_id()}}
 \item \href{#method-ChatSession-stats}{\code{ChatSession$stats()}}
 \item \href{#method-ChatSession-save}{\code{ChatSession$save()}}
@@ -311,6 +315,92 @@ Clear model runtime options for this session.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{keys}}{Optional option names to clear. If NULL, clears all.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_capability_model"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_capability_model}{}}}
+\subsection{Method \code{set_capability_model()}}{
+Set a model route for a session capability.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_capability_model(
+  capability,
+  model,
+  type = "auto",
+  required_model_capabilities = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{capability}}{Capability route name, such as "vision.inspect".}
+
+\item{\code{model}}{Model ID string or model object. Passing NULL clears the route.}
+
+\item{\code{type}}{Model type: "auto", "language", "embedding", or "image".}
+
+\item{\code{required_model_capabilities}}{Optional required model capability flags.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self for chaining.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_capability_model"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_capability_model}{}}}
+\subsection{Method \code{get_capability_model()}}{
+Get the configured model for a session capability.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_capability_model(capability, default = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{capability}}{Capability route name.}
+
+\item{\code{default}}{Value returned when no route is configured.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A model ID string, model object, or default.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-list_capability_models"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-list_capability_models}{}}}
+\subsection{Method \code{list_capability_models()}}{
+List session capability model routes.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$list_capability_models()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame of configured session routes.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-clear_capability_model"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-clear_capability_model}{}}}
+\subsection{Method \code{clear_capability_model()}}{
+Clear one or all session capability model routes.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$clear_capability_model(capability = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{capability}}{Optional route name. If NULL, clears all routes.}
 }
 \if{html}{\out{</div>}}
 }

@@ -174,6 +174,73 @@ test_that("SkillRegistry finds relevant skills from query and file paths", {
   expect_true(grepl("paths", by_path$matched_by[[1]], fixed = TRUE))
 })
 
+test_that("SkillRegistry refresh picks up skill updates on disk", {
+  temp_dir <- tempfile()
+  dir.create(temp_dir)
+  on.exit(unlink(temp_dir, recursive = TRUE))
+
+  dir.create(file.path(temp_dir, "live-skill"))
+  writeLines(c(
+    "---",
+    "name: live-skill",
+    "description: First version",
+    "---",
+    "Body v1"
+  ), file.path(temp_dir, "live-skill", "SKILL.md"))
+
+  registry <- SkillRegistry$new()
+  registry$scan_skills(temp_dir, recursive = TRUE)
+  expect_equal(registry$get_skill("live-skill")$description, "First version")
+  expect_equal(nrow(registry$list_roots()), 1L)
+
+  writeLines(c(
+    "---",
+    "name: live-skill",
+    "description: Updated version",
+    "---",
+    "Body v2"
+  ), file.path(temp_dir, "live-skill", "SKILL.md"))
+
+  dir.create(file.path(temp_dir, "new-skill"))
+  writeLines(c(
+    "---",
+    "name: new-skill",
+    "description: Added later",
+    "---",
+    "New body"
+  ), file.path(temp_dir, "new-skill", "SKILL.md"))
+
+  registry$refresh()
+
+  expect_equal(registry$get_skill("live-skill")$description, "Updated version")
+  expect_true(registry$has_skill("new-skill"))
+})
+
+test_that("default_skill_roots includes user install path and prioritizes project roots", {
+  old_roots <- getOption("aisdk.skill_roots")
+  old_env <- Sys.getenv("AISDK_SKILL_PATHS", unset = NA_character_)
+  on.exit(options(aisdk.skill_roots = old_roots), add = TRUE)
+  on.exit({
+    if (is.na(old_env)) Sys.unsetenv("AISDK_SKILL_PATHS") else Sys.setenv(AISDK_SKILL_PATHS = old_env)
+  }, add = TRUE)
+  options(aisdk.skill_roots = character(0))
+  Sys.unsetenv("AISDK_SKILL_PATHS")
+
+  project_dir <- tempfile()
+  dir.create(project_dir)
+  on.exit(unlink(project_dir, recursive = TRUE), add = TRUE)
+
+  project_skills <- file.path(project_dir, ".aisdk", "skills")
+  dir.create(project_skills, recursive = TRUE)
+  project_skills <- normalizePath(project_skills, winslash = "/", mustWork = FALSE)
+
+  roots <- default_skill_roots(project_dir = project_dir)
+
+  expect_true(project_skills %in% roots)
+  expect_true(any(grepl("\\.aisdk/skills$", roots)))
+  expect_equal(tail(roots, 1), normalizePath(project_skills, winslash = "/", mustWork = FALSE))
+})
+
 # === Tests for convenience functions ===
 
 test_that("create_skill_registry creates populated registry", {
@@ -250,4 +317,33 @@ description: Deep skill
     expect_true(registry$has_skill("root_skill"))
     expect_true(registry$has_skill("subdir_skill"))
     expect_false(registry$has_skill("deep_skill"))
+})
+
+test_that("create_skill_registry accepts multiple roots with later roots overriding earlier skills", {
+  root_a <- tempfile("skills-a-")
+  root_b <- tempfile("skills-b-")
+  dir.create(file.path(root_a, "shared"), recursive = TRUE)
+  dir.create(file.path(root_b, "shared"), recursive = TRUE)
+  on.exit(unlink(root_a, recursive = TRUE), add = TRUE)
+  on.exit(unlink(root_b, recursive = TRUE), add = TRUE)
+
+  writeLines(c(
+    "---",
+    "name: shared",
+    "description: From A",
+    "---",
+    "A"
+  ), file.path(root_a, "shared", "SKILL.md"))
+  writeLines(c(
+    "---",
+    "name: shared",
+    "description: From B",
+    "---",
+    "B"
+  ), file.path(root_b, "shared", "SKILL.md"))
+
+  registry <- create_skill_registry(c(root_a, root_b), recursive = TRUE)
+
+  expect_equal(registry$get_skill("shared")$description, "From B")
+  expect_equal(nrow(registry$list_roots()), 2L)
 })

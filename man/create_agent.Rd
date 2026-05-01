@@ -10,7 +10,8 @@ create_agent(
   system_prompt = NULL,
   tools = NULL,
   skills = NULL,
-  model = NULL
+  model = NULL,
+  capability_models = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ create_agent(
 \item{skills}{Optional character vector of skill paths or "auto".}
 
 \item{model}{Optional default model ID for this agent.}
+
+\item{capability_models}{Optional named list of capability-specific model routes.}
 }
 \value{
 An Agent object.

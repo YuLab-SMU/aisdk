@@ -84,6 +84,16 @@ test_that("console turn routing injects non-vision model limits", {
     expect_true(grepl("Current user language: Chinese", routed_prompt, fixed = TRUE))
 })
 
+test_that("console turn routing respects configured vision capability model", {
+    session <- create_chat_session(model = "deepseek:deepseek-v4-flash")
+    session$set_capability_model("vision.inspect", "openai:gpt-4o", type = "language")
+
+    routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "帮我看看这个图")
+
+    expect_false(grepl("Model registry: vision_input = false.", routed_prompt, fixed = TRUE))
+    expect_true(grepl("Current user language: Chinese", routed_prompt, fixed = TRUE))
+})
+
 test_that("console turn routing can match custom skill by when_to_use and paths", {
     skill_root <- tempfile("console-skill-")
     dir.create(skill_root, recursive = TRUE)
@@ -392,6 +402,38 @@ test_that("analyze_image_file refuses configured non-vision current model", {
     expect_true(grepl("cannot inspect image pixels", result, fixed = TRUE))
 })
 
+test_that("analyze_image_file can use configured vision capability model", {
+    old_routes <- aisdk:::get_capability_model_routes()
+    withr::defer(aisdk:::store_capability_model_routes(old_routes))
+    clear_capability_model()
+    set_capability_model("vision.inspect", "openai:gpt-4o", type = "language")
+
+    tools <- create_console_tools()
+    analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "deepseek:deepseek-v4-flash"
+
+    local_mocked_bindings(
+        analyze_image = function(model, image, prompt, ...) {
+            expect_equal(model, "openai:gpt-4o")
+            expect_equal(image, "https://example.com/chart.png")
+            GenerateResult$new(text = "Routed vision result.")
+        }
+    )
+
+    result <- analyze_tool$run(
+        list(path = "https://example.com/chart.png", task = "Read the chart"),
+        envir = envir
+    )
+
+    expect_true(grepl("Routed vision result.", result, fixed = TRUE))
+    expect_true(any(grepl(
+        "Vision model: openai:gpt-4o",
+        attr(result, "aisdk_messages", exact = TRUE),
+        fixed = TRUE
+    )))
+})
+
 test_that("analyze_image_file reports ambiguity when multiple candidates are similarly relevant", {
     workdir <- tempfile("console-images-ambig-")
     dir.create(workdir, recursive = TRUE)
@@ -441,6 +483,38 @@ test_that("generate_image_asset stores recent image artifacts", {
     expect_equal(envir$.console_image_artifacts[[1]]$kind, "generated")
     expect_equal(envir$.console_image_artifacts[[1]]$artifacts[[1]]$path, file.path(tempdir(), "generated.png"))
     expect_match(envir$.console_image_artifacts[[1]]$artifact_id, "^img-")
+})
+
+test_that("generate_image_asset can use configured image capability model", {
+    old_routes <- aisdk:::get_capability_model_routes()
+    withr::defer(aisdk:::store_capability_model_routes(old_routes))
+    clear_capability_model()
+    set_capability_model("image.generate", "gemini:gemini-2.5-flash-image", type = "image")
+
+    tools <- create_console_tools()
+    gen_tool <- tools[[which(sapply(tools, function(t) t$name) == "generate_image_asset")]]
+    envir <- new.env(parent = emptyenv())
+    envir$.session_model_id <- "openai:gpt-4o"
+
+    local_mocked_bindings(
+        generate_image = function(model, prompt, output_dir, ...) {
+            expect_equal(model, "gemini:gemini-2.5-flash-image")
+            GenerateImageResult$new(
+                images = list(list(
+                    path = file.path(output_dir, "generated.png"),
+                    media_type = "image/png"
+                ))
+            )
+        }
+    )
+
+    result <- gen_tool$run(
+        list(prompt = "Generate a chart illustration"),
+        envir = envir
+    )
+
+    expect_true(grepl("Generated 1 image", result))
+    expect_equal(envir$.console_image_artifacts[[1]]$model, "gemini:gemini-2.5-flash-image")
 })
 
 test_that("edit_image_asset reuses the latest image artifact when image_path is omitted", {

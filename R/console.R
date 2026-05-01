@@ -520,6 +520,13 @@ console_build_model_capability_section <- function(session) {
     return(NULL)
   }
 
+  routed_vision_model <- session$get_capability_model("vision.inspect", default = NULL) %||%
+    get_capability_model("vision.inspect", default = NULL)
+  if (!is.null(routed_vision_model) &&
+      !model_ref_capability_explicitly_unavailable(routed_vision_model, "vision_input")) {
+    return(NULL)
+  }
+
   if (!model_capability_explicitly_unavailable(model_id, "vision_input")) {
     return(NULL)
   }
@@ -744,6 +751,7 @@ handle_command <- function(input,
         "{.code /persona skill <name>} - Lock to a skill-backed persona",
         "{.code /persona evolve <note>} - Add an evolution note to the current persona",
         "{.code /persona default} - Return to the built-in default persona",
+        "{.code /skills [list|reload|roots]} - Inspect or reload live skills",
         "{.code /feishu} - Launch the Feishu setup wizard",
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
@@ -1037,6 +1045,50 @@ handle_command <- function(input,
           }
         } else {
           cli::cli_alert_danger("Usage: {.code /persona [set|skill|evolve|default]}")
+        }
+      }
+    },
+    "/skills" = ,
+    "/skill" = {
+      registry <- console_get_skill_registry(session)
+      if (is.null(registry)) {
+        cli::cli_alert_danger("No skill registry is attached to this session.")
+      } else {
+        subcmd <- tolower(args[1] %||% "list")
+        if (subcmd %in% c("list", "ls", "available")) {
+          skills <- registry$list_skills()
+          if (nrow(skills) == 0) {
+            cli::cli_alert_info("No skills are currently available.")
+          } else {
+            cli::cli_h2("Available Skills")
+            cli::cli_ul(vapply(seq_len(nrow(skills)), function(i) {
+              paste0(skills$name[[i]], ": ", skills$description[[i]])
+            }, character(1)))
+          }
+        } else if (subcmd %in% c("reload", "refresh")) {
+          roots <- registry$list_roots()
+          if (nrow(roots) == 0) {
+            cli::cli_alert_warning("No remembered skill roots are available to reload.")
+          } else {
+            before <- registry$count()
+            registry$refresh(clear = TRUE)
+            after <- registry$count()
+            assign(".skill_registry", registry, envir = session$get_envir())
+            result$refresh_status <- TRUE
+            cli::cli_alert_success("Reloaded skills: {before} -> {after}.")
+          }
+        } else if (subcmd == "roots") {
+          roots <- registry$list_roots()
+          if (nrow(roots) == 0) {
+            cli::cli_alert_info("No skill roots are remembered.")
+          } else {
+            cli::cli_h2("Skill Roots")
+            cli::cli_ul(vapply(seq_len(nrow(roots)), function(i) {
+              paste0(roots$path[[i]], if (isTRUE(roots$recursive[[i]])) " (recursive)" else "")
+            }, character(1)))
+          }
+        } else {
+          cli::cli_alert_danger("Usage: {.code /skills [list|reload|roots]}")
         }
       }
     },

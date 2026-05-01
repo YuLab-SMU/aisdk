@@ -134,6 +134,48 @@ test_that("model current reports the active model without switching", {
   expect_equal(session$get_model_id(), "openai:gpt-4o")
 })
 
+test_that("skills command reloads the session skill registry", {
+  skill_root <- tempfile("console-live-skills-")
+  dir.create(file.path(skill_root, "live_skill"), recursive = TRUE)
+  on.exit(unlink(skill_root, recursive = TRUE), add = TRUE)
+
+  writeLines(c(
+    "---",
+    "name: live_skill",
+    "description: Live skill",
+    "---",
+    "Original"
+  ), file.path(skill_root, "live_skill", "SKILL.md"))
+
+  agent <- create_agent(
+    name = "SkillConsole",
+    description = "Console with live skills",
+    skills = skill_root
+  )
+  session <- create_chat_session(model = "mock:test", agent = agent)
+  registry <- session$get_envir()$.skill_registry
+  expect_equal(registry$get_skill("live_skill")$description, "Live skill")
+
+  writeLines(c(
+    "---",
+    "name: live_skill",
+    "description: Updated live skill",
+    "---",
+    "Updated"
+  ), file.path(skill_root, "live_skill", "SKILL.md"))
+
+  result <- aisdk:::handle_command(
+    "/skills reload",
+    session,
+    stream = TRUE,
+    verbose = FALSE,
+    show_thinking = FALSE
+  )
+
+  expect_true(result$refresh_status)
+  expect_equal(registry$get_skill("live_skill")$description, "Updated live skill")
+})
+
 test_that("model command updates context and thinking settings", {
   session <- aisdk::create_chat_session(model = "deepseek:deepseek-v4-flash")
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")

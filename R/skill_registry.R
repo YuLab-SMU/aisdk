@@ -5,6 +5,83 @@
 #' @name skill_registry
 NULL
 
+#' @keywords internal
+normalize_skill_root <- function(path) {
+  if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
+    return(NULL)
+  }
+  normalizePath(path.expand(path), winslash = "/", mustWork = FALSE)
+}
+
+#' @keywords internal
+split_skill_path_env <- function(value) {
+  if (is.null(value) || !nzchar(value)) {
+    return(character(0))
+  }
+  parts <- strsplit(value, .Platform$path.sep, fixed = TRUE)[[1]]
+  parts[nzchar(parts)]
+}
+
+#' @title Default Skill Roots
+#' @description
+#' Return the standard skill search roots in increasing priority order:
+#' bundled package skills, installed user skills, project skills, then
+#' explicitly configured roots.
+#' @param project_dir Project directory used for project-local skill roots.
+#' @param include_missing If `TRUE`, include roots even when they do not exist.
+#' @return Character vector of skill root directories.
+#' @export
+default_skill_roots <- function(project_dir = getwd(), include_missing = FALSE) {
+  project_dir <- normalize_skill_root(project_dir) %||% getwd()
+  package_root <- system.file("skills", package = "aisdk")
+  option_roots <- getOption("aisdk.skill_roots", character(0))
+  env_roots <- split_skill_path_env(Sys.getenv("AISDK_SKILL_PATHS", ""))
+
+  roots <- as.character(unlist(list(
+    package_root,
+    file.path(Sys.getenv("HOME"), ".aisdk", "skills"),
+    file.path(Sys.getenv("HOME"), "aisdk", "skills"),
+    file.path(project_dir, "inst", "skills"),
+    file.path(project_dir, "skills"),
+    file.path(project_dir, "aisdk", "skills"),
+    file.path(project_dir, ".aisdk", "skills"),
+    option_roots,
+    env_roots
+  ), use.names = FALSE))
+
+  roots <- roots[!is.na(roots) & nzchar(roots)]
+  roots <- unique(vapply(roots, function(root) normalize_skill_root(root) %||% "", character(1)))
+  roots <- roots[nzchar(roots)]
+  if (!isTRUE(include_missing)) {
+    roots <- roots[dir.exists(roots)]
+  }
+  roots
+}
+
+#' @keywords internal
+create_auto_skill_registry <- function(project_dir = getwd(), recursive = TRUE) {
+  roots <- default_skill_roots(project_dir = project_dir, include_missing = FALSE)
+  registry <- SkillRegistry$new()
+  for (root in roots) {
+    registry$scan_skills(root, recursive = recursive)
+  }
+  registry
+}
+
+#' @keywords internal
+coerce_skill_registry <- function(skills, recursive = TRUE, project_dir = getwd()) {
+  if (inherits(skills, "SkillRegistry")) {
+    return(skills)
+  }
+  if (!is.character(skills)) {
+    rlang::abort("skills must be a path string, 'auto', character vector of paths, or SkillRegistry object.")
+  }
+  if (length(skills) == 1 && identical(skills, "auto")) {
+    return(create_auto_skill_registry(project_dir = project_dir, recursive = recursive))
+  }
+  create_skill_registry(skills, recursive = recursive)
+}
+
 #' @title SkillRegistry Class
 #' @description
 #' R6 class that manages a collection of skills. Provides methods to:
@@ -22,12 +99,14 @@ SkillRegistry <- R6::R6Class(
     #' @description
     #' Create a new SkillRegistry, optionally scanning a directory.
     #' @param path Optional path to scan for skills on creation.
+    #' @param recursive Whether to scan subdirectories when `path` is provided.
     #' @return A new SkillRegistry object.
-    initialize = function(path = NULL) {
+    initialize = function(path = NULL, recursive = FALSE) {
       private$.skills <- list()
+      private$.roots <- list()
       
       if (!is.null(path)) {
-        self$scan_skills(path)
+        self$scan_skills(path, recursive = recursive)
       }
       
       invisible(self)
@@ -37,16 +116,25 @@ SkillRegistry <- R6::R6Class(
     #' Scan a directory for skill folders containing SKILL.md files.
     #' @param path Path to the directory to scan.
     #' @param recursive Whether to scan subdirectories. Default FALSE.
+    #' @param remember Whether this root should be remembered for `refresh()`.
     #' @return The registry object (invisibly), for chaining.
-    scan_skills = function(path, recursive = FALSE) {
+    scan_skills = function(path, recursive = FALSE, remember = TRUE) {
+      if (length(path) > 1) {
+        recursive_values <- if (length(recursive) == length(path)) recursive else rep(recursive[[1]], length(path))
+        for (i in seq_along(path)) {
+          self$scan_skills(path[[i]], recursive = recursive_values[[i]], remember = remember)
+        }
+        return(invisible(self))
+      }
       if (!dir.exists(path)) {
         rlang::abort(paste0("Directory does not exist: ", path))
       }
       
       path <- normalizePath(path, mustWork = TRUE)
+      if (isTRUE(remember)) {
+        private$remember_root(path, recursive = recursive)
+      }
       
-      # Find all SKILL.md files
-      # Find all SKILL.md files
       if (recursive) {
         skill_files <- list.files(
           path,
@@ -101,6 +189,44 @@ SkillRegistry <- R6::R6Class(
       }
       
       invisible(self)
+    },
+
+    #' @description
+    #' Re-scan remembered skill roots so updates on disk become visible.
+    #' @param clear If TRUE, clears currently loaded skills before re-scanning.
+    #' @return The registry object (invisibly).
+    refresh = function(clear = TRUE) {
+      roots <- self$list_roots()
+      if (isTRUE(clear)) {
+        private$.skills <- list()
+      }
+      if (nrow(roots) == 0) {
+        return(invisible(self))
+      }
+
+      for (i in seq_len(nrow(roots))) {
+        path <- roots$path[[i]]
+        if (!dir.exists(path)) {
+          next
+        }
+        self$scan_skills(path, recursive = roots$recursive[[i]], remember = FALSE)
+      }
+      invisible(self)
+    },
+
+    #' @description
+    #' List skill roots remembered by this registry.
+    #' @return A data frame with root path and recursive flag.
+    list_roots = function() {
+      if (length(private$.roots) == 0) {
+        return(data.frame(path = character(0), recursive = logical(0), stringsAsFactors = FALSE))
+      }
+      data.frame(
+        path = vapply(private$.roots, function(root) root$path, character(1)),
+        recursive = vapply(private$.roots, function(root) isTRUE(root$recursive), logical(1)),
+        row.names = NULL,
+        stringsAsFactors = FALSE
+      )
     },
     
     #' @description
@@ -333,6 +459,14 @@ SkillRegistry <- R6::R6Class(
   
   private = list(
     .skills = NULL,
+    .roots = NULL,
+
+    remember_root = function(path, recursive = FALSE) {
+      path <- normalizePath(path, winslash = "/", mustWork = FALSE)
+      key <- path
+      private$.roots[[key]] <- list(path = path, recursive = isTRUE(recursive))
+      invisible(NULL)
+    },
 
     empty_match_table = function() {
       data.frame(
