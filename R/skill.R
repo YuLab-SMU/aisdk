@@ -37,6 +37,9 @@ Skill <- R6::R6Class(
     
     #' @field path The directory path containing the skill files.
     path = NULL,
+
+    #' @field manifest Raw YAML frontmatter parsed from SKILL.md.
+    manifest = NULL,
     
     #' @description
     #' Create a new Skill object by parsing a SKILL.md file.
@@ -70,6 +73,7 @@ Skill <- R6::R6Class(
           NULL
       )
       self$paths <- private$normalize_patterns(parsed$frontmatter$paths %||% NULL)
+      self$manifest <- parsed$frontmatter
       private$.body <- parsed$body
       
       if (is.null(self$name) || self$name == "") {
@@ -84,6 +88,69 @@ Skill <- R6::R6Class(
     #' @return Character string containing the skill instructions.
     load = function() {
       private$.body
+    },
+
+    #' @description
+    #' Return the raw SKILL.md frontmatter as a list.
+    #' @return Named list of metadata fields.
+    get_manifest = function() {
+      self$manifest %||% list()
+    },
+
+    #' @description
+    #' Export the skill to a structured record suitable for a skill store.
+    #' @param include_body Include the full SKILL.md body in the record.
+    #' @param include_files Include textual source files from the skill folder.
+    #' @param include_assets Include a list of asset file names.
+    #' @return A named list ready for JSON serialization.
+    to_store_record = function(include_body = TRUE,
+                               include_files = TRUE,
+                               include_assets = FALSE) {
+      manifest <- self$get_manifest()
+      author <- private$normalize_author(manifest$author %||% NULL)
+      repository <- manifest$repository %||% list(
+        type = "local",
+        url = paste0("file://", normalizePath(self$path, mustWork = FALSE))
+      )
+      record_id <- private$resolve_store_id(manifest, repository)
+      scripts <- if (include_files) private$collect_text_files("scripts") else list()
+      references <- if (include_files) private$collect_text_files("references") else list()
+      assets <- if (include_assets) private$list_assets() else character(0)
+      tools <- if (include_files) private$infer_tools_from_scripts() else list()
+
+      list(
+        id = record_id,
+        name = self$name,
+        version = as.character(manifest$version %||% "0.1.0"),
+        description = self$description %||% "",
+        author = author,
+        license = manifest$license %||% NULL,
+        repository = repository,
+        path = manifest$path %||% NULL,
+        capabilities = private$normalize_character_vector(manifest$capabilities %||% character(0)),
+        dependencies = private$normalize_character_vector(manifest$dependencies %||% character(0)),
+        system_requirements = private$normalize_character_vector(manifest$system_requirements %||% character(0)),
+        entry = manifest$entry %||% list(main = "SKILL.md", scripts = "scripts/"),
+        aliases = self$aliases,
+        when_to_use = self$when_to_use,
+        paths = self$paths,
+        tools = tools,
+        readme = if (isTRUE(include_body)) self$load() else NULL,
+        code = private$compose_code_bundle(include_body = include_body, scripts = scripts, references = references),
+        scripts = scripts,
+        references = references,
+        assets = assets,
+        source = list(
+          type = "aisdk-skill",
+          path = self$path
+        ),
+        readme_url = private$build_readme_url(repository, manifest$path %||% NULL),
+        downloads = as.integer(manifest$downloads %||% 0L),
+        stars = manifest$stars %||% NULL,
+        created_at = manifest$created_at %||% NULL,
+        updated_at = manifest$updated_at %||% NULL,
+        generated_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+      )
     },
 
     #' @description
@@ -335,6 +402,200 @@ Skill <- R6::R6Class(
       body <- trimws(body)
       
       list(frontmatter = frontmatter, body = body)
+    },
+
+    normalize_character_vector = function(x) {
+      if (is.null(x) || length(x) == 0) {
+        return(character(0))
+      }
+
+      values <- as.character(unlist(x, use.names = FALSE))
+      values <- trimws(values)
+      values <- values[nzchar(values)]
+      unique(values)
+    },
+
+    normalize_author = function(author) {
+      if (is.null(author) || length(author) == 0) {
+        return(list(name = Sys.info()[["user"]] %||% "unknown"))
+      }
+
+      if (is.character(author)) {
+        return(list(name = paste(author, collapse = " ")))
+      }
+
+      if (is.list(author)) {
+        return(list(
+          name = author$name %||% author$display_name %||% "unknown",
+          email = author$email %||% NULL,
+          url = author$url %||% NULL
+        ))
+      }
+
+      list(name = as.character(author)[[1]])
+    },
+
+    resolve_store_id = function(manifest, repository) {
+      if (!is.null(manifest$id) && nzchar(as.character(manifest$id))) {
+        return(as.character(manifest$id))
+      }
+
+      if (is.list(repository) && identical(repository$type, "github")) {
+        owner <- repository$owner %||% NULL
+        repo <- repository$repo %||% NULL
+        path <- manifest$path %||% repository$path %||% NULL
+        if (!is.null(owner) && !is.null(repo)) {
+          if (!is.null(path) && nzchar(path)) {
+            return(paste(owner, repo, path, sep = "/"))
+          }
+          return(paste(owner, repo, sep = "/"))
+        }
+      }
+
+      self$name
+    },
+
+    list_assets = function() {
+      assets_dir <- file.path(self$path, "assets")
+      if (!dir.exists(assets_dir)) {
+        return(character(0))
+      }
+
+      list.files(assets_dir, recursive = TRUE, full.names = FALSE)
+    },
+
+    collect_text_files = function(subdir) {
+      dir_path <- file.path(self$path, subdir)
+      if (!dir.exists(dir_path)) {
+        return(list())
+      }
+
+      files <- list.files(dir_path, recursive = TRUE, full.names = TRUE, all.files = FALSE)
+      files <- files[file.info(files)$isdir %in% FALSE]
+      files <- files[private$is_text_file(files)]
+      if (length(files) == 0) {
+        return(list())
+      }
+
+      root_path <- normalizePath(self$path, winslash = "/", mustWork = FALSE)
+      rel_paths <- vapply(files, function(file) {
+        normalized_file <- normalizePath(file, winslash = "/", mustWork = FALSE)
+        prefix <- paste0(root_path, "/")
+        if (startsWith(normalized_file, prefix)) {
+          return(substr(normalized_file, nchar(prefix) + 1L, nchar(normalized_file)))
+        }
+        if (identical(normalized_file, root_path)) {
+          return(".")
+        }
+        normalized_file
+      }, character(1))
+
+      stats::setNames(lapply(files, function(file) {
+        paste(readLines(file, warn = FALSE), collapse = "\n")
+      }), rel_paths)
+    },
+
+    infer_tools_from_scripts = function() {
+      scripts_dir <- file.path(self$path, "scripts")
+      if (!dir.exists(scripts_dir)) {
+        return(list())
+      }
+
+      script_files <- list.files(scripts_dir, pattern = "\\.R$", full.names = TRUE, recursive = TRUE)
+      if (length(script_files) == 0) {
+        return(list())
+      }
+
+      lapply(script_files, function(file) {
+        lines <- readLines(file, warn = FALSE)
+        script_name <- tools::file_path_sans_ext(basename(file))
+        root_path <- normalizePath(self$path, winslash = "/", mustWork = FALSE)
+        normalized_file <- normalizePath(file, winslash = "/", mustWork = FALSE)
+        prefix <- paste0(root_path, "/")
+        list(
+          name = script_name,
+          description = private$infer_script_description(lines, script_name),
+          parameters = private$infer_script_parameters(lines),
+          path = if (startsWith(normalized_file, prefix)) {
+            substr(normalized_file, nchar(prefix) + 1L, nchar(normalized_file))
+          } else {
+            normalized_file
+          }
+        )
+      })
+    },
+
+    infer_script_description = function(lines, script_name) {
+      comments <- trimws(sub("^#+'?\\s*", "", lines[grepl("^\\s*#+'?\\s*", lines)]))
+      comments <- comments[nzchar(comments)]
+      if (length(comments) > 0) {
+        return(comments[[1]])
+      }
+      paste("Run", script_name)
+    },
+
+    infer_script_parameters = function(lines) {
+      matches <- unlist(regmatches(lines, gregexpr("args\\$[A-Za-z0-9_.]+", lines, perl = TRUE)))
+      if (length(matches) == 0) {
+        return(list())
+      }
+
+      params <- unique(sub("^args\\$", "", matches))
+      stats::setNames(
+        rep(list("Script argument"), length(params)),
+        params
+      )
+    },
+
+    build_readme_url = function(repository, skill_path = NULL) {
+      if (!is.list(repository) || is.null(repository$type) || repository$type != "github") {
+        return(NULL)
+      }
+
+      owner <- repository$owner %||% NULL
+      repo <- repository$repo %||% NULL
+      branch <- repository$branch %||% "main"
+      if (is.null(owner) || is.null(repo)) {
+        return(NULL)
+      }
+
+      base_path <- skill_path
+      if (!is.null(base_path) && nzchar(base_path)) {
+        return(sprintf(
+          "https://raw.githubusercontent.com/%s/%s/%s/%s/SKILL.md",
+          owner, repo, branch, base_path
+        ))
+      }
+      sprintf("https://raw.githubusercontent.com/%s/%s/%s/SKILL.md", owner, repo, branch)
+    },
+
+    is_text_file = function(files) {
+      ext <- tolower(tools::file_ext(files))
+      ext %in% c(
+        "md", "r", "json", "yml", "yaml", "txt", "csv", "tsv",
+        "py", "js", "ts", "html", "css", "svg", "xml", "toml", "ini"
+      )
+    },
+
+    compose_code_bundle = function(include_body = TRUE, scripts = list(), references = list()) {
+      chunks <- character(0)
+      if (isTRUE(include_body) && nzchar(private$.body %||% "")) {
+        chunks <- c(chunks, c("## SKILL.md", self$load()))
+      }
+
+      if (length(scripts) > 0) {
+        for (name in names(scripts)) {
+          chunks <- c(chunks, c(paste0("## scripts/", name), scripts[[name]]))
+        }
+      }
+
+      if (length(references) > 0) {
+        for (name in names(references)) {
+          chunks <- c(chunks, c(paste0("## references/", name), references[[name]]))
+        }
+      }
+
+      paste(chunks, collapse = "\n\n")
     }
   )
 )

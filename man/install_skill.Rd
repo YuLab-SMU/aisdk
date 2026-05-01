@@ -7,7 +7,8 @@
 install_skill(skill_ref, version = NULL, force = FALSE)
 }
 \arguments{
-\item{skill_ref}{Skill reference (e.g., "username/skillname").}
+\item{skill_ref}{Skill reference (e.g., "username/skillname" or
+"username/repo/path/to/skill").}
 
 \item{version}{Optional specific version.}
 

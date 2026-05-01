@@ -26,6 +26,8 @@ A Skill consists of:
 \item{\code{paths}}{Optional file glob patterns that make this skill relevant.}
 
 \item{\code{path}}{The directory path containing the skill files.}
+
+\item{\code{manifest}}{Raw YAML frontmatter parsed from SKILL.md.}
 }
 \if{html}{\out{</div>}}
 }
@@ -34,6 +36,8 @@ A Skill consists of:
 \itemize{
 \item \href{#method-Skill-new}{\code{Skill$new()}}
 \item \href{#method-Skill-load}{\code{Skill$load()}}
+\item \href{#method-Skill-get_manifest}{\code{Skill$get_manifest()}}
+\item \href{#method-Skill-to_store_record}{\code{Skill$to_store_record()}}
 \item \href{#method-Skill-metadata_text}{\code{Skill$metadata_text()}}
 \item \href{#method-Skill-matches_paths}{\code{Skill$matches_paths()}}
 \item \href{#method-Skill-execute_script}{\code{Skill$execute_script()}}
@@ -76,6 +80,47 @@ Load the full SKILL.md body content (Level 2).
 
 \subsection{Returns}{
 Character string containing the skill instructions.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-get_manifest"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-get_manifest}{}}}
+\subsection{Method \code{get_manifest()}}{
+Return the raw SKILL.md frontmatter as a list.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$get_manifest()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Named list of metadata fields.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Skill-to_store_record"></a>}}
+\if{latex}{\out{\hypertarget{method-Skill-to_store_record}{}}}
+\subsection{Method \code{to_store_record()}}{
+Export the skill to a structured record suitable for a skill store.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Skill$to_store_record(
+  include_body = TRUE,
+  include_files = TRUE,
+  include_assets = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{include_body}}{Include the full SKILL.md body in the record.}
+
+\item{\code{include_files}}{Include textual source files from the skill folder.}
+
+\item{\code{include_assets}}{Include a list of asset file names.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A named list ready for JSON serialization.
 }
 }
 \if{html}{\out{<hr>}}

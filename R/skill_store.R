@@ -149,6 +149,9 @@ SkillStore <- R6::R6Class(
         name = manifest$name,
         version = manifest$version,
         path = skill_dir,
+        source_ref = skill_ref,
+        source_type = parsed$type,
+        source_path = parsed$path %||% NULL,
         installed_at = Sys.time()
       )
       private$save_installed_index()
@@ -373,24 +376,40 @@ SkillStore <- R6::R6Class(
     parse_skill_ref = function(ref) {
       # Handle different reference formats:
       # - "skillname" -> registry lookup
-      # - "username/skillname" -> GitHub
-      # - "https://..." -> direct URL
+      # - "username/skillname" -> GitHub repository root
+      # - "username/repo/path/to/skill" -> skill subdirectory in a GitHub repository
+      # - "https://github.com/owner/repo[/tree/branch/path]" -> GitHub URL
+      # - "https://..." -> direct archive URL
 
       if (grepl("^https?://", ref)) {
-        # Direct URL
-        list(type = "url", url = ref, name = basename(ref))
+        github_ref <- private$parse_github_url(ref)
+        if (!is.null(github_ref)) {
+          github_ref
+        } else {
+          # Direct URL
+          list(type = "url", url = ref, name = basename(ref), path = NULL)
+        }
       } else if (grepl("/", ref)) {
         # GitHub reference
-        parts <- strsplit(ref, "/")[[1]]
+        parts <- strsplit(ref, "/", fixed = TRUE)[[1]]
+        if (length(parts) < 2 || !nzchar(parts[[1]]) || !nzchar(parts[[2]])) {
+          rlang::abort("GitHub skill references must use 'owner/repo' or 'owner/repo/path'.")
+        }
+        skill_path <- NULL
+        if (length(parts) > 2) {
+          skill_path <- paste(parts[-c(1, 2)], collapse = "/")
+        }
         list(
           type = "github",
           owner = parts[1],
           repo = parts[2],
-          name = parts[2]
+          path = skill_path,
+          branch = NULL,
+          name = private$skill_name_from_source(parts[2], skill_path)
         )
       } else {
         # Registry name
-        list(type = "registry", name = ref)
+        list(type = "registry", name = ref, path = NULL)
       }
     },
 
@@ -413,7 +432,7 @@ SkillStore <- R6::R6Class(
 
     download_from_github = function(parsed, dest_dir, version) {
       # Construct GitHub archive URL
-      ref <- if (!is.null(version)) paste0("v", version) else "main"
+      ref <- parsed$branch %||% if (!is.null(version)) paste0("v", version) else "main"
       url <- sprintf(
         "https://github.com/%s/%s/archive/refs/heads/%s.zip",
         parsed$owner, parsed$repo, ref
@@ -421,14 +440,14 @@ SkillStore <- R6::R6Class(
 
       # Try tags if heads fails
       tryCatch({
-        private$download_and_extract(url, dest_dir, parsed$repo)
+        private$download_and_extract(url, dest_dir, parsed$repo, subdir = parsed$path)
       }, error = function(e) {
-        if (!is.null(version)) {
+        if (!is.null(version) && is.null(parsed$branch)) {
           url <- sprintf(
             "https://github.com/%s/%s/archive/refs/tags/v%s.zip",
             parsed$owner, parsed$repo, version
           )
-          private$download_and_extract(url, dest_dir, parsed$repo)
+          private$download_and_extract(url, dest_dir, parsed$repo, subdir = parsed$path)
         } else {
           stop(e)
         }
@@ -451,7 +470,15 @@ SkillStore <- R6::R6Class(
       if (!is.null(info$repository$url)) {
         # Download from repository
         parsed <- private$parse_skill_ref(info$repository$url)
-        private$download_skill(parsed, version)
+        parsed$path <- info$path %||% parsed$path
+        parsed$branch <- info$repository$branch %||% parsed$branch
+        if (identical(parsed$type, "github")) {
+          private$download_from_github(parsed, dest_dir, version)
+        } else if (identical(parsed$type, "url")) {
+          private$download_from_url(parsed$url, dest_dir)
+        } else {
+          rlang::abort(paste0("Unsupported repository source for skill: ", name))
+        }
       } else if (!is.null(info$download_url)) {
         private$download_from_url(info$download_url, dest_dir)
       } else {
@@ -459,7 +486,7 @@ SkillStore <- R6::R6Class(
       }
     },
 
-    download_and_extract = function(url, dest_dir, expected_name) {
+    download_and_extract = function(url, dest_dir, expected_name, subdir = NULL) {
       # Create temp file for download
       temp_zip <- tempfile(fileext = ".zip")
       on.exit(unlink(temp_zip), add = TRUE)
@@ -478,9 +505,47 @@ SkillStore <- R6::R6Class(
         rlang::abort("No directory found in archive")
       }
 
+      source_dir <- extracted_dirs[1]
+      if (!is.null(subdir) && nzchar(subdir)) {
+        subdir <- gsub("^/+|/+$", "", subdir)
+        source_dir <- file.path(source_dir, subdir)
+        if (!dir.exists(source_dir)) {
+          rlang::abort(paste0("Skill path not found in archive: ", subdir))
+        }
+      }
+
       # Move to destination
       dir.create(dirname(dest_dir), recursive = TRUE, showWarnings = FALSE)
-      file.rename(extracted_dirs[1], dest_dir)
+      if (!file.rename(source_dir, dest_dir)) {
+        rlang::abort(paste0("Failed to install skill archive into: ", dest_dir))
+      }
+    },
+
+    parse_github_url = function(url) {
+      pattern <- "^https?://github[.]com/([^/]+)/([^/]+?)(?:[.]git)?(?:/(tree|blob)/([^/]+)(?:/(.*))?)?/?$"
+      matches <- regexec(pattern, url)
+      parts <- regmatches(url, matches)[[1]]
+      if (length(parts) == 0) {
+        return(NULL)
+      }
+
+      skill_path <- if (length(parts) >= 6 && nzchar(parts[[6]])) parts[[6]] else NULL
+      repo <- parts[[3]]
+      list(
+        type = "github",
+        owner = parts[[2]],
+        repo = repo,
+        path = skill_path,
+        branch = if (length(parts) >= 5 && nzchar(parts[[5]])) parts[[5]] else NULL,
+        name = private$skill_name_from_source(repo, skill_path)
+      )
+    },
+
+    skill_name_from_source = function(repo, skill_path = NULL) {
+      if (!is.null(skill_path) && nzchar(skill_path)) {
+        return(basename(gsub("/+$", "", skill_path)))
+      }
+      sub("[.]git$", "", repo)
     },
 
     load_manifest = function(skill_dir) {
@@ -533,7 +598,8 @@ SkillStore <- R6::R6Class(
 #' @title Install a Skill
 #' @description
 #' Install a skill from the global skill store or a GitHub repository.
-#' @param skill_ref Skill reference (e.g., "username/skillname").
+#' @param skill_ref Skill reference (e.g., "username/skillname" or
+#'   "username/repo/path/to/skill").
 #' @param version Optional specific version.
 #' @param force Force reinstallation.
 #' @return The installed Skill object.
@@ -675,6 +741,284 @@ result
 
   message("Created skill scaffold at: ", skill_dir)
   skill_dir
+}
+
+#' @title Convert a Skill to a Store Record
+#' @description
+#' Convert a `Skill` object or skill directory into a JSON-ready record that
+#' matches the skill store schema.
+#' @param skill A `Skill` object or path to a skill directory.
+#' @param include_body Include the full `SKILL.md` body.
+#' @param include_files Include textual source files from `scripts/` and `references/`.
+#' @param include_assets Include asset file names.
+#' @return A named list ready for JSON serialization.
+#' @export
+skill_to_store_record <- function(skill,
+                                  include_body = TRUE,
+                                  include_files = TRUE,
+                                  include_assets = FALSE) {
+  skill_obj <- if (inherits(skill, "Skill")) {
+    skill
+  } else if (is.character(skill) && length(skill) == 1) {
+    Skill$new(skill)
+  } else {
+    rlang::abort("skill must be a Skill object or a single directory path.")
+  }
+
+  skill_obj$to_store_record(
+    include_body = include_body,
+    include_files = include_files,
+    include_assets = include_assets
+  )
+}
+
+#' @title Publish a Skill to the Store
+#' @description
+#' Publish a skill record as a JSON file to a GitHub-backed skill store.
+#' @param skill A `Skill` object or path to a skill directory.
+#' @param github_user GitHub owner of the skill store repository.
+#' @param github_token GitHub token with content write access.
+#' @param repo_name Skill store repository name.
+#' @param base_path Directory inside the repository where skills live.
+#' @param branch Repository branch to write to.
+#' @param message Commit message. Defaults to a generated message.
+#' @param include_body Include the full `SKILL.md` body.
+#' @param include_files Include textual source files.
+#' @param include_assets Include asset file names.
+#' @return A list containing the record and GitHub API response.
+#' @export
+publish_skill <- function(skill,
+                          github_user,
+                          github_token,
+                          repo_name,
+                          base_path = "skills/",
+                          branch = "main",
+                          message = NULL,
+                          include_body = TRUE,
+                          include_files = TRUE,
+                          include_assets = FALSE) {
+  record <- skill_to_store_record(
+    skill,
+    include_body = include_body,
+    include_files = include_files,
+    include_assets = include_assets
+  )
+  publish_skill_record(
+    record = record,
+    github_user = github_user,
+    github_token = github_token,
+    repo_name = repo_name,
+    base_path = base_path,
+    branch = branch,
+    message = message
+  )
+}
+
+#' @title Publish a Skill Record
+#' @description
+#' Upload a skill JSON record to a GitHub-backed skill store.
+#' @param record JSON-ready skill record.
+#' @param github_user GitHub owner of the skill store repository.
+#' @param github_token GitHub token with content write access.
+#' @param repo_name Skill store repository name.
+#' @param base_path Directory inside the repository where skills live.
+#' @param branch Repository branch to write to.
+#' @param message Commit message. Defaults to a generated message.
+#' @return A list with `record`, `path`, and `response`.
+#' @export
+publish_skill_record <- function(record,
+                                 github_user,
+                                 github_token,
+                                 repo_name,
+                                 base_path = "skills/",
+                                 branch = "main",
+                                 message = NULL) {
+  if (!is.list(record)) {
+    rlang::abort("record must be a list produced by skill_to_store_record().")
+  }
+
+  skill_id <- record$id %||% record$name
+  if (is.null(skill_id) || !nzchar(skill_id)) {
+    rlang::abort("record must include an id or name.")
+  }
+
+  normalized_base <- gsub("^/+|/+$", "", base_path %||% "skills/")
+  file_path <- file.path(normalized_base, paste0(skill_id, ".json"))
+  file_path <- gsub("\\\\", "/", file_path)
+  json_content <- jsonlite::toJSON(record, auto_unbox = TRUE, pretty = TRUE, null = "null")
+  encoded_content <- base64enc::base64encode(charToRaw(json_content))
+  api_url <- sprintf(
+    "https://api.github.com/repos/%s/%s/contents/%s",
+    github_user, repo_name, file_path
+  )
+
+  get_req <- httr2::request(api_url)
+  get_req <- httr2::req_headers(
+    get_req,
+    Authorization = paste("token", github_token),
+    Accept = "application/vnd.github+json"
+  )
+  if (!is.null(branch) && nzchar(branch)) {
+    get_req <- httr2::req_url_query(get_req, ref = branch)
+  }
+  get_req <- httr2::req_error(get_req, is_error = function(resp) FALSE)
+  get_resp <- httr2::req_perform(get_req)
+  existing_sha <- NULL
+  if (httr2::resp_status(get_resp) == 200) {
+    existing_sha <- tryCatch(httr2::resp_body_json(get_resp)$sha, error = function(e) NULL)
+  }
+
+  commit_message <- message %||% sprintf("Publish skill: %s", record$name %||% skill_id)
+  body <- list(
+    message = commit_message,
+    content = encoded_content,
+    branch = branch
+  )
+  if (!is.null(existing_sha)) {
+    body$sha <- existing_sha
+  }
+
+  put_req <- httr2::request(api_url)
+  put_req <- httr2::req_headers(
+    put_req,
+    Authorization = paste("token", github_token),
+    Accept = "application/vnd.github+json"
+  )
+  put_req <- httr2::req_method(put_req, "PUT")
+  put_req <- httr2::req_body_json(put_req, body)
+  put_resp <- httr2::req_perform(put_req)
+
+  list(
+    record = record,
+    path = file_path,
+    response = httr2::resp_body_json(put_resp)
+  )
+}
+
+#' @title Record a Skill Iteration
+#' @description
+#' Persist a local optimization or evaluation iteration for a skill.
+#' @param skill A `Skill` object or path to a skill directory.
+#' @param iteration A named list with iteration metadata, eval results, notes, or artifacts.
+#' @param out_dir Output directory. Defaults to `<skill>/.aisdk/iterations`.
+#' @param filename Optional filename. Defaults to a timestamped slug.
+#' @param include_record Include the serialized skill record in the output.
+#' @return Path to the written JSON file.
+#' @export
+record_skill_iteration <- function(skill,
+                                   iteration = list(),
+                                   out_dir = NULL,
+                                   filename = NULL,
+                                   include_record = TRUE) {
+  skill_obj <- if (inherits(skill, "Skill")) {
+    skill
+  } else if (is.character(skill) && length(skill) == 1) {
+    Skill$new(skill)
+  } else {
+    rlang::abort("skill must be a Skill object or a single directory path.")
+  }
+
+  record <- if (isTRUE(include_record)) {
+    skill_to_store_record(skill_obj, include_body = TRUE, include_files = TRUE, include_assets = TRUE)
+  } else {
+    NULL
+  }
+
+  output_dir <- out_dir %||% file.path(skill_obj$path, ".aisdk", "iterations")
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+  timestamp <- format(Sys.time(), "%Y%m%d-%H%M%S", tz = "UTC")
+  safe_name <- gsub("[^A-Za-z0-9._-]+", "-", skill_obj$name %||% "skill")
+  output_file <- filename %||% paste0(timestamp, "-", safe_name, ".json")
+  output_path <- file.path(output_dir, output_file)
+
+  payload <- list(
+    skill = list(
+      name = skill_obj$name,
+      path = skill_obj$path,
+      version = skill_obj$manifest$version %||% NULL
+    ),
+    iteration = iteration,
+    record = record,
+    created_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  )
+
+  jsonlite::write_json(payload, output_path, auto_unbox = TRUE, pretty = TRUE, null = "null")
+  output_path
+}
+
+#' @title Use a Skill from the Store
+#' @description
+#' Install a skill from the store and return the loaded `Skill` object.
+#' @param skill_ref Skill reference.
+#' @param version Optional version.
+#' @param force Force reinstallation.
+#' @return A `Skill` object.
+#' @export
+use_skill <- function(skill_ref, version = NULL, force = FALSE) {
+  install_skill(skill_ref, version = version, force = force)
+}
+
+#' @title Sync a Skill to the Store
+#' @description
+#' Publish a skill to the store and optionally record the iteration locally.
+#' @param skill A `Skill` object or path to a skill directory.
+#' @param github_user GitHub owner of the skill store repository.
+#' @param github_token GitHub token with content write access.
+#' @param repo_name Skill store repository name.
+#' @param base_path Directory inside the repository where skills live.
+#' @param branch Repository branch to write to.
+#' @param message Commit message for the store publish.
+#' @param iteration Named list describing the current optimization iteration.
+#' @param out_dir Optional local iteration log directory.
+#' @param record_iteration Write a local iteration log.
+#' @param include_body Include the full `SKILL.md` body in the published record.
+#' @param include_files Include textual source files in the published record.
+#' @param include_assets Include asset file names in the published record.
+#' @return A list with `publish` and `iteration_path`.
+#' @export
+sync_skill <- function(skill,
+                       github_user,
+                       github_token,
+                       repo_name,
+                       base_path = "skills/",
+                       branch = "main",
+                       message = NULL,
+                       iteration = list(),
+                       out_dir = NULL,
+                       record_iteration = TRUE,
+                       include_body = TRUE,
+                       include_files = TRUE,
+                       include_assets = FALSE,
+                       publish_fun = publish_skill,
+                       record_fun = record_skill_iteration) {
+  publish_result <- publish_fun(
+    skill = skill,
+    github_user = github_user,
+    github_token = github_token,
+    repo_name = repo_name,
+    base_path = base_path,
+    branch = branch,
+    message = message,
+    include_body = include_body,
+    include_files = include_files,
+    include_assets = include_assets
+  )
+
+  iteration_path <- NULL
+  if (isTRUE(record_iteration)) {
+    iteration_path <- record_fun(
+      skill = skill,
+      iteration = iteration,
+      out_dir = out_dir,
+      include_record = TRUE
+    )
+  }
+
+  list(
+    publish = publish_result,
+    iteration_path = iteration_path
+  )
 }
 
 # Package environment for skill store
