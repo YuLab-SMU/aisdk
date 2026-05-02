@@ -48,6 +48,10 @@ sync_skill(
 \item{include_files}{Include textual source files in the published record.}
 
 \item{include_assets}{Include asset file names in the published record.}
+
+\item{publish_fun}{Function used to publish the skill. Defaults to \code{\link[=publish_skill]{publish_skill()}}.}
+
+\item{record_fun}{Function used to record the iteration. Defaults to \code{\link[=record_skill_iteration]{record_skill_iteration()}}.}
 }
 \value{
 A list with \code{publish} and \code{iteration_path}.

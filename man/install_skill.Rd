@@ -7,8 +7,10 @@
 install_skill(skill_ref, version = NULL, force = FALSE)
 }
 \arguments{
-\item{skill_ref}{Skill reference (e.g., "username/skillname" or
-"username/repo/path/to/skill").}
+\item{skill_ref}{Skill reference (e.g., \code{"username/skillname"},
+\code{"username/repo/path/to/skill"}, or a public GitHub URL pointing to a
+skill directory such as
+\code{"https://github.com/posit-dev/skills/tree/main/r-lib/testing-r-packages"}).}
 
 \item{version}{Optional specific version.}
 
@@ -23,8 +25,9 @@ Install a skill from the global skill store or a GitHub repository.
 \examples{
 \donttest{
 if (interactive()) {
-# Install from GitHub
+# Install from a public GitHub repository
 install_skill("aisdk/data-analysis")
+install_skill("posit-dev/skills/r-lib/testing-r-packages")
 
 # Install specific version
 install_skill("aisdk/visualization", version = "1.2.0")

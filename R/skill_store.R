@@ -978,6 +978,8 @@ use_skill <- function(skill_ref, version = NULL, force = FALSE) {
 #' @param include_body Include the full `SKILL.md` body in the published record.
 #' @param include_files Include textual source files in the published record.
 #' @param include_assets Include asset file names in the published record.
+#' @param publish_fun Function used to publish the skill. Defaults to [publish_skill()].
+#' @param record_fun Function used to record the iteration. Defaults to [record_skill_iteration()].
 #' @return A list with `publish` and `iteration_path`.
 #' @export
 sync_skill <- function(skill,
