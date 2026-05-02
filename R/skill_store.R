@@ -598,8 +598,10 @@ SkillStore <- R6::R6Class(
 #' @title Install a Skill
 #' @description
 #' Install a skill from the global skill store or a GitHub repository.
-#' @param skill_ref Skill reference (e.g., "username/skillname" or
-#'   "username/repo/path/to/skill").
+#' @param skill_ref Skill reference (e.g., `"username/skillname"`,
+#'   `"username/repo/path/to/skill"`, or a public GitHub URL pointing to a
+#'   skill directory such as
+#'   `"https://github.com/posit-dev/skills/tree/main/r-lib/testing-r-packages"`).
 #' @param version Optional specific version.
 #' @param force Force reinstallation.
 #' @return The installed Skill object.
@@ -607,8 +609,9 @@ SkillStore <- R6::R6Class(
 #' @examples
 #' \donttest{
 #' if (interactive()) {
-#' # Install from GitHub
+#' # Install from a public GitHub repository
 #' install_skill("aisdk/data-analysis")
+#' install_skill("posit-dev/skills/r-lib/testing-r-packages")
 #'
 #' # Install specific version
 #' install_skill("aisdk/visualization", version = "1.2.0")

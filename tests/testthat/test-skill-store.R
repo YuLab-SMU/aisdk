@@ -36,6 +36,29 @@ test_that("SkillStore parses GitHub tree URLs with branch and path", {
   expect_equal(parsed$name, "foo")
 })
 
+test_that("SkillStore parses public GitHub repository refs without auth ownership", {
+  install_path <- tempfile("aisdk-skill-store-")
+  store <- SkillStore$new(install_path = install_path)
+  on.exit(unlink(install_path, recursive = TRUE), add = TRUE)
+
+  private <- store$.__enclos_env__$private
+
+  root_ref <- private$parse_skill_ref("https://github.com/posit-dev/skills")
+  expect_equal(root_ref$type, "github")
+  expect_equal(root_ref$owner, "posit-dev")
+  expect_equal(root_ref$repo, "skills")
+  expect_null(root_ref$path)
+  expect_null(root_ref$branch)
+  expect_equal(root_ref$name, "skills")
+
+  path_ref <- private$parse_skill_ref("posit-dev/skills/data-wrangling")
+  expect_equal(path_ref$type, "github")
+  expect_equal(path_ref$owner, "posit-dev")
+  expect_equal(path_ref$repo, "skills")
+  expect_equal(path_ref$path, "data-wrangling")
+  expect_equal(path_ref$name, "data-wrangling")
+})
+
 test_that("SkillStore installs a subdirectory from an archive", {
   skip_if(Sys.which("zip") == "", "zip command is not available")
 
