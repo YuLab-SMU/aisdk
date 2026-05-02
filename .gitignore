@@ -63,3 +63,4 @@ Rplots*.pdf
 **/*.quarto_ipynb
 _site/
 .positai
+.aisdk/
