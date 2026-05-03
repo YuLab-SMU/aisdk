@@ -82,6 +82,27 @@ test_that("resolve_request_timeout_config prefers explicit layered settings over
   expect_equal(cfg$idle_timeout_seconds, 15)
 })
 
+test_that("apply_request_timeout_config skips unsupported curl options", {
+  req <- httr2::request("https://example.com")
+  cfg <- list(
+    total_timeout_seconds = NULL,
+    first_byte_timeout_seconds = 45,
+    connect_timeout_seconds = 5,
+    idle_timeout_seconds = 15
+  )
+
+  req <- testthat::with_mocked_bindings(
+    curl_option_available = function(option_name) FALSE,
+    aisdk:::apply_request_timeout_config(req, cfg),
+    .package = "aisdk"
+  )
+
+  expect_equal(req$options$connecttimeout, 5L)
+  expect_null(req$options$server_response_timeout)
+  expect_equal(req$options$low_speed_limit, 1L)
+  expect_equal(req$options$low_speed_time, 15L)
+})
+
 test_that("http_error_classes detects compatibility errors", {
   classes <- aisdk:::http_error_classes(
     status = 400,

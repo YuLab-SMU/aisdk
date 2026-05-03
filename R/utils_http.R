@@ -125,6 +125,10 @@ resolve_request_timeout_seconds <- function(timeout_seconds = NULL) {
   resolve_request_timeout_config(timeout_seconds = timeout_seconds, request_type = "request")$total_timeout_seconds
 }
 
+curl_option_available <- function(option_name) {
+  option_name %in% names(curl::curl_options())
+}
+
 apply_request_timeout_config <- function(req, timeout_config) {
   if (!is.null(timeout_config$total_timeout_seconds)) {
     req <- httr2::req_timeout(req, timeout_config$total_timeout_seconds)
@@ -136,7 +140,10 @@ apply_request_timeout_config <- function(req, timeout_config) {
     curl_options$connecttimeout <- as.integer(ceiling(timeout_config$connect_timeout_seconds))
   }
 
-  if (!is.null(timeout_config$first_byte_timeout_seconds)) {
+  if (
+    !is.null(timeout_config$first_byte_timeout_seconds) &&
+      curl_option_available("server_response_timeout")
+  ) {
     curl_options$server_response_timeout <- as.integer(ceiling(timeout_config$first_byte_timeout_seconds))
   }
 
