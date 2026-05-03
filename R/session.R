@@ -118,7 +118,7 @@ ChatSession <- R6::R6Class(
       extra_args$turn_system_prompt <- NULL
 
       # Resolve model if needed
-      model <- private$get_model()
+      model <- private$resolve_model()
 
       # Append user message to history
       self$append_message("user", prompt)
@@ -133,7 +133,7 @@ ChatSession <- R6::R6Class(
             model = model,
             prompt = prompt_payload$messages,
             system = prompt_payload$system,
-            tools = private$.tools,
+            tools = private$prepare_tools(),
             max_steps = private$.max_steps,
             session = self,
             hooks = private$.hooks,
@@ -169,7 +169,7 @@ ChatSession <- R6::R6Class(
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
       extra_args$turn_system_prompt <- NULL
 
-      model <- private$get_model()
+      model <- private$resolve_model()
 
       # Append user message
       self$append_message("user", prompt)
@@ -187,7 +187,7 @@ ChatSession <- R6::R6Class(
             callback = callback,
             system = prompt_payload$system,
             registry = private$.registry,
-            tools = private$.tools,
+            tools = private$prepare_tools(),
             max_steps = private$.max_steps,
             session = self,
             hooks = private$.hooks
@@ -460,6 +460,18 @@ ChatSession <- R6::R6Class(
         return(paste0(private$.model$provider, ":", private$.model$model_id))
       }
       default_model_id(get_model())
+    },
+
+    #' @description Get the resolved language model for this session.
+    #' @return A `LanguageModelV1` object.
+    get_model = function() {
+      private$resolve_model()
+    },
+
+    #' @description Get tools configured on this session.
+    #' @return A list of `Tool` objects.
+    get_tools = function() {
+      private$.tools %||% list()
     },
 
     #' @description Get token usage statistics.
@@ -753,6 +765,25 @@ ChatSession <- R6::R6Class(
       assembled$state
     },
 
+    #' @description List compact context handles available to this session.
+    #' @return A list of context handle records.
+    list_context_handles = function() {
+      list_context_handles(self)
+    },
+
+    #' @description Create context query tools bound to this session.
+    #' @return A list of `Tool` objects.
+    create_context_query_tools = function() {
+      create_context_query_tools(self)
+    },
+
+    #' @description Run a bounded child session for a focused query.
+    #' @param ... Arguments passed to `sub_session_query()`.
+    #' @return A compact sub-session result list.
+    sub_session_query = function(...) {
+      sub_session_query(self, ...)
+    },
+
     #' @description Clear shared memory.
     #' @param keys Optional specific keys to clear. If NULL, clears all.
     #' @return Invisible self for chaining.
@@ -873,7 +904,14 @@ ChatSession <- R6::R6Class(
         persist = TRUE
       )
     },
-    get_model = function() {
+    prepare_tools = function() {
+      tools <- private$.tools %||% list()
+      if (identical(get_session_context_management_mode(self), "adaptive")) {
+        tools <- append_unique_tools(tools, create_context_query_tools(self))
+      }
+      tools
+    },
+    resolve_model = function() {
       if (!is.null(private$.model)) {
         return(private$.model)
       }

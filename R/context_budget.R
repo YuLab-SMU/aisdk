@@ -225,6 +225,9 @@ normalize_context_state <- function(state = NULL) {
     tool_digest = list(),
     object_cards = list(),
     artifact_cards = list(),
+    context_handles = list(),
+    sub_sessions = list(),
+    route_decisions = list(),
     carryover = list(),
     transcript_segments = list(),
     retrieval_cache = list(),
@@ -246,6 +249,9 @@ normalize_context_state <- function(state = NULL) {
     "tool_digest",
     "object_cards",
     "artifact_cards",
+    "context_handles",
+    "sub_sessions",
+    "route_decisions",
     "carryover",
     "transcript_segments",
     "retrieval_cache",
@@ -1062,6 +1068,24 @@ render_context_state_block <- function(state,
     }
   }
 
+  if (length(state$context_handles) > 0) {
+    lines <- c(
+      lines,
+      "Available context handles:",
+      "Use context_search() to find handles, context_get() for bounded detail, and object_peek() before requesting full live objects."
+    )
+    handles <- utils::head(state$context_handles, 8L)
+    for (handle in handles) {
+      lines <- c(lines, sprintf("- %s [%s] %s", handle$id %||% "", handle$kind %||% "", handle$title %||% ""))
+      if (nzchar(handle$summary %||% "")) {
+        lines <- c(lines, paste0("  ", handle$summary))
+      }
+      if (nzchar(handle$accessor %||% "")) {
+        lines <- c(lines, paste0("  accessor: ", handle$accessor))
+      }
+    }
+  }
+
   if (length(state$event_log) > 0) {
     lines <- c(lines, "Recent context events:")
     events <- tail(state$event_log, max_events)
@@ -1220,6 +1244,7 @@ synthesize_context_state <- function(session,
   state$active_facts <- build_active_facts(session, state = state, messages = messages)
   state$decisions <- build_decisions(messages = messages)
   state$open_loops <- build_open_loops(state = state, messages = messages, generation_result = generation_result)
+  state$context_handles <- list_context_handles(session, state = state, persist = FALSE)
 
   llm_memory <- llm_synthesize_working_memory(
     session,
@@ -2645,6 +2670,9 @@ assemble_session_messages <- function(session,
       }
     } else {
       state$retrieval_cache <- list()
+    }
+    if (identical(mode, "adaptive")) {
+      state$context_handles <- list_context_handles(session, state = state, persist = FALSE)
     }
     structured_block <- render_context_state_block(state)
   }

@@ -27,6 +27,8 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-list_capability_models}{\code{ChatSession$list_capability_models()}}
 \item \href{#method-ChatSession-clear_capability_model}{\code{ChatSession$clear_capability_model()}}
 \item \href{#method-ChatSession-get_model_id}{\code{ChatSession$get_model_id()}}
+\item \href{#method-ChatSession-get_model}{\code{ChatSession$get_model()}}
+\item \href{#method-ChatSession-get_tools}{\code{ChatSession$get_tools()}}
 \item \href{#method-ChatSession-stats}{\code{ChatSession$stats()}}
 \item \href{#method-ChatSession-save}{\code{ChatSession$save()}}
 \item \href{#method-ChatSession-as_list}{\code{ChatSession$as_list()}}
@@ -50,6 +52,9 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_context_metrics}{\code{ChatSession$get_context_metrics()}}
 \item \href{#method-ChatSession-assemble_messages}{\code{ChatSession$assemble_messages()}}
 \item \href{#method-ChatSession-refresh_context_state}{\code{ChatSession$refresh_context_state()}}
+\item \href{#method-ChatSession-list_context_handles}{\code{ChatSession$list_context_handles()}}
+\item \href{#method-ChatSession-create_context_query_tools}{\code{ChatSession$create_context_query_tools()}}
+\item \href{#method-ChatSession-sub_session_query}{\code{ChatSession$sub_session_query()}}
 \item \href{#method-ChatSession-clear_memory}{\code{ChatSession$clear_memory()}}
 \item \href{#method-ChatSession-get_envir}{\code{ChatSession$get_envir()}}
 \item \href{#method-ChatSession-eval_in_session}{\code{ChatSession$eval_in_session()}}
@@ -419,6 +424,32 @@ Get current model identifier.
 
 \subsection{Returns}{
 Model ID string.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_model"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_model}{}}}
+\subsection{Method \code{get_model()}}{
+Get the resolved language model for this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_model()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A \code{LanguageModelV1} object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_tools"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_tools}{}}}
+\subsection{Method \code{get_tools()}}{
+Get tools configured on this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_tools()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of \code{Tool} objects.
 }
 }
 \if{html}{\out{<hr>}}
@@ -823,6 +854,52 @@ Refresh the adaptive context state from current history.
 }
 \subsection{Returns}{
 The normalized context state list.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-list_context_handles"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-list_context_handles}{}}}
+\subsection{Method \code{list_context_handles()}}{
+List compact context handles available to this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$list_context_handles()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of context handle records.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-create_context_query_tools"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-create_context_query_tools}{}}}
+\subsection{Method \code{create_context_query_tools()}}{
+Create context query tools bound to this session.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$create_context_query_tools()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of \code{Tool} objects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-sub_session_query"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-sub_session_query}{}}}
+\subsection{Method \code{sub_session_query()}}{
+Run a bounded child session for a focused query.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$sub_session_query(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{Arguments passed to \code{sub_session_query()}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A compact sub-session result list.
 }
 }
 \if{html}{\out{<hr>}}

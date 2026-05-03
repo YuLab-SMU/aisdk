@@ -147,6 +147,44 @@ test_that("refresh_context_state builds live object cards and injects them into 
   expect_match(assembled$system, "deep inspect: inspect_r_object", fixed = TRUE)
 })
 
+test_that("adaptive prompt assembly includes compact context handle block", {
+  session <- aisdk::create_chat_session(
+    model = MockModel$new(),
+    system_prompt = "Base system"
+  )
+  session$set_context_management_config(create_context_management_config(mode = "adaptive"))
+  env <- session$get_envir()
+  env$large_df <- data.frame(
+    x = seq_len(100),
+    y = rep(paste(rep("large-payload", 12), collapse = " "), 100),
+    stringsAsFactors = FALSE
+  )
+
+  assembled <- session$assemble_messages()
+
+  expect_match(assembled$system, "Available context handles:", fixed = TRUE)
+  expect_match(assembled$system, "object:large_df", fixed = TRUE)
+  expect_match(assembled$system, "Use context_search()", fixed = TRUE)
+  expect_false(grepl(paste(rep("large-payload", 12), collapse = " "), assembled$system, fixed = TRUE))
+})
+
+test_that("adaptive ChatSession send auto-adds context query tools without duplicates", {
+  mock_model <- MockModel$new()
+  mock_model$add_response(text = "done")
+  existing_tool <- create_context_query_tools()[[1]]
+  session <- aisdk::create_chat_session(
+    model = mock_model,
+    tools = list(existing_tool)
+  )
+  session$set_context_management_config(create_context_management_config(mode = "adaptive"))
+
+  session$send("hello")
+
+  tool_names <- vapply(mock_model$last_params$tools, function(tool_obj) tool_obj$name, character(1))
+  expect_true(all(c("context_search", "context_get", "object_peek", "sub_session_query") %in% tool_names))
+  expect_equal(sum(tool_names == "context_search"), 1L)
+})
+
 test_that("assemble_session_messages can retrieve semantic object cards as ranked hits", {
   session <- aisdk::create_chat_session(
     model = MockModel$new(),
