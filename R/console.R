@@ -235,11 +235,13 @@ console_chat <- function(session = NULL,
   render_console_frame(build_console_frame(app_state), state = app_state, force = TRUE)
   cli::cli_text("Type {.code /help} for commands, {.code /quit} to exit.")
 
+  input_state <- console_create_input_state(session)
+
   # Main REPL loop
   while (TRUE) {
     # Read user input
     input <- tryCatch(
-      readline_multiline(),
+      readline_multiline(input_state),
       interrupt = function(e) {
         cli::cli_alert_info("Use /quit to exit.")
         return("")
@@ -357,12 +359,668 @@ console_chat <- function(session = NULL,
 }
 
 #' @keywords internal
-readline_multiline <- function() {
-  # Simple single-line input for now
-  # Could be extended for multi-line with special handling
-  cli::cli_text(cli::col_blue(cli::symbol$pointer), " ", cli::col_blue("You:"))
-  input <- readline("  ")
+readline_multiline <- function(input_state = NULL,
+                               readline_fn = NULL,
+                               quiet = FALSE,
+                               paste_output_dir = tempdir(),
+                               clipboard_fn = console_read_clipboard) {
+  input_state <- input_state %||% console_create_input_state()
+  draining_paste <- console_has_queued_paste_drain(input_state)
+  if (!isTRUE(quiet) && !draining_paste) {
+    cli::cli_text(cli::col_blue(cli::symbol$pointer), " ", cli::col_blue("You:"))
+  }
+
+  input_event <- console_read_input_event(
+    prompt = if (draining_paste) "" else "  ",
+    readline_fn = readline_fn
+  )
+  if (identical(input_event$type, "eof")) {
+    return(NULL)
+  }
+  if (identical(input_event$type, "paste")) {
+    paste_ref <- console_save_paste_event(input_event$text, output_dir = paste_output_dir)
+    if (nzchar(paste_ref$message %||% "")) {
+      input_state$pending_paste <- paste_ref
+      if (!isTRUE(quiet)) {
+        console_show_paste_notice(paste_ref)
+      }
+    }
+    return("")
+  }
+
+  input <- input_event$text %||% ""
+  if (console_consume_queued_paste_line(input_state, input)) {
+    if (!isTRUE(quiet)) {
+      console_clear_readline_echo(input, has_label = !draining_paste)
+    }
+    console_maybe_show_pending_paste_notice(input_state, quiet = quiet)
+    return("")
+  }
+
+  if (!is.null(input_state$pending_paste)) {
+    if (startsWith(trimws(input), "/")) {
+      console_input_history_add(input_state, input)
+      return(input)
+    }
+
+    input <- console_consume_pending_paste(input_state, input)
+    console_input_history_add(input_state, input)
+    return(input)
+  }
+
+  if (console_should_auto_paste(input) || console_should_rstudio_clipboard_paste(input, clipboard_fn)) {
+    paste_ref <- console_read_paste_to_file(
+      input_state,
+      readline_fn = readline_fn,
+      quiet = quiet,
+      initial_lines = input,
+      output_dir = paste_output_dir,
+      clipboard_fn = clipboard_fn
+    )
+    if (nzchar(paste_ref$message %||% "")) {
+      input_state$pending_paste <- paste_ref
+    }
+    return("")
+  }
+
+  console_input_history_add(input_state, input)
   input
+}
+
+#' @keywords internal
+console_read_input_event <- function(prompt = "  ", readline_fn = NULL) {
+  if (!is.null(readline_fn)) {
+    return(list(type = "line", text = readline_fn(prompt)))
+  }
+
+  event <- console_read_bracketed_input(prompt)
+  if (!is.null(event)) {
+    return(event)
+  }
+
+  list(type = "line", text = readline(prompt))
+}
+
+#' @keywords internal
+console_read_bracketed_input <- function(prompt = "  ") {
+  if (!console_can_use_raw_input()) {
+    return(NULL)
+  }
+
+  old_stty <- tryCatch(system2("stty", "-g", stdout = TRUE, stderr = FALSE), error = function(e) character(0))
+  if (length(old_stty) == 0L || !nzchar(old_stty[[1]])) {
+    return(NULL)
+  }
+
+  con <- tryCatch(file("stdin", open = "rb"), error = function(e) NULL)
+  if (is.null(con)) {
+    return(NULL)
+  }
+  chars <- character(0)
+  char_bytes <- raw(0)
+  paste_bytes <- raw(0)
+  in_paste <- FALSE
+
+  restore <- function() {
+    cat("\033[?2004l")
+    tryCatch(close(con), error = function(e) NULL)
+    tryCatch(system2("stty", old_stty[[1]], stdout = FALSE, stderr = FALSE), error = function(e) NULL)
+    utils::flush.console()
+  }
+
+  cat(prompt)
+  utils::flush.console()
+  ok <- tryCatch({
+    system2("stty", c("raw", "-echo"), stdout = FALSE, stderr = FALSE)
+    cat("\033[?2004h")
+    utils::flush.console()
+
+    repeat {
+      byte <- console_read_raw_byte(con)
+      if (identical(byte, as.raw(0x1b))) {
+        seq <- console_read_escape_sequence(con)
+        if (identical(seq, "[200~")) {
+          in_paste <- TRUE
+          paste_bytes <- raw(0)
+          next
+        }
+        if (identical(seq, "[201~") && isTRUE(in_paste)) {
+          cat("\r\n")
+          return(list(type = "paste", text = rawToChar(paste_bytes)))
+        }
+        next
+      }
+
+      if (isTRUE(in_paste)) {
+        paste_bytes <- c(paste_bytes, byte)
+        next
+      }
+
+      if (identical(byte, as.raw(0x0d)) || identical(byte, as.raw(0x0a))) {
+        cat("\r\n")
+        return(list(type = "line", text = paste0(chars, collapse = "")))
+      }
+
+      if (identical(byte, as.raw(0x03))) {
+        stop(structure(list(message = "interrupt"), class = c("interrupt", "condition")))
+      }
+
+      if (identical(byte, as.raw(0x04))) {
+        return(list(type = "eof", text = NULL))
+      }
+
+      if (identical(byte, as.raw(0x7f)) || identical(byte, as.raw(0x08))) {
+        if (length(chars) > 0L) {
+          chars <- chars[-length(chars)]
+          cat("\b \b")
+          utils::flush.console()
+        }
+        next
+      }
+
+      char_bytes <- c(char_bytes, byte)
+      ch <- console_try_decode_utf8(char_bytes)
+      if (!is.null(ch)) {
+        chars <- c(chars, ch)
+        cat(ch)
+        utils::flush.console()
+        char_bytes <- raw(0)
+      }
+    }
+  }, error = function(e) {
+    if (inherits(e, "interrupt")) {
+      stop(e)
+    }
+    NULL
+  }, finally = restore())
+
+  ok
+}
+
+#' @keywords internal
+console_read_escape_sequence <- function(con) {
+  bytes <- raw(0)
+  repeat {
+    byte <- console_read_raw_byte(con)
+    bytes <- c(bytes, byte)
+    seq <- rawToChar(bytes)
+    if (grepl("~$", seq) || length(bytes) >= 8L) {
+      return(seq)
+    }
+  }
+}
+
+#' @keywords internal
+console_read_raw_byte <- function(con) {
+  byte <- readBin(con, what = "raw", n = 1L)
+  if (length(byte) == 0L) {
+    stop("No input available")
+  }
+  byte
+}
+
+#' @keywords internal
+console_try_decode_utf8 <- function(bytes) {
+  text <- tryCatch(rawToChar(bytes), error = function(e) NULL)
+  if (is.null(text)) {
+    return(NULL)
+  }
+  decoded <- iconv(text, from = "UTF-8", to = "UTF-8", sub = NA_character_)
+  if (is.na(decoded)) {
+    return(NULL)
+  }
+  decoded
+}
+
+#' @keywords internal
+console_can_use_raw_input <- function() {
+  if (!interactive() || .Platform$OS.type == "windows") {
+    return(FALSE)
+  }
+  status <- tryCatch(system2("test", c("-t", "0"), stdout = FALSE, stderr = FALSE), error = function(e) 1L)
+  identical(status, 0L)
+}
+
+#' @keywords internal
+console_save_paste_event <- function(text, output_dir = tempdir()) {
+  text <- gsub("\r\n", "\n", text %||% "", fixed = TRUE)
+  text <- gsub("\r", "\n", text, fixed = TRUE)
+  if (!nzchar(text)) {
+    return(console_create_paste_ref("", 0L))
+  }
+  path <- console_write_paste_text(text, output_dir = output_dir)
+  chars <- nchar(text, type = "chars", allowNA = FALSE, keepNA = FALSE)
+  console_create_paste_ref(path, chars)
+}
+
+#' @keywords internal
+console_read_paste_to_file <- function(input_state = NULL,
+                                       readline_fn = function(prompt) readline(prompt),
+                                       quiet = FALSE,
+                                       initial_lines = character(0),
+                                       output_dir = tempdir(),
+                                       clipboard_fn = console_read_clipboard) {
+  initial_lines <- console_normalize_input_lines(initial_lines)
+  text <- console_clipboard_paste_text(initial_lines, clipboard_fn = clipboard_fn)
+  used_clipboard <- !is.null(text)
+  if (!used_clipboard) {
+    if (!isTRUE(quiet)) {
+      cli::cli_alert_info("Detected pasted content. Continue paste, then type {.code /endpaste} on its own line.")
+    }
+    lines <- initial_lines
+    repeat {
+      line <- readline_fn("  ")
+      if (identical(trimws(line), "/endpaste")) {
+        break
+      }
+      lines <- c(lines, line)
+    }
+    text <- paste(lines, collapse = "\n")
+  }
+
+  if (!nzchar(text)) {
+    return(console_create_paste_ref("", 0L))
+  }
+
+  path <- console_write_paste_text(text, output_dir = output_dir)
+  chars <- nchar(text, type = "chars", allowNA = FALSE, keepNA = FALSE)
+  paste_ref <- console_create_paste_ref(path, chars)
+  if (used_clipboard) {
+    console_queue_paste_drain(input_state, text, initial_lines, paste_ref)
+  }
+  if (!isTRUE(quiet)) {
+    if (used_clipboard) {
+      # In clipboard mode only initial_lines have been echoed by readline() so far.
+      # The remaining lines are still in the stdin buffer and must not be cleared.
+      console_clear_paste_echo(initial_lines = initial_lines)
+    } else {
+      # In manual /endpaste mode all lines have been echoed interactively.
+      console_clear_paste_echo(text, initial_lines)
+    }
+  }
+  if (!isTRUE(quiet) && console_pending_paste_drain_empty(input_state)) {
+    console_show_paste_notice(paste_ref)
+  }
+
+  paste_ref
+}
+
+#' @keywords internal
+console_create_paste_ref <- function(path, chars) {
+  message <- ""
+  if (nzchar(path)) {
+    message <- paste0(
+      "[Pasted Content ", chars, " chars]\n",
+      "The pasted content was saved to: ", path, "\n",
+      "Please use this file as the content for my request."
+    )
+  }
+  structure(
+    list(
+      path = path,
+      chars = chars,
+      message = message
+    ),
+    class = "aisdk_console_paste_ref"
+  )
+}
+
+#' @keywords internal
+console_consume_pending_paste <- function(input_state, input = "") {
+  paste_ref <- input_state$pending_paste
+  input_state$pending_paste <- NULL
+
+  paste_message <- paste_ref$message %||% ""
+  input <- trimws(input %||% "")
+  if (!nzchar(input)) {
+    return(paste_message)
+  }
+
+  paste0(input, "\n\n", paste_message)
+}
+
+#' @keywords internal
+console_queue_paste_drain <- function(input_state,
+                                      text,
+                                      initial_lines = character(0),
+                                      paste_ref = NULL) {
+  if (is.null(input_state)) {
+    return(invisible(character(0)))
+  }
+  lines <- console_submitted_paste_tail_lines(text, initial_lines)
+  input_state$pending_paste_drain <- lines
+  input_state$pending_paste_notice <- if (length(lines) > 0L) paste_ref else NULL
+  invisible(lines)
+}
+
+#' @keywords internal
+console_submitted_paste_tail_lines <- function(text, initial_lines = character(0)) {
+  initial_lines <- console_normalize_input_lines(initial_lines)
+  parts <- strsplit(text %||% "", "\n", fixed = TRUE)[[1]] %||% character(0)
+  initial_count <- length(initial_lines %||% character(0))
+  if (length(parts) <= initial_count) {
+    return(character(0))
+  }
+
+  tail_indexes <- seq.int(initial_count + 1L, length(parts))
+  parts[tail_indexes]
+}
+
+#' @keywords internal
+console_consume_queued_paste_line <- function(input_state, input) {
+  if (is.null(input_state)) {
+    return(FALSE)
+  }
+
+  queued <- input_state$pending_paste_drain %||% character(0)
+  if (length(queued) == 0L) {
+    return(FALSE)
+  }
+
+  matched_index <- console_match_queued_paste_line(input, queued)
+  if (!is.na(matched_index)) {
+    input_state$pending_paste_drain <- queued[-seq_len(matched_index)]
+    return(TRUE)
+  }
+
+  input_state$pending_paste_drain <- character(0)
+  FALSE
+}
+
+#' @keywords internal
+console_match_queued_paste_line <- function(input, queued) {
+  if (length(queued) == 0L) {
+    return(NA_integer_)
+  }
+
+  input_norm <- trimws(input %||% "")
+  queued_norm <- trimws(queued %||% "")
+  matches <- which(identical(input, queued[[1]]) | input_norm == queued_norm)
+  if (length(matches) == 0L) {
+    return(NA_integer_)
+  }
+  matches[[1]]
+}
+
+#' @keywords internal
+console_has_queued_paste_drain <- function(input_state) {
+  if (is.null(input_state)) {
+    return(FALSE)
+  }
+  length(input_state$pending_paste_drain %||% character(0)) > 0L
+}
+
+#' @keywords internal
+console_maybe_show_pending_paste_notice <- function(input_state, quiet = FALSE) {
+  if (is.null(input_state)) {
+    return(invisible(FALSE))
+  }
+  if (length(input_state$pending_paste_drain %||% character(0)) > 0L) {
+    return(invisible(FALSE))
+  }
+
+  paste_ref <- input_state$pending_paste_notice %||% NULL
+  input_state$pending_paste_notice <- NULL
+  if (is.null(paste_ref)) {
+    return(invisible(FALSE))
+  }
+
+  if (!isTRUE(quiet)) {
+    console_show_paste_notice(paste_ref)
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_pending_paste_drain_empty <- function(input_state) {
+  if (is.null(input_state)) {
+    return(TRUE)
+  }
+  length(input_state$pending_paste_drain %||% character(0)) == 0L
+}
+
+#' @keywords internal
+console_show_paste_notice <- function(paste_ref) {
+  if (is.null(paste_ref) || !nzchar(paste_ref$path %||% "")) {
+    return(invisible(FALSE))
+  }
+
+  chars <- paste_ref$chars %||% 0L
+  path <- paste_ref$path
+  cli::cli_alert_info("[Pasted Content {chars} chars] saved to {.file {path}}")
+  cli::cli_alert_info("Press Enter to send it, or type instructions to send with it.")
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_count_newlines <- function(text) {
+  matches <- gregexpr("\n", text %||% "", fixed = TRUE)[[1]]
+  if (identical(matches, -1L)) {
+    return(0L)
+  }
+  length(matches)
+}
+
+#' @keywords internal
+console_clear_paste_echo <- function(text = "", initial_lines = character(0)) {
+  if (console_clear_rstudio_console()) {
+    return(invisible(TRUE))
+  }
+
+  if (!console_supports_ansi_cursor_control()) {
+    return(invisible(FALSE))
+  }
+
+  lines_to_clear <- max(console_count_newlines(text %||% "") + length(initial_lines %||% character(0)), 1L)
+  for (i in seq_len(lines_to_clear)) {
+    cat("\033[1A\033[2K", sep = "")
+  }
+  utils::flush.console()
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_clear_readline_echo <- function(input = "", has_label = TRUE) {
+  if (console_clear_rstudio_console()) {
+    return(invisible(TRUE))
+  }
+
+  if (!console_supports_ansi_cursor_control()) {
+    return(invisible(FALSE))
+  }
+
+  prefix <- if (isTRUE(has_label)) "  " else ""
+  line_count <- console_wrapped_line_count(paste0(prefix, input %||% ""))
+  if (isTRUE(has_label)) {
+    line_count <- line_count + 1L
+  }
+  for (i in seq_len(line_count)) {
+    cat("\033[1A\033[2K", sep = "")
+  }
+  utils::flush.console()
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_clear_rstudio_console <- function() {
+  if (!console_running_in_rstudio()) {
+    return(FALSE)
+  }
+
+  tryCatch({
+    rstudioapi::executeCommand("clearConsole", quiet = TRUE)
+    rstudioapi::executeCommand("consoleClear", quiet = TRUE)
+    TRUE
+  }, error = function(e) {
+    FALSE
+  })
+}
+
+#' @keywords internal
+console_running_in_rstudio <- function() {
+  requireNamespace("rstudioapi", quietly = TRUE) &&
+    isTRUE(tryCatch(rstudioapi::isAvailable(), error = function(e) FALSE))
+}
+
+#' @keywords internal
+console_wrapped_line_count <- function(text) {
+  width <- getOption("width", 80L)
+  width <- suppressWarnings(as.integer(width))
+  if (is.na(width) || width < 20L) {
+    width <- 80L
+  }
+  max(1L, ceiling(nchar(text %||% "", type = "width", allowNA = FALSE, keepNA = FALSE) / width))
+}
+
+#' @keywords internal
+console_supports_ansi_cursor_control <- function() {
+  if (!interactive()) {
+    return(FALSE)
+  }
+  ansi_colors <- tryCatch(cli::num_ansi_colors(), error = function(e) 1L)
+  isTRUE(ansi_colors > 1L)
+}
+
+#' @keywords internal
+console_clipboard_paste_text <- function(initial_lines = character(0), clipboard_fn = console_read_clipboard) {
+  initial_lines <- console_normalize_input_lines(initial_lines)
+  first_line <- if (length(initial_lines) > 0L) initial_lines[[1]] %||% "" else ""
+  initial_text <- paste(initial_lines, collapse = "\n")
+  text <- tryCatch(clipboard_fn(), error = function(e) NULL)
+  if (!is.character(text) || length(text) != 1L || !nzchar(text)) {
+    return(NULL)
+  }
+
+  text <- gsub("\r\n", "\n", text, fixed = TRUE)
+  text <- gsub("\r", "\n", text, fixed = TRUE)
+  if (!nzchar(first_line) ||
+      startsWith(text, initial_text) ||
+      startsWith(text, first_line) ||
+      grepl(initial_text, text, fixed = TRUE) ||
+      grepl(first_line, text, fixed = TRUE)) {
+    return(text)
+  }
+
+  NULL
+}
+
+#' @keywords internal
+console_should_rstudio_clipboard_paste <- function(input, clipboard_fn = console_read_clipboard) {
+  if (!console_running_in_rstudio()) {
+    return(FALSE)
+  }
+
+  text <- console_clipboard_paste_text(input, clipboard_fn = clipboard_fn)
+  is.character(text) && length(text) == 1L && grepl("\n", text, fixed = TRUE)
+}
+
+#' @keywords internal
+console_normalize_input_lines <- function(lines = character(0)) {
+  lines <- lines %||% character(0)
+  if (!is.character(lines) || length(lines) == 0L) {
+    return(character(0))
+  }
+  normalized <- gsub("\r\n", "\n", lines, fixed = TRUE)
+  normalized <- gsub("\r", "\n", normalized, fixed = TRUE)
+  unlist(strsplit(normalized, "\n", fixed = TRUE), use.names = FALSE)
+}
+
+#' @keywords internal
+console_read_clipboard <- function() {
+  if (Sys.info()[["sysname"]] == "Darwin" && nzchar(Sys.which("pbpaste"))) {
+    return(paste(system2("pbpaste", stdout = TRUE, stderr = FALSE), collapse = "\n"))
+  }
+  if (.Platform$OS.type == "windows") {
+    clip <- tryCatch(utils::readClipboard(), error = function(e) character(0))
+    return(paste(clip, collapse = "\n"))
+  }
+  if (nzchar(Sys.which("wl-paste"))) {
+    return(paste(system2("wl-paste", stdout = TRUE, stderr = FALSE), collapse = "\n"))
+  }
+  if (nzchar(Sys.which("xclip"))) {
+    return(paste(system2("xclip", c("-selection", "clipboard", "-o"), stdout = TRUE, stderr = FALSE), collapse = "\n"))
+  }
+  if (nzchar(Sys.which("xsel"))) {
+    return(paste(system2("xsel", c("--clipboard", "--output"), stdout = TRUE, stderr = FALSE), collapse = "\n"))
+  }
+  NULL
+}
+
+#' @keywords internal
+console_write_paste_text <- function(text, output_dir = tempdir()) {
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(output_dir, paste0("aisdk-paste-", format(Sys.time(), "%Y%m%d-%H%M%S"), "-", sprintf("%04d", sample.int(10000L, 1L) - 1L), ".txt"))
+  writeLines(text, path, useBytes = TRUE)
+  normalizePath(path, winslash = "/", mustWork = FALSE)
+}
+
+#' @keywords internal
+console_should_auto_paste <- function(line) {
+  line <- trimws(line %||% "")
+  if (!nzchar(line) || startsWith(line, "/")) {
+    return(FALSE)
+  }
+
+  if (grepl("\n", line, fixed = TRUE)) {
+    return(TRUE)
+  }
+
+  grepl(
+    paste(c(
+      "^```",
+      "^---\\s*$",
+      "^###",
+      "^#'",
+      "^(title|source|author|published|created|description|tags):\\s*",
+      "^!\\[",
+      "^rm\\s*\\(",
+      "^library\\s*\\(",
+      "^source\\s*\\(",
+      "^\\w+\\s*<-\\s*function\\s*\\(",
+      "^\\w+\\s*<-\\s*list\\s*\\(",
+      "^\\w+\\s*<-\\s*lapply\\s*\\("
+    ), collapse = "|"),
+    line
+  )
+}
+
+#' @keywords internal
+console_create_input_state <- function(session = NULL) {
+  history <- character(0)
+  if (!is.null(session) && inherits(session, "ChatSession")) {
+    messages <- session$get_history()
+    history <- vapply(Filter(function(msg) {
+      identical(msg$role %||% "", "user") && is.character(msg$content %||% NULL) &&
+        length(msg$content) == 1L && nzchar(msg$content)
+    }, messages), function(msg) msg$content, character(1))
+  }
+
+  history <- utils::tail(history, 100L)
+  env <- new.env(parent = emptyenv())
+  env$history <- history
+  env$history_index <- length(history) + 1L
+  env$saved_input <- ""
+  env$pending_paste <- NULL
+  env$pending_paste_drain <- character(0)
+  env$pending_paste_notice <- NULL
+  env
+}
+
+#' @keywords internal
+console_input_history_add <- function(input_state, input) {
+  if (is.null(input_state) || is.null(input) || !nzchar(input)) {
+    return(invisible(input_state))
+  }
+
+  history <- input_state$history %||% character(0)
+  if (length(history) == 0L || !identical(tail(history, 1L), input)) {
+    history <- c(history, input)
+  }
+
+  input_state$history <- utils::tail(history, 100L)
+  input_state$history_index <- length(input_state$history) + 1L
+  input_state$saved_input <- ""
+  invisible(input_state)
 }
 
 #' @keywords internal

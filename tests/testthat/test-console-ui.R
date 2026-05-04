@@ -51,6 +51,403 @@ test_that("handle_command toggles debug mode", {
   expect_false(off_result$show_thinking)
 })
 
+test_that("console input state initializes with user chat messages", {
+  session <- aisdk::create_chat_session()
+  session$append_message("user", "first question")
+  session$append_message("assistant", "first answer")
+  session$append_message("user", "second\nquestion")
+
+  state <- aisdk:::console_create_input_state(session)
+
+  expect_equal(state$history, c("first question", "second\nquestion"))
+  expect_equal(state$history_index, 3L)
+})
+
+test_that("console readline returns a simple line immediately", {
+  state <- aisdk:::console_create_input_state()
+  lines <- c("alpha", "ignored")
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  input <- aisdk:::readline_multiline(state, readline_fn = fake_readline, quiet = TRUE)
+
+  expect_equal(input, "alpha")
+  expect_equal(index, 1L)
+  expect_equal(state$history, "alpha")
+})
+
+test_that("console readline keeps slash commands single-line", {
+  state <- aisdk:::console_create_input_state()
+  lines <- c("/help", "ignored")
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  input <- aisdk:::readline_multiline(state, readline_fn = fake_readline, quiet = TRUE)
+
+  expect_equal(input, "/help")
+  expect_equal(index, 1L)
+})
+
+test_that("console readline auto-saves script-like paste without sending immediately", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- paste(c(
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "",
+    "sce.all <- merge(x, y)"
+  ), collapse = "\n")
+  lines <- c(
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "",
+    "",
+    "ignored"
+  )
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  input <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(input, "")
+  expect_s3_class(state$pending_paste, "aisdk_console_paste_ref")
+  expect_true(file.exists(state$pending_paste$path))
+  expect_equal(paste(readLines(state$pending_paste$path, warn = FALSE), collapse = "\n"), clipboard_text)
+  expect_equal(state$pending_paste_drain, c("library(Matrix)", "", "sce.all <- merge(x, y)"))
+  expect_s3_class(state$pending_paste_notice, "aisdk_console_paste_ref")
+  expect_equal(index, 1L)
+})
+
+test_that("console readline handles RStudio-style multiline paste chunks", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- paste(c(
+    "###",
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "folder <- file.path('matrix', pro)",
+    "folder",
+    "counts <- Read10X(folder)"
+  ), collapse = "\n")
+  lines <- c(
+    paste(c(
+      "###",
+      "### Create: Jianming Zeng",
+      "library(Matrix)",
+      "folder <- file.path('matrix', pro)"
+    ), collapse = "\n"),
+    "folder",
+    "counts <- Read10X(folder)",
+    ""
+  )
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  first <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  skipped_one <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  skipped_two <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  sent <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(first, "")
+  expect_equal(skipped_one, "")
+  expect_equal(skipped_two, "")
+  expect_match(sent, "^\\[Pasted Content ")
+  expect_null(state$pending_paste)
+})
+
+test_that("console readline skips queued paste lines before explicit send", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- paste(c(
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "",
+    "sce.all <- merge(x, y)"
+  ), collapse = "\n")
+  lines <- c(
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "",
+    "sce.all <- merge(x, y)",
+    "帮我解释这段代码"
+  )
+  index <- 0L
+  prompts <- character(0)
+  fake_readline <- function(prompt) {
+    prompts <<- c(prompts, prompt)
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  first <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  skipped_one <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  skipped_two <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  skipped_three <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  sent <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(first, "")
+  expect_equal(skipped_one, "")
+  expect_equal(skipped_two, "")
+  expect_equal(skipped_three, "")
+  expect_match(sent, "^帮我解释这段代码\n\n\\[Pasted Content ")
+  expect_null(state$pending_paste)
+  expect_null(state$pending_paste_notice)
+  expect_equal(prompts, c("  ", "", "", "", "  "))
+})
+
+test_that("console readline sends pending paste on explicit empty enter", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- "### Create: Jianming Zeng\nlibrary(Matrix)"
+  lines <- c("### Create: Jianming Zeng", "")
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  first <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  second <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(first, "")
+  expect_match(second, "^\\[Pasted Content ")
+  expect_null(state$pending_paste)
+  expect_equal(state$history, second)
+})
+
+test_that("console readline combines pending paste with typed instructions", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- "### Create: Jianming Zeng"
+  lines <- c("### Create: Jianming Zeng", "帮我解释这段代码")
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  first <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  second <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(first, "")
+  expect_match(second, "^帮我解释这段代码\n\n\\[Pasted Content ")
+  expect_null(state$pending_paste)
+})
+
+test_that("console readline leaves pending paste intact for slash commands", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- "### Create: Jianming Zeng"
+  lines <- c("### Create: Jianming Zeng", "/help")
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  first <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+  second <- aisdk:::readline_multiline(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    paste_output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(first, "")
+  expect_equal(second, "/help")
+  expect_s3_class(state$pending_paste, "aisdk_console_paste_ref")
+})
+
+test_that("console paste file writer falls back to end marker when clipboard is unavailable", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  lines <- c(
+    "### Create: Jianming Zeng",
+    "library(Matrix)",
+    "",
+    "/not-a-command-inside-paste",
+    "/endpaste",
+    "ignored"
+  )
+  index <- 0L
+  fake_readline <- function(prompt) {
+    index <<- index + 1L
+    lines[[index]]
+  }
+
+  paste_ref <- aisdk:::console_read_paste_to_file(
+    state,
+    readline_fn = fake_readline,
+    quiet = TRUE,
+    output_dir = output_dir,
+    clipboard_fn = function() NULL
+  )
+
+  expect_s3_class(paste_ref, "aisdk_console_paste_ref")
+  expect_match(paste_ref$message, "^\\[Pasted Content ")
+  expect_true(file.exists(paste_ref$path))
+  expect_equal(paste(readLines(paste_ref$path, warn = FALSE), collapse = "\n"), paste(lines[1:4], collapse = "\n"))
+  expect_equal(index, 5L)
+})
+
+test_that("console paste file writer uses clipboard when it matches the first line", {
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- "### Create: Jianming Zeng\nlibrary(Matrix)"
+
+  paste_ref <- aisdk:::console_read_paste_to_file(
+    readline_fn = function(prompt) stop("should not read more lines"),
+    quiet = TRUE,
+    initial_lines = "### Create: Jianming Zeng",
+    output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(paste(readLines(paste_ref$path, warn = FALSE), collapse = "\n"), clipboard_text)
+})
+
+test_that("console bracketed paste event is saved without exposing content as input", {
+  output_dir <- tempfile("console-paste-")
+  paste_text <- "### Create: Jianming Zeng\r\nlibrary(Matrix)\r\n帮我检查"
+
+  paste_ref <- aisdk:::console_save_paste_event(paste_text, output_dir = output_dir)
+
+  expect_s3_class(paste_ref, "aisdk_console_paste_ref")
+  expect_match(paste_ref$message, "^\\[Pasted Content ")
+  expect_true(file.exists(paste_ref$path))
+  expect_equal(paste(readLines(paste_ref$path, warn = FALSE), collapse = "\n"), "### Create: Jianming Zeng\nlibrary(Matrix)\n帮我检查")
+})
+
+test_that("console paste file writer stores queued complete clipboard lines", {
+  state <- aisdk:::console_create_input_state()
+  output_dir <- tempfile("console-paste-")
+  clipboard_text <- "### Create: Jianming Zeng\nlibrary(Matrix)\nqsave(x)"
+
+  paste_ref <- aisdk:::console_read_paste_to_file(
+    state,
+    readline_fn = function(prompt) stop("should not read queued lines immediately"),
+    quiet = TRUE,
+    initial_lines = "### Create: Jianming Zeng",
+    output_dir = output_dir,
+    clipboard_fn = function() clipboard_text
+  )
+
+  expect_equal(paste(readLines(paste_ref$path, warn = FALSE), collapse = "\n"), clipboard_text)
+  expect_equal(state$pending_paste_drain, c("library(Matrix)", "qsave(x)"))
+})
+
+test_that("console auto-paste detection stays conservative", {
+  expect_false(aisdk:::console_should_auto_paste("hello"))
+  expect_false(aisdk:::console_should_auto_paste("/help"))
+  expect_true(aisdk:::console_should_auto_paste("---"))
+  expect_true(aisdk:::console_should_auto_paste("title: \"Anthropic研究员：用AI写代码\""))
+  expect_true(aisdk:::console_should_auto_paste("### Create: Jianming Zeng"))
+  expect_true(aisdk:::console_should_auto_paste("library(Seurat)"))
+  expect_true(aisdk:::console_should_auto_paste("scRNAlist <- lapply(samples, function(pro) {"))
+})
+
 test_that("handle_command toggles inspect mode through app state", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
