@@ -1,6 +1,6 @@
 Package: aisdk
 Title: Unified Interface for AI Model Providers
-Version: 1.1.2
+Version: 1.1.3
 Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
 Description: A production-grade AI toolkit for R featuring a layered
     architecture (Specification, Utilities, Providers, Core), request
