@@ -55,15 +55,58 @@ test_that("DeepSeek provider forwards thinking-mode parameters", {
         thinking = TRUE,
         thinking_budget = 2048,
         reasoning_effort = "low",
-        max_tokens = 1000
+        max_tokens = 1000,
+        temperature = 0.2,
+        top_p = 0.9,
+        presence_penalty = 0.1,
+        frequency_penalty = 0.2
     ))
 
     # logical TRUE is auto-converted to DeepSeek API format
     expect_equal(payload$body$thinking, list(type = "enabled"))
     expect_equal(payload$body$thinking_budget, 2048)
-    expect_equal(payload$body$reasoning_effort, "low")
+    expect_equal(payload$body$reasoning_effort, "high")
     expect_equal(payload$body$max_completion_tokens, 1000)
     expect_null(payload$body$max_tokens)
+    expect_null(payload$body$temperature)
+    expect_null(payload$body$top_p)
+    expect_null(payload$body$presence_penalty)
+    expect_null(payload$body$frequency_penalty)
+})
+
+test_that("DeepSeek reasoning_effort maps to supported thinking-mode levels", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4")
+
+    low_payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        reasoning_effort = "medium"
+    ))
+    max_payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        reasoning_effort = "xhigh"
+    ))
+
+    expect_equal(low_payload$body$reasoning_effort, "high")
+    expect_equal(max_payload$body$reasoning_effort, "max")
+})
+
+test_that("DeepSeek chat model keeps sampling params unless thinking is enabled", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-chat")
+
+    plain_payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        temperature = 0.2
+    ))
+    thinking_payload <- model$build_payload(list(
+        messages = list(list(role = "user", content = "Hello")),
+        thinking = TRUE,
+        temperature = 0.2
+    ))
+
+    expect_equal(plain_payload$body$temperature, 0.2)
+    expect_null(thinking_payload$body$temperature)
 })
 
 test_that("DeepSeek thinking parameter accepts native API format", {
@@ -107,7 +150,7 @@ test_that("DeepSeek stream payload forwards thinking-mode parameters", {
     # logical FALSE is auto-converted to DeepSeek API format
     expect_equal(payload$body$thinking, list(type = "disabled"))
     expect_equal(payload$body$thinking_budget, 512)
-    expect_equal(payload$body$reasoning_effort, "medium")
+    expect_equal(payload$body$reasoning_effort, "high")
 })
 
 test_that("DeepSeek tool turns preserve reasoning_content when thinking is enabled", {
@@ -180,6 +223,98 @@ test_that("DeepSeek tool turns preserve reasoning_content when thinking is enabl
     expect_equal(assistant_message$role, "assistant")
     expect_equal(assistant_message$reasoning_content, "Need the time tool.")
     expect_length(assistant_message$tool_calls, 1)
+    expect_equal(result$messages_added[[1]]$reasoning_content, "Need the time tool.")
+    expect_equal(result$messages_added[[2]]$role, "tool")
+    expect_equal(result$messages_added[[3]]$role, "assistant")
+    expect_equal(result$messages_added[[3]]$content, "The current time is 12:00.")
+})
+
+test_that("DeepSeek ChatSession persists tool-turn reasoning_content for later replay", {
+    provider <- suppressWarnings(create_deepseek(api_key = "test-key"))
+    model <- provider$language_model("deepseek-v4-flash")
+
+    test_tool <- Tool$new(
+        name = "get_time",
+        description = "Get the current time",
+        parameters = z_object(.dummy = z_string("Unused")),
+        execute = function(args) "12:00"
+    )
+
+    calls <- 0
+    captured_bodies <- list()
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            calls <<- calls + 1
+            captured_bodies[[calls]] <<- body
+
+            if (calls == 1) {
+                return(list(
+                    choices = list(list(
+                        message = list(
+                            content = "",
+                            reasoning_content = "Need the time tool.",
+                            tool_calls = list(list(
+                                id = "call_1",
+                                type = "function",
+                                `function` = list(
+                                    name = "get_time",
+                                    arguments = "{\".dummy\":\"unused\"}"
+                                )
+                            ))
+                        ),
+                        finish_reason = "tool_calls"
+                    )),
+                    usage = list(prompt_tokens = 8, completion_tokens = 4, total_tokens = 12)
+                ))
+            }
+
+            if (calls == 2) {
+                return(list(
+                    choices = list(list(
+                        message = list(
+                            content = "The current time is 12:00.",
+                            reasoning_content = NULL
+                        ),
+                        finish_reason = "stop"
+                    )),
+                    usage = list(prompt_tokens = 20, completion_tokens = 6, total_tokens = 26)
+                ))
+            }
+
+            list(
+                choices = list(list(
+                    message = list(
+                        content = "Earlier tool context is intact.",
+                        reasoning_content = NULL
+                    ),
+                    finish_reason = "stop"
+                )),
+                usage = list(prompt_tokens = 30, completion_tokens = 5, total_tokens = 35)
+            )
+        },
+        .package = "aisdk"
+    )
+
+    session <- create_chat_session(
+        model = model,
+        tools = list(test_tool),
+        max_steps = 3
+    )
+
+    result <- session$send("What time is it?", thinking = TRUE, max_tokens = 100)
+    expect_equal(result$text, "The current time is 12:00.")
+
+    history <- session$get_history()
+    expect_equal(vapply(history, `[[`, character(1), "role"), c("user", "assistant", "tool", "assistant"))
+    expect_equal(history[[2]]$reasoning_content, "Need the time tool.")
+    expect_length(history[[2]]$tool_calls, 1)
+
+    session$send("Can you still answer?", thinking = TRUE, max_tokens = 100)
+    replayed_assistant <- captured_bodies[[3]]$messages[[2]]
+    expect_equal(replayed_assistant$role, "assistant")
+    expect_equal(replayed_assistant$reasoning_content, "Need the time tool.")
+    expect_length(replayed_assistant$tool_calls, 1)
 })
 
 test_that("create_deepseek() accepts custom base_url", {

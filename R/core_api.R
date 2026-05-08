@@ -204,6 +204,7 @@ generate_text <- function(model = NULL,
   # Track all tool calls for debugging/logging
   all_tool_calls <- list()
   all_tool_results <- list()
+  initial_messages_len <- length(messages)
   step <- 0
   result <- NULL
 
@@ -386,6 +387,12 @@ generate_text <- function(model = NULL,
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
     result$all_tool_results <- all_tool_results
+    result$messages_added <- build_messages_added(
+      messages = messages,
+      initial_len = initial_messages_len,
+      final_text = result$text %||% NULL,
+      final_reasoning = result$reasoning %||% NULL
+    )
   }
 
   # Trigger on_generation_end
@@ -503,6 +510,7 @@ stream_text <- function(model = NULL,
 
   all_tool_calls <- list()
   all_tool_results <- list()
+  initial_messages_len <- length(messages)
   step <- 0
   result <- NULL
 
@@ -686,12 +694,12 @@ stream_text <- function(model = NULL,
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
     result$all_tool_results <- all_tool_results
-    # Return messages added during tool execution for session history sync
-    # Calculate which messages were added (everything after the initial prompt)
-    initial_len <- length(build_messages(prompt, system))
-    if (length(messages) > initial_len) {
-      result$messages_added <- messages[(initial_len + 1):length(messages)]
-    }
+    result$messages_added <- build_messages_added(
+      messages = messages,
+      initial_len = initial_messages_len,
+      final_text = result$text %||% NULL,
+      final_reasoning = result$reasoning %||% NULL
+    )
   }
 
   # Trigger on_generation_end
@@ -969,6 +977,24 @@ build_messages <- function(prompt, system = NULL) {
   }
 
   messages
+}
+
+#' @keywords internal
+build_messages_added <- function(messages, initial_len, final_text = NULL, final_reasoning = NULL) {
+  messages_added <- list()
+  if (length(messages) > initial_len) {
+    messages_added <- messages[(initial_len + 1):length(messages)]
+  }
+
+  if (!is.null(final_text) && nzchar(final_text)) {
+    final_message <- list(role = "assistant", content = final_text)
+    if (!is.null(final_reasoning) && nzchar(final_reasoning)) {
+      final_message$reasoning <- final_reasoning
+    }
+    messages_added <- c(messages_added, list(final_message))
+  }
+
+  messages_added
 }
 
 # Null-coalescing operator (if not already defined)

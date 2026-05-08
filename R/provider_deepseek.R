@@ -28,6 +28,44 @@ DeepSeekLanguageModel <- R6::R6Class(
                 }
             }
             thinking
+        },
+        normalize_reasoning_effort = function(reasoning_effort) {
+            if (is.null(reasoning_effort)) {
+                return(NULL)
+            }
+            effort <- tolower(trimws(as.character(reasoning_effort[[1]])))
+            if (effort %in% c("low", "medium", "high")) {
+                return("high")
+            }
+            if (effort %in% c("xhigh", "max")) {
+                return("max")
+            }
+            reasoning_effort
+        },
+        thinking_is_enabled = function(payload_body) {
+            thinking <- payload_body$thinking %||% NULL
+            if (is.null(thinking)) {
+                return(isTRUE(self$has_capability("is_reasoning_model")))
+            }
+            if (isTRUE(thinking)) {
+                return(TRUE)
+            }
+            if (identical(thinking, FALSE)) {
+                return(FALSE)
+            }
+            if (is.list(thinking) && !is.null(thinking$type)) {
+                return(identical(tolower(as.character(thinking$type)), "enabled"))
+            }
+            TRUE
+        },
+        prune_sampling_for_thinking = function(payload) {
+            if (private$thinking_is_enabled(payload$body)) {
+                payload$body$temperature <- NULL
+                payload$body$top_p <- NULL
+                payload$body$presence_penalty <- NULL
+                payload$body$frequency_penalty <- NULL
+            }
+            payload
         }
     ),
 
@@ -87,10 +125,10 @@ DeepSeekLanguageModel <- R6::R6Class(
                 payload$body$thinking_budget <- thinking_budget
             }
             if (!is.null(reasoning_effort)) {
-                payload$body$reasoning_effort <- reasoning_effort
+                payload$body$reasoning_effort <- private$normalize_reasoning_effort(reasoning_effort)
             }
 
-            payload
+            private$prune_sampling_for_thinking(payload)
         },
 
         #' @description Build stream payload with DeepSeek-specific reasoning params.
@@ -110,10 +148,10 @@ DeepSeekLanguageModel <- R6::R6Class(
                 payload$body$thinking_budget <- thinking_budget
             }
             if (!is.null(reasoning_effort)) {
-                payload$body$reasoning_effort <- reasoning_effort
+                payload$body$reasoning_effort <- private$normalize_reasoning_effort(reasoning_effort)
             }
 
-            payload
+            private$prune_sampling_for_thinking(payload)
         }
     )
 )

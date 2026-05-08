@@ -143,14 +143,7 @@ ChatSession <- R6::R6Class(
         )
       )
 
-      # Append assistant response to history
-      if (!is.null(result$text) && nzchar(result$text)) {
-        self$append_message(
-          "assistant",
-          result$text,
-          reasoning = result$reasoning %||% NULL
-        )
-      }
+      private$sync_generation_messages(result)
 
       # Update stats
       private$update_stats(result)
@@ -196,20 +189,7 @@ ChatSession <- R6::R6Class(
         )
       )
 
-      # Sync messages added during tool execution to session history
-      # This includes all intermediate assistant (with tool_calls) and tool result messages
-      if (!is.null(result$messages_added) && length(result$messages_added) > 0) {
-        for (msg in result$messages_added) {
-          private$.history <- c(private$.history, list(msg))
-        }
-      } else if (!is.null(result$text) && nzchar(result$text)) {
-        # No tool calls were made, just append the final response
-        self$append_message(
-          "assistant",
-          result$text,
-          reasoning = result$reasoning %||% NULL
-        )
-      }
+      private$sync_generation_messages(result)
 
       # Update stats
       private$update_stats(result)
@@ -903,6 +883,24 @@ ChatSession <- R6::R6Class(
         system = combined_system,
         persist = TRUE
       )
+    },
+    sync_generation_messages = function(result) {
+      if (!is.null(result$messages_added) && length(result$messages_added) > 0) {
+        for (msg in result$messages_added) {
+          private$.history <- c(private$.history, list(msg))
+        }
+        return(invisible())
+      }
+
+      if (!is.null(result$text) && nzchar(result$text)) {
+        msg <- list(role = "assistant", content = result$text)
+        if (!is.null(result$reasoning) && nzchar(result$reasoning)) {
+          msg$reasoning <- result$reasoning
+        }
+        private$.history <- c(private$.history, list(msg))
+      }
+
+      invisible()
     },
     prepare_tools = function() {
       tools <- private$.tools %||% list()
