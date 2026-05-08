@@ -1232,6 +1232,7 @@ create_console_tools <- function(working_dir = tempdir(),
 #' @param additional_tools Optional list of additional Tool objects to include.
 #' @param language Language for responses: "auto", "en", or "zh" (default: "auto").
 #' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
+#' @param skills Optional skill paths, `"auto"`, or a SkillRegistry object.
 #' @return An Agent object configured for console interaction.
 #' @export
 #' @examples
@@ -1251,7 +1252,8 @@ create_console_agent <- function(working_dir = tempdir(),
                                  sandbox_mode = "permissive",
                                  additional_tools = NULL,
                                  language = "auto",
-                                 startup_dir = working_dir) {
+                                 startup_dir = working_dir,
+                                 skills = "auto") {
     # Resolve working directory
     working_dir <- normalizePath(working_dir, winslash = "/", mustWork = FALSE)
     startup_dir <- normalizePath(startup_dir, winslash = "/", mustWork = FALSE)
@@ -1271,13 +1273,19 @@ create_console_agent <- function(working_dir = tempdir(),
     # Build system prompt
     system_prompt <- build_console_system_prompt(working_dir, startup_dir, sandbox_mode, language)
 
+    skill_registry <- if (identical(skills, "auto")) {
+        create_auto_skill_registry(project_dir = startup_dir, recursive = TRUE)
+    } else {
+        skills
+    }
+
     # Create agent
     Agent$new(
         name = "ConsoleAgent",
         description = "Intelligent terminal assistant for natural language command execution",
         system_prompt = system_prompt,
         tools = tools,
-        skills = "auto"
+        skills = skill_registry
     )
 }
 

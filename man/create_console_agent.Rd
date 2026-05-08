@@ -9,7 +9,8 @@ create_console_agent(
   sandbox_mode = "permissive",
   additional_tools = NULL,
   language = "auto",
-  startup_dir = working_dir
+  startup_dir = working_dir,
+  skills = "auto"
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ create_console_agent(
 \item{language}{Language for responses: "auto", "en", or "zh" (default: "auto").}
 
 \item{startup_dir}{R session startup directory used for project-aware context. Defaults to \code{getwd()}.}
+
+\item{skills}{Optional skill paths, \code{"auto"}, or a SkillRegistry object.}
 }
 \value{
 An Agent object configured for console interaction.

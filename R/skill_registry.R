@@ -43,6 +43,7 @@ default_skill_roots <- function(project_dir = getwd(), include_missing = FALSE) 
     file.path(Sys.getenv("HOME"), "aisdk", "skills"),
     file.path(project_dir, "inst", "skills"),
     file.path(project_dir, "skills"),
+    file.path(project_dir, ".skills"),
     file.path(project_dir, "aisdk", "skills"),
     file.path(project_dir, ".aisdk", "skills"),
     option_roots,

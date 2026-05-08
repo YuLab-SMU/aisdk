@@ -13,6 +13,49 @@ test_that("create_console_agent auto-loads local skill tools when available", {
     expect_true("execute_skill_script" %in% tool_names)
 })
 
+test_that("create_console_agent accepts explicit skill roots", {
+    skill_root <- tempfile("console-agent-skills-")
+    dir.create(file.path(skill_root, "custom-skill"), recursive = TRUE)
+    on.exit(unlink(skill_root, recursive = TRUE), add = TRUE)
+
+    writeLines(c(
+        "---",
+        "name: custom-skill",
+        "description: Custom console skill",
+        "---",
+        "Custom skill body"
+    ), file.path(skill_root, "custom-skill", "SKILL.md"))
+
+    agent <- create_console_agent(skills = skill_root)
+    session <- create_chat_session(model = "mock:test", agent = agent)
+    registry <- aisdk:::console_get_skill_registry(session)
+
+    expect_true(registry$has_skill("custom-skill"))
+})
+
+test_that("create_console_agent auto-discovers skills from startup directory", {
+    startup_dir <- tempfile("console-agent-startup-skills-")
+    skill_dir <- file.path(startup_dir, ".skills", "startup-skill")
+    dir.create(skill_dir, recursive = TRUE)
+    on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
+
+    writeLines(c(
+        "---",
+        "name: startup-skill",
+        "description: Startup directory skill",
+        "---",
+        "Startup skill body"
+    ), file.path(skill_dir, "SKILL.md"))
+
+    agent <- withr::with_dir(tempdir(), {
+        create_console_agent(working_dir = tempdir(), startup_dir = startup_dir)
+    })
+    session <- create_chat_session(model = "mock:test", agent = agent)
+    registry <- aisdk:::console_get_skill_registry(session)
+
+    expect_true(registry$has_skill("startup-skill"))
+})
+
 test_that("console turn routing preloads explicitly referenced persona skill", {
     agent <- create_console_agent()
     session <- create_chat_session(model = "mock:test", agent = agent)

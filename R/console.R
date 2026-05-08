@@ -39,6 +39,9 @@ NULL
 #'   - `"auto"` (default): Use the built-in console agent with terminal tools
 #'   - `NULL`: Simple chat mode without tools
 #'   - An Agent object: Use the provided custom agent
+#' @param skills Optional skill paths, `"auto"`, or a SkillRegistry object for
+#'   the built-in console agent. Defaults to automatic skill discovery when
+#'   `agent = "auto"`.
 #' @param working_dir Working directory for sandboxed console tools. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode for the console agent: "strict", "permissive" (default), or "none".
 #' @param show_thinking Logical. Whether to show model thinking blocks when the
@@ -96,6 +99,7 @@ console_chat <- function(session = NULL,
                          stream = TRUE,
                          verbose = FALSE,
                          agent = "auto",
+                         skills = NULL,
                          working_dir = tempdir(),
                          sandbox_mode = "permissive",
                          show_thinking = verbose,
@@ -126,6 +130,7 @@ console_chat <- function(session = NULL,
       working_dir = working_dir,
       startup_dir = startup_dir,
       sandbox_mode = sandbox_mode,
+      skills = skills %||% "auto",
       additional_tools = tools
     )
     agent_mode <- TRUE

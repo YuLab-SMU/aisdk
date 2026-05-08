@@ -233,12 +233,37 @@ test_that("default_skill_roots includes user install path and prioritizes projec
   project_skills <- file.path(project_dir, ".aisdk", "skills")
   dir.create(project_skills, recursive = TRUE)
   project_skills <- normalizePath(project_skills, winslash = "/", mustWork = FALSE)
+  dot_skills <- file.path(project_dir, ".skills")
+  dir.create(dot_skills, recursive = TRUE)
+  dot_skills <- normalizePath(dot_skills, winslash = "/", mustWork = FALSE)
 
   roots <- default_skill_roots(project_dir = project_dir)
 
+  expect_true(dot_skills %in% roots)
   expect_true(project_skills %in% roots)
+  expect_true(any(grepl("\\.skills$", roots)))
   expect_true(any(grepl("\\.aisdk/skills$", roots)))
   expect_equal(tail(roots, 1), normalizePath(project_skills, winslash = "/", mustWork = FALSE))
+})
+
+test_that("auto skill registry discovers project .skills directory", {
+  project_dir <- tempfile()
+  skill_dir <- file.path(project_dir, ".skills", "project-skill")
+  dir.create(skill_dir, recursive = TRUE)
+  on.exit(unlink(project_dir, recursive = TRUE), add = TRUE)
+
+  writeLines(c(
+    "---",
+    "name: project-skill",
+    "description: Project dot skills",
+    "---",
+    "Project-local skill body"
+  ), file.path(skill_dir, "SKILL.md"))
+
+  registry <- aisdk:::create_auto_skill_registry(project_dir = project_dir, recursive = TRUE)
+
+  expect_true(registry$has_skill("project-skill"))
+  expect_true(any(grepl("\\.skills$", registry$list_roots()$path)))
 })
 
 # === Tests for convenience functions ===

@@ -12,6 +12,7 @@ console_chat(
   stream = TRUE,
   verbose = FALSE,
   agent = "auto",
+  skills = NULL,
   working_dir = tempdir(),
   sandbox_mode = "permissive",
   show_thinking = verbose,
@@ -38,6 +39,10 @@ thinking output. Defaults to \code{FALSE} for a cleaner console UI.}
 \item \code{NULL}: Simple chat mode without tools
 \item An Agent object: Use the provided custom agent
 }}
+
+\item{skills}{Optional skill paths, \code{"auto"}, or a SkillRegistry object for
+the built-in console agent. Defaults to automatic skill discovery when
+\code{agent = "auto"}.}
 
 \item{working_dir}{Working directory for sandboxed console tools. Defaults to \code{tempdir()}.}
 
