@@ -216,7 +216,7 @@ test_that("SkillRegistry refresh picks up skill updates on disk", {
   expect_true(registry$has_skill("new-skill"))
 })
 
-test_that("default_skill_roots includes user install path and prioritizes project roots", {
+test_that("default_skill_roots includes user install paths and prioritizes project roots", {
   old_roots <- getOption("aisdk.skill_roots")
   old_env <- Sys.getenv("AISDK_SKILL_PATHS", unset = NA_character_)
   on.exit(options(aisdk.skill_roots = old_roots), add = TRUE)
@@ -238,7 +238,15 @@ test_that("default_skill_roots includes user install path and prioritizes projec
   dot_skills <- normalizePath(dot_skills, winslash = "/", mustWork = FALSE)
 
   roots <- default_skill_roots(project_dir = project_dir)
+  roots_with_missing <- default_skill_roots(project_dir = project_dir, include_missing = TRUE)
 
+  user_agents_roots <- normalizePath(
+    file.path(Sys.getenv("HOME"), c(".agents", "agents"), "skills"),
+    winslash = "/",
+    mustWork = FALSE
+  )
+
+  expect_true(all(user_agents_roots %in% roots_with_missing))
   expect_true(dot_skills %in% roots)
   expect_true(project_skills %in% roots)
   expect_true(any(grepl("\\.skills$", roots)))
