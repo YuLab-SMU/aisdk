@@ -25,6 +25,10 @@ NULL
         base_url = "https://api.deepseek.com/v1",
         env_key = "DEEPSEEK_API_KEY"
     ),
+    moonshot = list(
+        base_url = "https://api.moonshot.cn/v1",
+        env_key = "MOONSHOT_API_KEY"
+    ),
     xai = list(
         base_url = "https://api.x.ai/v1",
         env_key = "XAI_API_KEY"

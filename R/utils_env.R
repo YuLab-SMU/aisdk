@@ -29,6 +29,15 @@ has_api_key <- function(provider) {
   } else if (provider == "stepfun") {
     key <- Sys.getenv("STEPFUN_API_KEY")
     return(nzchar(key) && !grepl("^your_|^example_", key))
+  } else if (provider == "moonshot") {
+    key <- Sys.getenv("MOONSHOT_API_KEY")
+    return(nzchar(key) && !grepl("^your_|^example_", key))
+  } else if (provider %in% c("kimi", "kimi_code")) {
+    key <- Sys.getenv("KIMI_API_KEY")
+    if (!nzchar(key)) {
+      key <- Sys.getenv("KIMI_CODE_API_KEY")
+    }
+    return(nzchar(key) && !grepl("^your_|^example_", key))
   } else if (provider == "api") {
     # Generic check for ANY key
     return(enable_api_tests())

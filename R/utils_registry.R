@@ -188,6 +188,8 @@ get_default_registry <- function() {
         if (exists("create_bailian", mode = "function")) reg$register("bailian", function() suppressWarnings(create_bailian()))
         if (exists("create_openrouter", mode = "function")) reg$register("openrouter", function() suppressWarnings(create_openrouter()))
         if (exists("create_aihubmix", mode = "function")) reg$register("aihubmix", function() suppressWarnings(create_aihubmix()))
+        if (exists("create_moonshot", mode = "function")) reg$register("moonshot", function() suppressWarnings(create_moonshot(platform = "platform")))
+        if (exists("create_kimi_code", mode = "function")) reg$register("kimi", function() suppressWarnings(create_kimi_code(api_format = "anthropic")))
         if (exists("create_custom_provider", mode = "function")) reg$register("custom", function() suppressWarnings(create_env_custom_provider()))
       },
       error = function(e) {}
