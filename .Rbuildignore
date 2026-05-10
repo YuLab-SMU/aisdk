@@ -24,6 +24,7 @@
 ^index\.qmd$
 ^reference$
 ^scripts$
+^benchmarks$
 ^dev_docs$
 ^vignettes$
 ^assets$
