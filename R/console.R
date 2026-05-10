@@ -47,6 +47,8 @@ NULL
 #' @param show_thinking Logical. Whether to show model thinking blocks when the
 #'   provider exposes them. Defaults to `verbose`.
 #' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
+#' @param initial_prompt Optional user prompt to send automatically before
+#'   entering the interactive REPL.
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
@@ -103,7 +105,8 @@ console_chat <- function(session = NULL,
                          working_dir = tempdir(),
                          sandbox_mode = "permissive",
                          show_thinking = verbose,
-                         startup_dir = getwd()) {
+                         startup_dir = getwd(),
+                         initial_prompt = NULL) {
   # Ensure cli package is available
   if (!requireNamespace("cli", quietly = TRUE)) {
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
@@ -241,6 +244,18 @@ console_chat <- function(session = NULL,
   cli::cli_text("Type {.code /help} for commands, {.code /quit} to exit.")
 
   input_state <- console_create_input_state(session)
+  if (!is.null(initial_prompt) && nzchar(trimws(initial_prompt))) {
+    console_input_history_add(input_state, initial_prompt)
+    console_send_user_message(
+      input = initial_prompt,
+      session = session,
+      stream = stream,
+      verbose = verbose,
+      show_thinking = show_thinking,
+      app_state = app_state
+    )
+    cli::cli_text("")
+  }
 
   # Main REPL loop
   while (TRUE) {
@@ -292,75 +307,102 @@ console_chat <- function(session = NULL,
       next
     }
 
-    # Check if model is set
-    if (is.null(session$get_model_id())) {
-      cli::cli_alert_danger("No model set. Use {.code /model <id>} first.")
-      cli::cli_alert_info("Example: {.code /model openai:gpt-4o}")
-      next
-    }
+    console_send_user_message(
+      input = input,
+      session = session,
+      stream = stream,
+      verbose = verbose,
+      show_thinking = show_thinking,
+      app_state = app_state
+    )
+    cli::cli_text("")
+  }
 
-    # Send message to model
-    turn_system_prompt <- console_build_turn_system_prompt(session, input)
+  invisible(session)
+}
+
+#' @keywords internal
+console_send_user_message <- function(input,
+                                      session,
+                                      stream,
+                                      verbose = FALSE,
+                                      show_thinking = verbose,
+                                      app_state = NULL) {
+  if (is.null(session$get_model_id())) {
+    cli::cli_alert_danger("No model set. Use {.code /model <id>} first.")
+    cli::cli_alert_info("Example: {.code /model openai:gpt-4o}")
+    return(invisible(FALSE))
+  }
+
+  turn_system_prompt <- console_build_turn_system_prompt(session, input)
+  if (!is.null(app_state)) {
     console_app_sync_session(app_state, session)
     console_app_start_turn(app_state, input)
-    cli::cli_text("")
-    cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
+  }
+  cli::cli_text("")
+  cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
 
-    tryCatch(
-      {
-        with_console_chat_display(
-          app_state = app_state,
-          code = {
-            if (stream) {
-              md_renderer <- create_markdown_stream_renderer()
-              session$send_stream(
-                input,
-                turn_system_prompt = turn_system_prompt,
-                callback = function(text, done) {
-                  if (isTRUE(done)) {
-                    md_renderer$process_chunk(NULL, TRUE)
-                  } else {
+  ok <- TRUE
+  tryCatch(
+    {
+      with_console_chat_display(
+        app_state = app_state,
+        code = {
+          if (stream) {
+            md_renderer <- create_markdown_stream_renderer()
+            session$send_stream(
+              input,
+              turn_system_prompt = turn_system_prompt,
+              callback = function(text, done) {
+                if (isTRUE(done)) {
+                  md_renderer$process_chunk(NULL, TRUE)
+                } else {
+                  if (!is.null(app_state)) {
                     console_app_append_assistant_text(app_state, text)
-                    md_renderer$process_chunk(text, FALSE)
                   }
+                  md_renderer$process_chunk(text, FALSE)
                 }
-              )
-            } else {
-              # Non-streaming output
-              md_renderer <- create_markdown_stream_renderer()
-              result <- session$send(input, turn_system_prompt = turn_system_prompt)
-              if (!is.null(result$text)) {
+              }
+            )
+          } else {
+            md_renderer <- create_markdown_stream_renderer()
+            result <- session$send(input, turn_system_prompt = turn_system_prompt)
+            if (!is.null(result$text)) {
+              if (!is.null(app_state)) {
                 console_app_append_assistant_text(app_state, result$text)
-                # Render as markdown
-                md_renderer$process_chunk(result$text, FALSE)
-                md_renderer$process_chunk(NULL, TRUE)
               }
+              md_renderer$process_chunk(result$text, FALSE)
+              md_renderer$process_chunk(NULL, TRUE)
+            }
 
-              # Show tool calls if any in debug mode
-              if (isTRUE(verbose) && !is.null(result$tool_calls) && length(result$tool_calls) > 0) {
-                cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
-              }
+            if (isTRUE(verbose) && !is.null(result$tool_calls) && length(result$tool_calls) > 0) {
+              cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
             }
           }
-        )
+        }
+      )
+      if (!is.null(app_state)) {
         console_app_finish_turn(app_state, failed = FALSE)
-      },
-      error = function(e) {
-        console_app_finish_turn(app_state, failed = TRUE)
-        cli::cli_alert_danger("Error: {conditionMessage(e)}")
       }
-    )
+    },
+    error = function(e) {
+      ok <<- FALSE
+      if (!is.null(app_state)) {
+        console_app_finish_turn(app_state, failed = TRUE)
+      }
+      cli::cli_alert_danger("Error: {conditionMessage(e)}")
+    }
+  )
 
+  if (!is.null(app_state)) {
     render_console_frame(
       build_console_frame(app_state),
       state = app_state,
       sections = c("timeline", "overlay"),
       force = FALSE
     )
-    cli::cli_text("")
   }
-
-  invisible(session)
+  invisible(ok)
 }
 
 #' @keywords internal

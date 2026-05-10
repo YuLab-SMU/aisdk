@@ -1,0 +1,4 @@
+Name: Ask aisdk about last error
+Description: Collect recent R error context and open aisdk console chat.
+Binding: ask_ai
+Interactive: true
