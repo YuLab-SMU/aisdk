@@ -206,6 +206,19 @@ Useful commands:
 - `/debug [on|off]`, `/stream [on|off]`
 - `/model <id>`, `/history`, `/stats`, `/clear`
 
+For error-driven work, `ask_ai()` collects the recent R error context,
+traceback, warnings, active RStudio document when available, session
+information, and workspace object summaries, then opens `console_chat()` with
+that context as the first turn:
+
+```r
+# Run after an R error, or from the RStudio Addin menu
+# ask_ai(skill = "biotree")
+
+# Preview what would be sent without launching chat
+# ask_ai(show_context = TRUE)
+```
+
 ### Image Generation
 
 `aisdk` exposes image generation and editing through a dedicated `image_model()` path.

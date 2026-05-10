@@ -16,7 +16,8 @@ console_chat(
   working_dir = tempdir(),
   sandbox_mode = "permissive",
   show_thinking = verbose,
-  startup_dir = getwd()
+  startup_dir = getwd(),
+  initial_prompt = NULL
 )
 }
 \arguments{
@@ -52,6 +53,9 @@ the built-in console agent. Defaults to automatic skill discovery when
 provider exposes them. Defaults to \code{verbose}.}
 
 \item{startup_dir}{R session startup directory used for project-aware context. Defaults to \code{getwd()}.}
+
+\item{initial_prompt}{Optional user prompt to send automatically before
+entering the interactive REPL.}
 }
 \value{
 The ChatSession object (invisibly) when chat ends.
