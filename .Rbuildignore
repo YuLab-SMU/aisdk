@@ -44,6 +44,5 @@
 ^\.aisdk$
 ^mtcars_.*\.(png|pdf)$
 ^cran-comments\.md$
-^CONTEXT_EXTENSION\.md$
 ^TODO\.md$
 ^verify_context_extension\.R$
