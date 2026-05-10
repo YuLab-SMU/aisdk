@@ -103,6 +103,22 @@ test_that("apply_request_timeout_config skips unsupported curl options", {
   expect_equal(req$options$low_speed_time, 15L)
 })
 
+test_that("prepare_json_post_request sets an explicit POST method", {
+  req <- httr2::request("https://example.com")
+  req <- aisdk:::prepare_json_post_request(req, list(message = "hi"))
+
+  expect_equal(req$method, "POST")
+  expect_equal(req$body$type, "json")
+})
+
+test_that("prepare_multipart_post_request sets an explicit POST method", {
+  req <- httr2::request("https://example.com")
+  req <- aisdk:::prepare_multipart_post_request(req, list(field = "value"))
+
+  expect_equal(req$method, "POST")
+  expect_equal(req$body$type, "multipart")
+})
+
 test_that("http_error_classes detects compatibility errors", {
   classes <- aisdk:::http_error_classes(
     status = 400,

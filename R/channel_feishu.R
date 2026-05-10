@@ -545,11 +545,10 @@ FeishuChannelAdapter <- R6::R6Class(
       token <- private$get_tenant_access_token()
       req <- httr2::request(sprintf("%s/open-apis/im/v1/images", self$config$base_url))
       req <- httr2::req_headers(req, Authorization = paste("Bearer", token))
-      req <- httr2::req_body_multipart(
-        req,
+      req <- prepare_multipart_post_request(req, list(
         image_type = "message",
         image = curl::form_file(path)
-      )
+      ))
       req <- httr2::req_error(req, is_error = function(resp) FALSE)
       resp <- httr2::req_perform(req)
       status <- httr2::resp_status(resp)
@@ -575,12 +574,11 @@ FeishuChannelAdapter <- R6::R6Class(
       token <- private$get_tenant_access_token()
       req <- httr2::request(sprintf("%s/open-apis/im/v1/files", self$config$base_url))
       req <- httr2::req_headers(req, Authorization = paste("Bearer", token))
-      req <- httr2::req_body_multipart(
-        req,
+      req <- prepare_multipart_post_request(req, list(
         file_type = feishu_guess_file_type(path),
         file_name = basename(path),
         file = curl::form_file(path)
-      )
+      ))
       req <- httr2::req_error(req, is_error = function(resp) FALSE)
       resp <- httr2::req_perform(req)
       status <- httr2::resp_status(resp)

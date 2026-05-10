@@ -198,7 +198,7 @@ McpSseClient <- R6::R6Class(
       
       req <- httr2::request(self$endpoint)
       req <- httr2::req_headers(req, !!!self$auth_headers, "Content-Type" = "application/json")
-      req <- httr2::req_body_json(req, request)
+      req <- prepare_json_post_request(req, request)
       
       httr2::req_perform(req)
       
@@ -231,7 +231,7 @@ McpSseClient <- R6::R6Class(
     send_notification = function(notification) {
       req <- httr2::request(self$endpoint)
       req <- httr2::req_headers(req, !!!self$auth_headers, "Content-Type" = "application/json")
-      req <- httr2::req_body_json(req, notification)
+      req <- prepare_json_post_request(req, notification)
       httr2::req_perform(req)
     }
   )

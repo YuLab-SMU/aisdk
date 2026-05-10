@@ -1040,7 +1040,7 @@ stream_responses_api <- function(url, headers, body, callback,
   )
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
-  req <- httr2::req_body_json(req, body)
+  req <- prepare_json_post_request(req, body)
   req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE)
 

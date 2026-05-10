@@ -159,6 +159,16 @@ apply_request_timeout_config <- function(req, timeout_config) {
   req
 }
 
+prepare_json_post_request <- function(req, body) {
+  req <- httr2::req_method(req, "POST")
+  httr2::req_body_json(req, body)
+}
+
+prepare_multipart_post_request <- function(req, body) {
+  req <- httr2::req_method(req, "POST")
+  do.call(httr2::req_body_multipart, c(list(.req = req), body))
+}
+
 safe_parse_api_error_body <- function(error_body) {
   if (is.null(error_body) || !is.character(error_body) || !nzchar(trimws(error_body))) {
     return(NULL)
@@ -307,7 +317,7 @@ post_to_api <- function(url, headers, body,
       {
         req <- httr2::request(url)
         req <- httr2::req_headers(req, !!!headers)
-        req <- httr2::req_body_json(req, body)
+        req <- prepare_json_post_request(req, body)
         req <- apply_request_timeout_config(req, timeout_config)
         req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
@@ -428,7 +438,7 @@ post_multipart_to_api <- function(url, headers, body,
       {
         req <- httr2::request(url)
         req <- httr2::req_headers(req, !!!headers)
-        req <- httr2::req_body_multipart(req, !!!body)
+        req <- prepare_multipart_post_request(req, body)
         req <- apply_request_timeout_config(req, timeout_config)
         req <- httr2::req_error(req, is_error = function(resp) FALSE)
 
@@ -542,7 +552,7 @@ stream_from_api <- function(url, headers, body, callback,
 
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
-  req <- httr2::req_body_json(req, body)
+  req <- prepare_json_post_request(req, body)
   req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
