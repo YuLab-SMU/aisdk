@@ -9,6 +9,9 @@ stream_from_api(
   headers,
   body,
   callback,
+  max_retries = 5,
+  initial_delay_ms = 2000,
+  backoff_factor = 2,
   timeout_seconds = NULL,
   total_timeout_seconds = NULL,
   first_byte_timeout_seconds = NULL,
@@ -24,6 +27,13 @@ stream_from_api(
 \item{body}{The request body (will be converted to JSON).}
 
 \item{callback}{A function called for each parsed SSE data chunk.}
+
+\item{max_retries}{Maximum number of connection/first-event retries
+before any stream chunk has been delivered (default: 5).}
+
+\item{initial_delay_ms}{Initial delay in milliseconds (default: 2000).}
+
+\item{backoff_factor}{Multiplier for delay on each retry (default: 2).}
 
 \item{timeout_seconds}{Legacy alias for \code{total_timeout_seconds}.}
 

@@ -145,3 +145,139 @@ test_that("request_error_classes separates timeout from generic network failures
   expect_true("aisdk_api_timeout_error" %in% aisdk:::request_error_classes(timeout_err))
   expect_true("aisdk_api_network_error" %in% aisdk:::request_error_classes(network_err))
 })
+
+test_that("stream_from_api retries connection failures before any event is delivered", {
+  attempts <- 0L
+  chunks <- list()
+  done_seen <- FALSE
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      attempts <<- attempts + 1L
+      if (attempts == 1L) {
+        stop(simpleError("Failed to perform HTTP request. Caused by error in `open.connection()`: cannot open the connection"))
+      }
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(
+        list(data = "{\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}"),
+        list(data = "[DONE]")
+      )
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    stream_response_is_complete = function(resp) FALSE,
+    stream_response_sse = function(resp) {
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      event
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(
+    aisdk:::stream_from_api(
+      url = "https://example.test/chat/completions",
+      headers = list(),
+      body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) {
+        if (isTRUE(done)) {
+          done_seen <<- TRUE
+        } else {
+          chunks <<- c(chunks, list(data))
+        }
+      },
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_equal(attempts, 2L)
+  expect_length(chunks, 1)
+  expect_equal(chunks[[1]]$choices[[1]]$delta$content, "ok")
+  expect_true(done_seen)
+})
+
+test_that("stream_from_api defaults to five retries before any event is delivered", {
+  attempts <- 0L
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      attempts <<- attempts + 1L
+      if (attempts <= 5L) {
+        stop(simpleError("Failed to perform HTTP request. Caused by error in `open.connection()`: cannot open the connection"))
+      }
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(list(data = "[DONE]"))
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    stream_response_is_complete = function(resp) FALSE,
+    stream_response_sse = function(resp) {
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      event
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(
+    aisdk:::stream_from_api(
+      url = "https://example.test/chat/completions",
+      headers = list(),
+      body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) NULL,
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_equal(attempts, 6L)
+})
+
+test_that("stream_from_api does not retry after a stream event is delivered", {
+  attempts <- 0L
+  chunks <- list()
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      attempts <<- attempts + 1L
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(
+        list(data = "{\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}"),
+        simpleError("Connection reset by peer")
+      )
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    stream_response_is_complete = function(resp) FALSE,
+    stream_response_sse = function(resp) {
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      if (inherits(event, "error")) {
+        stop(event)
+      }
+      event
+    },
+    .package = "aisdk"
+  )
+
+  expect_error(
+    aisdk:::stream_from_api(
+      url = "https://example.test/chat/completions",
+      headers = list(),
+      body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) {
+        if (!isTRUE(done)) {
+          chunks <<- c(chunks, list(data))
+        }
+      },
+      initial_delay_ms = 0
+    ),
+    class = "aisdk_stream_partial_error"
+  )
+
+  expect_equal(attempts, 1L)
+  expect_length(chunks, 1)
+  expect_equal(chunks[[1]]$choices[[1]]$delta$content, "partial")
+})

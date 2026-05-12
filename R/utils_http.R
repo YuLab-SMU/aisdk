@@ -223,6 +223,59 @@ request_error_classes <- function(error) {
   unique(classes)
 }
 
+is_stream_transport_error <- function(error) {
+  msg <- conditionMessage(error) %||% ""
+  grepl(
+    paste(c(
+      "Failed to perform HTTP request",
+      "cannot open the connection",
+      "connection reset",
+      "connection refused",
+      "connection closed",
+      "transfer closed",
+      "failure when receiving data",
+      "could not resolve host",
+      "host unreachable",
+      "timeout",
+      "timed out",
+      "server_response_timeout",
+      "connecttimeout",
+      "low speed",
+      "SSL"
+    ), collapse = "|"),
+    msg,
+    ignore.case = TRUE
+  )
+}
+
+stream_perform_connection <- function(req) {
+  httr2::req_perform_connection(req)
+}
+
+stream_response_status <- function(resp) {
+  httr2::resp_status(resp)
+}
+
+stream_response_body_string <- function(resp) {
+  httr2::resp_body_string(resp)
+}
+
+stream_response_is_complete <- function(resp) {
+  httr2::resp_stream_is_complete(resp)
+}
+
+stream_response_sse <- function(resp) {
+  httr2::resp_stream_sse(resp)
+}
+
+stream_response_close <- function(resp) {
+  if (is.null(resp)) {
+    return(invisible(NULL))
+  }
+  tryCatch(close(resp), error = function(e) NULL)
+  invisible(NULL)
+}
+
 abort_http_api_error <- function(status, url, error_body) {
   rlang::abort(
     c(
@@ -511,6 +564,10 @@ post_multipart_to_api <- function(url, headers, body,
 #' @param headers A named list of HTTP headers.
 #' @param body The request body (will be converted to JSON).
 #' @param callback A function called for each parsed SSE data chunk.
+#' @param max_retries Maximum number of connection/first-event retries
+#'   before any stream chunk has been delivered (default: 5).
+#' @param initial_delay_ms Initial delay in milliseconds (default: 2000).
+#' @param backoff_factor Multiplier for delay on each retry (default: 2).
 #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
 #' @param total_timeout_seconds Optional total stream timeout in seconds.
 #'   Defaults to `getOption("aisdk.http_total_timeout_seconds")`, then
@@ -529,6 +586,9 @@ post_multipart_to_api <- function(url, headers, body,
 #'   arriving, the stream is considered healthy.
 #' @keywords internal
 stream_from_api <- function(url, headers, body, callback,
+                            max_retries = 5,
+                            initial_delay_ms = 2000,
+                            backoff_factor = 2,
                             timeout_seconds = NULL,
                             total_timeout_seconds = NULL,
                             first_byte_timeout_seconds = NULL,
@@ -556,91 +616,163 @@ stream_from_api <- function(url, headers, body, callback,
   req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
-  # Establish connection
-  resp <- httr2::req_perform_connection(req)
+  attempt <- 0
+  delay_ms <- initial_delay_ms
 
-  # Ensure connection is closed when function exits
-  on.exit(close(resp), add = TRUE)
+  run_stream_attempt <- function() {
+    resp <- NULL
+    stream_state <- new.env(parent = emptyenv())
+    stream_state$consecutive_errors <- 0
+    stream_state$delivered_events <- FALSE
+    max_consecutive_errors <- 10
 
-  # Check status code immediately
-  status <- httr2::resp_status(resp)
-  if (status >= 400) {
-    # If error, try to read the body to give a helpful message
-    error_text <- tryCatch(
-      httr2::resp_body_string(resp),
-      error = function(e) "Unknown error (could not read body)"
-    )
+    on.exit(stream_response_close(resp), add = TRUE)
 
-    rlang::abort(c(
-      paste0("API request failed with status ", status),
-      "i" = paste0("URL: ", url),
-      "x" = error_text
-    ), class = "aisdk_api_error")
-  }
+    # Establish connection
+    resp <- stream_perform_connection(req)
 
-  # Track consecutive errors for circuit breaker
+    # Check status code immediately
+    status <- stream_response_status(resp)
+    if (status >= 400) {
+      # If error, try to read the body to give a helpful message
+      error_text <- tryCatch(
+        stream_response_body_string(resp),
+        error = function(e) "Unknown error (could not read body)"
+      )
 
-  stream_state <- new.env(parent = emptyenv())
-  stream_state$consecutive_errors <- 0
-  max_consecutive_errors <- 10
+      abort_http_api_error(status = status, url = url, error_body = error_text)
+    }
 
-  # Iterate over the stream using standard SSE parsing
-  while (!httr2::resp_stream_is_complete(resp)) {
-    # resp_stream_sse returns a list(type=..., data=..., id=..., retry=...) or NULL
-    event <- tryCatch(
-      httr2::resp_stream_sse(resp),
-      error = function(e) {
-        stream_state$consecutive_errors <- stream_state$consecutive_errors + 1
-        if (stream_state$consecutive_errors >= max_consecutive_errors) {
-          rlang::abort(c(
-            "Too many consecutive SSE parsing errors",
-            "x" = conditionMessage(e)
-          ), class = "aisdk_stream_error")
-        }
-        NULL
+    abort_stream_transport_error <- function(e) {
+      stream_class <- if (isTRUE(stream_state$delivered_events)) {
+        "aisdk_stream_partial_error"
+      } else {
+        "aisdk_stream_start_error"
       }
-    )
+      header <- if (isTRUE(stream_state$delivered_events)) {
+        "API stream interrupted after data was received"
+      } else {
+        "API stream failed before the first event"
+      }
+      rlang::abort(
+        c(
+          header,
+          "i" = paste0("URL: ", url),
+          "x" = conditionMessage(e)
+        ),
+        class = c(stream_class, request_error_classes(e)),
+        parent = e
+      )
+    }
 
-    if (!is.null(event)) {
-      stream_state$consecutive_errors <- 0 # Reset on successful event
-
-      # Standard SSE handling
-      # OpenAI and compatible APIs usually send JSON in the 'data' field
-      if (!is.null(event$data) && nzchar(event$data)) {
-        if (event$data == "[DONE]") {
-          callback(NULL, done = TRUE)
-          break
-        }
-
-        # Parse JSON data with repair fallback
-        tryCatch(
-          {
-            data <- jsonlite::fromJSON(event$data, simplifyVector = FALSE)
-            # Pass parsed data to callback
-            callback(data, done = FALSE)
-          },
-          error = function(e) {
-            # Try to repair JSON before giving up
-            tryCatch(
-              {
-                repaired_data <- fix_json(event$data)
-                data <- jsonlite::fromJSON(repaired_data, simplifyVector = FALSE)
-                callback(data, done = FALSE)
-              },
-              error = function(e2) {
-                # Log warning but don't crash - graceful degradation
-                debug_opt <- getOption("aisdk.debug", FALSE)
-                if (isTRUE(debug_opt)) {
-                  message(
-                    "Warning: Malformed JSON in SSE data (skipping): ",
-                    substr(event$data, 1, 100)
-                  )
-                }
-              }
-            )
+    # Iterate over the stream using standard SSE parsing
+    repeat {
+      stream_complete <- tryCatch(
+        stream_response_is_complete(resp),
+        error = function(e) {
+          if (is_stream_transport_error(e)) {
+            abort_stream_transport_error(e)
           }
-        )
+          rlang::cnd_signal(e)
+        }
+      )
+      if (isTRUE(stream_complete)) {
+        break
+      }
+
+      # resp_stream_sse returns a list(type=..., data=..., id=..., retry=...) or NULL
+      event <- tryCatch(
+        stream_response_sse(resp),
+        error = function(e) {
+          if (is_stream_transport_error(e)) {
+            abort_stream_transport_error(e)
+          }
+
+          stream_state$consecutive_errors <- stream_state$consecutive_errors + 1
+          if (stream_state$consecutive_errors >= max_consecutive_errors) {
+            rlang::abort(c(
+              "Too many consecutive SSE parsing errors",
+              "x" = conditionMessage(e)
+            ), class = "aisdk_stream_error")
+          }
+          NULL
+        }
+      )
+
+      if (!is.null(event)) {
+        stream_state$consecutive_errors <- 0 # Reset on successful event
+
+        # Standard SSE handling
+        # OpenAI and compatible APIs usually send JSON in the 'data' field
+        if (!is.null(event$data) && nzchar(event$data)) {
+          if (event$data == "[DONE]") {
+            callback(NULL, done = TRUE)
+            break
+          }
+
+          # Parse JSON data with repair fallback
+          tryCatch(
+            {
+              data <- jsonlite::fromJSON(event$data, simplifyVector = FALSE)
+              # Pass parsed data to callback
+              callback(data, done = FALSE)
+              stream_state$delivered_events <- TRUE
+            },
+            error = function(e) {
+              # Try to repair JSON before giving up
+              tryCatch(
+                {
+                  repaired_data <- fix_json(event$data)
+                  data <- jsonlite::fromJSON(repaired_data, simplifyVector = FALSE)
+                  callback(data, done = FALSE)
+                  stream_state$delivered_events <- TRUE
+                },
+                error = function(e2) {
+                  # Log warning but don't crash - graceful degradation
+                  debug_opt <- getOption("aisdk.debug", FALSE)
+                  if (isTRUE(debug_opt)) {
+                    message(
+                      "Warning: Malformed JSON in SSE data (skipping): ",
+                      substr(event$data, 1, 100)
+                    )
+                  }
+                }
+              )
+            }
+          )
+        }
       }
     }
+
+    TRUE
+  }
+
+  repeat {
+    attempt <- attempt + 1
+
+    attempt_result <- tryCatch(
+      run_stream_attempt(),
+      error = function(e) e
+    )
+
+    if (isTRUE(attempt_result)) {
+      return(invisible(NULL))
+    }
+
+    retryable_start_failure <- inherits(attempt_result, "aisdk_stream_start_error") ||
+      (!inherits(attempt_result, "aisdk_api_error") && is_stream_transport_error(attempt_result))
+
+    if (retryable_start_failure && attempt <= max_retries) {
+      message(sprintf("Network error, retrying stream in %d ms...", delay_ms))
+      Sys.sleep(delay_ms / 1000)
+      delay_ms <- delay_ms * backoff_factor
+      next
+    }
+
+    if (retryable_start_failure) {
+      abort_retry_api_error(url = url, error = attempt_result)
+    }
+
+    rlang::cnd_signal(attempt_result)
   }
 }
