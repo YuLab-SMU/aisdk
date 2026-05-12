@@ -581,7 +581,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>
 <code>/help</code>: show the command list</li>
 <li>
-<code>/quit</code>, <code>/exit</code>: end the console session</li>
+<code>/quit</code>, <code>/exit</code>: end the console session while the console is waiting for input</li>
 <li>
 <code>/save [path]</code>: save the current session</li>
 <li>
@@ -595,7 +595,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>
 <code>/stream [on|off]</code>: toggle token streaming</li>
 <li>
-<code>/local [on|off]</code>: enable or disable local execution mode</li>
+<code>/local [on|off]</code>: enable or disable local execution mode for workspace mutations</li>
 <li>
 <code>/debug [on|off]</code>: switch between clean and debug behavior</li>
 <li>
@@ -727,9 +727,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>the console starts with the configured sandbox mode</li>
 <li>local execution is separately visible and separately toggleable</li>
+<li>read-only object inspection can list and inspect both the session environment and <code>.GlobalEnv</code>, which matches the RStudio Environment view</li>
+<li>if an object name exists in both places, the session environment is inspected first and the result reports <code>location</code>
+</li>
+<li>Seurat-like S4 objects get a structural summary of assays, default assay, layers or slots, reductions, images, metadata columns, and cell/feature scale</li>
 <li>you can inspect the current runtime state from the status bar instead of guessing</li>
 </ul>
-<p>When you enable local execution, the agent can work in the shared session environment more directly, so this should be treated as a deliberate workflow choice rather than a background detail.</p>
+<p>When you enable local execution, the agent can work in the shared session environment and <code>.GlobalEnv</code> more directly. Treat that as the deliberate choice for creating or changing objects; read-only inspection does not require it.</p>
+<p>While a model request is running, <code>/quit</code> is not read as input. Use RStudio Stop/ESC or terminal Ctrl-C to cancel the current turn. The console marks that turn as cancelled, restores the conversation history to the state before the request, and returns to the input prompt.</p>
 </section><section id="recommended-usage-pattern" class="level2"><h2 class="anchored" data-anchor-id="recommended-usage-pattern">Recommended Usage Pattern</h2>
 <p>For most users, the practical workflow is:</p>
 <ol type="1">
