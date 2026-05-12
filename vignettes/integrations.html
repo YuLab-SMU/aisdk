@@ -401,6 +401,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
 <li><a href="#the-ai-chat-ui" id="toc-the-ai-chat-ui" class="nav-link active" data-scroll-target="#the-ai-chat-ui">The AI Chat UI</a></li>
+  <li><a href="#best-practice-share-a-chatsession-with-console_chat" id="toc-best-practice-share-a-chatsession-with-console_chat" class="nav-link" data-scroll-target="#best-practice-share-a-chatsession-with-console_chat">Best Practice: Share a ChatSession with <code>console_chat()</code></a></li>
+  <li><a href="#optional-shinychat-ui-backend" id="toc-optional-shinychat-ui-backend" class="nav-link" data-scroll-target="#optional-shinychat-ui-backend">Optional <code>shinychat</code> UI Backend</a></li>
   <li>
 <a href="#ai-controlled-apps-the-copilot-pattern" id="toc-ai-controlled-apps-the-copilot-pattern" class="nav-link" data-scroll-target="#ai-controlled-apps-the-copilot-pattern">AI-Controlled Apps (The Copilot Pattern)</a>
   <ul class="collapse">
@@ -437,7 +439,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   
 
 
-</header><p><strong>aisdk</strong> provides seamless integration with Shiny, allowing you to build AI-powered applications where the AI can control the UI and interact with reactive input/output.</p>
+</header><p><strong>aisdk</strong> provides Shiny integration for AI-powered applications where the same stateful chat session can be exercised in the terminal and embedded in a browser UI. The recommended workflow is to prototype tools and model behavior with <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>, then pass the same <code>ChatSession</code> to <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer()</a></code>.</p>
 <section id="the-ai-chat-ui" class="level2"><h2 class="anchored" data-anchor-id="the-ai-chat-ui">The AI Chat UI</h2>
 <p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI()</a></code> and <code><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer()</a></code> to add a chat interface.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/">shiny</a></span><span class="op">)</span></span>
@@ -452,16 +454,86 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section><section id="best-practice-share-a-chatsession-with-console_chat" class="level2"><h2 class="anchored" data-anchor-id="best-practice-share-a-chatsession-with-console_chat">Best Practice: Share a ChatSession with <code>console_chat()</code>
+</h2>
+<p><code><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer()</a></code> is backed by <code>ChatSession</code>, the same execution path used by <code><a href="https://rdrr.io/pkg/aisdk/man/console_chat.html">console_chat()</a></code>. That means tools, model runtime options, streamed thinking blocks, and session state work the same way in both places.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/">shiny</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">calc_tool</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/tool_factory.html">tool</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"calculate"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"Perform a mathematical calculation on two numbers"</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span></span>
+<span>    a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The first number"</span><span class="op">)</span>,</span>
+<span>    b <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_number.html">z_number</a></span><span class="op">(</span><span class="st">"The second number"</span><span class="op">)</span>,</span>
+<span>    operation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_enum.html">z_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"add"</span>, <span class="st">"subtract"</span>, <span class="st">"multiply"</span>, <span class="st">"divide"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"The operator"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  execute <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">args</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw"><a href="https://rdrr.io/r/base/switch.html">switch</a></span><span class="op">(</span></span>
+<span>      <span class="va">args</span><span class="op">$</span><span class="va">operation</span>,</span>
+<span>      add <span class="op">=</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span> <span class="op">+</span> <span class="va">args</span><span class="op">$</span><span class="va">b</span>,</span>
+<span>      subtract <span class="op">=</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span> <span class="op">-</span> <span class="va">args</span><span class="op">$</span><span class="va">b</span>,</span>
+<span>      multiply <span class="op">=</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span> <span class="op">*</span> <span class="va">args</span><span class="op">$</span><span class="va">b</span>,</span>
+<span>      divide <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="va">args</span><span class="op">$</span><span class="va">b</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">args</span><span class="op">$</span><span class="va">a</span> <span class="op">/</span> <span class="va">args</span><span class="op">$</span><span class="va">b</span> <span class="kw">else</span> <span class="st">"Error: Division by zero"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_chat_session.html">create_chat_session</a></span><span class="op">(</span></span>
+<span>  model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">calc_tool</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Optional: validate the model and tools in the terminal first.</span></span>
+<span><span class="co"># console_chat(chat)</span></span>
+<span></span>
+<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html">fluidPage</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI</a></span><span class="op">(</span><span class="st">"chat"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span></span>
+<span>    <span class="st">"chat"</span>,</span>
+<span>    session <span class="op">=</span> <span class="va">chat</span>,</span>
+<span>    show_thinking <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>    debug <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Use <code>show_thinking = TRUE</code> when the provider streams reasoning as <code>&lt;think&gt;</code> blocks or native reasoning deltas. Use <code>debug = TRUE</code> while developing tools to show tool arguments and results in the chat UI.</p>
+</section><section id="optional-shinychat-ui-backend" class="level2"><h2 class="anchored" data-anchor-id="optional-shinychat-ui-backend">Optional <code>shinychat</code> UI Backend</h2>
+<p>The default <code>backend = "aisdk"</code> keeps aisdk’s built-in turn view. If you prefer Posit’s <code>shinychat</code> front end, install <code>shinychat</code> and pass the backend to both the UI and server:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/">shiny</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/create_chat_session.html">create_chat_session</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/fluidPage.html">fluidPage</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatUI.html">aiChatUI</a></span><span class="op">(</span><span class="st">"chat"</span>, backend <span class="op">=</span> <span class="st">"shinychat"</span>, height <span class="op">=</span> <span class="st">"650px"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/aiChatServer.html">aiChatServer</a></span><span class="op">(</span></span>
+<span>    <span class="st">"chat"</span>,</span>
+<span>    session <span class="op">=</span> <span class="va">chat</span>,</span>
+<span>    backend <span class="op">=</span> <span class="st">"shinychat"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>With this backend, user messages are owned by the <code>shinychat</code> front end and assistant output is sent through <code>shinychat</code>’s chunk protocol. aisdk still owns the model call, tool execution, session history, and session environment.</p>
 </section><section id="ai-controlled-apps-the-copilot-pattern" class="level2"><h2 class="anchored" data-anchor-id="ai-controlled-apps-the-copilot-pattern">AI-Controlled Apps (The Copilot Pattern)</h2>
 <p>You can give the AI tools to modify <code>reactiveValues</code>, effectively letting it control your app.</p>
 <section id="define-reactive-values" class="level3"><h3 class="anchored" data-anchor-id="define-reactive-values">1. Define Reactive Values</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">rv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactiveValues.html">reactiveValues</a></span><span class="op">(</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">rv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/reactiveValues.html">reactiveValues</a></span><span class="op">(</span></span>
 <span>  plot_color <span class="op">=</span> <span class="st">"blue"</span>,</span>
 <span>  title <span class="op">=</span> <span class="st">"My Plot"</span></span>
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="create-reactive-tools" class="level3"><h3 class="anchored" data-anchor-id="create-reactive-tools">2. Create Reactive Tools</h3>
 <p>Use <code><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool()</a></code> to define tools that can read/write these values.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">change_color</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool</a></span><span class="op">(</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">change_color</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/reactive_tool.html">reactive_tool</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"change_color"</span>,</span>
 <span>  description <span class="op">=</span> <span class="st">"Change the plot color"</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_object.html">z_object</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/z_string.html">z_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -471,7 +543,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="initialize-server-with-tools" class="level3"><h3 class="anchored" data-anchor-id="initialize-server-with-tools">3. Initialize Server with Tools</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># ... rv definition ...</span></span>
 <span>  </span>
 <span>  <span class="co"># Wrap tools with current session context</span></span>
@@ -486,7 +558,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span>    <span class="st">"chat"</span>,</span>
 <span>    model <span class="op">=</span> <span class="st">"openai:gpt-4o"</span>,</span>
 <span>    tools <span class="op">=</span> <span class="va">tools</span>,</span>
-<span>    context <span class="op">=</span> <span class="va">get_context</span></span>
+<span>    context <span class="op">=</span> <span class="va">get_context</span>,</span>
+<span>    show_thinking <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Now the user can say “Change the plot to red”, and the AI will execute the tool, updating the Shiny app instantly.</p>
@@ -494,27 +567,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>aisdk</strong> also includes a custom knitr engine <a href="https://github.com/urniaz/ai">ai</a> for AI-assisted code generation. In <code>.Rmd</code> documents you use direct <a href="https://github.com/urniaz/ai">ai</a> chunks; in <code>.qmd</code> documents you should use <code>{r}</code> chunks with <code>#| engine: ai</code>.</p>
 <section id="register-the-ai-engine" class="level3"><h3 class="anchored" data-anchor-id="register-the-ai-engine">1. Register the AI Engine</h3>
 <p>Before using <a href="https://github.com/urniaz/ai">ai</a> chunks in your document, register the engine in an initial setup chunk.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r code-with-copy"><code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/YuLab-SMU/aisdk">aisdk</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/aisdk/man/register_ai_engine.html">register_ai_engine</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="basic-usage" class="level3"><h3 class="anchored" data-anchor-id="basic-usage">2. Basic Usage</h3>
 <p>If you do not opt into review mode, <a href="https://github.com/urniaz/ai">ai</a> keeps the simpler legacy flow: prompt the model, extract code, and execute immediately when <code>eval = TRUE</code>.</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="in">Create a scatter plot of mpg vs wt from the mtcars dataset, </span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="in">colored by the number of cylinders (cyl). Make it look nice using ggplot2.</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="in">Create a scatter plot of mpg vs wt from the mtcars dataset, </span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="in">colored by the number of cylinders (cyl). Make it look nice using ggplot2.</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>For Quarto, the equivalent pattern is:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="in">Create a scatter plot of mpg vs wt from the mtcars dataset,</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="in">colored by the number of cylinders (cyl). Make it look nice using ggplot2.</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="in">Create a scatter plot of mpg vs wt from the mtcars dataset,</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="in">colored by the number of cylinders (cyl). Make it look nice using ggplot2.</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section><section id="session-and-provider-options" class="level3"><h3 class="anchored" data-anchor-id="session-and-provider-options">3. Session and Provider Options</h3>
 <p>Provider/session options for <a href="https://github.com/urniaz/ai">ai</a> chunks:</p>
 <ul>
@@ -532,22 +605,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="context-auto-detection" class="level4"><h4 class="anchored" data-anchor-id="context-auto-detection">Context Auto-Detection</h4>
 <p>If your prompt mentions variables that already exist in the knitr environment, the engine can automatically summarize those objects and pass the summaries to the model. This keeps the prompt grounded in the current document state.</p>
 <p>For example, if you load a dataset in a previous <code>{r}</code> chunk:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.r .cell-code}</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>my_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">category =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>), <span class="at">value =</span> <span class="fu">rnorm</span>(<span class="dv">4</span>))</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="in">Calculate the mean of 'value' grouped by 'category' in my_data using dplyr.</span></span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="in">```{.r .cell-code}</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>my_data <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">category =</span> <span class="fu">c</span>(<span class="st">"A"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>), <span class="at">value =</span> <span class="fu">rnorm</span>(<span class="dv">4</span>))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>::: {.cell}</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="in">```{.ai .cell-code}</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="in">Calculate the mean of 'value' grouped by 'category' in my_data using dplyr.</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The engine sees <code>my_data</code> in the prompt, finds it in the knitr environment, and sends its schema to the model so it can write accurate code.</p>
 <p>You can manually control this with the <code>context</code> chunk option: - <code>context = "my_data"</code> explicitly includes only <code>my_data</code> - <code>context = c("data1", "data2")</code> includes multiple specific objects - <code>context = FALSE</code> disables context passing entirely</p>
 </section></section><section id="quarto-notes" class="level3"><h3 class="anchored" data-anchor-id="quarto-notes">4. Quarto Notes</h3>

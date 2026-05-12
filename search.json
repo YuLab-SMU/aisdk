@@ -858,7 +858,7 @@
     "href": "vignettes/integrations.html",
     "title": "Shiny Integration",
     "section": "",
-    "text": "aisdk provides seamless integration with Shiny, allowing you to build AI-powered applications where the AI can control the UI and interact with reactive input/output."
+    "text": "aisdk provides Shiny integration for AI-powered applications where the same stateful chat session can be exercised in the terminal and embedded in a browser UI. The recommended workflow is to prototype tools and model behavior with console_chat(), then pass the same ChatSession to aiChatServer()."
   },
   {
     "objectID": "vignettes/integrations.html#the-ai-chat-ui",
@@ -868,11 +868,25 @@
     "text": "The AI Chat UI\nUse aiChatUI() and aiChatServer() to add a chat interface.\nlibrary(shiny)\nlibrary(aisdk)\n\nui &lt;- fluidPage(\n  aiChatUI(\"chat\")\n)\n\nserver &lt;- function(input, output, session) {\n  aiChatServer(\"chat\", model = \"openai:gpt-4o\")\n}\n\nshinyApp(ui, server)"
   },
   {
+    "objectID": "vignettes/integrations.html#best-practice-share-a-chatsession-with-console_chat",
+    "href": "vignettes/integrations.html#best-practice-share-a-chatsession-with-console_chat",
+    "title": "Shiny Integration",
+    "section": "Best Practice: Share a ChatSession with console_chat()\n",
+    "text": "Best Practice: Share a ChatSession with console_chat()\n\naiChatServer() is backed by ChatSession, the same execution path used by console_chat(). That means tools, model runtime options, streamed thinking blocks, and session state work the same way in both places.\nlibrary(shiny)\nlibrary(aisdk)\n\ncalc_tool &lt;- tool(\n  name = \"calculate\",\n  description = \"Perform a mathematical calculation on two numbers\",\n  parameters = z_object(\n    a = z_number(\"The first number\"),\n    b = z_number(\"The second number\"),\n    operation = z_enum(\n      c(\"add\", \"subtract\", \"multiply\", \"divide\"),\n      \"The operator\"\n    )\n  ),\n  execute = function(args) {\n    switch(\n      args$operation,\n      add = args$a + args$b,\n      subtract = args$a - args$b,\n      multiply = args$a * args$b,\n      divide = if (args$b != 0) args$a / args$b else \"Error: Division by zero\"\n    )\n  }\n)\n\nchat &lt;- create_chat_session(\n  model = \"openai:gpt-4o\",\n  tools = list(calc_tool)\n)\n\n# Optional: validate the model and tools in the terminal first.\n# console_chat(chat)\n\nui &lt;- fluidPage(aiChatUI(\"chat\"))\n\nserver &lt;- function(input, output, session) {\n  aiChatServer(\n    \"chat\",\n    session = chat,\n    show_thinking = TRUE,\n    debug = FALSE\n  )\n}\n\nshinyApp(ui, server)\nUse show_thinking = TRUE when the provider streams reasoning as &lt;think&gt; blocks or native reasoning deltas. Use debug = TRUE while developing tools to show tool arguments and results in the chat UI."
+  },
+  {
+    "objectID": "vignettes/integrations.html#optional-shinychat-ui-backend",
+    "href": "vignettes/integrations.html#optional-shinychat-ui-backend",
+    "title": "Shiny Integration",
+    "section": "Optional shinychat UI Backend",
+    "text": "Optional shinychat UI Backend\nThe default backend = \"aisdk\" keeps aisdk’s built-in turn view. If you prefer Posit’s shinychat front end, install shinychat and pass the backend to both the UI and server:\nlibrary(shiny)\nlibrary(aisdk)\n\nchat &lt;- create_chat_session(model = \"openai:gpt-4o\")\n\nui &lt;- fluidPage(\n  aiChatUI(\"chat\", backend = \"shinychat\", height = \"650px\")\n)\n\nserver &lt;- function(input, output, session) {\n  aiChatServer(\n    \"chat\",\n    session = chat,\n    backend = \"shinychat\"\n  )\n}\n\nshinyApp(ui, server)\nWith this backend, user messages are owned by the shinychat front end and assistant output is sent through shinychat’s chunk protocol. aisdk still owns the model call, tool execution, session history, and session environment."
+  },
+  {
     "objectID": "vignettes/integrations.html#ai-controlled-apps-the-copilot-pattern",
     "href": "vignettes/integrations.html#ai-controlled-apps-the-copilot-pattern",
     "title": "Shiny Integration",
     "section": "AI-Controlled Apps (The Copilot Pattern)",
-    "text": "AI-Controlled Apps (The Copilot Pattern)\nYou can give the AI tools to modify reactiveValues, effectively letting it control your app.\n1. Define Reactive Values\nrv &lt;- reactiveValues(\n  plot_color = \"blue\",\n  title = \"My Plot\"\n)\n2. Create Reactive Tools\nUse reactive_tool() to define tools that can read/write these values.\nchange_color &lt;- reactive_tool(\n  name = \"change_color\",\n  description = \"Change the plot color\",\n  parameters = z_object(color = z_string()),\n  execute = function(rv, session, color) {\n    rv$plot_color &lt;- color\n    paste(\"Changed color to\", color)\n  }\n)\n3. Initialize Server with Tools\nserver &lt;- function(input, output, session) {\n  # ... rv definition ...\n  \n  # Wrap tools with current session context\n  tools &lt;- wrap_reactive_tools(list(change_color), rv, session)\n  \n  # Provide context so AI \"sees\" the current state\n  get_context &lt;- reactive({\n    list(current_color = rv$plot_color)\n  })\n\n  aiChatServer(\n    \"chat\",\n    model = \"openai:gpt-4o\",\n    tools = tools,\n    context = get_context\n  )\n}\nNow the user can say “Change the plot to red”, and the AI will execute the tool, updating the Shiny app instantly."
+    "text": "AI-Controlled Apps (The Copilot Pattern)\nYou can give the AI tools to modify reactiveValues, effectively letting it control your app.\n1. Define Reactive Values\nrv &lt;- reactiveValues(\n  plot_color = \"blue\",\n  title = \"My Plot\"\n)\n2. Create Reactive Tools\nUse reactive_tool() to define tools that can read/write these values.\nchange_color &lt;- reactive_tool(\n  name = \"change_color\",\n  description = \"Change the plot color\",\n  parameters = z_object(color = z_string()),\n  execute = function(rv, session, color) {\n    rv$plot_color &lt;- color\n    paste(\"Changed color to\", color)\n  }\n)\n3. Initialize Server with Tools\nserver &lt;- function(input, output, session) {\n  # ... rv definition ...\n  \n  # Wrap tools with current session context\n  tools &lt;- wrap_reactive_tools(list(change_color), rv, session)\n  \n  # Provide context so AI \"sees\" the current state\n  get_context &lt;- reactive({\n    list(current_color = rv$plot_color)\n  })\n\n  aiChatServer(\n    \"chat\",\n    model = \"openai:gpt-4o\",\n    tools = tools,\n    context = get_context,\n    show_thinking = TRUE\n  )\n}\nNow the user can say “Change the plot to red”, and the AI will execute the tool, updating the Shiny app instantly."
   },
   {
     "objectID": "vignettes/integrations.html#rmarkdown-and-quarto-integration",
