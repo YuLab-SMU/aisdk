@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
+  <title id="title">ask_ai error context assistant flow</title>
+  <desc id="desc">Architecture diagram showing how ask_ai collects R error context, builds an initial prompt, starts console_chat, routes skills, and returns diagnostic guidance.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fafc"/>
+      <stop offset="1" stop-color="#eef7f2"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#20302a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3e6257"/>
+    </marker>
+    <style>
+      .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #18322b; }
+      .subtitle { font: 400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #49675f; }
+      .label { font: 700 20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #17312a; }
+      .body { font: 400 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #415c55; }
+      .small { font: 400 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #5f746e; }
+      .code { font: 600 15px "SFMono-Regular", Consolas, monospace; fill: #244a42; }
+      .card { fill: #ffffff; stroke: #d8e5df; stroke-width: 1.4; rx: 18; filter: url(#shadow); }
+      .soft { fill: #f2faf6; stroke: #cbe3d8; stroke-width: 1.4; rx: 14; }
+      .accent { fill: #e4f3ec; stroke: #b8d9ca; stroke-width: 1.4; rx: 14; }
+      .warn { fill: #fff8e8; stroke: #ead9a4; stroke-width: 1.4; rx: 14; }
+      .line { stroke: #3e6257; stroke-width: 2.6; fill: none; marker-end: url(#arrow); }
+      .thin { stroke: #9ab8ad; stroke-width: 1.4; fill: none; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="760" fill="url(#bg)"/>
+
+  <text x="64" y="66" class="title">ask_ai(): Error Context Assistant</text>
+  <text x="64" y="99" class="subtitle">A one-step bridge from a failed R workflow to a skill-aware console conversation.</text>
+
+  <rect x="58" y="138" width="230" height="156" class="card"/>
+  <text x="88" y="177" class="label">1. User trigger</text>
+  <text x="88" y="211" class="body">Run after an R error</text>
+  <text x="88" y="238" class="code">ask_ai()</text>
+  <text x="88" y="264" class="small">or launch the RStudio Addin</text>
+
+  <rect x="362" y="122" width="292" height="188" class="card"/>
+  <text x="392" y="160" class="label">2. collect_ai_context()</text>
+  <rect x="392" y="182" width="232" height="28" class="soft"/>
+  <text x="406" y="201" class="small">geterrmessage()</text>
+  <rect x="392" y="218" width="232" height="28" class="soft"/>
+  <text x="406" y="237" class="small">traceback() + .Last.warning</text>
+  <rect x="392" y="254" width="232" height="28" class="soft"/>
+  <text x="406" y="273" class="small">RStudio active document</text>
+  <rect x="392" y="290" width="232" height="28" class="soft"/>
+  <text x="406" y="309" class="small">sessionInfo() + object summary</text>
+
+  <rect x="736" y="138" width="246" height="156" class="card"/>
+  <text x="766" y="177" class="label">3. Initial prompt</text>
+  <text x="766" y="211" class="body">Structured context blocks</text>
+  <text x="766" y="239" class="code">[last_error_begin]</text>
+  <text x="766" y="265" class="small">Optional: @biotree or another skill</text>
+
+  <rect x="1052" y="138" width="170" height="156" class="card"/>
+  <text x="1082" y="177" class="label">4. Chat</text>
+  <text x="1082" y="211" class="body">Send into</text>
+  <text x="1082" y="239" class="code">console_chat()</text>
+  <text x="1082" y="265" class="small">then keep talking</text>
+
+  <path class="line" d="M 292 216 C 318 216, 332 216, 358 216"/>
+  <path class="line" d="M 658 216 C 684 216, 704 216, 732 216"/>
+  <path class="line" d="M 986 216 C 1010 216, 1026 216, 1048 216"/>
+
+  <rect x="112" y="392" width="306" height="190" class="card"/>
+  <text x="144" y="431" class="label">Context boundary</text>
+  <text x="144" y="466" class="body">V1 is explicit and reversible.</text>
+  <text x="144" y="497" class="small">No global options(error=...) hook.</text>
+  <text x="144" y="525" class="small">No automatic mutation of user code.</text>
+  <text x="144" y="553" class="small">Use show_context = TRUE to preview.</text>
+
+  <rect x="494" y="382" width="292" height="210" class="card"/>
+  <text x="526" y="421" class="label">Skill-aware routing</text>
+  <rect x="526" y="446" width="226" height="34" class="accent"/>
+  <text x="544" y="468" class="code">skills = "auto"</text>
+  <text x="526" y="510" class="body">The existing console agent</text>
+  <text x="526" y="538" class="body">chooses matching local skills</text>
+  <text x="526" y="566" class="small">Example: biotree for R/Bioc errors</text>
+
+  <rect x="862" y="392" width="306" height="190" class="card"/>
+  <text x="894" y="431" class="label">Assistant output</text>
+  <text x="894" y="466" class="body">Diagnose root cause first.</text>
+  <text x="894" y="497" class="body">Suggest concrete next steps.</text>
+  <text x="894" y="528" class="body">Ask for missing evidence.</text>
+  <text x="894" y="559" class="small">The session remains interactive.</text>
+
+  <path class="thin" d="M 508 310 C 508 350, 596 352, 625 382"/>
+  <path class="thin" d="M 858 294 C 858 350, 720 348, 672 382"/>
+  <path class="line" d="M 786 488 C 812 488, 832 488, 858 488"/>
+
+  <rect x="58" y="654" width="1164" height="54" class="warn"/>
+  <text x="88" y="687" class="body">Design intent: keep the user's R workflow in one place while making the error report rich enough for model + skill diagnosis.</text>
+</svg>

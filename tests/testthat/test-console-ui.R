@@ -264,7 +264,7 @@ test_that("console readline skips queued paste lines before explicit send", {
   expect_match(sent, "^帮我解释这段代码\n\n\\[Pasted Content ")
   expect_null(state$pending_paste)
   expect_null(state$pending_paste_notice)
-  expect_equal(prompts, c("  ", "", "", "", "  "))
+  expect_equal(prompts, c("  ", "", "", "", "  [paste pending] "))
 })
 
 test_that("console readline sends pending paste on explicit empty enter", {
@@ -361,6 +361,25 @@ test_that("console readline leaves pending paste intact for slash commands", {
   expect_s3_class(state$pending_paste, "aisdk_console_paste_ref")
 })
 
+test_that("console readline marks pending paste prompt without consuming slash commands", {
+  state <- aisdk:::console_create_input_state()
+  state$pending_paste <- aisdk:::console_create_paste_ref("/tmp/aisdk-paste.txt", 12L)
+  prompts <- character(0)
+
+  input <- aisdk:::readline_multiline(
+    state,
+    readline_fn = function(prompt) {
+      prompts <<- c(prompts, prompt)
+      "/history"
+    },
+    quiet = TRUE
+  )
+
+  expect_equal(input, "/history")
+  expect_equal(prompts, "  [paste pending] ")
+  expect_s3_class(state$pending_paste, "aisdk_console_paste_ref")
+})
+
 test_that("console paste file writer falls back to end marker when clipboard is unavailable", {
   state <- aisdk:::console_create_input_state()
   output_dir <- tempfile("console-paste-")
@@ -446,6 +465,9 @@ test_that("console auto-paste detection stays conservative", {
   expect_true(aisdk:::console_should_auto_paste("### Create: Jianming Zeng"))
   expect_true(aisdk:::console_should_auto_paste("library(Seurat)"))
   expect_true(aisdk:::console_should_auto_paste("scRNAlist <- lapply(samples, function(pro) {"))
+  expect_true(aisdk:::console_should_auto_paste("for (sample in samples) {"))
+  expect_true(aisdk:::console_should_auto_paste("sce <- CreateSeuratObject(counts)"))
+  expect_true(aisdk:::console_should_auto_paste("df |> dplyr::filter(group == 'A')"))
 })
 
 test_that("handle_command toggles inspect mode through app state", {
@@ -1053,4 +1075,49 @@ test_that("with_console_chat_display derives visibility from app state", {
     expect_equal(getOption("aisdk.tool_log_mode"), "detailed")
     expect_true(getOption("aisdk.show_thinking"))
   })
+})
+
+test_that("console_send_user_message cancels turn and restores history on interrupt", {
+  interrupt_model <- MockModel$new(list(function(params) {
+    stop(structure(list(message = "interrupt"), class = c("interrupt", "condition")))
+  }))
+  session <- aisdk::create_chat_session(model = interrupt_model)
+  session$append_message("user", "existing")
+  session$append_message("assistant", "history")
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  ok <- aisdk:::console_send_user_message(
+    "please stop",
+    session = session,
+    stream = TRUE,
+    app_state = app_state
+  )
+
+  expect_false(ok)
+  expect_equal(vapply(session$get_history(), `[[`, character(1), "content"), c("existing", "history"))
+  turn <- aisdk:::console_app_get_current_turn(app_state)
+  expect_equal(turn$phase, "cancelled")
+  expect_equal(app_state$phase, "cancelled")
+  expect_equal(app_state$tool_state, "idle")
+})
+
+test_that("console_send_user_message restores history on send errors", {
+  error_model <- MockModel$new(list(function(params) {
+    stop("boom")
+  }))
+  session <- aisdk::create_chat_session(model = error_model)
+  session$append_message("user", "existing")
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  ok <- aisdk:::console_send_user_message(
+    "will fail",
+    session = session,
+    stream = FALSE,
+    app_state = app_state
+  )
+
+  expect_false(ok)
+  expect_equal(length(session$get_history()), 1L)
+  expect_equal(session$get_history()[[1]]$content, "existing")
+  expect_equal(aisdk:::console_app_get_current_turn(app_state)$phase, "error")
 })

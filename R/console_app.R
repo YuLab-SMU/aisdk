@@ -563,23 +563,30 @@ console_app_record_tool_result <- function(state, name, result, success = TRUE, 
 }
 
 #' @keywords internal
-console_app_finish_turn <- function(state, failed = FALSE) {
+console_app_finish_turn <- function(state, failed = FALSE, cancelled = FALSE) {
   turn <- console_app_get_current_turn(state)
+  failed <- isTRUE(failed)
+  cancelled <- isTRUE(cancelled)
+  terminal_phase <- if (cancelled) "cancelled" else if (failed) "error" else "done"
   if (is.null(turn)) {
-    state$phase <- if (failed) "error" else "idle"
-    state$tool_state <- if (failed) "error" else "idle"
+    state$phase <- if (failed || cancelled) terminal_phase else "idle"
+    state$tool_state <- if (failed && !cancelled) "error" else "idle"
     return(invisible(state))
   }
 
   turn$ended_at <- Sys.time()
-  turn$phase <- if (failed) "error" else "done"
+  turn$phase <- terminal_phase
   if (!is.null(turn$started_at) && !is.null(turn$ended_at)) {
     turn$elapsed_ms <- as.numeric(difftime(turn$ended_at, turn$started_at, units = "secs")) * 1000
   }
 
-  state$phase <- if (failed) "error" else "idle"
-  if (!failed && identical(state$tool_state, "running")) {
+  state$phase <- if (failed || cancelled) terminal_phase else "idle"
+  if (cancelled) {
     state$tool_state <- "idle"
+  } else if (!failed && identical(state$tool_state, "running")) {
+    state$tool_state <- "idle"
+  } else if (failed && identical(state$tool_state, "running")) {
+    state$tool_state <- "error"
   }
 
   console_app_update_current_turn(state, turn)

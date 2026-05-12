@@ -9,6 +9,7 @@ resolve_r_binding(
   package = NULL,
   session = NULL,
   envir = NULL,
+  scope = c("session", "workspace", "all"),
   prefer = c("auto", "object", "function")
 )
 }
@@ -20,6 +21,11 @@ resolve_r_binding(
 \item{session}{Optional \code{ChatSession} or \code{SharedSession}.}
 
 \item{envir}{Optional environment. Ignored when \code{session} is provided.}
+
+\item{scope}{Where to resolve live objects before the search path:
+\code{"session"} checks only the session environment, \code{"workspace"} checks only
+\code{.GlobalEnv}, and \code{"all"} checks session environment first, then
+\code{.GlobalEnv}.}
 
 \item{prefer}{Preferred kind: \code{"auto"}, \code{"object"}, or \code{"function"}.}
 }

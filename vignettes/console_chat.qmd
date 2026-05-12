@@ -175,7 +175,7 @@ the normal default.
 ### Session control
 
 - `/help`: show the command list
-- `/quit`, `/exit`: end the console session
+- `/quit`, `/exit`: end the console session while the console is waiting for input
 - `/save [path]`: save the current session
 - `/load <path>`: restore a saved session
 - `/clear`: clear conversation history
@@ -184,7 +184,7 @@ the normal default.
 
 - `/model <id>`: switch the model without losing the session
 - `/stream [on|off]`: toggle token streaming
-- `/local [on|off]`: enable or disable local execution mode
+- `/local [on|off]`: enable or disable local execution mode for workspace mutations
 - `/debug [on|off]`: switch between clean and debug behavior
 - `/inspect [on|off]`: switch into or out of inspect mode
 
@@ -330,12 +330,23 @@ Key points:
 
 - the console starts with the configured sandbox mode
 - local execution is separately visible and separately toggleable
+- read-only object inspection can list and inspect both the session environment
+  and `.GlobalEnv`, which matches the RStudio Environment view
+- if an object name exists in both places, the session environment is inspected
+  first and the result reports `location`
+- Seurat-like S4 objects get a structural summary of assays, default assay,
+  layers or slots, reductions, images, metadata columns, and cell/feature scale
 - you can inspect the current runtime state from the status bar instead of
   guessing
 
 When you enable local execution, the agent can work in the shared session
-environment more directly, so this should be treated as a deliberate workflow
-choice rather than a background detail.
+environment and `.GlobalEnv` more directly. Treat that as the deliberate choice
+for creating or changing objects; read-only inspection does not require it.
+
+While a model request is running, `/quit` is not read as input. Use RStudio
+Stop/ESC or terminal Ctrl-C to cancel the current turn. The console marks that
+turn as cancelled, restores the conversation history to the state before the
+request, and returns to the input prompt.
 
 ## Recommended Usage Pattern
 

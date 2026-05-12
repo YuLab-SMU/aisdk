@@ -197,14 +197,22 @@ Current console features include:
 - a persistent status bar showing model, sandbox, stream, and tool state
 - per-turn tool timeline summaries in inspect mode
 - an overlay-backed inspector for the latest turn or an individual tool
+- read-only inspection of session objects and RStudio `.GlobalEnv` objects
+- Seurat-like object summaries for assays, layers/slots, reductions, images,
+  metadata columns, and cell/feature scale
 - session persistence via `/save` and `/load`
 
 Useful commands:
 
 - `/inspect on`, `/inspect turn`, `/inspect tool <index>`
 - `/inspect next`, `/inspect prev`, `/inspect close`
-- `/debug [on|off]`, `/stream [on|off]`
+- `/debug [on|off]`, `/stream [on|off]`, `/local [on|off]`
 - `/model <id>`, `/history`, `/stats`, `/clear`
+
+Use `/quit` or `/exit` only while the console is waiting for input. During a
+running model request, use RStudio Stop/ESC or terminal Ctrl-C to cancel the
+current turn; the console restores history to before that request and returns to
+the prompt.
 
 For error-driven work, `ask_ai()` collects the recent R error context,
 traceback, warnings, active RStudio document when available, session
