@@ -9,6 +9,27 @@ test_that("resolve_r_binding prefers live session environment over search path",
   expect_equal(binding$object, 42)
 })
 
+test_that("resolve_r_binding can read .GlobalEnv and still prefers session env", {
+  global_name <- "aisdk_global_probe"
+  collision_name <- "aisdk_collision_probe"
+  assign(global_name, data.frame(x = 1:2), envir = .GlobalEnv)
+  assign(collision_name, "global", envir = .GlobalEnv)
+  on.exit(rm(list = c(global_name, collision_name), envir = .GlobalEnv), add = TRUE)
+
+  env <- new.env(parent = emptyenv())
+  env[[collision_name]] <- "session"
+
+  global_binding <- resolve_r_binding(global_name, envir = env, scope = "all")
+  collision_binding <- resolve_r_binding(collision_name, envir = env, scope = "all")
+  workspace_binding <- resolve_r_binding(collision_name, envir = env, scope = "workspace")
+
+  expect_equal(global_binding$location, "global_env")
+  expect_equal(collision_binding$location, "session_env")
+  expect_equal(collision_binding$object, "session")
+  expect_equal(workspace_binding$location, "global_env")
+  expect_equal(workspace_binding$object, "global")
+})
+
 test_that("resolve_r_binding can resolve a package function directly", {
   binding <- resolve_r_binding("lm", package = "stats")
 
@@ -30,6 +51,21 @@ test_that("list_r_objects returns compact metadata for live objects", {
   expect_true("model" %in% objects$name)
 })
 
+test_that("list_r_objects can include workspace objects with locations", {
+  global_name <- "aisdk_global_list_probe"
+  assign(global_name, 1:3, envir = .GlobalEnv)
+  on.exit(rm(list = global_name, envir = .GlobalEnv), add = TRUE)
+
+  env <- new.env(parent = emptyenv())
+  env$session_only <- data.frame(x = 1)
+
+  objects <- list_r_objects(envir = env, pattern = "^(session_only|aisdk_global_list_probe)$", scope = "all")
+
+  expect_true(all(c("name", "class", "type", "size", "location") %in% names(objects)))
+  expect_equal(objects$location[match("session_only", objects$name)], "session_env")
+  expect_equal(objects$location[match(global_name, objects$name)], "global_env")
+})
+
 test_that("inspect_r_object uses the active semantic adapter registry", {
   session <- create_chat_session(model = MockModel$new())
   env <- session$get_envir()
@@ -49,7 +85,62 @@ test_that("inspect_r_object uses the active semantic adapter registry", {
   structured <- inspect_r_object("custom_obj", session = session, detail = "structured")
 
   expect_match(summary_text, "custom summary for custom_obj", fixed = TRUE)
+  expect_equal(structured$binding$location, "session_env")
   expect_equal(structured$adapter, "custom-object-adapter")
+})
+
+test_that("inspect_r_object reports binding location for GlobalEnv objects", {
+  object_name <- "aisdk_global_inspect_probe"
+  assign(object_name, data.frame(x = 1:3), envir = .GlobalEnv)
+  on.exit(rm(list = object_name, envir = .GlobalEnv), add = TRUE)
+
+  text <- inspect_r_object(object_name, envir = new.env(parent = emptyenv()), detail = "summary", scope = "all")
+  structured <- inspect_r_object(object_name, envir = new.env(parent = emptyenv()), detail = "structured", scope = "all")
+
+  expect_match(text, "location=global_env", fixed = TRUE)
+  expect_equal(structured$binding$location, "global_env")
+})
+
+test_that("Seurat-like semantic adapter summarizes S4 object structure without Seurat installed", {
+  if (!methods::isClass("AisdkMockAssay")) {
+    methods::setClass("AisdkMockAssay", slots = list(counts = "matrix"))
+  }
+  if (!methods::isClass("AisdkMockSeurat")) {
+    methods::setClass(
+      "AisdkMockSeurat",
+      slots = list(
+        assays = "list",
+        meta.data = "data.frame",
+        reductions = "list",
+        images = "list",
+        active.assay = "character"
+      )
+    )
+  }
+
+  obj <- methods::new(
+    "AisdkMockSeurat",
+    assays = list(RNA = methods::new("AisdkMockAssay", counts = matrix(seq_len(12), nrow = 3))),
+    meta.data = data.frame(sample = c("a", "b", "c", "d")),
+    reductions = list(pca = list()),
+    images = list(slice1 = list()),
+    active.assay = "RNA"
+  )
+  env <- new.env(parent = emptyenv())
+  env$seu <- obj
+
+  structured <- inspect_r_object("seu", envir = env, detail = "structured")
+  summary <- inspect_r_object("seu", envir = env, detail = "summary")
+
+  expect_equal(structured$adapter, "seurat")
+  expect_equal(structured$schema$assays, "RNA")
+  expect_equal(structured$schema$default_assay, "RNA")
+  expect_equal(structured$schema$layers, "counts")
+  expect_equal(structured$schema$reductions, "pca")
+  expect_equal(structured$schema$images, "slice1")
+  expect_equal(structured$schema$cells, 4L)
+  expect_equal(structured$schema$features, 3L)
+  expect_match(summary, "Metadata columns: sample", fixed = TRUE)
 })
 
 test_that("inspect_r_function reports signature and function kind", {

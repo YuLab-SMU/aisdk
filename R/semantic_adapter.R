@@ -377,6 +377,7 @@ create_default_semantic_adapter_registry <- function(include_workflow_hints = TR
                                                      extension_registrars = NULL) {
   registry <- create_semantic_adapter_registry(
     adapters = list(
+      create_seurat_semantic_adapter(),
       create_s4_semantic_adapter(),
       create_generic_semantic_adapter()
     )
@@ -596,6 +597,323 @@ semantic_render_inspection <- function(obj, name = NULL, registry = NULL, envir 
   }
 
   semantic_render_summary(obj, name = name, registry = registry, envir = envir)
+}
+
+#' @keywords internal
+seurat_slot_or_null <- function(obj, slot_name) {
+  if (!isS4(obj)) {
+    return(NULL)
+  }
+  if (!slot_name %in% tryCatch(methods::slotNames(obj), error = function(e) character(0))) {
+    return(NULL)
+  }
+  tryCatch(methods::slot(obj, slot_name), error = function(e) NULL)
+}
+
+#' @keywords internal
+seurat_list_or_slot <- function(obj, name) {
+  if (is.list(obj) && !is.null(obj[[name]])) {
+    return(obj[[name]])
+  }
+  seurat_slot_or_null(obj, name)
+}
+
+#' @keywords internal
+seurat_named_entries <- function(x) {
+  if (is.null(x)) {
+    return(character(0))
+  }
+  names_vec <- tryCatch(names(x), error = function(e) character(0))
+  names_vec <- names_vec %||% character(0)
+  names_vec[nzchar(names_vec)]
+}
+
+#' @keywords internal
+seurat_first_or_null <- function(x) {
+  if (length(x %||% character(0)) == 0L) {
+    return(NULL)
+  }
+  x[[1]]
+}
+
+#' @keywords internal
+seurat_default_assay <- function(obj, assay_names = character(0)) {
+  default <- call_object_accessor(
+    obj,
+    c("DefaultAssay"),
+    default = NULL,
+    package = "SeuratObject"
+  )
+  if (is.null(default)) {
+    default <- call_object_accessor(obj, c("DefaultAssay"), default = NULL, package = "Seurat")
+  }
+  if (is.character(default) && length(default) > 0 && nzchar(default[[1]])) {
+    return(default[[1]])
+  }
+
+  active <- seurat_slot_or_null(obj, "active.assay")
+  if (is.character(active) && length(active) > 0 && nzchar(active[[1]])) {
+    return(active[[1]])
+  }
+
+  seurat_first_or_null(assay_names)
+}
+
+#' @keywords internal
+seurat_assay_object <- function(obj, assay = NULL) {
+  assays <- seurat_list_or_slot(obj, "assays")
+  if (is.null(assays)) {
+    return(NULL)
+  }
+  assay_names <- seurat_named_entries(assays)
+  assay <- assay %||% seurat_first_or_null(assay_names)
+  if (is.null(assay) || !nzchar(assay) || !assay %in% assay_names) {
+    return(NULL)
+  }
+  tryCatch(assays[[assay]], error = function(e) NULL)
+}
+
+#' @keywords internal
+seurat_assay_layers <- function(assay_obj) {
+  layers <- call_object_accessor(
+    assay_obj,
+    c("Layers"),
+    default = NULL,
+    package = "SeuratObject"
+  )
+  if (is.null(layers)) {
+    layers <- call_object_accessor(assay_obj, c("Layers"), default = NULL, package = "Seurat")
+  }
+  if (is.character(layers) && length(layers) > 0) {
+    return(layers[nzchar(layers)])
+  }
+
+  if (isS4(assay_obj)) {
+    slot_names <- tryCatch(methods::slotNames(assay_obj), error = function(e) character(0))
+    if ("layers" %in% slot_names) {
+      return(seurat_named_entries(seurat_slot_or_null(assay_obj, "layers")))
+    }
+    return(intersect(slot_names, c("counts", "data", "scale.data")))
+  }
+
+  if (is.list(assay_obj)) {
+    if (!is.null(assay_obj$layers)) {
+      return(seurat_named_entries(assay_obj$layers))
+    }
+    return(intersect(names(assay_obj) %||% character(0), c("counts", "data", "scale.data")))
+  }
+
+  character(0)
+}
+
+#' @keywords internal
+seurat_assay_matrix_candidates <- function(assay_obj) {
+  candidates <- list()
+  add_candidate <- function(value) {
+    dims <- tryCatch(dim(value), error = function(e) NULL)
+    if (is.numeric(dims) && length(dims) >= 2) {
+      candidates[[length(candidates) + 1L]] <<- value
+    }
+  }
+
+  if (isS4(assay_obj)) {
+    slot_names <- tryCatch(methods::slotNames(assay_obj), error = function(e) character(0))
+    for (slot_name in intersect(c("counts", "data", "scale.data"), slot_names)) {
+      add_candidate(seurat_slot_or_null(assay_obj, slot_name))
+    }
+    layers <- seurat_slot_or_null(assay_obj, "layers")
+    if (is.list(layers) || is.environment(layers)) {
+      for (layer_name in seurat_named_entries(layers)) {
+        add_candidate(tryCatch(layers[[layer_name]], error = function(e) NULL))
+      }
+    }
+  } else if (is.list(assay_obj)) {
+    for (entry_name in intersect(c("counts", "data", "scale.data"), names(assay_obj) %||% character(0))) {
+      add_candidate(assay_obj[[entry_name]])
+    }
+    layers <- assay_obj$layers %||% NULL
+    if (is.list(layers) || is.environment(layers)) {
+      for (layer_name in seurat_named_entries(layers)) {
+        add_candidate(tryCatch(layers[[layer_name]], error = function(e) NULL))
+      }
+    }
+  }
+
+  candidates
+}
+
+#' @keywords internal
+seurat_dimensions <- function(obj, default_assay = NULL) {
+  dims <- tryCatch(dim(obj), error = function(e) NULL)
+  if (is.numeric(dims) && length(dims) >= 2) {
+    return(list(features = as.integer(dims[[1]]), cells = as.integer(dims[[2]])))
+  }
+
+  assay_obj <- seurat_assay_object(obj, default_assay)
+  assay_dims <- tryCatch(dim(assay_obj), error = function(e) NULL)
+  if (is.numeric(assay_dims) && length(assay_dims) >= 2) {
+    return(list(features = as.integer(assay_dims[[1]]), cells = as.integer(assay_dims[[2]])))
+  }
+
+  matrices <- seurat_assay_matrix_candidates(assay_obj)
+  if (length(matrices) > 0) {
+    matrix_dims <- tryCatch(dim(matrices[[1]]), error = function(e) NULL)
+    if (is.numeric(matrix_dims) && length(matrix_dims) >= 2) {
+      return(list(features = as.integer(matrix_dims[[1]]), cells = as.integer(matrix_dims[[2]])))
+    }
+  }
+
+  meta <- seurat_list_or_slot(obj, "meta.data")
+  cells <- if (is.data.frame(meta)) nrow(meta) else NA_integer_
+  list(features = NA_integer_, cells = as.integer(cells))
+}
+
+#' @keywords internal
+describe_seurat_like_object <- function(obj) {
+  assays <- seurat_list_or_slot(obj, "assays")
+  assay_names <- seurat_named_entries(assays)
+  default_assay <- seurat_default_assay(obj, assay_names)
+  assay_obj <- seurat_assay_object(obj, default_assay)
+  reductions <- seurat_named_entries(seurat_list_or_slot(obj, "reductions"))
+  images <- seurat_named_entries(seurat_list_or_slot(obj, "images"))
+  meta <- seurat_list_or_slot(obj, "meta.data")
+  meta_columns <- if (is.data.frame(meta)) names(meta) else character(0)
+  dims <- seurat_dimensions(obj, default_assay)
+  version <- seurat_slot_or_null(obj, "version")
+  commands <- seurat_list_or_slot(obj, "commands")
+  command_names <- seurat_named_entries(commands)
+
+  list(
+    class = class(obj),
+    primary_class = class(obj)[[1]] %||% "Seurat",
+    version = if (length(version) > 0) as.character(version[[1]]) else NULL,
+    assays = assay_names,
+    default_assay = default_assay,
+    assay_class = if (!is.null(assay_obj)) class(assay_obj) else character(0),
+    layers = seurat_assay_layers(assay_obj),
+    assay_slots = if (isS4(assay_obj)) tryCatch(methods::slotNames(assay_obj), error = function(e) character(0)) else character(0),
+    reductions = reductions,
+    images = images,
+    metadata_columns = meta_columns,
+    cells = dims$cells,
+    features = dims$features,
+    commands = command_names
+  )
+}
+
+#' @keywords internal
+create_seurat_semantic_adapter <- function() {
+  create_semantic_adapter(
+    name = "seurat",
+    supports = function(obj) {
+      is_semantic_class(obj, "Seurat") ||
+        (isS4(obj) && all(c("assays", "meta.data") %in% tryCatch(methods::slotNames(obj), error = function(e) character(0))))
+    },
+    capabilities = c("identity", "schema", "semantics", "preview", "budget_estimate", "safety_checks"),
+    priority = 200,
+    describe_identity = function(obj) {
+      info <- describe_seurat_like_object(obj)
+      list(
+        class = info$class,
+        primary_class = info$primary_class,
+        seurat_version = info$version,
+        typeof = typeof(obj)
+      )
+    },
+    describe_schema = function(obj) {
+      info <- describe_seurat_like_object(obj)
+      list(
+        kind = "Seurat",
+        assays = info$assays,
+        default_assay = info$default_assay,
+        assay_class = info$assay_class,
+        layers = info$layers,
+        assay_slots = info$assay_slots,
+        reductions = info$reductions,
+        images = info$images,
+        metadata_columns = info$metadata_columns,
+        cells = info$cells,
+        features = info$features
+      )
+    },
+    describe_semantics = function(obj) {
+      info <- describe_seurat_like_object(obj)
+      list(
+        summary = sprintf(
+          "Seurat-like single-cell object with %s assay(s), %s cell(s), and %s feature(s).",
+          length(info$assays),
+          if (is.na(info$cells)) "unknown" else info$cells,
+          if (is.na(info$features)) "unknown" else info$features
+        )
+      )
+    },
+    estimate_cost = function(obj) {
+      list(tokens = "low", compute = "low", io = "none")
+    },
+    provenance = function(obj) {
+      list(adapter = "seurat", package = "aisdk", optional_dependencies = c("SeuratObject", "Seurat"))
+    },
+    validate_action = function(obj, action) {
+      list(
+        status = "allow",
+        reason = "Seurat adapter performs read-only structural inspection.",
+        category = "read",
+        expensive = FALSE
+      )
+    },
+    render_summary = function(obj, name = NULL) {
+      info <- describe_seurat_like_object(obj)
+      lines <- c(
+        paste0("**Seurat Object** (", paste(info$class, collapse = ", "), ")"),
+        "",
+        paste0("Cells: ", if (is.na(info$cells)) "unknown" else info$cells),
+        paste0("Features: ", if (is.na(info$features)) "unknown" else info$features),
+        paste0("Assays: ", if (length(info$assays)) paste(info$assays, collapse = ", ") else "(none found)"),
+        paste0("Default assay: ", info$default_assay %||% "(unknown)"),
+        paste0("Assay class: ", if (length(info$assay_class)) paste(info$assay_class, collapse = ", ") else "(unknown)"),
+        paste0("Layers/slots: ", if (length(info$layers)) paste(info$layers, collapse = ", ") else if (length(info$assay_slots)) paste(info$assay_slots, collapse = ", ") else "(none found)"),
+        paste0("Reductions: ", if (length(info$reductions)) paste(info$reductions, collapse = ", ") else "(none found)"),
+        paste0("Images: ", if (length(info$images)) paste(info$images, collapse = ", ") else "(none found)"),
+        paste0("Metadata columns: ", if (length(info$metadata_columns)) paste(utils::head(info$metadata_columns, 30), collapse = ", ") else "(none found)")
+      )
+      if (!is.null(info$version)) {
+        lines <- c(lines, paste0("Seurat object version: ", info$version))
+      }
+      paste(lines, collapse = "\n")
+    },
+    render_inspection = function(obj, name = NULL, head_rows = 6) {
+      info <- describe_seurat_like_object(obj)
+      meta_preview <- character(0)
+      meta <- seurat_list_or_slot(obj, "meta.data")
+      if (is.data.frame(meta) && nrow(meta) > 0) {
+        meta_preview <- c(
+          "",
+          paste0("Metadata preview (first ", min(head_rows, nrow(meta)), " rows):"),
+          utils::capture.output(print(utils::head(meta, head_rows)))
+        )
+      }
+
+      lines <- c(
+        paste0("Variable: ", name %||% "<unnamed>"),
+        paste0("Type: ", paste(info$class, collapse = ", ")),
+        paste0("Size: ", format(utils::object.size(obj), units = "auto")),
+        paste0("Cells: ", if (is.na(info$cells)) "unknown" else info$cells),
+        paste0("Features: ", if (is.na(info$features)) "unknown" else info$features),
+        paste0("Assays: ", if (length(info$assays)) paste(info$assays, collapse = ", ") else "(none found)"),
+        paste0("Default assay: ", info$default_assay %||% "(unknown)"),
+        paste0("Assay class: ", if (length(info$assay_class)) paste(info$assay_class, collapse = ", ") else "(unknown)"),
+        paste0("Layers: ", if (length(info$layers)) paste(info$layers, collapse = ", ") else "(none found)"),
+        paste0("Assay slots: ", if (length(info$assay_slots)) paste(info$assay_slots, collapse = ", ") else "(none found)"),
+        paste0("Reductions: ", if (length(info$reductions)) paste(info$reductions, collapse = ", ") else "(none found)"),
+        paste0("Images: ", if (length(info$images)) paste(info$images, collapse = ", ") else "(none found)"),
+        paste0("Metadata columns: ", if (length(info$metadata_columns)) paste(info$metadata_columns, collapse = ", ") else "(none found)"),
+        if (!is.null(info$version)) paste0("Seurat object version: ", info$version) else NULL,
+        if (length(info$commands)) paste0("Command history entries: ", paste(utils::head(info$commands, 20), collapse = ", ")) else NULL,
+        meta_preview
+      )
+      paste(lines, collapse = "\n")
+    }
+  )
 }
 
 #' @keywords internal

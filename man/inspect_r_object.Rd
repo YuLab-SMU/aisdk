@@ -9,7 +9,8 @@ inspect_r_object(
   detail = c("summary", "full", "structured"),
   session = NULL,
   envir = NULL,
-  head_rows = 6L
+  head_rows = 6L,
+  scope = c("all", "session", "workspace")
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ inspect_r_object(
 \item{envir}{Optional environment. Ignored when \code{session} is provided.}
 
 \item{head_rows}{Maximum preview rows for inspection renderers.}
+
+\item{scope}{Where to resolve the object. Defaults to \code{"all"} so console
+inspection can see session objects and \code{.GlobalEnv} read-only.}
 }
 \value{
 A character string for \code{"summary"}/\code{"full"} or a structured list for

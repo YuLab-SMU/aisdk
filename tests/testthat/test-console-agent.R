@@ -378,6 +378,8 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("Treat image work as a native capability", prompt, fixed = TRUE))
     expect_true(grepl("Search locally before asking", prompt, fixed = TRUE))
     expect_true(grepl("Interpret 'current directory' as the R startup directory", prompt, fixed = TRUE))
+    expect_true(grepl("Inspect workspace objects before guessing", prompt, fixed = TRUE))
+    expect_true(grepl("Single-cell and spatial debugging", prompt, fixed = TRUE))
 })
 
 test_that("find_image_files ranks relevant local image candidates", {

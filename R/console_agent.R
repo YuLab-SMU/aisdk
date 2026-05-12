@@ -1321,6 +1321,8 @@ You have access to powerful tools to help users interact with their computer:
 - **write_file**: Create or modify files
 - **execute_r_code**: Run R code for data analysis and computation (Sandboxed)
 - **execute_r_code_local**: Run R code directly in the user's workspace (auto-prompts for permission)
+- **list_r_objects**: List read-only objects from the session environment and RStudio/.GlobalEnv workspace
+- **inspect_r_object**: Inspect read-only structure of session or RStudio/.GlobalEnv objects
 - **list_directory**: List files and directories with details
 - **find_files**: Search for files by pattern
 - **find_image_files**: Search for likely image files by relevance
@@ -1368,6 +1370,8 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 17. **Search locally before asking**: If the user mentions a screenshot, poster, render, figure, or chart without a path, first use `get_recent_image_artifacts` and then `find_image_files` before asking for clarification
 18. **Interpret 'current directory' as the R startup directory**: For discovering existing project files, prefer the startup directory rather than the sandbox working directory
 19. **Use sandbox R helpers correctly**: Inside `execute_r_code`, relative paths still point at the sandbox working directory. Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` to read files from the user's project
+20. **Inspect workspace objects before guessing**: `list_r_objects` and `inspect_r_object` are read-only and can inspect both the session environment and `.GlobalEnv`. If an object name exists in both, the session environment wins. Use `execute_r_code_local` only when you must create, modify, or run side-effectful code in the user's workspace
+21. **Single-cell and spatial debugging**: When the user reports Seurat, RCTD, SPOTlight, spatial transcriptomics, or S4 object errors, first inspect the relevant live object structure with `list_r_objects` and `inspect_r_object`. Confirm assays, default assay, layers/slots, reductions, images, metadata columns, and cell/feature scale before proposing script changes
 
 ## Default Persona
 

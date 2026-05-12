@@ -335,6 +335,7 @@ console_send_user_message <- function(input,
   }
 
   turn_system_prompt <- console_build_turn_system_prompt(session, input)
+  history_snapshot <- session$get_history()
   if (!is.null(app_state)) {
     console_app_sync_session(app_state, session)
     console_app_start_turn(app_state, input)
@@ -343,6 +344,7 @@ console_send_user_message <- function(input,
   cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
 
   ok <- TRUE
+  md_renderer <- NULL
   tryCatch(
     {
       with_console_chat_display(
@@ -385,8 +387,23 @@ console_send_user_message <- function(input,
         console_app_finish_turn(app_state, failed = FALSE)
       }
     },
+    interrupt = function(e) {
+      ok <<- FALSE
+      console_restore_session_history(session, history_snapshot)
+      if (!is.null(md_renderer)) {
+        tryCatch(md_renderer$process_chunk(NULL, TRUE), error = function(e) NULL)
+      }
+      if (!is.null(app_state)) {
+        console_app_finish_turn(app_state, failed = TRUE, cancelled = TRUE)
+      }
+      cli::cli_alert_warning("Cancelled current turn. History was restored to before this request.")
+    },
     error = function(e) {
       ok <<- FALSE
+      console_restore_session_history(session, history_snapshot)
+      if (!is.null(md_renderer)) {
+        tryCatch(md_renderer$process_chunk(NULL, TRUE), error = function(e) NULL)
+      }
       if (!is.null(app_state)) {
         console_app_finish_turn(app_state, failed = TRUE)
       }
@@ -406,6 +423,16 @@ console_send_user_message <- function(input,
 }
 
 #' @keywords internal
+console_restore_session_history <- function(session, history) {
+  if (is.null(session) || !inherits(session, "ChatSession") || !is.list(history)) {
+    return(invisible(FALSE))
+  }
+
+  session$restore_from_list(list(history = history))
+  invisible(TRUE)
+}
+
+#' @keywords internal
 readline_multiline <- function(input_state = NULL,
                                readline_fn = NULL,
                                quiet = FALSE,
@@ -415,10 +442,13 @@ readline_multiline <- function(input_state = NULL,
   draining_paste <- console_has_queued_paste_drain(input_state)
   if (!isTRUE(quiet) && !draining_paste) {
     cli::cli_text(cli::col_blue(cli::symbol$pointer), " ", cli::col_blue("You:"))
+    if (!is.null(input_state$pending_paste)) {
+      cli::cli_alert_info("Pending pasted code: press Enter to send it, type instructions to attach, or run slash commands without consuming it.")
+    }
   }
 
   input_event <- console_read_input_event(
-    prompt = if (draining_paste) "" else "  ",
+    prompt = if (draining_paste) "" else if (!is.null(input_state$pending_paste)) "  [paste pending] " else "  ",
     readline_fn = readline_fn
   )
   if (identical(input_event$type, "eof")) {
@@ -1020,14 +1050,24 @@ console_should_auto_paste <- function(line) {
       "^#'",
       "^(title|source|author|published|created|description|tags):\\s*",
       "^!\\[",
+      "^if\\s*\\(",
+      "^for\\s*\\(",
+      "^while\\s*\\(",
+      "^tryCatch\\s*\\(",
+      "^\\}\\s*(else\\b)?",
       "^rm\\s*\\(",
       "^library\\s*\\(",
       "^source\\s*\\(",
+      "^\\w[\\w.]*\\s*<-\\s*[^[:space:]]+",
       "^\\w+\\s*<-\\s*function\\s*\\(",
       "^\\w+\\s*<-\\s*list\\s*\\(",
-      "^\\w+\\s*<-\\s*lapply\\s*\\("
+      "^\\w+\\s*<-\\s*lapply\\s*\\(",
+      "%>%",
+      "\\|>",
+      "\\{\\s*$"
     ), collapse = "|"),
-    line
+    line,
+    perl = TRUE
   )
 }
 

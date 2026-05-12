@@ -9,7 +9,8 @@ list_r_objects(
   envir = NULL,
   pattern = NULL,
   include_hidden = FALSE,
-  limit = 50L
+  limit = 50L,
+  scope = c("session", "workspace", "all")
 )
 }
 \arguments{
@@ -22,6 +23,11 @@ list_r_objects(
 \item{include_hidden}{Logical; whether to include names starting with \code{"."}.}
 
 \item{limit}{Maximum number of rows to return.}
+
+\item{scope}{One of \code{"session"}, \code{"workspace"}, or \code{"all"}. Defaults to
+\code{"session"} for compatibility. \code{"workspace"} lists \code{.GlobalEnv}; \code{"all"}
+lists session environment objects followed by \code{.GlobalEnv} objects and
+includes a \code{location} column.}
 }
 \value{
 A data frame with object metadata.

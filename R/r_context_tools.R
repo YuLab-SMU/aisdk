@@ -36,6 +36,36 @@ resolve_r_context_envir <- function(session = NULL, envir = NULL) {
 }
 
 #' @keywords internal
+normalize_r_context_scope <- function(scope = c("session", "workspace", "all")) {
+  match.arg(scope)
+}
+
+#' @keywords internal
+r_context_scope_environments <- function(session = NULL,
+                                         envir = NULL,
+                                         scope = c("session", "workspace", "all")) {
+  scope <- normalize_r_context_scope(scope)
+  session_envir <- resolve_r_context_envir(session = session, envir = envir)
+  envs <- list()
+
+  add_env <- function(name, env) {
+    if (!is.null(env) && is.environment(env) &&
+        !any(vapply(envs, function(item) identical(item$env, env), logical(1)))) {
+      envs[[length(envs) + 1L]] <<- list(location = name, env = env)
+    }
+  }
+
+  if (scope %in% c("session", "all")) {
+    add_env("session_env", session_envir)
+  }
+  if (scope %in% c("workspace", "all")) {
+    add_env("global_env", .GlobalEnv)
+  }
+
+  envs
+}
+
+#' @keywords internal
 binding_record <- function(name,
                            object,
                            kind,
@@ -102,6 +132,26 @@ resolve_search_path_binding <- function(name) {
 }
 
 #' @keywords internal
+resolve_environment_binding <- function(name, envir, location) {
+  if (is.null(envir) || !is.environment(envir) ||
+      !exists(name, envir = envir, inherits = FALSE)) {
+    return(NULL)
+  }
+
+  object <- get(name, envir = envir, inherits = FALSE)
+  binding_record(
+    name = name,
+    object = object,
+    kind = classify_binding_kind(object),
+    location = location,
+    package = NULL,
+    namespace = NULL,
+    exported = NA,
+    provenance = list(source = location)
+  )
+}
+
+#' @keywords internal
 resolve_namespace_binding <- function(name, namespace_name) {
   if (!requireNamespace(namespace_name, quietly = TRUE)) {
     return(NULL)
@@ -133,6 +183,10 @@ resolve_namespace_binding <- function(name, namespace_name) {
 #' @param package Optional package/namespace name to search first.
 #' @param session Optional `ChatSession` or `SharedSession`.
 #' @param envir Optional environment. Ignored when `session` is provided.
+#' @param scope Where to resolve live objects before the search path:
+#'   `"session"` checks only the session environment, `"workspace"` checks only
+#'   `.GlobalEnv`, and `"all"` checks session environment first, then
+#'   `.GlobalEnv`.
 #' @param prefer Preferred kind: `"auto"`, `"object"`, or `"function"`.
 #' @return A binding record list or `NULL` if not found.
 #' @export
@@ -140,10 +194,11 @@ resolve_r_binding <- function(name,
                               package = NULL,
                               session = NULL,
                               envir = NULL,
+                              scope = c("session", "workspace", "all"),
                               prefer = c("auto", "object", "function")) {
   name <- validate_symbolic_name(name)
+  scope <- normalize_r_context_scope(scope)
   prefer <- match.arg(prefer)
-  target_envir <- resolve_r_context_envir(session = session, envir = envir)
 
   choose_candidate <- function(candidate, fallback = NULL) {
     if (is.null(candidate)) {
@@ -161,19 +216,8 @@ resolve_r_binding <- function(name,
     return(resolve_namespace_binding(name, package))
   }
 
-  if (!is.null(target_envir) && is.environment(target_envir) &&
-      exists(name, envir = target_envir, inherits = FALSE)) {
-    object <- get(name, envir = target_envir, inherits = FALSE)
-    candidate <- binding_record(
-      name = name,
-      object = object,
-      kind = classify_binding_kind(object),
-      location = "session_env",
-      package = NULL,
-      namespace = NULL,
-      exported = NA,
-      provenance = list(source = "session_env")
-    )
+  for (env_info in r_context_scope_environments(session = session, envir = envir, scope = scope)) {
+    candidate <- resolve_environment_binding(name, env_info$env, env_info$location)
     chosen <- choose_candidate(candidate, fallback = fallback)
     if (!identical(chosen, fallback)) {
       return(chosen)
@@ -214,51 +258,89 @@ format_object_size <- function(object) {
 #' @param pattern Optional regex pattern used to filter names.
 #' @param include_hidden Logical; whether to include names starting with `"."`.
 #' @param limit Maximum number of rows to return.
+#' @param scope One of `"session"`, `"workspace"`, or `"all"`. Defaults to
+#'   `"session"` for compatibility. `"workspace"` lists `.GlobalEnv`; `"all"`
+#'   lists session environment objects followed by `.GlobalEnv` objects and
+#'   includes a `location` column.
 #' @return A data frame with object metadata.
 #' @export
 list_r_objects <- function(session = NULL,
                            envir = NULL,
                            pattern = NULL,
                            include_hidden = FALSE,
-                           limit = 50L) {
-  target_envir <- resolve_r_context_envir(session = session, envir = envir)
-  if (is.null(target_envir) || !is.environment(target_envir)) {
-    return(data.frame(
+                           limit = 50L,
+                           scope = c("session", "workspace", "all")) {
+  scope <- normalize_r_context_scope(scope)
+  include_location <- !identical(scope, "session")
+  envs <- r_context_scope_environments(session = session, envir = envir, scope = scope)
+  if (length(envs) == 0) {
+    empty <- data.frame(
       name = character(0),
       class = character(0),
       type = character(0),
       size = character(0),
-      stringsAsFactors = FALSE
-    ))
-  }
-
-  names_vec <- ls(target_envir, all.names = include_hidden, pattern = pattern %||% "")
-  if (!isTRUE(include_hidden)) {
-    names_vec <- names_vec[!grepl("^\\.", names_vec)]
-  }
-  if (length(names_vec) > limit) {
-    names_vec <- names_vec[seq_len(limit)]
-  }
-  if (length(names_vec) == 0) {
-    return(data.frame(
-      name = character(0),
-      class = character(0),
-      type = character(0),
-      size = character(0),
-      stringsAsFactors = FALSE
-    ))
-  }
-
-  rows <- lapply(names_vec, function(object_name) {
-    object <- get(object_name, envir = target_envir, inherits = FALSE)
-    data.frame(
-      name = object_name,
-      class = paste(class(object), collapse = ", "),
-      type = typeof(object),
-      size = format_object_size(object),
       stringsAsFactors = FALSE
     )
-  })
+    if (include_location) {
+      empty$location <- character(0)
+    }
+    return(empty)
+  }
+
+  rows <- list()
+  seen <- character(0)
+  limit <- as.integer(limit %||% 50L)
+  if (is.na(limit) || limit < 1L) {
+    limit <- 50L
+  }
+
+  for (env_info in envs) {
+    names_vec <- ls(env_info$env, all.names = include_hidden, pattern = pattern %||% "")
+    if (!isTRUE(include_hidden)) {
+      names_vec <- names_vec[!grepl("^\\.", names_vec)]
+    }
+    names_vec <- sort(names_vec)
+
+    for (object_name in names_vec) {
+      if (object_name %in% seen) {
+        next
+      }
+      object <- get(object_name, envir = env_info$env, inherits = FALSE)
+      row <- data.frame(
+        name = object_name,
+        class = paste(class(object), collapse = ", "),
+        type = typeof(object),
+        size = format_object_size(object),
+        stringsAsFactors = FALSE
+      )
+      if (include_location) {
+        row$location <- env_info$location
+      }
+      rows[[length(rows) + 1L]] <- row
+      seen <- c(seen, object_name)
+      if (length(rows) >= limit) {
+        break
+      }
+    }
+
+    if (length(rows) >= limit) {
+      break
+    }
+  }
+
+  if (length(rows) == 0) {
+    empty <- data.frame(
+      name = character(0),
+      class = character(0),
+      type = character(0),
+      size = character(0),
+      stringsAsFactors = FALSE
+    )
+    if (include_location) {
+      empty$location <- character(0)
+    }
+    return(empty)
+  }
 
   do.call(rbind, rows)
 }
@@ -273,7 +355,9 @@ format_object_table <- function(df) {
     sprintf("Found %d live R object(s):", nrow(df)),
     "",
     apply(df, 1, function(row) {
-      sprintf("- %s | class=%s | type=%s | size=%s", row[["name"]], row[["class"]], row[["type"]], row[["size"]])
+      location <- if ("location" %in% names(row)) row[["location"]] else ""
+      location_text <- if (nzchar(location)) paste0(" | location=", location) else ""
+      sprintf("- %s | class=%s | type=%s | size=%s%s", row[["name"]], row[["class"]], row[["type"]], row[["size"]], location_text)
     })
   )
   paste(lines, collapse = "\n")
@@ -288,6 +372,8 @@ format_object_table <- function(df) {
 #' @param session Optional `ChatSession` or `SharedSession`.
 #' @param envir Optional environment. Ignored when `session` is provided.
 #' @param head_rows Maximum preview rows for inspection renderers.
+#' @param scope Where to resolve the object. Defaults to `"all"` so console
+#'   inspection can see session objects and `.GlobalEnv` read-only.
 #' @return A character string for `"summary"`/`"full"` or a structured list for
 #'   `"structured"`.
 #' @export
@@ -295,9 +381,11 @@ inspect_r_object <- function(name,
                              detail = c("summary", "full", "structured"),
                              session = NULL,
                              envir = NULL,
-                             head_rows = 6L) {
+                             head_rows = 6L,
+                             scope = c("all", "session", "workspace")) {
   detail <- match.arg(detail)
-  binding <- resolve_r_binding(name, session = session, envir = envir, prefer = "object")
+  scope <- match.arg(scope)
+  binding <- resolve_r_binding(name, session = session, envir = envir, prefer = "object", scope = scope)
   if (is.null(binding)) {
     rlang::abort(sprintf("Object `%s` was not found.", name))
   }
@@ -329,8 +417,21 @@ inspect_r_object <- function(name,
   )
 
   if (is.character(result)) {
-    paste0(prefix, result)
+    binding_header <- sprintf(
+      "Binding: %s | location=%s",
+      binding$name %||% name,
+      binding$location %||% "unknown"
+    )
+    paste0(prefix, binding_header, "\n\n", result)
   } else {
+    result$binding <- list(
+      name = binding$name %||% name,
+      location = binding$location %||% "unknown",
+      kind = binding$kind %||% "object",
+      package = binding$package %||% NULL,
+      namespace = binding$namespace %||% NULL,
+      exported = if (is.null(binding$exported)) NA else binding$exported
+    )
     result
   }
 }
@@ -762,14 +863,16 @@ create_r_context_tools <- function() {
       parameters = z_object(
         pattern = z_string("Optional regex pattern used to filter object names", nullable = TRUE),
         include_hidden = z_boolean("Whether to include hidden names starting with '.'", nullable = TRUE),
-        limit = z_integer("Maximum number of objects to return", nullable = TRUE)
+        limit = z_integer("Maximum number of objects to return", nullable = TRUE),
+        scope = z_enum(c("all", "session", "workspace"), description = "Object scope to list. Default: all", default = "all")
       ),
       execute = function(args) {
         objects <- list_r_objects(
           envir = args$.envir,
           pattern = args$pattern %||% NULL,
           include_hidden = args$include_hidden %||% FALSE,
-          limit = args$limit %||% 50L
+          limit = args$limit %||% 50L,
+          scope = args$scope %||% "all"
         )
         format_object_table(objects)
       }
@@ -783,14 +886,16 @@ create_r_context_tools <- function() {
       parameters = z_object(
         name = z_string("Object name to inspect"),
         detail = z_enum(c("summary", "full", "structured"), description = "Inspection detail level", default = "summary"),
-        head_rows = z_integer("Maximum preview rows for tabular inspections", nullable = TRUE)
+        head_rows = z_integer("Maximum preview rows for tabular inspections", nullable = TRUE),
+        scope = z_enum(c("all", "session", "workspace"), description = "Object scope to inspect. Default: all", default = "all")
       ),
       execute = function(args) {
         inspect_r_object(
           name = args$name,
           detail = args$detail %||% "summary",
           envir = args$.envir,
-          head_rows = args$head_rows %||% 6L
+          head_rows = args$head_rows %||% 6L,
+          scope = args$scope %||% "all"
         )
       }
     ),
