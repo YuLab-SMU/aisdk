@@ -282,3 +282,13 @@ test_that("ChatSession metadata helpers round-trip", {
   expect_equal(session$get_metadata("parent_session_key"), "root")
   expect_true(all(c("channel", "parent_session_key") %in% session$list_metadata()))
 })
+
+test_that("ChatSession stores a single multimodal content block as a block list", {
+  session <- ChatSession$new(model = MockModel$new())
+
+  session$append_message("user", input_image("https://example.com/dog.png"))
+  history <- session$get_history()
+
+  expect_length(history[[1]]$content, 1)
+  expect_equal(history[[1]]$content[[1]]$type, "input_image")
+})

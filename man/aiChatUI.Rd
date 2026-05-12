@@ -4,12 +4,30 @@
 \alias{aiChatUI}
 \title{AI Chat UI}
 \usage{
-aiChatUI(id, height = "500px")
+aiChatUI(
+  id,
+  height = "500px",
+  backend = c("aisdk", "shinychat"),
+  models = NULL,
+  attachments = TRUE,
+  controls = TRUE
+)
 }
 \arguments{
 \item{id}{The namespace ID for the module.}
 
 \item{height}{Height of the chat window (e.g. "400px").}
+
+\item{backend}{UI backend to use. \code{"aisdk"} uses the built-in dependency-light
+interface. \code{"shinychat"} uses \code{shinychat::chat_ui()} when the optional
+\code{shinychat} package is installed.}
+
+\item{models}{Optional character vector or list of selectable model IDs.}
+
+\item{attachments}{Whether to show the built-in image attachment controls.}
+
+\item{controls}{Whether to show runtime controls such as model selection and
+cancel/retry buttons when available.}
 }
 \value{
 A Shiny UI definition.

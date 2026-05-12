@@ -206,6 +206,45 @@ test_that("OpenAI chat payload builder translates multimodal content blocks", {
   expect_equal(blocks[[2]]$image_url$detail, "high")
 })
 
+test_that("OpenAI chat payload keeps single image content as an array", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$language_model("gpt-4o")
+
+  payload <- model$build_payload(list(
+    messages = list(list(
+      role = "user",
+      content = input_image("https://example.com/test.png", media_type = "image/png")
+    ))
+  ))
+
+  content <- payload$body$messages[[1]]$content
+  expect_length(content, 1)
+  expect_equal(content[[1]]$type, "image_url")
+
+  json <- jsonlite::toJSON(payload$body, auto_unbox = TRUE, null = "null")
+  expect_match(
+    json,
+    '"content":\\[\\{"type":"image_url"',
+    perl = TRUE
+  )
+})
+
+test_that("OpenAI chat payload keeps ChatSession single image history as an array", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$language_model("gpt-4o")
+  session <- ChatSession$new(model = model)
+  session$append_message("user", input_image("https://example.com/test.png", media_type = "image/png"))
+
+  payload <- model$build_payload(list(messages = session$get_history()))
+  json <- jsonlite::toJSON(payload$body, auto_unbox = TRUE, null = "null")
+
+  expect_match(
+    json,
+    '"content":\\[\\{"type":"image_url"',
+    perl = TRUE
+  )
+})
+
 test_that("OpenAI responses model translates multimodal content blocks", {
   provider <- safe_create_provider(create_openai)
   model <- provider$responses_model("o1")

@@ -4,261 +4,187 @@
 #'
 #' @param id The namespace ID for the module.
 #' @param height Height of the chat window (e.g. "400px").
+#' @param backend UI backend to use. `"aisdk"` uses the built-in dependency-light
+#'   interface. `"shinychat"` uses `shinychat::chat_ui()` when the optional
+#'   `shinychat` package is installed.
+#' @param models Optional character vector or list of selectable model IDs.
+#' @param attachments Whether to show the built-in image attachment controls.
+#' @param controls Whether to show runtime controls such as model selection and
+#'   cancel/retry buttons when available.
 #' @return A Shiny UI definition.
 #' @export
-aiChatUI <- function(id, height = "500px") {
-  # Check for suggested packages
-  rlang::check_installed(c("shiny", "bslib", "commonmark"))
-  
-  ns <- shiny::NS(id)
-  
-  # Note: This UI requires Bootstrap 5 (provided by bslib::bs_theme(version = 5))
-  # Standard Shiny uses Bootstrap 3 by default which may break the layout.
-  
-  # CSS for the chat interface
-  # We embed this directly for now, later could move to inst/www
-  chat_css <- "
-    .chat-container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      border: 1px solid var(--bs-border-color, #e5e7eb);
-      border-radius: 0.75rem;
-      background-color: var(--bs-body-bg, #ffffff);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-      overflow: hidden;
-    }
-    .chat-messages {
-      flex-grow: 1;
-      overflow-y: auto;
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-      background: var(--bs-body-bg, #ffffff);
-    }
-    .chat-input-area {
-      padding: 0.85rem 1rem 1rem;
-      border-top: 1px solid var(--bs-border-color, #e5e7eb);
-      background-color: var(--bs-tertiary-bg, #f8fafc);
-      border-bottom-left-radius: 0.75rem;
-      border-bottom-right-radius: 0.75rem;
-    }
-    .message {
-      max-width: 78%;
-      padding: 0.7rem 0.95rem;
-      border-radius: 1rem;
-      position: relative;
-      font-size: 1.05rem;
-      line-height: 1.45;
-      word-wrap: break-word;
-      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
-    }
-    .message.user {
-      align-self: flex-end;
-      background: var(--bs-primary, #2563eb);
-      color: var(--bs-white, #ffffff);
-      border-bottom-right-radius: 0.4rem;
-    }
-    .message.assistant {
-      align-self: flex-start;
-      background-color: var(--bs-tertiary-bg, #f8fafc);
-      color: var(--bs-body-color, #0f172a);
-      border: 1px solid var(--bs-border-color, #e5e7eb);
-      border-bottom-left-radius: 0.4rem;
-    }
-    .message p:last-child {
-      margin-bottom: 0;
-    }
-    .message pre {
-      background-color: var(--bs-dark, #0f172a);
-      color: #e2e8f0;
-      padding: 0.6rem 0.75rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
-    }
-    .message-content {
-      white-space: pre-wrap;
-    }
-    .message-thinking {
-      white-space: pre-wrap;
-      color: var(--bs-secondary-color, #64748b);
-      font-size: 0.95rem;
-      padding: 0.4rem 0.6rem;
-      border-radius: 0.6rem;
-      background: rgba(148, 163, 184, 0.12);
-      margin-bottom: 0.5rem;
-    }
-    .message-thinking:empty {
-      display: none;
-    }
-    .message-thinking-block {
-      margin-top: 0.6rem;
-    }
-    .message-thinking-block > summary {
-      cursor: pointer;
-      color: var(--bs-secondary-color, #64748b);
-      font-size: 0.95rem;
-    }
-    .message.user pre {
-      background-color: rgba(255, 255, 255, 0.18);
-      color: #ffffff;
-    }
-    .chat-input-area textarea {
-      border: 1px solid var(--bs-border-color, #e5e7eb);
-      border-radius: 0.75rem;
-      padding: 0.6rem 0.8rem;
-      background: var(--bs-body-bg, #ffffff);
-      font-size: 1rem;
-    }
-    .chat-input-area textarea:focus {
-      border-color: var(--bs-primary, #2563eb);
-      box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.2);
-    }
-      border-radius: 0.75rem;
-      padding: 0.5rem 0.85rem;
-    }
-    .tool-execution {
-      background-color: var(--bs-body-bg, #ffffff);
-      border: 1px solid var(--bs-border-color, #e5e7eb);
-      border-radius: 0.6rem;
-      margin-top: 0.8rem;
-      margin-bottom: 0.8rem;
-      overflow: hidden;
-      font-size: 0.9rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .tool-execution summary {
-      padding: 0.6rem 0.8rem;
-      cursor: pointer;
-      background-color: var(--bs-secondary-bg, #f8fafc);
-      color: var(--bs-secondary-color, #64748b);
-      font-weight: 500;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .tool-execution summary:hover {
-      background-color: var(--bs-tertiary-bg, #f1f5f9);
-    }
-    .tool-execution-body {
-      padding: 0.8rem;
-      border-top: 1px solid var(--bs-border-color, #e5e7eb);
-      background-color: var(--bs-body-bg, #ffffff);
-    }
-    .tool-execution pre {
-      margin: 0;
-      background-color: var(--bs-dark, #0f172a);
-      color: #e2e8f0;
-      border-radius: 0.4rem;
-      padding: 0.6rem;
-    }
-  "
-  
-  shiny::tagList(
-    shiny::tags$head(
-      shiny::tags$style(shiny::HTML(chat_css)),
-      # Prevent favicon 404
-      shiny::tags$link(rel = "icon", href = "data:,") 
-    ),
-    
-    bslib::card(
+aiChatUI <- function(id,
+                     height = "500px",
+                     backend = c("aisdk", "shinychat"),
+                     models = NULL,
+                     attachments = TRUE,
+                     controls = TRUE) {
+  backend <- match.arg(backend)
+
+  # The built-in backend intentionally avoids bslib components so it works in
+  # Shiny's default Bootstrap 3 pages.
+  rlang::check_installed(c("shiny", "htmltools", "commonmark"))
+
+  if (identical(backend, "shinychat")) {
+    rlang::check_installed(
+      "shinychat",
+      reason = "to use `aiChatUI(backend = \"shinychat\")`. Install it or use `backend = \"aisdk\"`."
+    )
+    ns <- shiny::NS(id)
+    return(shinychat::chat_ui(
+      ns(shinychat_control_id()),
       height = height,
-      full_screen = TRUE,
-      class = "p-0", # Remove padding from card body to let chat fill it
-      
-      shiny::div(
-        class = "chat-container",
-        
-        # Messages Area
+      messages = list(list(
+        role = "assistant",
+        content = "Hello! How can I help you today?"
+      ))
+    ))
+  }
+
+  ns <- shiny::NS(id)
+  model_choices <- normalize_shiny_model_choices(models)
+
+  htmltools::tagList(
+    aisdk_chat_dependency(),
+    shiny::div(
+      id = ns("chat_root"),
+      class = "aisdk-chat-root",
+      `data-chat-id` = ns("chat_root"),
+      `data-attachments` = if (isTRUE(attachments)) "true" else "false",
+      style = sprintf("--aisdk-chat-height: %s;", html_escape(height)),
+      if (isTRUE(controls)) {
         shiny::div(
-          id = ns("chat_messages"),
-          class = "chat-messages",
-          # Initial welcome message could go here
-          shiny::div(
-            class = "message assistant",
-            shiny::HTML("Hello! How can I help you today?")
-          )
-        ),
-        
-        # Input Area
-        shiny::div(
-          class = "chat-input-area",
-          shiny::div(
-            class = "d-flex gap-2",
-            shiny::div(
-              style = "flex-grow: 1;",
-              shiny::textAreaInput(
-                ns("user_input"),
-                label = NULL,
-                placeholder = "Type your message...",
-                rows = 1,
-                resize = "none" # We might want auto-resize JS later
-              )
-            ),
-            shiny::actionButton(
-              ns("send"),
-              label = shiny::icon("paper-plane"),
-              class = "btn-primary",
-              style = "height: fit-content;"
+          class = "aisdk-chat-toolbar",
+          shiny::selectizeInput(
+            ns("model"),
+            label = NULL,
+            choices = model_choices,
+            selected = if (length(model_choices) > 0) model_choices[[1]] else NULL,
+            width = "100%",
+            options = list(
+              create = TRUE,
+              persist = FALSE,
+              placeholder = "model id"
             )
           ),
-          shiny::helpText("Enter to send (Shift+Enter for new line)", class = "mb-0 mt-1 small")
+          shiny::div(
+            class = "aisdk-chat-actions",
+            shiny::actionButton(ns("model_apply"), label = shiny::icon("refresh"), class = "aisdk-chat-icon", title = "Switch model"),
+            shiny::actionButton(ns("retry"), label = shiny::icon("redo"), class = "aisdk-chat-icon", title = "Retry"),
+            shiny::actionButton(ns("cancel"), label = shiny::icon("stop"), class = "aisdk-chat-icon", title = "Cancel")
+          )
+        )
+      },
+      shiny::div(
+        id = ns("chat_messages"),
+        class = "aisdk-chat-messages",
+        `aria-live` = "polite",
+        shiny::tags$article(
+          class = "aisdk-message assistant",
+          shiny::HTML(commonmark::markdown_html("Hello! How can I help you today?"))
+        )
+      ),
+      shiny::actionButton(ns("jump_bottom"), label = shiny::icon("arrow-down"), class = "aisdk-jump-bottom", title = "Jump to bottom"),
+      shiny::div(
+        class = "aisdk-chat-input",
+        if (isTRUE(attachments)) {
+          shiny::div(
+            class = "aisdk-attachment-row",
+            shiny::fileInput(
+              ns("attachments"),
+              label = NULL,
+              accept = c("image/png", "image/jpeg", "image/gif", "image/webp"),
+              multiple = TRUE,
+              buttonLabel = shiny::icon("image"),
+              placeholder = "Images"
+            ),
+            shiny::div(class = "aisdk-attachment-previews")
+          )
+        },
+        shiny::div(
+          class = "aisdk-chat-input-row",
+          shiny::div(
+            class = "aisdk-chat-input-field",
+            shiny::textAreaInput(
+              ns("user_input"),
+              label = NULL,
+              placeholder = "Type your message...",
+              rows = 1,
+              resize = "none"
+            )
+          ),
+          shiny::actionButton(
+            ns("send"),
+            label = shiny::icon("paper-plane"),
+            class = "btn-primary aisdk-chat-send",
+            title = "Send"
+          )
         )
       )
-    ),
-    
-    # JavaScript for scrolling and Enter key
-    shiny::tags$script(shiny::HTML(sprintf("
-      $('#%s').on('keydown', function(e) {
-        if (e.keyCode === 13 && !e.shiftKey) {
-          e.preventDefault();
-          $('#%s').click();
-        }
-      });
-      
-      Shiny.addCustomMessageHandler('scroll_chat_%s', function(message) {
-        var el = document.getElementById('%s');
-        if (el) {
-          el.scrollTop = el.scrollHeight;
-        }
-      });
+    )
+  )
+}
 
-      Shiny.addCustomMessageHandler('update_element', function(message) {
-        var el = document.getElementById(message.id);
-        if (el) {
-          el.innerHTML = message.html;
-        }
-      });
-      
-      Shiny.addCustomMessageHandler('append_text', function(message) {
-        var el = document.getElementById(message.id);
-        if (!el) return;
-        if (message.clear) {
-          el.innerHTML = '';
-        }
-        el.appendChild(document.createTextNode(message.text));
-      });
-      
-      Shiny.addCustomMessageHandler('append_html', function(message) {
-        var el = document.getElementById(message.id);
-        if (!el) return;
-        // Append HTML to the end of the container (usually chat_messages)
-        // If content_id is provided, append inside that
-        if (message.content_id) {
-           el = document.getElementById(message.content_id);
-           if (!el) return;
-        }
-        
-        var template = document.createElement('div');
-        template.innerHTML = message.html;
-        
-        // If we simply append, it works
-        while (template.firstChild) {
-          el.appendChild(template.firstChild);
-        }
-      });
-    ", ns("user_input"), ns("send"), id, ns("chat_messages"))))
+#' @keywords internal
+normalize_shiny_model_choices <- function(models = NULL) {
+  if (is.null(models)) {
+    return(character(0))
+  }
+  if (is.character(models)) {
+    out <- models
+    if (is.null(names(out))) {
+      names(out) <- out
+    } else {
+      empty <- !nzchar(names(out))
+      names(out)[empty] <- out[empty]
+    }
+    return(out)
+  }
+  if (is.list(models)) {
+    ids <- vapply(models, function(model) {
+      if (is.character(model)) {
+        model[[1]]
+      } else if (inherits(model, "LanguageModelV1")) {
+        paste0(model$provider, ":", model$model_id)
+      } else {
+        model$id %||% model$value %||% model$model %||% ""
+      }
+    }, character(1))
+    labels <- vapply(seq_along(models), function(i) {
+      model <- models[[i]]
+      if (!is.null(names(models)) && nzchar(names(models)[[i]])) {
+        names(models)[[i]]
+      } else if (is.list(model) && !inherits(model, "LanguageModelV1")) {
+        model$label %||% ids[[i]]
+      } else {
+        ids[[i]]
+      }
+    }, character(1))
+    keep <- nzchar(ids)
+    ids <- ids[keep]
+    labels <- labels[keep]
+    stats::setNames(ids, labels)
+  } else {
+    rlang::abort("`models` must be NULL, a character vector, or a list.")
+  }
+}
+
+#' @keywords internal
+aisdk_chat_dependency <- function() {
+  www_dir <- system.file("www", package = "aisdk")
+  asset_paths <- file.path(www_dir, c("aisdk-chat.css", "aisdk-chat.js"))
+  asset_mtime <- suppressWarnings(max(file.info(asset_paths)$mtime, na.rm = TRUE))
+  version <- as.character(utils::packageVersion("aisdk"))
+  if (is.finite(as.numeric(asset_mtime))) {
+    version <- paste0(version, ".", as.integer(as.numeric(asset_mtime)))
+  }
+
+  htmltools::htmlDependency(
+    name = "aisdk-chat",
+    version = version,
+    src = "www",
+    package = "aisdk",
+    stylesheet = "aisdk-chat.css",
+    script = "aisdk-chat.js"
   )
 }

@@ -116,6 +116,8 @@ ChatSession <- R6::R6Class(
       extra_args <- merge_call_options(self$get_model_call_options(), list(...))
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
       extra_args$turn_system_prompt <- NULL
+      call_hooks <- extra_args$hooks %||% private$.hooks
+      extra_args$hooks <- NULL
 
       # Resolve model if needed
       model <- private$resolve_model()
@@ -136,7 +138,7 @@ ChatSession <- R6::R6Class(
             tools = private$prepare_tools(),
             max_steps = private$.max_steps,
             session = self,
-            hooks = private$.hooks,
+            hooks = call_hooks,
             registry = private$.registry
           ),
           extra_args
@@ -161,6 +163,8 @@ ChatSession <- R6::R6Class(
       extra_args <- merge_call_options(self$get_model_call_options(), list(...))
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
       extra_args$turn_system_prompt <- NULL
+      call_hooks <- extra_args$hooks %||% private$.hooks
+      extra_args$hooks <- NULL
 
       model <- private$resolve_model()
 
@@ -183,7 +187,7 @@ ChatSession <- R6::R6Class(
             tools = private$prepare_tools(),
             max_steps = private$.max_steps,
             session = self,
-            hooks = private$.hooks
+            hooks = call_hooks
           ),
           extra_args
         )
@@ -203,6 +207,9 @@ ChatSession <- R6::R6Class(
     #' @param content Message content.
     #' @param reasoning Optional reasoning text to attach to the message.
     append_message = function(role, content, reasoning = NULL) {
+      if (!identical(role, "tool") && is_content_block(content)) {
+        content <- normalize_content_blocks(content)
+      }
       msg <- list(role = role, content = content)
       if (!is.null(reasoning) && nzchar(reasoning)) {
         msg$reasoning <- reasoning

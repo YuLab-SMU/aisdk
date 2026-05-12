@@ -45,17 +45,27 @@
 #' }
 #' }
 reactive_tool <- function(name, description, parameters, execute) {
-  # Store the execute function with metadata
-  structure(
-    tool(
-      name = name,
-      description = description,
-      parameters = parameters,
-      execute = execute  # Will be wrapped later
-    ),
-    class = c("ReactiveTool", "Tool"),
-    reactive = TRUE
+  if (!is.function(execute)) {
+    rlang::abort("`execute` must be a function.")
+  }
+
+  fml_names <- names(formals(execute)) %||% character(0)
+  if (length(fml_names) < 2 || !identical(fml_names[1:2], c("rv", "session"))) {
+    rlang::abort("`execute` for reactive_tool() must start with arguments `rv` and `session`.")
+  }
+
+  tool_obj <- Tool$new(
+    name = name,
+    description = description,
+    parameters = parameters,
+    execute = function(args) {
+      rlang::abort("Reactive tools must be wrapped with wrap_reactive_tools() before use.")
+    }
   )
+  class(tool_obj) <- unique(c("ReactiveTool", class(tool_obj)))
+  attr(tool_obj, "reactive") <- TRUE
+  attr(tool_obj, "reactive_execute") <- execute
+  tool_obj
 }
 
 #' @title Wrap Reactive Tools
@@ -72,14 +82,23 @@ reactive_tool <- function(name, description, parameters, execute) {
 wrap_reactive_tools <- function(tools, rv, session) {
   lapply(tools, function(t) {
     if (inherits(t, "ReactiveTool")) {
-      # Create new tool with wrapped execute
-      original_execute <- t$execute
-      tool(
+      original_execute <- attr(t, "reactive_execute", exact = TRUE)
+      if (!is.function(original_execute)) {
+        rlang::abort("ReactiveTool is missing its original execute function.")
+      }
+      Tool$new(
         name = t$name,
         description = t$description,
         parameters = t$parameters,
-        execute = function(...) {
-          original_execute(rv, session, ...)
+        execute = function(args) {
+          args <- args[setdiff(names(args), c(".envir", "rv", "session"))]
+          fml_names <- names(formals(original_execute)) %||% character(0)
+          if (!("..." %in% fml_names)) {
+            allowed <- setdiff(fml_names, c("rv", "session"))
+            args <- args[names(args) %in% allowed]
+          }
+          ordered <- c(list(rv = rv, session = session), args)
+          do.call(original_execute, ordered)
         }
       )
     } else {

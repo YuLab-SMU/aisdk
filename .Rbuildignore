@@ -1,5 +1,11 @@
 ^\.Rproj\.user$
 ^.*\.Rproj$
+^\.DS_Store$
+^\.RData$
+^\.Rhistory$
+^\.Ruserdata$
+^\.Rapp\.history$
+^\.Rprofile$
 ^\.Renviron.*$
 ^\.env.*$
 ^dev_logs

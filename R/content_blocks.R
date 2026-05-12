@@ -169,6 +169,10 @@ normalize_content_blocks <- function(content) {
     return(list(input_text(content)))
   }
 
+  if (is_content_block(content)) {
+    content <- list(content)
+  }
+
   if (!is.list(content)) {
     rlang::abort("Content must be a character string or a list of content blocks.")
   }
@@ -181,7 +185,7 @@ normalize_content_blocks <- function(content) {
     rlang::abort("Content lists must contain content block objects with a `type` field.")
   }
 
-  blocks <- lapply(content, coerce_legacy_content_block)
+  blocks <- unname(lapply(content, coerce_legacy_content_block))
   validate_content_blocks(blocks)
   blocks
 }

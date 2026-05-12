@@ -6,35 +6,75 @@
 \usage{
 aiChatServer(
   id,
-  model,
+  model = NULL,
   tools = NULL,
   context = NULL,
   system = NULL,
+  session = NULL,
+  hooks = NULL,
+  show_thinking = TRUE,
+  stream = TRUE,
+  backend = c("aisdk", "shinychat"),
   debug = FALSE,
+  models = NULL,
+  selected_model = NULL,
+  allow_model_switch = TRUE,
+  max_upload_size = NULL,
   on_message_complete = NULL
 )
 }
 \arguments{
 \item{id}{The namespace ID for the module.}
 
-\item{model}{Either a LanguageModelV1 object, or a string ID like "openai:gpt-4o".}
+\item{model}{A \code{LanguageModelV1} object or a string ID like
+\code{"openai:gpt-4o"}. Ignored when \code{session} is supplied.}
 
 \item{tools}{Optional list of Tool objects for function calling.}
 
-\item{context}{Optional reactive expression that returns context data to inject
-into the system prompt. This is read with \code{isolate()} to avoid reactive loops.}
+\item{context}{Optional reactive expression that returns context data to
+inject into the turn-specific system prompt. This is read with \code{isolate()}
+to avoid reactive loops.}
 
-\item{system}{Optional system prompt.}
+\item{system}{Optional base system prompt.}
 
-\item{debug}{Reactive expression or logical. If TRUE, shows raw debug output in UI.}
+\item{session}{Optional existing \link{ChatSession} object. Use this to share
+history, tools, memory, or the session environment with other interfaces
+such as \code{\link[=console_chat]{console_chat()}}.}
 
-\item{on_message_complete}{Optional callback function called when a message is complete.
-Takes one argument: the complete assistant message text.}
+\item{hooks}{Optional \link{HookHandler} object. Shiny tool-call hooks are merged
+with these hooks so tool progress can be rendered in the chat UI.}
+
+\item{show_thinking}{Reactive expression or logical. If \code{TRUE}, streamed
+\verb{<think>} blocks are shown in a collapsible block in the assistant message.
+If \code{FALSE}, thinking text is hidden while preserving the final answer.}
+
+\item{stream}{Whether to use streaming output. Default \code{TRUE}.}
+
+\item{backend}{UI backend used by \code{aiChatUI()}. \code{"aisdk"} is the built-in UI.
+\code{"shinychat"} requires the optional \code{shinychat} package and currently uses
+the same \code{ChatSession} execution path with an adapter for rendering.}
+
+\item{debug}{Reactive expression or logical. If \code{TRUE}, tool arguments and
+results are shown expanded in the UI.}
+
+\item{models}{Optional character vector or list of selectable model IDs.}
+
+\item{selected_model}{Optional initial model ID used for this chat session.}
+
+\item{allow_model_switch}{Whether users may switch models between turns.
+Switching is ignored while a turn is generating.}
+
+\item{max_upload_size}{Optional maximum image upload size in bytes.}
+
+\item{on_message_complete}{Optional callback function called when a message
+is complete. Takes one argument: the complete assistant message text.}
 }
 \value{
-A reactive value containing the chat history.
+A reactive value containing the \code{ChatSession} history.
 }
 \description{
-Shiny module server for AI-powered chat, featuring non-blocking streaming
-via background processes and tool execution bridge.
+Shiny module server for AI-powered chat. The module is backed by
+\link{ChatSession}, the same stateful execution path used by \code{\link[=console_chat]{console_chat()}}, so
+tool calls, session environments, model runtime options, and streamed
+thinking blocks behave consistently across terminal and Shiny interfaces.
 }

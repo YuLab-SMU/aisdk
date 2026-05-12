@@ -24,12 +24,12 @@ translate_message_content <- function(content, target = c("openai_chat", "openai
     return(content)
   }
 
-  switch(target,
+  unname(switch(target,
     openai_chat = translate_blocks_openai_chat(blocks),
     openai_responses = translate_blocks_openai_responses(blocks),
     gemini = translate_blocks_gemini(blocks),
     anthropic = translate_blocks_anthropic(blocks)
-  )
+  ))
 }
 
 #' @keywords internal

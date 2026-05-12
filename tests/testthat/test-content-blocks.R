@@ -31,6 +31,27 @@ test_that("normalize_content_blocks coerces legacy OpenAI blocks", {
   expect_equal(blocks[[2]]$value, "https://example.com/dog.png")
 })
 
+test_that("normalize_content_blocks accepts a single block without dropping array shape", {
+  image <- input_image("https://example.com/dog.png")
+  blocks <- normalize_content_blocks(image)
+
+  expect_length(blocks, 1)
+  expect_equal(blocks[[1]]$type, "input_image")
+})
+
+test_that("normalize_content_blocks removes names so JSON stays array-shaped", {
+  blocks <- normalize_content_blocks(list(
+    `1` = input_image("https://example.com/dog.png")
+  ))
+
+  expect_null(names(blocks))
+  expect_match(
+    jsonlite::toJSON(blocks, auto_unbox = TRUE),
+    "^\\[",
+    perl = TRUE
+  )
+})
+
 test_that("content_blocks_to_text rejects non-text blocks", {
   expect_error(
     content_blocks_to_text(list(input_text("hello"), input_image("https://example.com/dog.png"))),
