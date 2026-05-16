@@ -55,7 +55,7 @@ Skill <- R6::R6Class(
         rlang::abort(paste0("SKILL.md not found at: ", skill_md_path))
       }
       
-      self$path <- normalizePath(path, mustWork = TRUE)
+      self$path <- normalizePath(path, winslash = "/", mustWork = TRUE)
       
       # Parse YAML frontmatter (Level 1)
       content <- readLines(skill_md_path, warn = FALSE)
@@ -275,7 +275,7 @@ Skill <- R6::R6Class(
         rlang::abort(paste0("Asset not found: ", asset_path))
       }
       
-      normalizePath(asset_path, mustWork = TRUE)
+      normalizePath(asset_path, winslash = "/", mustWork = TRUE)
     },
     
     #' @description
