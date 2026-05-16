@@ -513,6 +513,57 @@ test_that("console image command sends local image as multimodal message", {
   expect_equal(history[[1]]$content[[2]]$type, "input_image")
 })
 
+test_that("console image command stores clipboard image in cache with path context", {
+  startup_dir <- tempfile("console-startup-")
+  dir.create(startup_dir)
+  on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
+
+  model <- MockModel$new(list(list(text = "ok", finish_reason = "stop")))
+  model$capabilities <- list(vision_input = TRUE)
+  session <- aisdk::create_chat_session(model = model)
+  session$set_metadata("console_startup_dir", startup_dir)
+
+  clipboard_image_fn <- function(output_dir) {
+    expected_cache_dir <- file.path(
+      normalizePath(startup_dir, winslash = "/", mustWork = TRUE),
+      ".aisdk",
+      "cache",
+      "images"
+    )
+    expect_equal(
+      output_dir,
+      expected_cache_dir
+    )
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    path <- file.path(output_dir, "clipboard-image-test.png")
+    writeBin(as.raw(0:15), path)
+    normalizePath(path, winslash = "/", mustWork = TRUE)
+  }
+
+  result <- aisdk:::handle_command(
+    "/paste-image",
+    session,
+    stream = FALSE,
+    verbose = FALSE,
+    show_thinking = FALSE,
+    clipboard_image_fn = clipboard_image_fn
+  )
+
+  cached_path <- normalizePath(
+    file.path(startup_dir, ".aisdk", "cache", "images", "clipboard-image-test.png"),
+    winslash = "/",
+    mustWork = TRUE
+  )
+  user_message <- model$last_params$messages[[length(model$last_params$messages)]]
+
+  expect_false(result$exit)
+  expect_equal(user_message$content[[1]]$type, "input_text")
+  expect_match(user_message$content[[1]]$text, "Cached image file: clipboard-image-test.png", fixed = TRUE)
+  expect_match(user_message$content[[1]]$text, paste0("Cached image path: ", cached_path), fixed = TRUE)
+  expect_equal(user_message$content[[2]]$type, "input_image")
+  expect_equal(user_message$content[[2]]$value, cached_path)
+})
+
 test_that("handle_command toggles inspect mode through app state", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")

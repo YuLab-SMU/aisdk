@@ -1586,12 +1586,34 @@ console_should_auto_paste <- function(line) {
 }
 
 #' @keywords internal
+console_image_cache_dir <- function(session = NULL, startup_dir = getwd()) {
+  startup_dir <- console_session_directory(session, key = "console_startup_dir", default = startup_dir)
+  normalizePath(file.path(startup_dir, ".aisdk", "cache", "images"), winslash = "/", mustWork = FALSE)
+}
+
+#' @keywords internal
+console_clipboard_image_cache_path <- function(output_dir, extension = "png") {
+  extension <- tolower(trimws(extension %||% "png"))
+  if (!nzchar(extension)) {
+    extension <- "png"
+  }
+  file.path(
+    output_dir,
+    paste0(
+      "clipboard-image-",
+      format(Sys.time(), "%Y%m%d-%H%M%S"),
+      "-",
+      substr(generate_stable_id("clipboard_image", Sys.time(), stats::runif(1)), 1L, 8L),
+      ".",
+      extension
+    )
+  )
+}
+
+#' @keywords internal
 console_save_clipboard_image <- function(output_dir = tempdir()) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-  path <- file.path(
-    output_dir,
-    paste0("aisdk-clipboard-image-", format(Sys.time(), "%Y%m%d-%H%M%S"), ".png")
-  )
+  path <- console_clipboard_image_cache_path(output_dir, extension = "png")
 
   if (Sys.info()[["sysname"]] == "Darwin" && nzchar(Sys.which("pngpaste"))) {
     status <- tryCatch(
@@ -1618,10 +1640,19 @@ console_save_clipboard_image <- function(output_dir = tempdir()) {
 }
 
 #' @keywords internal
-console_image_message <- function(path, instruction = NULL) {
+console_image_message <- function(path, instruction = NULL, include_path_context = FALSE) {
   text <- trimws(instruction %||% "")
   if (!nzchar(text)) {
     text <- "Please inspect this image."
+  }
+  if (isTRUE(include_path_context)) {
+    path <- normalizePath(path, winslash = "/", mustWork = FALSE)
+    text <- paste(
+      text,
+      paste0("Cached image file: ", basename(path)),
+      paste0("Cached image path: ", path),
+      sep = "\n\n"
+    )
   }
   list(
     input_text(text),
@@ -2010,7 +2041,8 @@ handle_command <- function(input,
                            show_thinking = verbose,
                            app_state = NULL,
                            model_prompt_hooks = NULL,
-                           model_prompt_fn = prompt_console_provider_profile) {
+                           model_prompt_fn = prompt_console_provider_profile,
+                           clipboard_image_fn = console_save_clipboard_image) {
   # Parse command and arguments
   parts <- strsplit(trimws(input), "\\s+", perl = TRUE)[[1]]
   cmd <- tolower(parts[1])
@@ -2430,13 +2462,15 @@ handle_command <- function(input,
     "/image" = {
       path <- NULL
       instruction <- ""
+      include_path_context <- FALSE
       if (length(args) > 0L && file.exists(args[1])) {
         path <- normalizePath(args[1], winslash = "/", mustWork = TRUE)
         instruction <- trimws(paste(args[-1], collapse = " "))
       } else if (length(args) > 0L) {
         cli::cli_alert_danger("Image file not found: {.file {args[1]}}")
       } else {
-        path <- console_save_clipboard_image(output_dir = tempdir())
+        cache_dir <- console_image_cache_dir(session, startup_dir = console_session_directory(session, key = "console_startup_dir", default = getwd()))
+        path <- clipboard_image_fn(output_dir = cache_dir)
         if (is.null(path)) {
           cli::cli_alert_warning("No supported image clipboard payload was detected.")
           cli::cli_alert_info("Use {.code /paste-image <path> [instruction]} with a local PNG/JPEG/WebP file.")
@@ -2445,11 +2479,12 @@ handle_command <- function(input,
           }
         } else {
           cli::cli_alert_success("Clipboard image saved to {.file {path}}")
+          include_path_context <- TRUE
         }
       }
 
       if (!is.null(path) && file.exists(path)) {
-        message <- console_image_message(path, instruction)
+        message <- console_image_message(path, instruction, include_path_context = include_path_context)
         display <- console_input_display_text(message)
         console_append_session_event(
           session,
