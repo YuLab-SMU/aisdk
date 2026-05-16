@@ -439,6 +439,17 @@ test_that("console bracketed paste event is saved without exposing content as in
   expect_equal(paste(readLines(paste_ref$path, warn = FALSE), collapse = "\n"), "### Create: Jianming Zeng\nlibrary(Matrix)\n帮我检查")
 })
 
+test_that("console bracketed paste ignores short IME text", {
+  output_dir <- tempfile("console-paste-")
+  paste_ref <- aisdk:::console_save_paste_event("可以", output_dir = output_dir)
+
+  expect_s3_class(paste_ref, "aisdk_console_paste_ref")
+  expect_equal(paste_ref$path, "")
+  expect_equal(paste_ref$message, "")
+  expect_false(aisdk:::console_should_file_paste("吗？"))
+  expect_false(aisdk:::console_should_file_paste("hello"))
+})
+
 test_that("console paste file writer stores queued complete clipboard lines", {
   state <- aisdk:::console_create_input_state()
   output_dir <- tempfile("console-paste-")
@@ -459,6 +470,8 @@ test_that("console paste file writer stores queued complete clipboard lines", {
 
 test_that("console auto-paste detection stays conservative", {
   expect_false(aisdk:::console_should_auto_paste("hello"))
+  expect_false(aisdk:::console_should_auto_paste("可以给我个"))
+  expect_false(aisdk:::console_should_auto_paste("吗？"))
   expect_false(aisdk:::console_should_auto_paste("/help"))
   expect_true(aisdk:::console_should_auto_paste("---"))
   expect_true(aisdk:::console_should_auto_paste("title: \"Anthropic研究员：用AI写代码\""))
@@ -468,6 +481,36 @@ test_that("console auto-paste detection stays conservative", {
   expect_true(aisdk:::console_should_auto_paste("for (sample in samples) {"))
   expect_true(aisdk:::console_should_auto_paste("sce <- CreateSeuratObject(counts)"))
   expect_true(aisdk:::console_should_auto_paste("df |> dplyr::filter(group == 'A')"))
+  expect_true(aisdk:::console_should_file_paste(paste(rep("plain text", 80), collapse = " ")))
+})
+
+test_that("console image command sends local image as multimodal message", {
+  image_path <- tempfile(fileext = ".png")
+  writeBin(as.raw(0:15), image_path)
+  on.exit(unlink(image_path), add = TRUE)
+
+  model <- MockModel$new(list(list(text = "ok", finish_reason = "stop")))
+  model$capabilities <- list(vision_input = TRUE)
+  session <- aisdk::create_chat_session(model = model)
+
+  result <- aisdk:::handle_command(
+    paste("/paste-image", image_path, "describe it"),
+    session,
+    stream = FALSE,
+    verbose = FALSE,
+    show_thinking = FALSE
+  )
+
+  expect_false(result$exit)
+  user_message <- model$last_params$messages[[length(model$last_params$messages)]]
+  expect_equal(user_message$content[[1]]$type, "input_text")
+  expect_equal(user_message$content[[1]]$text, "describe it")
+  expect_equal(user_message$content[[2]]$type, "input_image")
+  expect_equal(user_message$content[[2]]$value, normalizePath(image_path, winslash = "/", mustWork = TRUE))
+
+  history <- session$get_history()
+  expect_equal(history[[1]]$role, "user")
+  expect_equal(history[[1]]$content[[2]]$type, "input_image")
 })
 
 test_that("handle_command toggles inspect mode through app state", {

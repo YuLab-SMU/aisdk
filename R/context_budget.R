@@ -98,6 +98,41 @@ context_text_char_count <- function(x) {
 }
 
 #' @keywords internal
+context_message_content_text <- function(content) {
+  if (is.null(content)) {
+    return("")
+  }
+
+  if (is.character(content)) {
+    values <- content[!is.na(content)]
+    return(paste(values, collapse = "\n"))
+  }
+
+  blocks <- tryCatch(
+    normalize_content_blocks(content),
+    error = function(e) NULL
+  )
+  if (!is.null(blocks)) {
+    pieces <- vapply(blocks, function(block) {
+      if (identical(block$type, "input_text")) {
+        return(block$text %||% "")
+      }
+      if (identical(block$type, "input_image")) {
+        return(paste0("[image: ", block$value %||% "", "]"))
+      }
+      ""
+    }, character(1))
+    return(paste(pieces[nzchar(pieces)], collapse = "\n"))
+  }
+
+  rendered <- tryCatch(
+    safe_to_json(content, auto_unbox = TRUE),
+    error = function(e) paste(capture.output(str(content, max.level = 1)), collapse = "\n")
+  )
+  as.character(rendered %||% "")
+}
+
+#' @keywords internal
 estimate_prompt_tokens <- function(messages = list(), system = NULL) {
   messages <- messages %||% list()
 
@@ -379,7 +414,7 @@ extract_recent_message_candidates <- function(messages,
     if (!(role %in% allowed_roles)) {
       next
     }
-    content <- as.character(message$content %||% "")
+    content <- context_message_content_text(message$content %||% "")
     if (!nzchar(trimws(content))) {
       next
     }
@@ -573,7 +608,7 @@ llm_synthesize_working_memory <- function(session,
   state <- normalize_context_state(state)
   recent_messages <- tail(messages %||% list(), policy$recent_messages %||% 6L)
   message_lines <- vapply(recent_messages, function(message) {
-    sprintf("%s: %s", message$role %||% "unknown", trim_context_preview(as.character(message$content %||% ""), max_chars = 180L))
+    sprintf("%s: %s", message$role %||% "unknown", trim_context_preview(context_message_content_text(message$content %||% ""), max_chars = 180L))
   }, character(1))
 
   deterministic_lines <- c(
@@ -633,7 +668,7 @@ llm_synthesize_working_memory <- function(session,
 #' @keywords internal
 message_preview_text <- function(message, max_chars = 160L) {
   role <- message$role %||% "unknown"
-  content <- trim_context_preview(message$content %||% "", max_chars = max_chars)
+  content <- trim_context_preview(context_message_content_text(message$content %||% ""), max_chars = max_chars)
   if (!nzchar(content) && !is.null(message$reasoning) && nzchar(message$reasoning)) {
     content <- trim_context_preview(message$reasoning, max_chars = max_chars)
   }

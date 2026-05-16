@@ -58,3 +58,19 @@ test_that("content_blocks_to_text rejects non-text blocks", {
     "must contain only text blocks"
   )
 })
+
+test_that("context previews render multimodal content safely", {
+  message <- list(
+    role = "user",
+    content = list(
+      input_text("describe this"),
+      input_image("https://example.com/dog.png")
+    )
+  )
+
+  rendered <- aisdk:::context_message_content_text(message$content)
+
+  expect_match(rendered, "describe this", fixed = TRUE)
+  expect_match(rendered, "[image: https://example.com/dog.png]", fixed = TRUE)
+  expect_match(aisdk:::message_preview_text(message), "user: describe this", fixed = TRUE)
+})

@@ -391,6 +391,7 @@ console_send_user_message <- function(input,
                                       verbose = FALSE,
                                       show_thinking = verbose,
                                       app_state = NULL,
+                                      display_input = NULL,
                                       check_tool_failures = TRUE,
                                       continue_incomplete = TRUE) {
   if (is.null(session$get_model_id())) {
@@ -399,11 +400,12 @@ console_send_user_message <- function(input,
     return(invisible(FALSE))
   }
 
-  turn_system_prompt <- console_build_turn_system_prompt(session, input)
+  display_input <- display_input %||% console_input_display_text(input)
+  turn_system_prompt <- console_build_turn_system_prompt(session, display_input)
   history_snapshot <- session$get_history()
   if (!is.null(app_state)) {
     console_app_sync_session(app_state, session)
-    console_app_start_turn(app_state, input)
+    console_app_start_turn(app_state, display_input)
   }
   cli::cli_text("")
   cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
@@ -636,6 +638,11 @@ console_incomplete_continuation_prompt <- function(generation_result) {
     "Do not restate the plan without acting.",
     paste0("Previous assistant message: ", generation_result$text %||% "")
   )
+}
+
+#' @keywords internal
+console_input_display_text <- function(input) {
+  context_message_content_text(input)
 }
 
 #' @keywords internal
@@ -885,14 +892,17 @@ readline_multiline <- function(input_state = NULL,
     return(NULL)
   }
   if (identical(input_event$type, "paste")) {
-    paste_ref <- console_save_paste_event(input_event$text, output_dir = paste_output_dir)
+    paste_text <- console_normalize_paste_text(input_event$text)
+    paste_ref <- console_save_paste_event(paste_text, output_dir = paste_output_dir)
     if (nzchar(paste_ref$message %||% "")) {
       input_state$pending_paste <- paste_ref
       if (!isTRUE(quiet)) {
         console_show_paste_notice(paste_ref)
       }
+      return("")
     }
-    return("")
+    console_input_history_add(input_state, paste_text)
+    return(paste_text)
   }
 
   input <- input_event$text %||% ""
@@ -992,8 +1002,24 @@ console_read_bracketed_input <- function(prompt = "  ") {
           next
         }
         if (identical(seq, "[201~") && isTRUE(in_paste)) {
-          cat("\r\n")
-          return(list(type = "paste", text = rawToChar(paste_bytes)))
+          paste_text <- console_normalize_paste_text(rawToChar(paste_bytes))
+          if (console_should_file_paste(paste_text)) {
+            cat("\r\n")
+            return(list(type = "paste", text = paste_text))
+          }
+
+          if (grepl("\n", paste_text, fixed = TRUE)) {
+            cat("\r\n")
+            return(list(type = "line", text = paste0(paste0(chars, collapse = ""), paste_text)))
+          }
+
+          paste_chars <- strsplit(paste_text, "", fixed = TRUE)[[1]] %||% character(0)
+          chars <- c(chars, paste_chars)
+          cat(paste_text)
+          utils::flush.console()
+          in_paste <- FALSE
+          paste_bytes <- raw(0)
+          next
         }
         next
       }
@@ -1090,9 +1116,11 @@ console_can_use_raw_input <- function() {
 
 #' @keywords internal
 console_save_paste_event <- function(text, output_dir = tempdir()) {
-  text <- gsub("\r\n", "\n", text %||% "", fixed = TRUE)
-  text <- gsub("\r", "\n", text, fixed = TRUE)
+  text <- console_normalize_paste_text(text)
   if (!nzchar(text)) {
+    return(console_create_paste_ref("", 0L))
+  }
+  if (!console_should_file_paste(text)) {
     return(console_create_paste_ref("", 0L))
   }
   path <- console_write_paste_text(text, output_dir = output_dir)
@@ -1418,7 +1446,7 @@ console_should_rstudio_clipboard_paste <- function(input, clipboard_fn = console
   }
 
   text <- console_clipboard_paste_text(input, clipboard_fn = clipboard_fn)
-  is.character(text) && length(text) == 1L && grepl("\n", text, fixed = TRUE)
+  is.character(text) && length(text) == 1L && console_should_file_paste(text)
 }
 
 #' @keywords internal
@@ -1462,16 +1490,67 @@ console_write_paste_text <- function(text, output_dir = tempdir()) {
 }
 
 #' @keywords internal
-console_should_auto_paste <- function(line) {
+console_normalize_paste_text <- function(text) {
+  text <- text %||% ""
+  if (!is.character(text) || length(text) == 0L) {
+    return("")
+  }
+  text <- paste(text, collapse = "\n")
+  text <- gsub("\r\n", "\n", text, fixed = TRUE)
+  gsub("\r", "\n", text, fixed = TRUE)
+}
+
+#' @keywords internal
+console_paste_file_min_chars <- function() {
+  value <- getOption("aisdk.console.paste_file_min_chars", 500L)
+  value <- suppressWarnings(as.integer(value))
+  if (is.na(value) || value < 80L) {
+    return(500L)
+  }
+  value
+}
+
+#' @keywords internal
+console_should_file_paste <- function(text) {
+  text <- console_normalize_paste_text(text)
+  trimmed <- trimws(text)
+  if (!nzchar(trimmed) || startsWith(trimmed, "/")) {
+    return(FALSE)
+  }
+
+  chars <- nchar(trimmed, type = "chars", allowNA = FALSE, keepNA = FALSE)
+  if (chars >= console_paste_file_min_chars()) {
+    return(TRUE)
+  }
+
+  lines <- console_normalize_input_lines(text)
+  non_empty <- lines[nzchar(trimws(lines))]
+  if (grepl("\n", text, fixed = TRUE)) {
+    return(
+      console_contains_code_like_paste(text) ||
+        (length(non_empty) >= 5L && chars >= 200L)
+    )
+  }
+
+  console_contains_code_like_paste(trimmed)
+}
+
+#' @keywords internal
+console_contains_code_like_paste <- function(text) {
+  text <- console_normalize_paste_text(text)
+  lines <- console_normalize_input_lines(text)
+  if (length(lines) == 0L) {
+    return(FALSE)
+  }
+  any(vapply(lines, console_is_code_like_paste_line, logical(1)))
+}
+
+#' @keywords internal
+console_is_code_like_paste_line <- function(line) {
   line <- trimws(line %||% "")
   if (!nzchar(line) || startsWith(line, "/")) {
     return(FALSE)
   }
-
-  if (grepl("\n", line, fixed = TRUE)) {
-    return(TRUE)
-  }
-
   grepl(
     paste(c(
       "^```",
@@ -1498,6 +1577,55 @@ console_should_auto_paste <- function(line) {
     ), collapse = "|"),
     line,
     perl = TRUE
+  )
+}
+
+#' @keywords internal
+console_should_auto_paste <- function(line) {
+  console_should_file_paste(line)
+}
+
+#' @keywords internal
+console_save_clipboard_image <- function(output_dir = tempdir()) {
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(
+    output_dir,
+    paste0("aisdk-clipboard-image-", format(Sys.time(), "%Y%m%d-%H%M%S"), ".png")
+  )
+
+  if (Sys.info()[["sysname"]] == "Darwin" && nzchar(Sys.which("pngpaste"))) {
+    status <- tryCatch(
+      system2("pngpaste", path, stdout = FALSE, stderr = FALSE),
+      error = function(e) 1L
+    )
+    if (identical(status, 0L) && file.exists(path) && file.info(path)$size > 0) {
+      return(normalizePath(path, winslash = "/", mustWork = FALSE))
+    }
+    return(NULL)
+  }
+
+  if (.Platform$OS.type != "windows" && nzchar(Sys.which("wl-paste"))) {
+    status <- tryCatch(
+      system2("wl-paste", c("--type", "image/png"), stdout = path, stderr = FALSE),
+      error = function(e) 1L
+    )
+    if (identical(status, 0L) && file.exists(path) && file.info(path)$size > 0) {
+      return(normalizePath(path, winslash = "/", mustWork = FALSE))
+    }
+  }
+
+  NULL
+}
+
+#' @keywords internal
+console_image_message <- function(path, instruction = NULL) {
+  text <- trimws(instruction %||% "")
+  if (!nzchar(text)) {
+    text <- "Please inspect this image."
+  }
+  list(
+    input_text(text),
+    input_image(path)
   )
 }
 
@@ -1928,6 +2056,7 @@ handle_command <- function(input,
         "{.code /persona default} - Return to the built-in default persona",
         "{.code /skills [list|reload|roots]} - Inspect or reload live skills",
         "{.code /feishu} - Launch the Feishu setup wizard",
+        "{.code /paste-image [path] [instruction]} - Send a local or supported clipboard image",
         "{.code /run-state} - Show why the last run stopped and whether it can continue",
         "{.code retry} or {.code /continue} - Continue a recoverable stopped run",
         "{.code /tree}, {.code /fork [name]}, {.code /checkout <id>} - Manage the session branch tree",
@@ -2297,6 +2426,49 @@ handle_command <- function(input,
         cli::cli_alert_info(wizard_result$summary %||% "Feishu setup finished.")
       }
     },
+    "/paste-image" = ,
+    "/image" = {
+      path <- NULL
+      instruction <- ""
+      if (length(args) > 0L && file.exists(args[1])) {
+        path <- normalizePath(args[1], winslash = "/", mustWork = TRUE)
+        instruction <- trimws(paste(args[-1], collapse = " "))
+      } else if (length(args) > 0L) {
+        cli::cli_alert_danger("Image file not found: {.file {args[1]}}")
+      } else {
+        path <- console_save_clipboard_image(output_dir = tempdir())
+        if (is.null(path)) {
+          cli::cli_alert_warning("No supported image clipboard payload was detected.")
+          cli::cli_alert_info("Use {.code /paste-image <path> [instruction]} with a local PNG/JPEG/WebP file.")
+          if (Sys.info()[["sysname"]] == "Darwin" && !nzchar(Sys.which("pngpaste"))) {
+            cli::cli_alert_info("On macOS, clipboard image capture requires the {.code pngpaste} command.")
+          }
+        } else {
+          cli::cli_alert_success("Clipboard image saved to {.file {path}}")
+        }
+      }
+
+      if (!is.null(path) && file.exists(path)) {
+        message <- console_image_message(path, instruction)
+        display <- console_input_display_text(message)
+        console_append_session_event(
+          session,
+          type = "message",
+          payload = list(message = list(role = "user", content = message)),
+          startup_dir = console_session_directory(session, key = "console_startup_dir", default = getwd()),
+          visible = TRUE
+        )
+        console_send_user_message(
+          input = message,
+          session = session,
+          stream = stream,
+          verbose = verbose,
+          show_thinking = show_thinking,
+          app_state = app_state,
+          display_input = display
+        )
+      }
+    },
     "/run-state" = ,
     "/runstate" = {
       console_print_run_state(session$get_run_state())
@@ -2396,10 +2568,11 @@ handle_command <- function(input,
             "tool" = cli::col_grey,
             identity
           )
-          content_preview <- if (nchar(msg$content) > 100) {
-            paste0(substr(msg$content, 1, 100), "...")
+          content <- context_message_content_text(msg$content %||% "")
+          content_preview <- if (nchar(content) > 100) {
+            paste0(substr(content, 1, 100), "...")
           } else {
-            msg$content
+            content
           }
           cli::cli_text("{i}. {role_color(msg$role)}: {content_preview}")
         }
