@@ -144,46 +144,65 @@ readline_with_options <- function(prompt, options) {
 #' @param choice The user's choice (1, 2, 3, or 4)
 #' @param tool_name Name of the failing tool
 #' @param session The ChatSession object
-#' @return Invisible NULL
+#' @param last_error Optional last error message for the failing tool.
+#' @return A list describing the selected action.
 #' @keywords internal
-handle_user_choice <- function(choice, tool_name, session) {
+handle_user_choice <- function(choice, tool_name, session, last_error = NULL) {
   choice <- trimws(choice)
 
   if (choice == "1") {
-    # Continue - do nothing, let the agent keep trying
-    cat("Continuing...\n")
+    cat("Continuing with a recovery prompt...\n")
+    return(list(
+      action = "continue",
+      guidance = paste(
+        sprintf("Continue from the previous `%s` tool failure.", tool_name),
+        "Use the previous tool error as evidence.",
+        "Do not repeat the exact same failing call unless you make a concrete change.",
+        "Switch to a safer diagnostic or ask the user if more input is needed.",
+        if (!is.null(last_error) && nzchar(last_error)) paste("Last error:", last_error) else NULL
+      ),
+      prompt = paste(
+        sprintf("Continue from the previous `%s` tool failure.", tool_name),
+        "Use the previous tool error as evidence.",
+        "Do not repeat the exact same failing call unless you make a concrete change.",
+        "Switch to a safer diagnostic or ask the user if more input is needed.",
+        if (!is.null(last_error) && nzchar(last_error)) paste("Last error:", last_error) else NULL
+      )
+    ))
   } else if (choice == "2") {
-    # Give up - add a message to the session suggesting to avoid this tool
-    if (!is.null(session) && inherits(session, "ChatSession")) {
-      session$add_message(list(
-        role = "user",
-        content = sprintf(
-          "The tool '%s' has failed multiple times. Please try a different approach without using this tool.",
-          tool_name
-        )
-      ))
-    }
-    cat("Added guidance to avoid this tool.\n")
+    cat("Continuing with guidance to avoid this tool.\n")
+    return(list(
+      action = "avoid_tool",
+      guidance = sprintf(
+        "The tool `%s` has failed multiple times. Stop using that tool for this task. Explain the failure briefly and try a different approach.",
+        tool_name
+      ),
+      prompt = sprintf(
+        "The tool `%s` has failed multiple times. Stop using that tool for this task. Explain the failure briefly and try a different approach.",
+        tool_name
+      )
+    ))
   } else if (choice == "3") {
-    # Explain - add a message asking the agent to explain
-    if (!is.null(session) && inherits(session, "ChatSession")) {
-      session$add_message(list(
-        role = "user",
-        content = sprintf(
-          "Please explain why the tool '%s' keeps failing and what alternative approaches we could try.",
-          tool_name
-        )
-      ))
-    }
     cat("Asking agent to explain the problem...\n")
+    return(list(
+      action = "explain",
+      guidance = sprintf(
+        "Please explain why the tool `%s` keeps failing and what alternative approaches we could try. Do not call the failing tool again in this response.",
+        tool_name
+      ),
+      prompt = sprintf(
+        "Please explain why the tool `%s` keeps failing and what alternative approaches we could try. Do not call the failing tool again in this response.",
+        tool_name
+      )
+    ))
   } else if (choice == "4") {
     # Manual - inform user they can now intervene
     cat("\nYou can now manually fix the issue. When ready, continue the conversation.\n")
+    return(list(action = "manual", guidance = NULL))
   } else {
     cat("Unknown choice, continuing...\n")
+    return(list(action = "none", guidance = NULL))
   }
-
-  invisible(NULL)
 }
 
 # Define %||% if not already defined

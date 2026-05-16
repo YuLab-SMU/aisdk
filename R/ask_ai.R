@@ -38,12 +38,42 @@ ai_truncate_text <- function(text, max_chars = Inf) {
 }
 
 #' @keywords internal
-ai_read_last_error <- function() {
+ai_error_tracker_env <- new.env(parent = emptyenv())
+
+#' @keywords internal
+ai_track_error <- function(error_msg) {
+  if (!is.null(error_msg) && nzchar(error_msg)) {
+    ai_error_tracker_env$last_error <- error_msg
+    ai_error_tracker_env$last_error_time <- Sys.time()
+  }
+}
+
+#' @keywords internal
+ai_read_last_error <- function(max_age_secs = 300) {
   text <- tryCatch(geterrmessage(), error = function(e) "")
   text <- trimws(text %||% "")
   if (!nzchar(text)) {
     return(NULL)
   }
+  if (identical(text, ai_error_tracker_env$ignored_error %||% NULL)) {
+    return(NULL)
+  }
+
+  # Check if this error was recently tracked
+  tracked_error <- ai_error_tracker_env$last_error
+  tracked_time <- ai_error_tracker_env$last_error_time
+
+  # If we have a tracked error and it matches, check its age
+  if (!is.null(tracked_error) && !is.null(tracked_time) && identical(text, tracked_error)) {
+    age_secs <- as.numeric(difftime(Sys.time(), tracked_time, units = "secs"))
+    if (is.finite(max_age_secs) && age_secs > max_age_secs) {
+      return(NULL)  # Error is too old
+    }
+  } else {
+    # New error detected, track it
+    ai_track_error(text)
+  }
+
   text
 }
 
@@ -70,13 +100,35 @@ ai_format_warning_object <- function(warnings) {
     return(conditionMessage(warnings))
   }
   if (is.list(warnings)) {
-    values <- vapply(warnings, function(w) {
-      if (inherits(w, "condition")) {
+    warning_names <- names(warnings) %||% rep("", length(warnings))
+    lines <- vapply(seq_along(warnings), function(i) {
+      message <- trimws(warning_names[[i]] %||% "")
+      w <- warnings[[i]]
+
+      value <- if (inherits(w, "condition")) {
         conditionMessage(w)
+      } else if (is.call(w) || is.language(w)) {
+        paste(deparse(w), collapse = " ")
       } else {
         ai_collapse_text(w)
       }
+      value <- trimws(value %||% "")
+
+      if (nzchar(message) && nzchar(value) && !identical(message, value)) {
+        paste0("- ", message, " [call: ", value, "]")
+      } else if (nzchar(message)) {
+        paste0("- ", message)
+      } else if (nzchar(value)) {
+        paste0("- ", value)
+      } else {
+        ""
+      }
     }, character(1))
+    lines <- lines[nzchar(trimws(lines))]
+    if (length(lines) == 0) {
+      return(NULL)
+    }
+    return(paste(lines, collapse = "\n"))
   } else {
     values <- ai_safe_text(warnings)
   }
@@ -100,12 +152,57 @@ ai_format_warning_object <- function(warnings) {
 }
 
 #' @keywords internal
-ai_read_last_warnings <- function() {
-  warnings <- get0(".Last.warning", envir = baseenv(), inherits = FALSE)
+ai_read_last_warnings <- function(max_age_secs = 300) {
+  warnings <- get0("last.warning", envir = baseenv(), inherits = FALSE)
+  if (is.null(warnings)) {
+    warnings <- get0("last.warning", envir = globalenv(), inherits = FALSE)
+  }
+  if (is.null(warnings)) {
+    warnings <- get0(".Last.warning", envir = baseenv(), inherits = FALSE)
+  }
   if (is.null(warnings)) {
     warnings <- get0(".Last.warning", envir = globalenv(), inherits = FALSE)
   }
+
+  # Track warning timestamp if we have warnings
+  if (!is.null(warnings)) {
+    tracked_warnings <- ai_error_tracker_env$last_warnings
+    tracked_time <- ai_error_tracker_env$last_warnings_time
+
+    # Check if these are new warnings
+    warnings_text <- ai_format_warning_object(warnings)
+    if (!is.null(warnings_text) && nzchar(warnings_text)) {
+      if (!identical(warnings_text, tracked_warnings)) {
+        # New warnings detected
+        ai_error_tracker_env$last_warnings <- warnings_text
+        ai_error_tracker_env$last_warnings_time <- Sys.time()
+      } else if (!is.null(tracked_time)) {
+        # Same warnings, check age
+        age_secs <- as.numeric(difftime(Sys.time(), tracked_time, units = "secs"))
+        if (is.finite(max_age_secs) && age_secs > max_age_secs) {
+          return(NULL)  # Warnings are too old
+        }
+      }
+    }
+  }
+
   ai_format_warning_object(warnings)
+}
+
+#' @keywords internal
+ai_warning_indicates_package_install_failure <- function(warnings_text) {
+  if (is.null(warnings_text) || !nzchar(warnings_text)) {
+    return(FALSE)
+  }
+  patterns <- c(
+    "installation of package .* had non-zero exit status",
+    "dependency .* is not available",
+    "Skipping [0-9]+ packages? not available",
+    "package .* is not available"
+  )
+  any(vapply(patterns, function(pattern) {
+    grepl(pattern, warnings_text, ignore.case = TRUE)
+  }, logical(1)))
 }
 
 #' @keywords internal
@@ -231,6 +328,42 @@ ai_collect_object_summaries <- function(envir = globalenv(), limit = Inf) {
   do.call(rbind, rows)
 }
 
+#' @keywords internal
+ai_read_command_history <- function(max_lines = 10) {
+  read_history_file <- function(path) {
+    if (is.null(path) || !file.exists(path)) {
+      return(character(0))
+    }
+    tryCatch(readLines(path, warn = FALSE), error = function(e) character(0))
+  }
+
+  candidates <- list()
+  tmp_history <- tempfile("aisdk-r-history-", fileext = ".Rhistory")
+  on.exit(unlink(tmp_history), add = TRUE)
+  saved <- tryCatch({
+    utils::savehistory(tmp_history)
+    TRUE
+  }, error = function(e) FALSE)
+  if (isTRUE(saved)) {
+    candidates[[length(candidates) + 1L]] <- read_history_file(tmp_history)
+  }
+
+  candidates[[length(candidates) + 1L]] <- read_history_file(file.path(getwd(), ".Rhistory"))
+  candidates[[length(candidates) + 1L]] <- read_history_file(file.path(path.expand("~"), ".Rhistory"))
+
+  for (lines in candidates) {
+    lines <- trimws(lines)
+    lines <- lines[nzchar(lines)]
+    lines <- lines[!grepl("ask_ai\\(", lines)]
+    if (length(lines) > 0) {
+      recent_lines <- utils::tail(lines, max_lines)
+      return(paste(recent_lines, collapse = "\n"))
+    }
+  }
+
+  NULL
+}
+
 #' Collect Context for `ask_ai()`
 #'
 #' Collect recent error details, traceback output, warnings, active script
@@ -241,18 +374,27 @@ ai_collect_object_summaries <- function(envir = globalenv(), limit = Inf) {
 #' @param error Optional error message. Defaults to `geterrmessage()`.
 #' @param traceback Optional traceback text. Defaults to `traceback()` output.
 #' @param warnings Optional warning text or warning object. Defaults to
-#'   `.Last.warning` when present.
+#'   R's `last.warning` context when present.
 #' @param include Character vector of sections to include.
 #' @param max_context_chars Maximum formatted context characters. Defaults to
 #'   `Inf`, meaning no explicit truncation.
+#' @param max_error_age_secs Maximum age in seconds for errors/warnings to be
+#'   included. Defaults to 300 (5 minutes). Set to `Inf` to include all errors.
+#' @param include_history Whether to include recent command history. Defaults to
+#'   `TRUE`.
+#' @param max_history_lines Maximum number of recent command history lines to
+#'   include. Defaults to 10.
 #' @return A structured context list with class `aisdk_ai_context`.
 #' @export
 collect_ai_context <- function(script = NULL,
                                error = NULL,
                                traceback = NULL,
                                warnings = NULL,
-                               include = c("error", "traceback", "warnings", "script", "session", "objects"),
-                               max_context_chars = Inf) {
+                               include = c("error", "traceback", "warnings", "script", "session", "objects", "history"),
+                               max_context_chars = Inf,
+                               max_error_age_secs = 300,
+                               include_history = TRUE,
+                               max_history_lines = 10) {
   include <- unique(include %||% character(0))
 
   ctx <- list(
@@ -264,17 +406,27 @@ collect_ai_context <- function(script = NULL,
     script = NULL,
     session = NULL,
     objects = NULL,
+    history = NULL,
     max_context_chars = max_context_chars
   )
 
   if ("error" %in% include) {
-    ctx$error <- ai_collapse_text(error %||% ai_read_last_error())
+    ctx$error <- ai_collapse_text(error %||% ai_read_last_error(max_age_secs = max_error_age_secs))
   }
   if ("traceback" %in% include) {
     ctx$traceback <- ai_collapse_text(traceback %||% ai_read_traceback())
   }
   if ("warnings" %in% include) {
-    ctx$warnings <- ai_collapse_text(ai_format_warning_object(warnings) %||% ai_read_last_warnings())
+    ctx$warnings <- ai_collapse_text(ai_format_warning_object(warnings) %||% ai_read_last_warnings(max_age_secs = max_error_age_secs))
+  }
+  if (is.null(error) &&
+      nzchar(ctx$error %||% "") &&
+      ai_warning_indicates_package_install_failure(ctx$warnings %||% "")) {
+    ctx$stale_error <- ctx$error
+    ctx$error <- ""
+    if (is.null(traceback)) {
+      ctx$traceback <- ""
+    }
   }
   if ("script" %in% include) {
     ctx$script <- ai_collect_script_context(script)
@@ -284,6 +436,9 @@ collect_ai_context <- function(script = NULL,
   }
   if ("objects" %in% include) {
     ctx$objects <- ai_collect_object_summaries(globalenv())
+  }
+  if ("history" %in% include && isTRUE(include_history)) {
+    ctx$history <- ai_read_command_history(max_lines = max_history_lines)
   }
 
   class(ctx) <- "aisdk_ai_context"
@@ -334,8 +489,10 @@ format_ai_context <- function(context) {
     paste0("collected_at: ", context$collected_at %||% ""),
     paste0("working_dir: ", context$working_dir %||% ""),
     if (nzchar(context$error %||% "")) c("[last_error_begin]", context$error, "[last_error_end]") else NULL,
+    if (nzchar(context$stale_error %||% "")) c("[stale_error_ignored_begin]", context$stale_error, "[stale_error_ignored_end]") else NULL,
     if (nzchar(context$traceback %||% "")) c("[traceback_begin]", context$traceback, "[traceback_end]") else NULL,
     if (nzchar(context$warnings %||% "")) c("[warnings_begin]", context$warnings, "[warnings_end]") else NULL,
+    if (nzchar(context$history %||% "")) c("[recent_commands_begin]", context$history, "[recent_commands_end]") else NULL,
     script_lines,
     if (!is.null(context$objects)) c("[objects_begin]", format_ai_objects(context$objects), "[objects_end]") else NULL,
     if (nzchar(context$session %||% "")) c("[session_info_begin]", context$session, "[session_info_end]") else NULL,
@@ -349,9 +506,22 @@ format_ai_context <- function(context) {
 #' @keywords internal
 build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
   context_text <- format_ai_context(context)
+
+  # Check if we have command history but no error/warning
+  has_history <- !is.null(context$history) && nzchar(context$history)
+  has_error <- !is.null(context$error) && nzchar(context$error)
+  has_warning <- !is.null(context$warnings) && nzchar(context$warnings)
+
+  # Adjust prompt based on what context we have
+  if (has_history && !has_error && !has_warning) {
+    analysis_prompt <- "Please analyze the recent R commands and session context. The commands may have produced errors or warnings that weren't captured. Diagnose any likely issues, then suggest concrete next steps."
+  } else {
+    analysis_prompt <- "Please analyze the following R error/session context. Diagnose the likely cause first, then suggest concrete next steps. If information is missing, say exactly what to inspect next."
+  }
+
   lines <- c(
     if (!is.null(skill) && nzchar(skill)) paste0("@", skill) else NULL,
-    "Please analyze the following R error/session context. Diagnose the likely cause first, then suggest concrete next steps. If information is missing, say exactly what to inspect next.",
+    analysis_prompt,
     if (!is.null(user_prompt) && nzchar(user_prompt)) c("", "[user_request_begin]", user_prompt, "[user_request_end]") else NULL,
     "",
     context_text
@@ -382,6 +552,11 @@ build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
 #'   launching `console_chat()`.
 #' @param max_context_chars Maximum formatted context characters. Defaults to
 #'   `Inf`, meaning no explicit truncation.
+#' @param max_error_age_secs Maximum age in seconds for errors/warnings to be
+#'   included. Defaults to 300 (5 minutes). Set to `Inf` to include all errors
+#'   regardless of age.
+#' @param confirm_stale_errors If `TRUE` (default), show a warning and prompt
+#'   for confirmation when errors/warnings are detected but appear stale.
 #' @param ... Additional arguments passed to `collect_ai_context()`.
 #' @return Invisibly returns the `ChatSession` from `console_chat()`, or a
 #'   preview list when `show_context = TRUE`.
@@ -398,13 +573,96 @@ ask_ai <- function(prompt = NULL,
                    verbose = FALSE,
                    show_context = FALSE,
                    max_context_chars = Inf,
+                   max_error_age_secs = 300,
+                   confirm_stale_errors = TRUE,
                    ...) {
   if (inherits(context, "aisdk_ai_context")) {
     ai_context <- context
     ai_context$max_context_chars <- max_context_chars
   } else {
-    ai_context <- collect_ai_context(max_context_chars = max_context_chars, ...)
+    ai_context <- collect_ai_context(
+      max_context_chars = max_context_chars,
+      max_error_age_secs = max_error_age_secs,
+      ...
+    )
     ai_context$additional_context <- ai_collapse_text(context)
+  }
+
+  # Check for stale errors/warnings and confirm with user
+  if (isTRUE(confirm_stale_errors) && !isTRUE(show_context)) {
+    has_error <- !is.null(ai_context$error) && nzchar(ai_context$error)
+    has_warnings <- !is.null(ai_context$warnings) && nzchar(ai_context$warnings)
+    has_history <- !is.null(ai_context$history) && nzchar(ai_context$history)
+
+    if (has_error || has_warnings || has_history) {
+      # Check if the error/warning is from geterrmessage() (not user-provided)
+      user_provided_error <- !missing(context) && (
+        (is.list(context) && !is.null(context$error)) ||
+        (!is.null(list(...)$error))
+      )
+
+      if (!user_provided_error) {
+        cat("\n")
+        cat("┌─ Detected Context ─────────────────────────────────────────────┐\n")
+        if (has_error) {
+          error_preview <- substr(ai_context$error, 1, 200)
+          if (nchar(ai_context$error) > 200) error_preview <- paste0(error_preview, "...")
+          cat("│ Error: ", error_preview, "\n", sep = "")
+        }
+        if (has_warnings) {
+          warning_preview <- substr(ai_context$warnings, 1, 200)
+          if (nchar(ai_context$warnings) > 200) warning_preview <- paste0(warning_preview, "...")
+          cat("│ Warning: ", warning_preview, "\n", sep = "")
+        }
+        if (!has_error && nzchar(ai_context$stale_error %||% "")) {
+          stale_preview <- substr(ai_context$stale_error, 1, 160)
+          if (nchar(ai_context$stale_error) > 160) stale_preview <- paste0(stale_preview, "...")
+          cat("│ Ignored stale error: ", stale_preview, "\n", sep = "")
+        }
+        if (has_history) {
+          history_lines <- unlist(strsplit(ai_context$history, "\n", fixed = TRUE), use.names = FALSE)
+          history_preview <- utils::tail(history_lines[nzchar(trimws(history_lines))], 3)
+          history_preview <- paste(history_preview, collapse = " | ")
+          if (nchar(history_preview) > 200) history_preview <- paste0(substr(history_preview, 1, 200), "...")
+          cat("│ Recent commands: ", history_preview, "\n", sep = "")
+        }
+        cat("└────────────────────────────────────────────────────────────────┘\n")
+        cat("\n")
+
+        response <- readline("Use this error/warning context? [Y/n/clear]: ")
+        response <- tolower(trimws(response))
+
+        if (response == "clear" || response == "c") {
+          clear_error_context()
+          cat("✓ Error context cleared. Restarting ask_ai() without error context...\n\n")
+          return(ask_ai(
+            prompt = prompt,
+            model = model,
+            skills = skills,
+            skill = skill,
+            context = context,
+            startup_dir = startup_dir,
+            working_dir = working_dir,
+            sandbox_mode = sandbox_mode,
+            stream = stream,
+            verbose = verbose,
+            show_context = show_context,
+            max_context_chars = max_context_chars,
+            max_error_age_secs = max_error_age_secs,
+            confirm_stale_errors = FALSE,  # Don't prompt again
+            ...
+          ))
+        } else if (response == "n" || response == "no") {
+          # Remove error/warning context
+          ai_context$error <- NULL
+          ai_context$traceback <- NULL
+          ai_context$warnings <- NULL
+          cat("✓ Proceeding without error/warning context.\n\n")
+        } else {
+          cat("✓ Using detected error/warning context.\n\n")
+        }
+      }
+    }
   }
 
   initial_prompt <- build_ask_ai_prompt(ai_context, user_prompt = prompt, skill = skill)
@@ -424,4 +682,42 @@ ask_ai <- function(prompt = NULL,
     verbose = verbose,
     initial_prompt = initial_prompt
   )
+}
+
+#' Clear Error Context for ask_ai()
+#'
+#' Clears the tracked error and warning context used by `ask_ai()`. This is
+#' useful when you want to start a fresh debugging session without stale
+#' error messages from previous operations.
+#'
+#' @return Invisibly returns `TRUE`.
+#' @export
+#' @examples
+#' \dontrun{
+#' # Clear stale errors before starting a new debugging session
+#' clear_error_context()
+#' ask_ai()
+#' }
+clear_error_context <- function() {
+  current_error <- tryCatch(trimws(geterrmessage() %||% ""), error = function(e) "")
+  ai_error_tracker_env$last_error <- NULL
+  ai_error_tracker_env$last_error_time <- NULL
+  ai_error_tracker_env$last_warnings <- NULL
+  ai_error_tracker_env$last_warnings_time <- NULL
+  ai_error_tracker_env$ignored_error <- if (nzchar(current_error)) current_error else NULL
+
+  if (exists("last.warning", envir = baseenv(), inherits = FALSE)) {
+    assign("last.warning", NULL, envir = baseenv())
+  }
+  if (exists("last.warning", envir = globalenv(), inherits = FALSE)) {
+    rm("last.warning", envir = globalenv())
+  }
+  if (exists(".Last.warning", envir = baseenv(), inherits = FALSE)) {
+    assign(".Last.warning", NULL, envir = baseenv())
+  }
+  if (exists(".Last.warning", envir = globalenv(), inherits = FALSE)) {
+    rm(".Last.warning", envir = globalenv())
+  }
+
+  invisible(TRUE)
 }

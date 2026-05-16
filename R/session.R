@@ -106,6 +106,7 @@ ChatSession <- R6::R6Class(
         messages_sent = 0,
         tool_calls_made = 0
       )
+      private$.last_run_state <- new_run_state(status = "running", stop_reason = "initialized")
     },
 
     #' @description Send a message and get a response.
@@ -146,6 +147,7 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
+      private$store_run_state(result$run_state %||% run_state_from_result(result))
 
       # Update stats
       private$update_stats(result)
@@ -158,7 +160,7 @@ ChatSession <- R6::R6Class(
     #' @param prompt The user message to send.
     #' @param callback Function called for each chunk: callback(text, done).
     #' @param ... Additional arguments passed to stream_text.
-    #' @return Invisible NULL (output is via callback).
+    #' @return The GenerateResult object invisibly (output is via callback).
     send_stream = function(prompt, callback, ...) {
       extra_args <- merge_call_options(self$get_model_call_options(), list(...))
       turn_system_prompt <- extra_args$turn_system_prompt %||% NULL
@@ -194,12 +196,59 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
+      private$store_run_state(result$run_state %||% run_state_from_result(result))
 
       # Update stats
       private$update_stats(result)
       self$refresh_context_state(generation_result = result)
 
-      invisible(NULL)
+      invisible(result)
+    },
+
+    #' @description Continue a recoverable previous run with structured action.
+    #' @param action One of "continue", "give_up", "avoid_tool", "explain", or "manual".
+    #' @param guidance Optional operator guidance to include in the continuation.
+    #' @param stream Whether to use streaming generation.
+    #' @param callback Streaming callback when `stream = TRUE`.
+    #' @param ... Additional arguments passed to send/send_stream.
+    #' @return The GenerateResult object, or an invisible needs-user result for manual action.
+    continue_run = function(action = "continue",
+                            guidance = NULL,
+                            stream = TRUE,
+                            callback = NULL,
+                            ...) {
+      action <- normalize_continue_action(action)
+      prior_state <- private$.last_run_state %||% new_run_state(status = "needs_user", stop_reason = "no_prior_run")
+      if (identical(action, "manual")) {
+        state <- new_run_state(
+          status = "needs_user",
+          stop_reason = "manual",
+          recoverable = TRUE,
+          failure_summary = prior_state$failure_summary %||% NULL,
+          pending_action = "manual",
+          last_tool_results = prior_state$last_tool_results %||% list()
+        )
+        private$store_run_state(state)
+        result <- attach_run_state(
+          GenerateResult$new(
+            text = "Manual intervention selected. Waiting for the next user instruction.",
+            finish_reason = "needs_user"
+          ),
+          state
+        )
+        return(invisible(result))
+      }
+
+      prompt <- run_state_continuation_prompt(
+        action = action,
+        guidance = guidance,
+        run_state = prior_state
+      )
+      if (isTRUE(stream)) {
+        self$send_stream(prompt, callback = callback %||% function(text, done) NULL, ...)
+      } else {
+        self$send(prompt, ...)
+      }
     },
 
     #' @description Append a message to the history.
@@ -507,6 +556,7 @@ ChatSession <- R6::R6Class(
         stats = private$.stats,
         max_steps = private$.max_steps,
         metadata = private$.metadata,
+        last_run_state = private$.last_run_state,
         envir_state = envir_state,
         # Note: tools and hooks are not serialized (must be re-provided on load)
         tool_names = if (length(private$.tools) > 0) {
@@ -558,6 +608,7 @@ ChatSession <- R6::R6Class(
       if (!is.null(data$metadata)) {
         private$.metadata <- data$metadata
       }
+      private$.last_run_state <- data$last_run_state %||% private$.metadata$last_run_state %||% private$.last_run_state
       if (!is.null(data$envir_state$console_image_artifacts)) {
         assign(".console_image_artifacts", data$envir_state$console_image_artifacts, envir = private$.envir)
       }
@@ -596,6 +647,20 @@ ChatSession <- R6::R6Class(
       } else {
         default
       }
+    },
+
+    #' @description Return the most recent structured run state.
+    #' @return A run state list.
+    get_run_state = function() {
+      private$.last_run_state %||% new_run_state(status = "running", stop_reason = "not_started")
+    },
+
+    #' @description Store the current structured run state.
+    #' @param run_state A run state list.
+    #' @return Invisible self.
+    set_run_state = function(run_state) {
+      private$store_run_state(run_state)
+      invisible(self)
     },
 
     #' @description Set a value in shared memory.
@@ -817,6 +882,7 @@ ChatSession <- R6::R6Class(
         system_prompt = private$.system_prompt,
         memory        = private$.memory,
         metadata      = private$.metadata,
+        last_run_state = private$.last_run_state,
         history       = private$.history,
         stats         = private$.stats
       ), path)
@@ -830,6 +896,7 @@ ChatSession <- R6::R6Class(
       data <- readRDS(path)
       if (!is.null(data$memory))  private$.memory  <- data$memory
       if (!is.null(data$metadata)) private$.metadata <- data$metadata
+      if (!is.null(data$last_run_state)) private$.last_run_state <- data$last_run_state
       if (!is.null(data$history)) private$.history <- data$history
       if (!is.null(data$stats))   private$.stats   <- data$stats
       invisible(self)
@@ -845,6 +912,7 @@ ChatSession <- R6::R6Class(
     .max_steps = 10,
     .registry = NULL,
     .stats = NULL,
+    .last_run_state = NULL,
     # Multi-agent support
     .memory = NULL,
     .metadata = NULL,
@@ -908,6 +976,13 @@ ChatSession <- R6::R6Class(
       }
 
       invisible()
+    },
+    store_run_state = function(run_state) {
+      if (!is.null(run_state)) {
+        private$.last_run_state <- run_state
+        private$.metadata$last_run_state <- run_state
+      }
+      invisible(run_state)
     },
     prepare_tools = function() {
       tools <- private$.tools %||% list()

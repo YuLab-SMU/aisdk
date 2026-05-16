@@ -4,7 +4,7 @@
 \alias{handle_user_choice}
 \title{Handle User Choice for Tool Failure}
 \usage{
-handle_user_choice(choice, tool_name, session)
+handle_user_choice(choice, tool_name, session, last_error = NULL)
 }
 \arguments{
 \item{choice}{The user's choice (1, 2, 3, or 4)}
@@ -12,9 +12,11 @@ handle_user_choice(choice, tool_name, session)
 \item{tool_name}{Name of the failing tool}
 
 \item{session}{The ChatSession object}
+
+\item{last_error}{Optional last error message for the failing tool.}
 }
 \value{
-Invisible NULL
+A list describing the selected action.
 }
 \description{
 Handles the user's choice when a tool has failed repeatedly.

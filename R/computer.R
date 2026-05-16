@@ -201,6 +201,92 @@ Computer <- R6::R6Class("Computer",
     },
 
     #' @description
+    #' Edit a file by replacing an exact text pattern.
+    #' @param path File path (relative to working_dir or absolute)
+    #' @param pattern Exact text to replace
+    #' @param replacement Replacement text
+    #' @param all Whether to replace all occurrences. Default FALSE.
+    #' @param encoding File encoding (default: "UTF-8")
+    #' @return Success status
+    edit_file = function(path, pattern, replacement, all = FALSE, encoding = "UTF-8") {
+      private$log_execution("edit_file", list(path = path, pattern_size = nchar(pattern %||% "")))
+
+      full_path <- private$resolve_path(path)
+      if (self$sandbox_mode == "strict") {
+        violation <- private$check_write_violation(full_path)
+        if (!is.null(violation)) {
+          return(list(
+            success = FALSE,
+            error = TRUE,
+            message = paste("Sandbox violation:", violation)
+          ))
+        }
+      }
+      if (!file.exists(full_path)) {
+        return(list(
+          success = FALSE,
+          error = TRUE,
+          message = paste("File not found:", path)
+        ))
+      }
+      if (!is.character(pattern) || length(pattern) != 1L || !nzchar(pattern)) {
+        return(list(
+          success = FALSE,
+          error = TRUE,
+          message = "`pattern` must be a single non-empty string."
+        ))
+      }
+      if (!is.character(replacement) || length(replacement) != 1L) {
+        return(list(
+          success = FALSE,
+          error = TRUE,
+          message = "`replacement` must be a single string."
+        ))
+      }
+
+      tryCatch(
+        {
+          content <- paste(readLines(full_path, encoding = encoding, warn = FALSE), collapse = "\n")
+          matches <- gregexpr(pattern, content, fixed = TRUE)[[1]]
+          count <- if (identical(matches[[1]], -1L)) 0L else length(matches)
+          if (count == 0L) {
+            return(list(
+              success = FALSE,
+              error = TRUE,
+              message = "Pattern not found."
+            ))
+          }
+          if (!isTRUE(all) && count > 1L) {
+            return(list(
+              success = FALSE,
+              error = TRUE,
+              message = paste("Pattern matched", count, "times. Refine the pattern or set `all = TRUE`.")
+            ))
+          }
+          edited <- sub(pattern, replacement, content, fixed = TRUE)
+          if (isTRUE(all)) {
+            edited <- gsub(pattern, replacement, content, fixed = TRUE)
+          }
+          writeLines(edited, full_path, useBytes = TRUE)
+          list(
+            success = TRUE,
+            error = FALSE,
+            path = full_path,
+            replacements = if (isTRUE(all)) count else 1L,
+            created_files = list(full_path)
+          )
+        },
+        error = function(e) {
+          list(
+            success = FALSE,
+            error = TRUE,
+            message = conditionMessage(e)
+          )
+        }
+      )
+    },
+
+    #' @description
     #' Execute R code in an isolated `callr` process
     #' @param code R code to execute
     #' @param timeout_ms Timeout in milliseconds (default: 30000)
@@ -521,6 +607,36 @@ create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sand
         } else {
           annotate_artifacts(
             paste("Successfully wrote to:", result$path),
+            result$created_files %||% character(0)
+          )
+        }
+      },
+      layer = "computer"
+    ),
+
+    tool(
+      name = "edit_file",
+      description = paste(
+        "Edit a file by replacing an exact text pattern.",
+        "Use this for small targeted changes after reading the file.",
+        "The pattern must match exactly. By default it must match once."
+      ),
+      parameters = z_object(
+        path = z_string("Path to the file to edit"),
+        pattern = z_string("Exact text to replace"),
+        replacement = z_string("Replacement text"),
+        all = z_boolean("Replace all occurrences instead of requiring a single match")
+      ),
+      execute = function(path, pattern, replacement, all = FALSE) {
+        result <- computer$edit_file(path, pattern, replacement, all = all)
+        if (result$error) {
+          result$message
+        } else {
+          annotate_artifacts(
+            paste0(
+              "Edited file: ", result$path,
+              "\nReplacements: ", result$replacements
+            ),
             result$created_files %||% character(0)
           )
         }

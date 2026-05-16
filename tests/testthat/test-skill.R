@@ -86,7 +86,7 @@ test_that("Skill$path is normalized", {
   skill <- Skill$new(test_skill_path)
   
   expect_true(file.exists(skill$path))
-  expect_false(grepl("\\.\\.", skill$path))
+  expect_equal(skill$path, normalizePath(test_skill_path, winslash = "/", mustWork = TRUE))
 })
 
 test_that("Skill validates path argument", {

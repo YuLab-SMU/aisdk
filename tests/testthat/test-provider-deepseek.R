@@ -1,7 +1,6 @@
 # Tests for DeepSeek Provider
 library(testthat)
 library(aisdk)
-pkgload::load_all(export_all = FALSE, helpers = FALSE, quiet = TRUE)
 
 # Load helper functions (for environment variable handling)
 helper_path <- file.path(test_path("helper-env.R"))

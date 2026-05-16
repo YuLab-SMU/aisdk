@@ -211,6 +211,7 @@ generate_text <- function(model = NULL,
   initial_messages_len <- length(messages)
   step <- 0
   result <- NULL
+  run_id <- paste0("run_", generate_stable_id("generate_text", Sys.time(), stats::runif(1)))
 
   # Circuit breaker state
   breaker_state <- new.env(parent = emptyenv())
@@ -256,6 +257,7 @@ generate_text <- function(model = NULL,
           # If we've reached max_steps, return without executing
           if (step >= max_steps) {
             warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+            result$finish_reason <- "tool_failure"
             break
           }
 
@@ -313,7 +315,9 @@ generate_text <- function(model = NULL,
                   list(
                     id = tc$id,
                     name = tc$name,
-                    result = paste0("Error executing tool: ", conditionMessage(e))
+                    result = paste0("Error executing tool: ", conditionMessage(e)),
+                    raw_result = NULL,
+                    is_error = TRUE
                   )
                 })
               }
@@ -328,9 +332,10 @@ generate_text <- function(model = NULL,
 
           # --- Circuit Breaker: Detect consecutive tool result errors ---
           # Check if any tools returned errors (not exceptions, but error results)
-          error_count <- sum(sapply(tool_results, function(tr) {
-            isTRUE(tr$is_error) || (!is.null(tr$result) && grepl("^Error", as.character(tr$result)[1]))
-          }))
+          error_count <- sum(vapply(tool_results, function(tr) {
+            tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
+          }, logical(1)))
+          tool_result_breaker_triggered <- FALSE
 
           if (error_count > 0) {
             breaker_state$consecutive_result_errors <- breaker_state$consecutive_result_errors + 1
@@ -341,7 +346,7 @@ generate_text <- function(model = NULL,
                 " consecutive tool result errors. Consider asking user for help."
               )
               result$finish_reason <- "tool_result_failure"
-              break
+              tool_result_breaker_triggered <- TRUE
             }
           } else {
             # Reset counter on successful tool execution
@@ -396,6 +401,10 @@ generate_text <- function(model = NULL,
             messages <- c(messages, list(tool_result_msg))
           }
 
+          if (isTRUE(tool_result_breaker_triggered)) {
+            break
+          }
+
           # Continue loop
         } else {
           # No tool calls, we're done
@@ -403,7 +412,14 @@ generate_text <- function(model = NULL,
         }
       }
     },
-    error = handle_network_error
+    error = function(e) {
+      if (is_network_error_condition(e)) {
+        handle_network_error(e, rethrow = FALSE)
+        result <<- blocked_network_result(e, run_id = run_id)
+      } else {
+        stop(e)
+      }
+    }
   )
 
   # Add step information to result for debugging
@@ -415,13 +431,29 @@ generate_text <- function(model = NULL,
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
     result$all_tool_results <- all_tool_results
+    final_text <- result$text %||% NULL
+    if (!is.null(result$tool_calls) &&
+        length(result$tool_calls) > 0 &&
+        identical(result$finish_reason %||% "", "tool_result_failure")) {
+      final_text <- NULL
+    }
     result$messages_added <- build_messages_added(
       messages = messages,
       initial_len = initial_messages_len,
-      final_text = result$text %||% NULL,
+      final_text = final_text,
       final_reasoning = result$reasoning %||% NULL
     )
   }
+  result <- attach_run_state(
+    result,
+    run_state_from_result(
+      result = result,
+      step = step,
+      max_steps = max_steps,
+      all_tool_results = all_tool_results,
+      run_id = run_id
+    )
+  )
 
   # Trigger on_generation_end
   if (!is.null(hooks)) {
@@ -545,6 +577,7 @@ stream_text <- function(model = NULL,
   initial_messages_len <- length(messages)
   step <- 0
   result <- NULL
+  run_id <- paste0("run_", generate_stable_id("stream_text", Sys.time(), stats::runif(1)))
 
   renderer <- create_stream_renderer()
 
@@ -588,6 +621,7 @@ stream_text <- function(model = NULL,
           # If we've reached max_steps, return without executing
           if (step >= max_steps) {
             warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
+            result$finish_reason <- "tool_failure"
             break
           }
 
@@ -644,7 +678,9 @@ stream_text <- function(model = NULL,
                   list(
                     id = tc$id,
                     name = tc$name,
-                    result = paste0("Error executing tool: ", conditionMessage(e))
+                    result = paste0("Error executing tool: ", conditionMessage(e)),
+                    raw_result = NULL,
+                    is_error = TRUE
                   )
                 })
               }
@@ -658,12 +694,10 @@ stream_text <- function(model = NULL,
           all_tool_results <- c(all_tool_results, tool_results)
 
           # --- Circuit Breaker: Detect tool result errors ---
-          tool_result_error_count <- 0
-          for (tr in tool_results) {
-            if (isTRUE(tr$is_error)) {
-              tool_result_error_count <- tool_result_error_count + 1
-            }
-          }
+          tool_result_error_count <- sum(vapply(tool_results, function(tr) {
+            tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
+          }, logical(1)))
+          tool_result_breaker_triggered <- FALSE
 
           if (tool_result_error_count > 0) {
             breaker_state$consecutive_tool_result_errors <-
@@ -676,8 +710,8 @@ stream_text <- function(model = NULL,
                 " consecutive tool result errors. ",
                 "Tools returned errors but did not throw exceptions."
               )
-              result$finish_reason <- "tool_failure"
-              break
+              result$finish_reason <- "tool_result_failure"
+              tool_result_breaker_triggered <- TRUE
             }
           } else {
             breaker_state$consecutive_tool_result_errors <- 0
@@ -734,6 +768,10 @@ stream_text <- function(model = NULL,
             renderer$reset_for_new_step()
           }
 
+          if (isTRUE(tool_result_breaker_triggered)) {
+            break
+          }
+
           # Continue loop - next iteration will stream the response to the tool output
         } else {
           # No tool calls, we're done
@@ -741,7 +779,14 @@ stream_text <- function(model = NULL,
         }
       }
     },
-    error = handle_network_error
+    error = function(e) {
+      if (is_network_error_condition(e)) {
+        handle_network_error(e, rethrow = FALSE)
+        result <<- blocked_network_result(e, run_id = run_id)
+      } else {
+        stop(e)
+      }
+    }
   )
 
   # Add step info
@@ -752,13 +797,29 @@ stream_text <- function(model = NULL,
     result$steps <- step
     result$all_tool_calls <- all_tool_calls
     result$all_tool_results <- all_tool_results
+    final_text <- result$text %||% NULL
+    if (!is.null(result$tool_calls) &&
+        length(result$tool_calls) > 0 &&
+        identical(result$finish_reason %||% "", "tool_result_failure")) {
+      final_text <- NULL
+    }
     result$messages_added <- build_messages_added(
       messages = messages,
       initial_len = initial_messages_len,
-      final_text = result$text %||% NULL,
+      final_text = final_text,
       final_reasoning = result$reasoning %||% NULL
     )
   }
+  result <- attach_run_state(
+    result,
+    run_state_from_result(
+      result = result,
+      step = step,
+      max_steps = max_steps,
+      all_tool_results = all_tool_results,
+      run_id = run_id
+    )
+  )
 
   # Trigger on_generation_end
   if (!is.null(hooks)) {
@@ -793,17 +854,9 @@ create_embeddings <- function(model, value, registry = NULL) {
 # --- Internal Helper Functions ---
 
 #' @keywords internal
-handle_network_error <- function(e) {
+handle_network_error <- function(e, rethrow = TRUE) {
   # Check for common network error patterns
-  msg <- conditionMessage(e)
-  is_network_error <- any(sapply(c(
-    "cannot open the connection",
-    "Failed to perform HTTP request",
-    "timeout",
-    "operation timed out",
-    "Connection reset",
-    "host unreachable"
-  ), function(p) grepl(p, msg, ignore.case = TRUE)))
+  is_network_error <- is_network_error_condition(e)
 
   if (is_network_error) {
     if (requireNamespace("cli", quietly = TRUE)) {
@@ -822,8 +875,11 @@ handle_network_error <- function(e) {
     }
   }
 
-  # Re-throw to allow programmatic handling if needed
-  rlang::cnd_signal(e)
+  if (isTRUE(rethrow)) {
+    rlang::cnd_signal(e)
+  }
+
+  invisible(is_network_error)
 }
 
 #' @keywords internal

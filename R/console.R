@@ -24,9 +24,10 @@ NULL
 #' status bar, tool timeline, and overlay surfaces, while preserving an
 #' append-only terminal fallback.
 #'
-#' By default, the console operates in agent mode with tools for bash execution,
-#' file operations, R code execution, and more. Set `agent = NULL` for simple
-#' chat without tools.
+#' By default, the console operates in minimal agent mode with four tools:
+#' `bash`, `read_file`, `write_file`, and `edit_file`. Set
+#' `profile = "legacy"` to restore the previous broad all-in-one agent, or
+#' `agent = NULL` for simple chat without tools.
 #'
 #' @param session A ChatSession object, a LanguageModelV1 object, or a model string ID to create a new session.
 #' @param system_prompt Optional system prompt (merged with agent prompt if agent is used).
@@ -49,6 +50,9 @@ NULL
 #' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
 #' @param initial_prompt Optional user prompt to send automatically before
 #'   entering the interactive REPL.
+#' @param profile Console profile. `"minimal"` is the default Pi-like tool set;
+#'   `"legacy"` restores the previous all-in-one console agent.
+#' @param extensions Extension loading mode. Defaults to `"auto"`.
 #' @return The ChatSession object (invisibly) when chat ends.
 #' @export
 #' @examples
@@ -106,7 +110,9 @@ console_chat <- function(session = NULL,
                          sandbox_mode = "permissive",
                          show_thinking = verbose,
                          startup_dir = getwd(),
-                         initial_prompt = NULL) {
+                         initial_prompt = NULL,
+                         profile = c("minimal", "legacy"),
+                         extensions = "auto") {
   # Ensure cli package is available
   if (!requireNamespace("cli", quietly = TRUE)) {
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
@@ -125,6 +131,7 @@ console_chat <- function(session = NULL,
 
   verbose <- isTRUE(verbose)
   show_thinking <- isTRUE(show_thinking)
+  profile <- match.arg(profile)
 
   # Resolve agent
   agent_mode <- FALSE
@@ -134,7 +141,9 @@ console_chat <- function(session = NULL,
       startup_dir = startup_dir,
       sandbox_mode = sandbox_mode,
       skills = skills %||% "auto",
-      additional_tools = tools
+      additional_tools = tools,
+      profile = profile,
+      extensions = extensions
     )
     agent_mode <- TRUE
     tools <- NULL # Tools are now in the agent
@@ -215,11 +224,28 @@ console_chat <- function(session = NULL,
 
   session$merge_metadata(list(
     console_working_dir = working_dir,
-    console_startup_dir = startup_dir
+    console_startup_dir = startup_dir,
+    console_profile = profile,
+    console_session_store_root = file.path(startup_dir, ".aisdk", "sessions")
   ))
+  session_id <- console_session_id(session)
+  branch_tree <- console_branch_tree(session)
   assign(".console_working_dir", working_dir, envir = session$get_envir())
   assign(".console_startup_dir", startup_dir, envir = session$get_envir())
   assign(".session_model_id", session$get_model_id() %||% "", envir = session$get_envir())
+  extension_runtime <- console_extension_runtime_load(session, startup_dir = startup_dir, extensions = extensions)
+  console_append_session_event(
+    session,
+    type = "custom",
+    payload = list(
+      event = "console_start",
+      session_id = session_id,
+      profile = profile,
+      branch = branch_tree$active %||% "main",
+      extensions = names(extension_runtime$extensions)
+    ),
+    startup_dir = startup_dir
+  )
 
   view_mode <- if (isTRUE(verbose)) "debug" else "clean"
 
@@ -236,7 +262,7 @@ console_chat <- function(session = NULL,
   cli::cli_h1("R AI SDK Console Chat")
   if (agent_mode) {
     n_tools <- length(session$.__enclos_env__$private$.tools)
-    cli::cli_text("Agent mode: {.val enabled} ({n_tools} tools)")
+    cli::cli_text("Agent mode: {.val enabled} ({n_tools} tools, profile: {.val {profile}})")
   } else {
     cli::cli_text("Agent mode: {.val disabled} (simple chat)")
   }
@@ -246,6 +272,13 @@ console_chat <- function(session = NULL,
   input_state <- console_create_input_state(session)
   if (!is.null(initial_prompt) && nzchar(trimws(initial_prompt))) {
     console_input_history_add(input_state, initial_prompt)
+    console_append_session_event(
+      session,
+      type = "message",
+      payload = list(message = list(role = "user", content = initial_prompt)),
+      startup_dir = startup_dir,
+      visible = TRUE
+    )
     console_send_user_message(
       input = initial_prompt,
       session = session,
@@ -283,6 +316,23 @@ console_chat <- function(session = NULL,
     }
 
     # Check for commands
+    if (tolower(trimws(input)) %in% c("retry", "continue")) {
+      state <- session$get_run_state()
+      if (isTRUE(state$recoverable)) {
+        console_continue_run_action(
+          session = session,
+          action = "continue",
+          guidance = NULL,
+          stream = stream,
+          verbose = verbose,
+          show_thinking = show_thinking,
+          app_state = app_state
+        )
+        cli::cli_text("")
+        next
+      }
+    }
+
     if (startsWith(input, "/")) {
       result <- handle_command(
         input,
@@ -307,6 +357,13 @@ console_chat <- function(session = NULL,
       next
     }
 
+    console_append_session_event(
+      session,
+      type = "message",
+      payload = list(message = list(role = "user", content = input)),
+      startup_dir = startup_dir,
+      visible = TRUE
+    )
     console_send_user_message(
       input = input,
       session = session,
@@ -314,6 +371,12 @@ console_chat <- function(session = NULL,
       verbose = verbose,
       show_thinking = show_thinking,
       app_state = app_state
+    )
+    console_append_session_event(
+      session,
+      type = "run_state",
+      payload = session$get_run_state(),
+      startup_dir = startup_dir
     )
     cli::cli_text("")
   }
@@ -327,7 +390,9 @@ console_send_user_message <- function(input,
                                       stream,
                                       verbose = FALSE,
                                       show_thinking = verbose,
-                                      app_state = NULL) {
+                                      app_state = NULL,
+                                      check_tool_failures = TRUE,
+                                      continue_incomplete = TRUE) {
   if (is.null(session$get_model_id())) {
     cli::cli_alert_danger("No model set. Use {.code /model <id>} first.")
     cli::cli_alert_info("Example: {.code /model openai:gpt-4o}")
@@ -353,7 +418,7 @@ console_send_user_message <- function(input,
         code = {
           if (stream) {
             md_renderer <- create_markdown_stream_renderer()
-            session$send_stream(
+            generation_result <- session$send_stream(
               input,
               turn_system_prompt = turn_system_prompt,
               callback = function(text, done) {
@@ -367,8 +432,6 @@ console_send_user_message <- function(input,
                 }
               }
             )
-            # For streaming, we can't easily get the result, so skip failure detection
-            # This is a limitation we'll document
           } else {
             md_renderer <- create_markdown_stream_renderer()
             generation_result <- session$send(input, turn_system_prompt = turn_system_prompt)
@@ -387,12 +450,49 @@ console_send_user_message <- function(input,
         }
       )
       if (!is.null(app_state)) {
-        console_app_finish_turn(app_state, failed = FALSE)
+        turn_failed <- !is.null(generation_result) &&
+          (generation_result$finish_reason %||% "") %in% c("tool_failure", "tool_result_failure")
+        console_app_finish_turn(app_state, failed = turn_failed)
       }
+      console_record_generation_events(session, generation_result)
 
       # Failure detection: check if any tools failed repeatedly
-      if (!is.null(generation_result) && !is.null(generation_result$all_tool_results)) {
-        console_check_tool_failures(generation_result$all_tool_results, session)
+      if (isTRUE(check_tool_failures) && !is.null(generation_result) && !is.null(generation_result$all_tool_results)) {
+        recovery_action <- console_check_tool_failures(generation_result$all_tool_results, session)
+        if (!is.null(recovery_action) && !is.null(recovery_action$action)) {
+          console_continue_run_action(
+            session = session,
+            action = recovery_action$action,
+            guidance = recovery_action$guidance %||% recovery_action$prompt %||% NULL,
+            stream = stream,
+            verbose = verbose,
+            show_thinking = show_thinking,
+            app_state = app_state
+          )
+        }
+      }
+
+      if (isTRUE(continue_incomplete) && console_generation_looks_incomplete(generation_result)) {
+        incomplete_state <- new_run_state(
+          status = "incomplete_action",
+          stop_reason = "assistant_promised_action_without_tool_call",
+          recoverable = TRUE,
+          failure_summary = generation_result$text %||% NULL,
+          pending_action = "continue",
+          last_tool_results = run_state_tool_results_tail(generation_result$all_tool_results %||% list())
+        )
+        generation_result$run_state <- incomplete_state
+        session$set_run_state(incomplete_state)
+        cli::cli_alert_info("Assistant ended after promising another action; continuing once.")
+        console_continue_run_action(
+          session = session,
+          action = "continue",
+          guidance = console_incomplete_continuation_prompt(generation_result),
+          stream = stream,
+          verbose = verbose,
+          show_thinking = show_thinking,
+          app_state = app_state
+        )
       }
     },
     interrupt = function(e) {
@@ -428,6 +528,328 @@ console_send_user_message <- function(input,
     )
   }
   invisible(ok)
+}
+
+#' @keywords internal
+console_generation_looks_incomplete <- function(generation_result) {
+  if (is.null(generation_result)) {
+    return(FALSE)
+  }
+  if (length(generation_result$all_tool_results %||% list()) == 0) {
+    return(FALSE)
+  }
+  if (!is.null(generation_result$tool_calls) && length(generation_result$tool_calls) > 0) {
+    return(FALSE)
+  }
+
+  text <- trimws(generation_result$text %||% "")
+  if (!nzchar(text)) {
+    return(FALSE)
+  }
+  if (grepl("[.!?。！？]$", text)) {
+    return(FALSE)
+  }
+
+  console_text_promises_action(text)
+}
+
+#' @keywords internal
+console_text_promises_action <- function(text) {
+  text <- trimws(text %||% "")
+  if (!nzchar(text)) {
+    return(FALSE)
+  }
+  if (grepl("[.!?。！？]$", text)) {
+    return(FALSE)
+  }
+
+  starts_like_action <- grepl(
+    "^(now|next|then|let me|i'?ll|i will|retrying|installing|checking|running|trying|found it\\b)",
+    text,
+    ignore.case = TRUE
+  )
+  contains_action_promise <- grepl(
+    "\\b(now|next|let me|i'?ll|i will|going to|retry|install|check|run|try)\\b",
+    text,
+    ignore.case = TRUE
+  )
+
+  starts_like_action || contains_action_promise
+}
+
+#' @keywords internal
+console_record_generation_events <- function(session, generation_result) {
+  if (is.null(session) || !inherits(session, "ChatSession") || is.null(generation_result)) {
+    return(invisible(FALSE))
+  }
+  startup <- console_session_directory(session, key = "console_startup_dir", default = getwd())
+  for (tc in generation_result$all_tool_calls %||% list()) {
+    console_append_session_event(
+      session,
+      type = "tool_call",
+      payload = list(
+        id = tc$id %||% NULL,
+        name = tc$name %||% NULL,
+        arguments = tc$arguments %||% list()
+      ),
+      startup_dir = startup
+    )
+  }
+  for (tr in generation_result$all_tool_results %||% list()) {
+    console_append_session_event(
+      session,
+      type = "tool_result",
+      payload = list(
+        id = tr$id %||% NULL,
+        name = tr$name %||% NULL,
+        is_error = isTRUE(tr$is_error),
+        result = tr$result %||% NULL
+      ),
+      startup_dir = startup
+    )
+  }
+  if (nzchar(generation_result$text %||% "")) {
+    console_append_session_event(
+      session,
+      type = "message",
+      payload = list(message = list(role = "assistant", content = generation_result$text)),
+      startup_dir = startup,
+      visible = TRUE
+    )
+  }
+  if (!is.null(generation_result$run_state)) {
+    console_append_session_event(
+      session,
+      type = "run_state",
+      payload = generation_result$run_state,
+      startup_dir = startup
+    )
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_incomplete_continuation_prompt <- function(generation_result) {
+  paste(
+    "Your previous assistant message appeared to promise another action, but it ended without a tool call.",
+    "Continue now by either calling the appropriate tool immediately or, if no further tool call is needed, give the final answer.",
+    "Do not restate the plan without acting.",
+    paste0("Previous assistant message: ", generation_result$text %||% "")
+  )
+}
+
+#' @keywords internal
+console_continue_run_action <- function(session,
+                                        action = "continue",
+                                        guidance = NULL,
+                                        stream = TRUE,
+                                        verbose = FALSE,
+                                        show_thinking = verbose,
+                                        app_state = NULL) {
+  if (is.null(session) || !inherits(session, "ChatSession")) {
+    return(invisible(FALSE))
+  }
+
+  action <- normalize_continue_action(action)
+  if (identical(action, "manual")) {
+    session$continue_run(action = "manual", guidance = guidance, stream = stream)
+    cli::cli_alert_info("Manual intervention selected. Continue when ready.")
+    return(invisible(TRUE))
+  }
+
+  cli::cli_text("")
+  cli::cli_text(cli::col_green(cli::symbol$pointer), " ", cli::col_green("Assistant:"))
+  result <- NULL
+  md_renderer <- create_markdown_stream_renderer()
+  tryCatch(
+    {
+      with_console_chat_display(
+        app_state = app_state,
+        code = {
+          if (isTRUE(stream)) {
+            result <- session$continue_run(
+              action = action,
+              guidance = guidance,
+              stream = TRUE,
+              callback = function(text, done) {
+                if (isTRUE(done)) {
+                  md_renderer$process_chunk(NULL, TRUE)
+                } else {
+                  if (!is.null(app_state)) {
+                    console_app_append_assistant_text(app_state, text)
+                  }
+                  md_renderer$process_chunk(text, FALSE)
+                }
+              }
+            )
+          } else {
+            result <- session$continue_run(
+              action = action,
+              guidance = guidance,
+              stream = FALSE
+            )
+            if (!is.null(result$text)) {
+              if (!is.null(app_state)) {
+                console_app_append_assistant_text(app_state, result$text)
+              }
+              md_renderer$process_chunk(result$text, FALSE)
+              md_renderer$process_chunk(NULL, TRUE)
+            }
+          }
+        }
+      )
+      if (!is.null(app_state)) {
+        failed <- (result$run_state$status %||% "") %in% c("tool_failed", "tool_result_failed", "blocked_network", "max_steps", "needs_user")
+        console_app_finish_turn(app_state, failed = failed)
+      }
+      if (!is.null(result) && console_continuation_still_incomplete(result)) {
+        needs_user_state <- new_run_state(
+          status = "needs_user",
+          stop_reason = "repeated_incomplete_action",
+          recoverable = TRUE,
+          failure_summary = result$text %||% NULL,
+          pending_action = "ask_user",
+          last_tool_results = run_state_tool_results_tail(result$all_tool_results %||% list())
+        )
+        result$run_state <- needs_user_state
+        session$set_run_state(needs_user_state)
+        cli::cli_alert_warning("Assistant still did not act after continuation. Marked run as needing user input.")
+      }
+      console_record_generation_events(session, result)
+      invisible(TRUE)
+    },
+    error = function(e) {
+      tryCatch(md_renderer$process_chunk(NULL, TRUE), error = function(e) NULL)
+      if (!is.null(app_state)) {
+        console_app_finish_turn(app_state, failed = TRUE)
+      }
+      cli::cli_alert_danger("Error: {conditionMessage(e)}")
+      invisible(FALSE)
+    }
+  )
+}
+
+#' @keywords internal
+console_continuation_still_incomplete <- function(generation_result) {
+  if (is.null(generation_result)) {
+    return(FALSE)
+  }
+  has_tool_calls <- length(generation_result$all_tool_calls %||% generation_result$tool_calls %||% list()) > 0
+  if (isTRUE(has_tool_calls)) {
+    return(FALSE)
+  }
+  console_text_promises_action(generation_result$text %||% "")
+}
+
+#' @keywords internal
+console_print_run_state <- function(run_state) {
+  run_state <- run_state %||% new_run_state(status = "running", stop_reason = "not_started")
+  cli::cli_h2("Run State")
+  cli::cli_ul(c(
+    paste0("Run id: ", run_state$run_id %||% "(none)"),
+    paste0("Status: ", run_state$status %||% "unknown"),
+    paste0("Stop reason: ", run_state$stop_reason %||% "unknown"),
+    paste0("Recoverable: ", if (isTRUE(run_state$recoverable)) "yes" else "no"),
+    paste0("Pending action: ", run_state$pending_action %||% "(none)")
+  ))
+  if (nzchar(run_state$failure_summary %||% "")) {
+    cli::cli_text("Failure summary:")
+    cli::cli_text(compact_text_preview(run_state$failure_summary, width = 800))
+  }
+  tool_results <- run_state$last_tool_results %||% list()
+  if (length(tool_results) > 0) {
+    cli::cli_text("Last tool results:")
+    cli::cli_ul(vapply(tool_results, function(tr) {
+      sprintf(
+        "%s [%s]: %s",
+        tr$name %||% "unknown",
+        if (isTRUE(tr$is_error)) "error" else "ok",
+        tr$result %||% ""
+      )
+    }, character(1)))
+  }
+  invisible(run_state)
+}
+
+#' @keywords internal
+console_print_branch_tree <- function(session) {
+  tree <- console_branch_tree(session)
+  cli::cli_h2("Session Tree")
+  cli::cli_text("Active: {.val {tree$active %||% 'main'}}")
+  branches <- tree$branches %||% list()
+  cli::cli_ul(vapply(branches, function(branch) {
+    marker <- if (identical(branch$id, tree$active)) "*" else " "
+    sprintf(
+      "%s %s (%s) parent=%s",
+      marker,
+      branch$id %||% "",
+      branch$name %||% "",
+      branch$parent %||% "(none)"
+    )
+  }, character(1)))
+  invisible(tree)
+}
+
+#' @keywords internal
+console_get_extension_runtime <- function(session) {
+  runtime <- tryCatch(get(".console_extension_runtime", envir = session$get_envir(), inherits = FALSE), error = function(e) NULL)
+  if (!is.null(runtime) && is.environment(runtime)) {
+    return(runtime)
+  }
+  startup <- console_session_directory(session, key = "console_startup_dir", default = getwd())
+  console_extension_runtime_load(session, startup_dir = startup)
+}
+
+#' @keywords internal
+console_handle_extension_command <- function(session, args = character()) {
+  runtime <- console_get_extension_runtime(session)
+  subcmd <- tolower(args[1] %||% "list")
+  startup <- console_session_directory(session, key = "console_startup_dir", default = getwd())
+
+  if (subcmd %in% c("list", "ls")) {
+    cli::cli_h2("Extensions")
+    cli::cli_ul(console_extension_summary_lines(runtime))
+    return(invisible(runtime))
+  }
+  if (subcmd %in% c("reload", "refresh")) {
+    runtime <- console_extension_runtime_load(session, startup_dir = startup)
+    console_append_session_event(
+      session,
+      type = "custom",
+      payload = list(event = "extensions_reload", extensions = names(runtime$extensions)),
+      startup_dir = startup
+    )
+    cli::cli_alert_success("Reloaded extensions: {.val {length(runtime$extensions)}}.")
+    return(invisible(runtime))
+  }
+  if (subcmd == "enable") {
+    id <- args[2] %||% ""
+    expose_tools <- any(args %in% c("--tools", "tools"))
+    if (!nzchar(id)) {
+      cli::cli_alert_danger("Usage: {.code /ext enable <id> [--tools]}")
+      return(invisible(runtime))
+    }
+    if (is.null(runtime$extensions[[id]])) {
+      cli::cli_alert_danger("Unknown extension: {.val {id}}")
+      return(invisible(runtime))
+    }
+    if (isTRUE(expose_tools)) {
+      runtime$enabled_tools <- unique(c(runtime$enabled_tools %||% character(0), runtime$extensions[[id]]$tools %||% character(0)))
+      cli::cli_alert_success("Enabled tools for extension {.val {id}}. Restart console_chat() to rebuild LLM tool context.")
+    } else {
+      cli::cli_alert_success("Extension {.val {id}} commands are available.")
+    }
+    console_append_session_event(
+      session,
+      type = "custom",
+      payload = list(event = "extension_enable", id = id, tools = expose_tools),
+      startup_dir = startup
+    )
+    return(invisible(runtime))
+  }
+
+  cli::cli_alert_danger("Usage: {.code /ext [list|reload|enable <id> --tools]}")
+  invisible(runtime)
 }
 
 #' @keywords internal
@@ -1506,6 +1928,12 @@ handle_command <- function(input,
         "{.code /persona default} - Return to the built-in default persona",
         "{.code /skills [list|reload|roots]} - Inspect or reload live skills",
         "{.code /feishu} - Launch the Feishu setup wizard",
+        "{.code /run-state} - Show why the last run stopped and whether it can continue",
+        "{.code retry} or {.code /continue} - Continue a recoverable stopped run",
+        "{.code /tree}, {.code /fork [name]}, {.code /checkout <id>} - Manage the session branch tree",
+        "{.code /summarize-branch <text>} - Store a branch summary as model-visible context",
+        "{.code /resume} - Show the JSONL event store path and recent events",
+        "{.code /ext [list|reload|enable <id> --tools]} - Manage console extensions",
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
         "{.code /clear} - Clear conversation history",
@@ -1518,6 +1946,7 @@ handle_command <- function(input,
         "{.code /inspect close} - Close the active inspect overlay",
         "{.code /debug [on|off]} - Toggle detailed tool and thinking output",
         "{.code /local [on|off]} - Toggle local execution mode",
+        "{.code /mode minimal|legacy} - Show or switch the console profile for future sessions",
         "{.code /help} - Show this help message"
       ))
     },
@@ -1868,6 +2297,90 @@ handle_command <- function(input,
         cli::cli_alert_info(wizard_result$summary %||% "Feishu setup finished.")
       }
     },
+    "/run-state" = ,
+    "/runstate" = {
+      console_print_run_state(session$get_run_state())
+    },
+    "/tree" = {
+      console_print_branch_tree(session)
+    },
+    "/fork" = {
+      name <- if (length(args) > 0) paste(args, collapse = " ") else NULL
+      branch_id <- console_fork_branch(session, name = name)
+      console_append_session_event(
+        session,
+        type = "branch_summary",
+        payload = list(action = "fork", branch_id = branch_id, name = name %||% branch_id),
+        startup_dir = console_session_directory(session, key = "console_startup_dir", default = getwd())
+      )
+      cli::cli_alert_success("Forked branch {.val {branch_id}}.")
+      result$refresh_status <- TRUE
+    },
+    "/checkout" = {
+      if (length(args) == 0) {
+        cli::cli_alert_danger("Usage: {.code /checkout <branch_id>}")
+      } else if (console_checkout_branch(session, args[1])) {
+        cli::cli_alert_success("Checked out branch {.val {args[1]}}.")
+        result$refresh_status <- TRUE
+      } else {
+        cli::cli_alert_danger("Unknown branch: {.val {args[1]}}")
+      }
+    },
+    "/summarize-branch" = {
+      summary <- trimws(paste(args, collapse = " "))
+      if (!nzchar(summary)) {
+        cli::cli_alert_danger("Usage: {.code /summarize-branch <summary text>}")
+      } else {
+        console_set_branch_summary(session, summary)
+        session$append_message("system", paste0("[branch_summary]\n", summary))
+        console_append_session_event(
+          session,
+          type = "custom_message",
+          payload = list(message = list(role = "system", content = paste0("[branch_summary]\n", summary))),
+          startup_dir = console_session_directory(session, key = "console_startup_dir", default = getwd()),
+          visible = TRUE
+        )
+        cli::cli_alert_success("Branch summary stored and added to model-visible context.")
+      }
+    },
+    "/resume" = {
+      startup <- console_session_directory(session, key = "console_startup_dir", default = getwd())
+      path <- console_session_event_path(session, startup_dir = startup)
+      events <- console_read_session_events(session, startup_dir = startup)
+      cli::cli_h2("Session Event Store")
+      cli::cli_text("Path: {.file {path}}")
+      cli::cli_text("Events: {.val {length(events)}}")
+      if (length(events) > 0) {
+        recent <- utils::tail(events, 5)
+        cli::cli_ul(vapply(recent, function(event) {
+          paste0(event$type %||% "unknown", " @ ", event$timestamp %||% "")
+        }, character(1)))
+      }
+    },
+    "/ext" = ,
+    "/extension" = ,
+    "/extensions" = {
+      console_handle_extension_command(session, args)
+    },
+    "/continue" = ,
+    "/retry" = {
+      action <- if (length(args) > 0) args[1] else "continue"
+      guidance <- if (length(args) > 1) paste(args[-1], collapse = " ") else NULL
+      tryCatch(
+        {
+          console_continue_run_action(
+            session = session,
+            action = action,
+            guidance = guidance,
+            stream = stream,
+            verbose = verbose,
+            show_thinking = show_thinking,
+            app_state = app_state
+          )
+        },
+        error = function(e) cli::cli_alert_danger(conditionMessage(e))
+      )
+    },
     "/history" = {
       history <- session$get_history()
       if (length(history) == 0) {
@@ -2063,6 +2576,20 @@ handle_command <- function(input,
         }
       }
     },
+    "/mode" = {
+      if (length(args) == 0) {
+        cli::cli_text("Console profile: {.val {session$get_metadata('console_profile', default = 'minimal')}}")
+      } else {
+        mode <- tolower(args[1])
+        if (!mode %in% c("minimal", "legacy")) {
+          cli::cli_alert_danger("Usage: {.code /mode minimal|legacy}")
+        } else {
+          session$set_metadata("console_profile", mode)
+          cli::cli_alert_success("Console profile set to {.val {mode}} for session metadata. Restart console_chat() to rebuild the default tool set.")
+          result$refresh_status <- TRUE
+        }
+      }
+    },
 
     # Unknown command
     {
@@ -2198,22 +2725,22 @@ with_console_chat_display <- function(verbose = FALSE,
 #' @param tool_results List of tool results from generation
 #' @param session ChatSession object
 #' @param threshold Minimum number of failures to trigger prompt (default: 2)
-#' @return Invisible NULL
+#' @return A selected recovery action list, or NULL.
 #' @keywords internal
 console_check_tool_failures <- function(tool_results, session, threshold = 2) {
   if (!interactive()) {
-    return(invisible(NULL))
+    return(NULL)
   }
 
   if (is.null(tool_results) || length(tool_results) == 0) {
-    return(invisible(NULL))
+    return(NULL)
   }
 
   # Analyze failures
   failure_counts <- analyze_tool_failures(tool_results)
 
   if (length(failure_counts) == 0) {
-    return(invisible(NULL))
+    return(NULL)
   }
 
   # Check each tool that has failures
@@ -2253,9 +2780,9 @@ console_check_tool_failures <- function(tool_results, session, threshold = 2) {
       )
 
       # Handle user's choice
-      handle_user_choice(response, tool_name, session)
+      return(handle_user_choice(response, tool_name, session, last_error = last_error))
     }
   }
 
-  invisible(NULL)
+  NULL
 }

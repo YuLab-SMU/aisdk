@@ -387,7 +387,7 @@ resolve_console_startup_model <- function(project_path = ".Renviron",
                                           global_rprofile_path = "~/.Rprofile",
                                           apply_profile_fn = apply_console_profile) {
   # Priority 1: Check runtime default from set_model() first
-  runtime_default <- tryCatch(get_model(default = NULL), error = function(e) NULL)
+  runtime_default <- tryCatch(get_explicit_default_model(), error = function(e) NULL)
   model_id <- ""
 
   if (!is.null(runtime_default)) {
@@ -430,7 +430,8 @@ resolve_console_startup_model <- function(project_path = ".Renviron",
     return(list(model_id = NULL, source = "invalid_default", profile = profile))
   }
 
-  source_label <- if (!is.null(runtime_default)) "runtime_default" else "saved_default"
+  saved_source <- if (exists("saved_default", inherits = FALSE)) saved_default$source %||% "saved_default" else "saved_default"
+  source_label <- if (!is.null(runtime_default)) "runtime_default" else saved_source
   list(model_id = model_id, source = source_label, profile = profile)
 }
 

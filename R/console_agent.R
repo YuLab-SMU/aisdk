@@ -10,13 +10,17 @@ NULL
 #' @title Create Console Tools
 #' @description
 #' Create a set of tools optimized for console/terminal interaction.
-#' Includes computer tools (bash, read_file, write_file, execute_r_code)
-#' plus additional console-specific tools.
+#' The default `"minimal"` profile exposes only `bash`, `read_file`,
+#' `write_file`, and `edit_file`. Use `profile = "legacy"` for the prior
+#' broad tool surface including R, image, Feishu, skill, and inspection tools.
 #'
 #'
 #' @param working_dir Working directory for sandboxed tool execution. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none" (default: "permissive").
 #' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
+#' @param profile Console profile. `"minimal"` is the default Pi-like tool set;
+#'   `"legacy"` restores the previous all-in-one console tools.
+#' @param extensions Extension loading mode. Defaults to `"auto"`.
 #' @return A list of Tool objects.
 #' @export
 #' @examples
@@ -29,7 +33,10 @@ NULL
 #' }
 create_console_tools <- function(working_dir = tempdir(),
                                  sandbox_mode = "permissive",
-                                 startup_dir = working_dir) {
+                                 startup_dir = working_dir,
+                                 profile = c("minimal", "legacy"),
+                                 extensions = "auto") {
+    profile <- match.arg(profile)
     working_dir <- normalizePath(working_dir, winslash = "/", mustWork = FALSE)
     startup_dir <- normalizePath(startup_dir, winslash = "/", mustWork = FALSE)
 
@@ -41,6 +48,13 @@ create_console_tools <- function(working_dir = tempdir(),
     computer_tools <- create_computer_tools(
         computer = computer
     )
+    if (identical(profile, "minimal")) {
+        return(Filter(
+            function(tool_obj) tool_obj$name %in% c("bash", "read_file", "write_file", "edit_file"),
+            computer_tools
+        ))
+    }
+
     computer_tools <- Filter(
         function(tool_obj) !tool_obj$name %in% c("read_file", "execute_r_code"),
         computer_tools
@@ -1233,6 +1247,9 @@ create_console_tools <- function(working_dir = tempdir(),
 #' @param language Language for responses: "auto", "en", or "zh" (default: "auto").
 #' @param startup_dir R session startup directory used for project-aware context. Defaults to `getwd()`.
 #' @param skills Optional skill paths, `"auto"`, or a SkillRegistry object.
+#' @param profile Console profile. `"minimal"` is the default Pi-like tool set;
+#'   `"legacy"` restores the previous all-in-one console agent.
+#' @param extensions Extension loading mode. Defaults to `"auto"`.
 #' @return An Agent object configured for console interaction.
 #' @export
 #' @examples
@@ -1253,7 +1270,10 @@ create_console_agent <- function(working_dir = tempdir(),
                                  additional_tools = NULL,
                                  language = "auto",
                                  startup_dir = working_dir,
-                                 skills = "auto") {
+                                 skills = "auto",
+                                 profile = c("minimal", "legacy"),
+                                 extensions = "auto") {
+    profile <- match.arg(profile)
     # Resolve working directory
     working_dir <- normalizePath(working_dir, winslash = "/", mustWork = FALSE)
     startup_dir <- normalizePath(startup_dir, winslash = "/", mustWork = FALSE)
@@ -1262,18 +1282,28 @@ create_console_agent <- function(working_dir = tempdir(),
     tools <- create_console_tools(
         working_dir = working_dir,
         startup_dir = startup_dir,
-        sandbox_mode = sandbox_mode
+        sandbox_mode = sandbox_mode,
+        profile = profile,
+        extensions = extensions
     )
 
     # Add any additional tools
+    extension_runtime <- console_extension_runtime_load(session = NULL, startup_dir = startup_dir, extensions = extensions)
+    extension_tools <- console_extension_tools(extension_runtime)
+    if (length(extension_tools) > 0) {
+        tools <- c(tools, extension_tools)
+    }
+
     if (!is.null(additional_tools)) {
         tools <- c(tools, additional_tools)
     }
 
     # Build system prompt
-    system_prompt <- build_console_system_prompt(working_dir, startup_dir, sandbox_mode, language)
+    system_prompt <- build_console_system_prompt(working_dir, startup_dir, sandbox_mode, language, profile = profile)
 
-    skill_registry <- if (identical(skills, "auto")) {
+    skill_registry <- if (identical(profile, "minimal")) {
+        NULL
+    } else if (identical(skills, "auto")) {
         create_auto_skill_registry(project_dir = startup_dir, recursive = TRUE)
     } else {
         skills
@@ -1298,7 +1328,8 @@ create_console_agent <- function(working_dir = tempdir(),
 #' @param language Language preference.
 #' @return System prompt string.
 #' @keywords internal
-build_console_system_prompt <- function(working_dir, startup_dir, sandbox_mode, language) {
+build_console_system_prompt <- function(working_dir, startup_dir, sandbox_mode, language, profile = c("minimal", "legacy")) {
+    profile <- match.arg(profile)
     # Detect language preference
     lang_hint <- if (language == "auto") {
         "Respond in the same language as the user's message."
@@ -1306,6 +1337,23 @@ build_console_system_prompt <- function(working_dir, startup_dir, sandbox_mode, 
         "Respond in Chinese (\u4e2d\u6587)."
     } else {
         "Respond in English."
+    }
+
+    if (identical(profile, "minimal")) {
+        return(paste0(
+            "You are R AI SDK Terminal Assistant.\n\n",
+            "Use a small computer tool set: `bash`, `read_file`, `write_file`, and `edit_file`.\n",
+            "Act directly when the task is clear. For file edits, read the file first, then use `edit_file` for targeted replacements or `write_file` for complete writes.\n",
+            "If a tool fails, use the error as evidence and change approach instead of repeating the same call.\n",
+            "Ask the user only when a decision or missing input blocks progress.\n\n",
+            "Language: ", lang_hint, "\n\n",
+            "Safety: you operate in ", sandbox_mode, " sandbox mode. Confirm destructive operations before proceeding.\n\n",
+            "Context:\n",
+            "- Working Directory: ", working_dir, "\n",
+            "- R Startup Directory: ", startup_dir, "\n",
+            "- Operating System: ", Sys.info()["sysname"], "\n",
+            "- R Version: ", R.Version()$version.string, "\n"
+        ))
     }
 
     paste0(

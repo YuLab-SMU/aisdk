@@ -185,6 +185,11 @@ get_model <- function(default = "openai:gpt-4o") {
   current %||% default
 }
 
+#' @keywords internal
+get_explicit_default_model <- function() {
+  .model_env$default %||% getOption("aisdk.default_model", NULL)
+}
+
 #' @title Set Default Model
 #' @description
 #' Sets the package-wide default language model. Pass `NULL` to restore the

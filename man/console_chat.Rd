@@ -17,7 +17,9 @@ console_chat(
   sandbox_mode = "permissive",
   show_thinking = verbose,
   startup_dir = getwd(),
-  initial_prompt = NULL
+  initial_prompt = NULL,
+  profile = c("minimal", "legacy"),
+  extensions = "auto"
 )
 }
 \arguments{
@@ -56,6 +58,11 @@ provider exposes them. Defaults to \code{verbose}.}
 
 \item{initial_prompt}{Optional user prompt to send automatically before
 entering the interactive REPL.}
+
+\item{profile}{Console profile. \code{"minimal"} is the default Pi-like tool set;
+\code{"legacy"} restores the previous all-in-one console agent.}
+
+\item{extensions}{Extension loading mode. Defaults to \code{"auto"}.}
 }
 \value{
 The ChatSession object (invisibly) when chat ends.
@@ -78,9 +85,10 @@ specific tool. The current implementation uses a shared frame builder for the
 status bar, tool timeline, and overlay surfaces, while preserving an
 append-only terminal fallback.
 
-By default, the console operates in agent mode with tools for bash execution,
-file operations, R code execution, and more. Set \code{agent = NULL} for simple
-chat without tools.
+By default, the console operates in minimal agent mode with four tools:
+\code{bash}, \code{read_file}, \code{write_file}, and \code{edit_file}. Set
+\code{profile = "legacy"} to restore the previous broad all-in-one agent, or
+\code{agent = NULL} for simple chat without tools.
 }
 \examples{
 \donttest{

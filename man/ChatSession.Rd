@@ -13,6 +13,7 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-new}{\code{ChatSession$new()}}
 \item \href{#method-ChatSession-send}{\code{ChatSession$send()}}
 \item \href{#method-ChatSession-send_stream}{\code{ChatSession$send_stream()}}
+\item \href{#method-ChatSession-continue_run}{\code{ChatSession$continue_run()}}
 \item \href{#method-ChatSession-append_message}{\code{ChatSession$append_message()}}
 \item \href{#method-ChatSession-get_history}{\code{ChatSession$get_history()}}
 \item \href{#method-ChatSession-get_last_response}{\code{ChatSession$get_last_response()}}
@@ -36,6 +37,8 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-restore_from_list}{\code{ChatSession$restore_from_list()}}
 \item \href{#method-ChatSession-print}{\code{ChatSession$print()}}
 \item \href{#method-ChatSession-get_memory}{\code{ChatSession$get_memory()}}
+\item \href{#method-ChatSession-get_run_state}{\code{ChatSession$get_run_state()}}
+\item \href{#method-ChatSession-set_run_state}{\code{ChatSession$set_run_state()}}
 \item \href{#method-ChatSession-set_memory}{\code{ChatSession$set_memory()}}
 \item \href{#method-ChatSession-list_memory}{\code{ChatSession$list_memory()}}
 \item \href{#method-ChatSession-get_metadata}{\code{ChatSession$get_metadata()}}
@@ -157,7 +160,41 @@ Send a message with streaming output.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisible NULL (output is via callback).
+The GenerateResult object invisibly (output is via callback).
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-continue_run"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-continue_run}{}}}
+\subsection{Method \code{continue_run()}}{
+Continue a recoverable previous run with structured action.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$continue_run(
+  action = "continue",
+  guidance = NULL,
+  stream = TRUE,
+  callback = NULL,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{action}}{One of "continue", "give_up", "avoid_tool", "explain", or "manual".}
+
+\item{\code{guidance}}{Optional operator guidance to include in the continuation.}
+
+\item{\code{stream}}{Whether to use streaming generation.}
+
+\item{\code{callback}}{Streaming callback when \code{stream = TRUE}.}
+
+\item{\code{...}}{Additional arguments passed to send/send_stream.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The GenerateResult object, or an invisible needs-user result for manual action.
 }
 }
 \if{html}{\out{<hr>}}
@@ -563,6 +600,39 @@ Get a value from shared memory.
 }
 \subsection{Returns}{
 The stored value or default.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-get_run_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-get_run_state}{}}}
+\subsection{Method \code{get_run_state()}}{
+Return the most recent structured run state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$get_run_state()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A run state list.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-set_run_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-set_run_state}{}}}
+\subsection{Method \code{set_run_state()}}{
+Store the current structured run state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$set_run_state(run_state)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{run_state}}{A run state list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisible self.
 }
 }
 \if{html}{\out{<hr>}}

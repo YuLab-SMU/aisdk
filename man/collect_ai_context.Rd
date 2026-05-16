@@ -26,7 +26,7 @@ document context is used when available.}
 \item{traceback}{Optional traceback text. Defaults to \code{traceback()} output.}
 
 \item{warnings}{Optional warning text or warning object. Defaults to
-\code{.Last.warning} when present.}
+R's \code{last.warning} context when present.}
 
 \item{include}{Character vector of sections to include.}
 

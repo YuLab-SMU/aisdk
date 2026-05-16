@@ -752,6 +752,30 @@ find_tool <- function(tools, name) {
   NULL
 }
 
+#' @keywords internal
+tool_result_indicates_error <- function(result, raw_result = result) {
+  if (!is.null(raw_result) && is.list(raw_result) && isTRUE(raw_result$error)) {
+    return(TRUE)
+  }
+  if (!is.null(result) && is.list(result) && isTRUE(result$error)) {
+    return(TRUE)
+  }
+  if (isTRUE(attr(result, "is_error", exact = TRUE))) {
+    return(TRUE)
+  }
+
+  if (is.character(result) && length(result) > 0) {
+    text <- trimws(paste(result, collapse = " "))
+    return(grepl(
+      "^(Error\\b|Error:|Error \\(|Error executing|Tool execution denied|Sandbox violation:)",
+      text,
+      ignore.case = TRUE
+    ))
+  }
+
+  FALSE
+}
+
 #' @title Execute Tool Calls
 #' @description
 #' Execute a list of tool calls returned by an LLM. This function safely
@@ -858,13 +882,14 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
           }
         }
 
-        # Trigger tool end hook only on success
+        result_is_error <- tool_result_indicates_error(result, raw_result)
+
         if (!is.null(hooks)) {
           hooks$trigger_tool_end(
             tool_obj,
             result,
-            success = TRUE,
-            error = NULL,
+            success = !result_is_error,
+            error = if (result_is_error) result else NULL,
             args = tc$arguments
           )
         }
@@ -874,7 +899,7 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
           name = tc$name,
           result = result,
           raw_result = raw_result,
-          is_error = FALSE
+          is_error = result_is_error
         )
       },
       error = function(e) {

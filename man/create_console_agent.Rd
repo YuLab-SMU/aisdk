@@ -10,7 +10,9 @@ create_console_agent(
   additional_tools = NULL,
   language = "auto",
   startup_dir = working_dir,
-  skills = "auto"
+  skills = "auto",
+  profile = c("minimal", "legacy"),
+  extensions = "auto"
 )
 }
 \arguments{
@@ -25,6 +27,11 @@ create_console_agent(
 \item{startup_dir}{R session startup directory used for project-aware context. Defaults to \code{getwd()}.}
 
 \item{skills}{Optional skill paths, \code{"auto"}, or a SkillRegistry object.}
+
+\item{profile}{Console profile. \code{"minimal"} is the default Pi-like tool set;
+\code{"legacy"} restores the previous all-in-one console agent.}
+
+\item{extensions}{Extension loading mode. Defaults to \code{"auto"}.}
 }
 \value{
 An Agent object configured for console interaction.

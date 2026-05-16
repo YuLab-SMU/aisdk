@@ -2,11 +2,11 @@ test_that("create_console_agent creates valid agent", {
     agent <- create_console_agent()
     expect_s3_class(agent, "Agent")
     expect_equal(agent$name, "ConsoleAgent")
-    expect_true(length(agent$tools) >= 12)
+    expect_equal(vapply(agent$tools, function(t) t$name, character(1)), c("bash", "read_file", "write_file", "edit_file"))
 })
 
 test_that("create_console_agent auto-loads local skill tools when available", {
-    agent <- create_console_agent()
+    agent <- create_console_agent(profile = "legacy")
     tool_names <- sapply(agent$tools, function(t) t$name)
 
     expect_true("load_skill" %in% tool_names)
@@ -26,7 +26,7 @@ test_that("create_console_agent accepts explicit skill roots", {
         "Custom skill body"
     ), file.path(skill_root, "custom-skill", "SKILL.md"))
 
-    agent <- create_console_agent(skills = skill_root)
+    agent <- create_console_agent(skills = skill_root, profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
     registry <- aisdk:::console_get_skill_registry(session)
 
@@ -48,7 +48,7 @@ test_that("create_console_agent auto-discovers skills from startup directory", {
     ), file.path(skill_dir, "SKILL.md"))
 
     agent <- withr::with_dir(tempdir(), {
-        create_console_agent(working_dir = tempdir(), startup_dir = startup_dir)
+        create_console_agent(working_dir = tempdir(), startup_dir = startup_dir, profile = "legacy")
     })
     session <- create_chat_session(model = "mock:test", agent = agent)
     registry <- aisdk:::console_get_skill_registry(session)
@@ -57,7 +57,7 @@ test_that("create_console_agent auto-discovers skills from startup directory", {
 })
 
 test_that("console turn routing preloads explicitly referenced persona skill", {
-    agent <- create_console_agent()
+    agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 
     routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "Y叔在吗？")
@@ -72,7 +72,7 @@ test_that("console turn routing preloads explicitly referenced persona skill", {
 })
 
 test_that("console turn routing preloads luxun persona for @ mentions", {
-    agent <- create_console_agent()
+    agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 
     routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "@鲁迅 教教我R语言")
@@ -103,7 +103,7 @@ test_that("manual persona produces turn persona prompt without skill match", {
 })
 
 test_that("console turn routing injects English reply language when input is English", {
-    agent <- create_console_agent()
+    agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 
     routed_prompt <- aisdk:::console_build_turn_system_prompt(session, "@Guangchuang can you teach me ggtree in two sentences?")
@@ -159,8 +159,8 @@ test_that("console turn routing can match custom skill by when_to_use and paths"
     agent <- create_agent(
         name = "ConsoleWithCustomSkill",
         description = "Console with targeted skills",
-        system_prompt = build_console_system_prompt(skill_root, skill_root, "permissive", "auto"),
-        tools = create_console_tools(working_dir = skill_root, startup_dir = skill_root, sandbox_mode = "permissive"),
+        system_prompt = build_console_system_prompt(skill_root, skill_root, "permissive", "auto", profile = "legacy"),
+        tools = create_console_tools(working_dir = skill_root, startup_dir = skill_root, sandbox_mode = "permissive", profile = "legacy"),
         skills = skill_root
     )
     session <- create_chat_session(model = "mock:test", agent = agent)
@@ -200,8 +200,8 @@ test_that("console turn routing uses stored startup directory instead of current
     agent <- create_agent(
         name = "ConsoleWithSplitDirs",
         description = "Console with separate startup and sandbox directories",
-        system_prompt = build_console_system_prompt(sandbox_dir, startup_dir, "permissive", "auto"),
-        tools = create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive"),
+        system_prompt = build_console_system_prompt(sandbox_dir, startup_dir, "permissive", "auto", profile = "legacy"),
+        tools = create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive", profile = "legacy"),
         skills = startup_dir
     )
     session <- create_chat_session(model = "mock:test", agent = agent)
@@ -221,11 +221,19 @@ test_that("create_console_tools includes all expected tools", {
     tools <- create_console_tools()
     tool_names <- sapply(tools, function(t) t$name)
 
+    expect_equal(tool_names, c("bash", "read_file", "write_file", "edit_file"))
+})
+
+test_that("legacy console tools include extended tool surface", {
+    tools <- create_console_tools(profile = "legacy")
+    tool_names <- sapply(tools, function(t) t$name)
+
     # Check computer tools
 
     expect_true("bash" %in% tool_names)
     expect_true("read_file" %in% tool_names)
     expect_true("write_file" %in% tool_names)
+    expect_true("edit_file" %in% tool_names)
     expect_true("execute_r_code" %in% tool_names)
     expect_true("list_r_objects" %in% tool_names)
     expect_true("inspect_r_object" %in% tool_names)
@@ -248,7 +256,7 @@ test_that("create_console_tools includes all expected tools", {
 })
 
 test_that("list_directory tool works", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     list_dir_tool <- tools[[which(sapply(tools, function(t) t$name) == "list_directory")]]
 
     result <- list_dir_tool$run(list(path = "."))
@@ -265,7 +273,7 @@ test_that("console file discovery tools prefer startup directory for current pro
     on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
     on.exit(unlink(sandbox_dir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive")
+    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive", profile = "legacy")
     list_dir_tool <- tools[[which(sapply(tools, function(t) t$name) == "list_directory")]]
     find_tool <- tools[[which(sapply(tools, function(t) t$name) == "find_files")]]
     read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
@@ -279,6 +287,47 @@ test_that("console file discovery tools prefer startup directory for current pro
     expect_equal(content, "tree-content")
 })
 
+test_that("edit_file supports exact replacement and reports errors", {
+    workdir <- tempfile("console-edit-file-")
+    dir.create(workdir, recursive = TRUE)
+    path <- file.path(workdir, "demo.txt")
+    writeLines(c("alpha", "beta", "gamma"), path)
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir)
+    edit_tool <- tools[[which(sapply(tools, function(t) t$name) == "edit_file")]]
+    read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
+
+    result <- edit_tool$run(list(path = "demo.txt", pattern = "beta", replacement = "BETA"))
+    content <- read_tool$run(list(path = "demo.txt"))
+
+    expect_true(grepl("Edited file:", result, fixed = TRUE))
+    expect_true(grepl("Replacements: 1", result, fixed = TRUE))
+    expect_equal(content, "alpha\nBETA\ngamma")
+
+    missing <- edit_tool$run(list(path = "demo.txt", pattern = "missing", replacement = "x"))
+    expect_true(grepl("Pattern not found", missing, fixed = TRUE))
+})
+
+test_that("edit_file rejects strict sandbox writes outside working directory", {
+    workdir <- tempfile("console-edit-sandbox-")
+    outside <- tempfile("console-edit-outside-")
+    dir.create(workdir, recursive = TRUE)
+    dir.create(outside, recursive = TRUE)
+    outside_file <- file.path(outside, "demo.txt")
+    writeLines("alpha", outside_file)
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+    on.exit(unlink(outside, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir, sandbox_mode = "strict")
+    edit_tool <- tools[[which(sapply(tools, function(t) t$name) == "edit_file")]]
+
+    result <- edit_tool$run(list(path = outside_file, pattern = "alpha", replacement = "beta"))
+
+    expect_true(grepl("Sandbox violation", result, fixed = TRUE))
+    expect_equal(paste(readLines(outside_file), collapse = "\n"), "alpha")
+})
+
 test_that("read_file reports image files instead of reading binary bytes", {
     workdir <- tempfile("console-binary-read-")
     dir.create(workdir, recursive = TRUE)
@@ -286,7 +335,7 @@ test_that("read_file reports image files instead of reading binary bytes", {
     writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x00)), image_path)
     on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = workdir, startup_dir = workdir, sandbox_mode = "permissive")
+    tools <- create_console_tools(working_dir = workdir, startup_dir = workdir, sandbox_mode = "permissive", profile = "legacy")
     read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
 
     result <- read_tool$run(list(path = "plot.png"))
@@ -296,7 +345,7 @@ test_that("read_file reports image files instead of reading binary bytes", {
 })
 
 test_that("get_system_info tool works", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     sys_info_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_system_info")]]
 
     result <- sys_info_tool$run(list())
@@ -315,7 +364,7 @@ test_that("execute_r_code exposes startup directory helpers while keeping sandbo
     on.exit(unlink(startup_dir, recursive = TRUE), add = TRUE)
     on.exit(unlink(sandbox_dir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive")
+    tools <- create_console_tools(working_dir = sandbox_dir, startup_dir = startup_dir, sandbox_mode = "permissive", profile = "legacy")
     exec_tool <- tools[[which(sapply(tools, function(t) t$name) == "execute_r_code")]]
 
     result <- exec_tool$run(list(code = paste(
@@ -329,7 +378,7 @@ test_that("execute_r_code exposes startup directory helpers while keeping sandbo
 })
 
 test_that("get_environment tool works", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     env_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_environment")]]
 
     result <- env_tool$run(list(names = "HOME, R_HOME"))
@@ -341,7 +390,7 @@ test_that("get_environment masks sensitive values", {
     Sys.setenv(TEST_API_KEY = "sk-1234567890abcdef")
     on.exit(Sys.unsetenv("TEST_API_KEY"))
 
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     env_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_environment")]]
 
     result <- env_tool$run(list(names = "TEST_API_KEY"))
@@ -351,7 +400,7 @@ test_that("get_environment masks sensitive values", {
 })
 
 test_that("find_files tool works", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     find_tool <- tools[[which(sapply(tools, function(t) t$name) == "find_files")]]
 
     # Search for R files in current directory
@@ -361,7 +410,7 @@ test_that("find_files tool works", {
 })
 
 test_that("console agent system prompt includes key elements", {
-    agent <- create_console_agent()
+    agent <- create_console_agent(profile = "legacy")
     prompt <- agent$system_prompt
 
     expect_true(grepl("Terminal Assistant", prompt))
@@ -389,7 +438,7 @@ test_that("find_image_files ranks relevant local image candidates", {
     file.create(file.path(workdir, "hero-banner.jpg"))
     on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = workdir)
+    tools <- create_console_tools(working_dir = workdir, profile = "legacy")
     find_img_tool <- tools[[which(sapply(tools, function(t) t$name) == "find_image_files")]]
 
     result <- find_img_tool$run(list(query = "login screenshot", path = ".", recursive = TRUE, limit = 5L))
@@ -405,7 +454,7 @@ test_that("analyze_image_file can auto-select a likely local image candidate", {
     file.create(file.path(workdir, "other-banner.jpg"))
     on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = workdir)
+    tools <- create_console_tools(working_dir = workdir, profile = "legacy")
     analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"
@@ -427,7 +476,7 @@ test_that("analyze_image_file can auto-select a likely local image candidate", {
 })
 
 test_that("analyze_image_file refuses configured non-vision current model", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "deepseek:deepseek-v4-flash"
@@ -453,7 +502,7 @@ test_that("analyze_image_file can use configured vision capability model", {
     clear_capability_model()
     set_capability_model("vision.inspect", "openai:gpt-4o", type = "language")
 
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "deepseek:deepseek-v4-flash"
@@ -486,7 +535,7 @@ test_that("analyze_image_file reports ambiguity when multiple candidates are sim
     file.create(file.path(workdir, "screen-b.png"))
     on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
 
-    tools <- create_console_tools(working_dir = workdir)
+    tools <- create_console_tools(working_dir = workdir, profile = "legacy")
     analyze_tool <- tools[[which(sapply(tools, function(t) t$name) == "analyze_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"
@@ -500,7 +549,7 @@ test_that("analyze_image_file reports ambiguity when multiple candidates are sim
 })
 
 test_that("generate_image_asset stores recent image artifacts", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     gen_tool <- tools[[which(sapply(tools, function(t) t$name) == "generate_image_asset")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"
@@ -536,7 +585,7 @@ test_that("generate_image_asset can use configured image capability model", {
     clear_capability_model()
     set_capability_model("image.generate", "gemini:gemini-2.5-flash-image", type = "image")
 
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     gen_tool <- tools[[which(sapply(tools, function(t) t$name) == "generate_image_asset")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"
@@ -563,7 +612,7 @@ test_that("generate_image_asset can use configured image capability model", {
 })
 
 test_that("edit_image_asset reuses the latest image artifact when image_path is omitted", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     edit_tool <- tools[[which(sapply(tools, function(t) t$name) == "edit_image_asset")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "gemini:gemini-2.5-flash"
@@ -602,7 +651,7 @@ test_that("edit_image_asset reuses the latest image artifact when image_path is 
 })
 
 test_that("get_recent_image_artifacts summarizes remembered image outputs", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     recent_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_recent_image_artifacts")]]
     envir <- new.env(parent = emptyenv())
     envir$.console_image_artifacts <- list(
@@ -627,7 +676,7 @@ test_that("get_recent_image_artifacts summarizes remembered image outputs", {
 })
 
 test_that("extract_from_image_file returns structured text and records extraction input", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     extract_tool <- tools[[which(sapply(tools, function(t) t$name) == "extract_from_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"
@@ -651,7 +700,7 @@ test_that("extract_from_image_file returns structured text and records extractio
 })
 
 test_that("extract_from_image_file handles batch extraction paths", {
-    tools <- create_console_tools()
+    tools <- create_console_tools(profile = "legacy")
     extract_tool <- tools[[which(sapply(tools, function(t) t$name) == "extract_from_image_file")]]
     envir <- new.env(parent = emptyenv())
     envir$.session_model_id <- "openai:gpt-4o"

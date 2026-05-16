@@ -14,7 +14,7 @@ console_check_tool_failures(tool_results, session, threshold = 2)
 \item{threshold}{Minimum number of failures to trigger prompt (default: 2)}
 }
 \value{
-Invisible NULL
+A selected recovery action list, or NULL.
 }
 \description{
 Analyzes tool results from a generation and prompts the user if any tool
