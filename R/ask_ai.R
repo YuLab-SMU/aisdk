@@ -603,30 +603,30 @@ ask_ai <- function(prompt = NULL,
 
       if (!user_provided_error) {
         cat("\n")
-        cat("┌─ Detected Context ─────────────────────────────────────────────┐\n")
+        cat(paste0("\u250c\u2500 Detected Context \u2500", strrep("\u2500", 44), "\u2510\n"))
         if (has_error) {
           error_preview <- substr(ai_context$error, 1, 200)
           if (nchar(ai_context$error) > 200) error_preview <- paste0(error_preview, "...")
-          cat("│ Error: ", error_preview, "\n", sep = "")
+          cat("\u2502 Error: ", error_preview, "\n", sep = "")
         }
         if (has_warnings) {
           warning_preview <- substr(ai_context$warnings, 1, 200)
           if (nchar(ai_context$warnings) > 200) warning_preview <- paste0(warning_preview, "...")
-          cat("│ Warning: ", warning_preview, "\n", sep = "")
+          cat("\u2502 Warning: ", warning_preview, "\n", sep = "")
         }
         if (!has_error && nzchar(ai_context$stale_error %||% "")) {
           stale_preview <- substr(ai_context$stale_error, 1, 160)
           if (nchar(ai_context$stale_error) > 160) stale_preview <- paste0(stale_preview, "...")
-          cat("│ Ignored stale error: ", stale_preview, "\n", sep = "")
+          cat("\u2502 Ignored stale error: ", stale_preview, "\n", sep = "")
         }
         if (has_history) {
           history_lines <- unlist(strsplit(ai_context$history, "\n", fixed = TRUE), use.names = FALSE)
           history_preview <- utils::tail(history_lines[nzchar(trimws(history_lines))], 3)
           history_preview <- paste(history_preview, collapse = " | ")
           if (nchar(history_preview) > 200) history_preview <- paste0(substr(history_preview, 1, 200), "...")
-          cat("│ Recent commands: ", history_preview, "\n", sep = "")
+          cat("\u2502 Recent commands: ", history_preview, "\n", sep = "")
         }
-        cat("└────────────────────────────────────────────────────────────────┘\n")
+        cat("\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n")
         cat("\n")
 
         response <- readline("Use this error/warning context? [Y/n/clear]: ")
@@ -634,7 +634,7 @@ ask_ai <- function(prompt = NULL,
 
         if (response == "clear" || response == "c") {
           clear_error_context()
-          cat("✓ Error context cleared. Restarting ask_ai() without error context...\n\n")
+          cat("\u2713 Error context cleared. Restarting ask_ai() without error context...\n\n")
           return(ask_ai(
             prompt = prompt,
             model = model,
@@ -657,9 +657,9 @@ ask_ai <- function(prompt = NULL,
           ai_context$error <- NULL
           ai_context$traceback <- NULL
           ai_context$warnings <- NULL
-          cat("✓ Proceeding without error/warning context.\n\n")
+          cat("\u2713 Proceeding without error/warning context.\n\n")
         } else {
-          cat("✓ Using detected error/warning context.\n\n")
+          cat("\u2713 Using detected error/warning context.\n\n")
         }
       }
     }

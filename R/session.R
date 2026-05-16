@@ -5,6 +5,22 @@
 #' @name session
 NULL
 
+json_safe_session_state <- function(x) {
+  if (inherits(x, "aisdk_run_state")) {
+    x <- unclass(x)
+  }
+
+  if (is.list(x) && !is.data.frame(x)) {
+    nms <- names(x)
+    x <- lapply(x, json_safe_session_state)
+    if (!is.null(nms)) {
+      names(x) <- nms
+    }
+  }
+
+  x
+}
+
 #' @title ChatSession Class
 #' @description
 #' R6 class representing a stateful chat session. Automatically manages
@@ -528,6 +544,7 @@ ChatSession <- R6::R6Class(
       data <- self$as_list()
 
       if (format == "json") {
+        data <- json_safe_session_state(data)
         json_str <- jsonlite::toJSON(data, auto_unbox = TRUE, pretty = TRUE)
         writeLines(json_str, path)
       } else {

@@ -548,7 +548,7 @@ console_generation_looks_incomplete <- function(generation_result) {
   if (!nzchar(text)) {
     return(FALSE)
   }
-  if (grepl("[.!?。！？]$", text)) {
+  if (grepl("[.!?\u3002\uff01\uff1f]$", text)) {
     return(FALSE)
   }
 
@@ -561,7 +561,7 @@ console_text_promises_action <- function(text) {
   if (!nzchar(text)) {
     return(FALSE)
   }
-  if (grepl("[.!?。！？]$", text)) {
+  if (grepl("[.!?\u3002\uff01\uff1f]$", text)) {
     return(FALSE)
   }
 
@@ -2809,7 +2809,7 @@ handle_command <- function(input,
   result
 }
 
-# ── Interactive Prompt Utilities ──────────────────────────────────────────────
+# -- Interactive Prompt Utilities ---------------------------------------------
 
 #' @title Console Interactive Menu
 #' @description

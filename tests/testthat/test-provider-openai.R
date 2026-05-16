@@ -560,7 +560,11 @@ test_that("OpenAI image model posts JSON generation payload and parses images", 
   skip_on_ci()
   skip_on_cran()
 
-  provider <- safe_create_provider(create_openai)
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
   model <- provider$image_model("gpt-image-2")
   captured_body <- NULL
 
@@ -596,7 +600,11 @@ test_that("OpenAI image generation forwards latest image parameters", {
   skip_on_ci()
   skip_on_cran()
 
-  provider <- safe_create_provider(create_openai)
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
   model <- provider$image_model("gpt-image-2")
   captured_body <- NULL
 
@@ -635,7 +643,11 @@ test_that("OpenAI image model posts multipart edit payload and parses images", {
   skip_on_ci()
   skip_on_cran()
 
-  provider <- safe_create_provider(create_openai)
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
   model <- provider$image_model("gpt-image-2")
   captured_body <- NULL
 
@@ -674,7 +686,11 @@ test_that("OpenAI image edit includes mask uploads when provided", {
   skip_on_ci()
   skip_on_cran()
 
-  provider <- safe_create_provider(create_openai)
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
   model <- provider$image_model("gpt-image-1.5")
   captured_body <- NULL
 

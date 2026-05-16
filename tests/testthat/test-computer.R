@@ -171,12 +171,13 @@ test_that("create_computer_tools returns list of Tools", {
 
   tools <- create_computer_tools(working_dir = tempdir())
 
-  expect_length(tools, 4)
+  expect_length(tools, 5)
   expect_s3_class(tools[[1]], "R6")
   expect_equal(tools[[1]]$name, "bash")
   expect_equal(tools[[2]]$name, "read_file")
   expect_equal(tools[[3]]$name, "write_file")
-  expect_equal(tools[[4]]$name, "execute_r_code")
+  expect_equal(tools[[4]]$name, "edit_file")
+  expect_equal(tools[[5]]$name, "execute_r_code")
 })
 
 test_that("computer tools have layer attribute set to 'computer'", {
@@ -201,6 +202,11 @@ test_that("computer tools are executable", {
   # Test write_file tool
   result <- tools[[3]]$run(list(path = "test.txt", content = "content"))
   expect_true(grepl("Successfully wrote", result))
+
+  # Test edit_file tool
+  result <- tools[[4]]$run(list(path = "test.txt", pattern = "content", replacement = "updated", all = FALSE))
+  expect_true(grepl("Edited file", result))
+  expect_equal(readLines(file.path(tempdir(), "test.txt"), warn = FALSE), "updated")
 
   # Cleanup
   unlink(file.path(tempdir(), "test.txt"))
@@ -302,7 +308,7 @@ test_that("create_computer_tools accepts custom Computer instance", {
 
   tools <- create_computer_tools(computer = custom_comp)
 
-  expect_length(tools, 4)
+  expect_length(tools, 5)
 
   # Verify the tools use the strict computer instance
   result <- tools[[1]]$run(list(command = "rm -rf /"))
