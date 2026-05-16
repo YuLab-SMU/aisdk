@@ -9,8 +9,12 @@ collect_ai_context(
   error = NULL,
   traceback = NULL,
   warnings = NULL,
-  include = c("error", "traceback", "warnings", "script", "session", "objects"),
-  max_context_chars = Inf
+  include = c("error", "traceback", "warnings", "script", "session", "objects",
+    "history"),
+  max_context_chars = Inf,
+  max_error_age_secs = 300,
+  include_history = TRUE,
+  max_history_lines = 10
 )
 }
 \arguments{
@@ -28,6 +32,15 @@ document context is used when available.}
 
 \item{max_context_chars}{Maximum formatted context characters. Defaults to
 \code{Inf}, meaning no explicit truncation.}
+
+\item{max_error_age_secs}{Maximum age in seconds for errors/warnings to be
+included. Defaults to 300 (5 minutes). Set to \code{Inf} to include all errors.}
+
+\item{include_history}{Whether to include recent command history. Defaults to
+\code{TRUE}.}
+
+\item{max_history_lines}{Maximum number of recent command history lines to
+include. Defaults to 10.}
 }
 \value{
 A structured context list with class \code{aisdk_ai_context}.

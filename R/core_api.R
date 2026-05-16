@@ -96,6 +96,9 @@ recover_text_tool_calls <- function(result) {
 #' @param max_steps Maximum number of generation steps (tool execution loops).
 #'   Default 1 (single generation, no automatic tool execution).
 #'   Set to higher values (e.g., 5) to enable automatic tool execution.
+#' @param max_tool_result_errors Maximum number of consecutive tool result errors
+#'   before triggering the circuit breaker. Default 2. Tool result errors are when
+#'   tools return error messages (not exceptions). Set to Inf to disable this check.
 #' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
 #'   All tools are bound into an isolated R environment and replaced by a single
 #'   `execute_r_code` meta-tool. The LLM writes R code to batch-invoke tools,
@@ -134,6 +137,7 @@ generate_text <- function(model = NULL,
                           max_tokens = NULL,
                           tools = NULL,
                           max_steps = 1,
+                          max_tool_result_errors = 2,
                           sandbox = FALSE,
                           skills = NULL,
                           session = NULL,
@@ -212,9 +216,11 @@ generate_text <- function(model = NULL,
   breaker_state <- new.env(parent = emptyenv())
   breaker_state$consecutive_identical_calls <- 0
   breaker_state$consecutive_tool_errors <- 0
+  breaker_state$consecutive_result_errors <- 0  # New: track tool result errors
   breaker_state$last_tool_signature <- NULL
   max_identical_calls <- 3 # Threshold for repeating identical tool calls
   max_tool_errors <- 3 # Threshold for consecutive tool execution errors
+  max_tool_result_errors <- max_tool_result_errors %||% 2  # New: threshold for tool result errors
 
   # ReAct loop
   tryCatch(
@@ -320,6 +326,28 @@ generate_text <- function(model = NULL,
           }
           all_tool_results <- c(all_tool_results, tool_results)
 
+          # --- Circuit Breaker: Detect consecutive tool result errors ---
+          # Check if any tools returned errors (not exceptions, but error results)
+          error_count <- sum(sapply(tool_results, function(tr) {
+            isTRUE(tr$is_error) || (!is.null(tr$result) && grepl("^Error", as.character(tr$result)[1]))
+          }))
+
+          if (error_count > 0) {
+            breaker_state$consecutive_result_errors <- breaker_state$consecutive_result_errors + 1
+
+            if (breaker_state$consecutive_result_errors >= max_tool_result_errors) {
+              warning(
+                "Circuit breaker triggered: ", breaker_state$consecutive_result_errors,
+                " consecutive tool result errors. Consider asking user for help."
+              )
+              result$finish_reason <- "tool_result_failure"
+              break
+            }
+          } else {
+            # Reset counter on successful tool execution
+            breaker_state$consecutive_result_errors <- 0
+          }
+
           # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
           if (interactive()) {
             for (tr in tool_results) {
@@ -417,6 +445,9 @@ generate_text <- function(model = NULL,
 #' @param tools Optional list of Tool objects for function calling.
 #' @param max_steps Maximum number of generation steps (tool execution loops).
 #'   Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.
+#' @param max_tool_result_errors Maximum number of consecutive tool result errors
+#'   before triggering the circuit breaker. Default 2. Tool result errors are when
+#'   tools return error messages (not exceptions). Set to Inf to disable this check.
 #' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
 #'   See \code{generate_text} for details. Default FALSE.
 #' @param skills Optional path to skills directory, or a SkillRegistry object.
@@ -443,6 +474,7 @@ stream_text <- function(model = NULL,
                         max_tokens = NULL,
                         tools = NULL,
                         max_steps = 1,
+                        max_tool_result_errors = 2,
                         sandbox = FALSE,
                         skills = NULL,
                         session = NULL,
@@ -624,6 +656,32 @@ stream_text <- function(model = NULL,
             break
           }
           all_tool_results <- c(all_tool_results, tool_results)
+
+          # --- Circuit Breaker: Detect tool result errors ---
+          tool_result_error_count <- 0
+          for (tr in tool_results) {
+            if (isTRUE(tr$is_error)) {
+              tool_result_error_count <- tool_result_error_count + 1
+            }
+          }
+
+          if (tool_result_error_count > 0) {
+            breaker_state$consecutive_tool_result_errors <-
+              (breaker_state$consecutive_tool_result_errors %||% 0) + 1
+
+            if (breaker_state$consecutive_tool_result_errors >= max_tool_result_errors) {
+              warning(
+                "Circuit breaker triggered: ",
+                breaker_state$consecutive_tool_result_errors,
+                " consecutive tool result errors. ",
+                "Tools returned errors but did not throw exceptions."
+              )
+              result$finish_reason <- "tool_failure"
+              break
+            }
+          } else {
+            breaker_state$consecutive_tool_result_errors <- 0
+          }
 
           # Log tool results
           if (interactive()) {

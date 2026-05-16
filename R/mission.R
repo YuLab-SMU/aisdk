@@ -941,10 +941,15 @@ Mission <- R6::R6Class(
             }
           )
         } else {
-          message(sprintf(
-            "[Mission STALL] Mission '%s' stalled at step '%s' after %d attempts.\n",
-            self$id, step$id, step$retry_count + 1
-          ))
+          # Interactive escalation: ask user what to do
+          if (interactive()) {
+            private$interactive_escalation(step, model)
+          } else {
+            message(sprintf(
+              "[Mission STALL] Mission '%s' stalled at step '%s' after %d attempts.\n",
+              self$id, step$id, step$retry_count + 1
+            ))
+          }
         }
       } else if (action == "skip") {
         step$status <- "done"  # mark as done so downstream steps can proceed
@@ -952,6 +957,120 @@ Mission <- R6::R6Class(
         private$log_event("step_skipped", list(step_id = step$id))
       }
       # "abort" — leave status as "failed", execution loop will stop naturally
+    },
+
+    # Interactive escalation: ask user for guidance
+    interactive_escalation = function(step, model) {
+      cli::cli_alert_danger(
+        "Mission stalled at step {.field {step$id}} after {step$retry_count + 1} attempts"
+      )
+      cli::cli_text("Step description: {.emph {step$description}}")
+
+      # Show recent errors
+      if (length(step$error_history) > 0) {
+        cli::cli_h3("Recent errors:")
+        recent_errors <- tail(step$error_history, 2)
+        for (err in recent_errors) {
+          cli::cli_text("  Attempt {err$attempt}: {.val {err$error}}")
+        }
+      }
+
+      # Ask user what to do
+      response <- utils::menu(
+        c(
+          "Let the agent explain the problem and suggest solutions",
+          "Retry this step one more time",
+          "Skip this step and continue",
+          "Abort the mission"
+        ),
+        title = "\nWhat would you like to do?"
+      )
+
+      if (response == 1) {
+        # Ask agent to explain
+        cli::cli_alert_info("Asking agent to analyze the problem...")
+
+        error_summary <- paste(
+          sapply(step$error_history, function(e) {
+            paste0("Attempt ", e$attempt, ": ", e$error)
+          }),
+          collapse = "\n"
+        )
+
+        explanation_prompt <- paste0(
+          "I encountered repeated failures while trying to: ", step$description, "\n\n",
+          "Error history:\n", error_summary, "\n\n",
+          "Please analyze what went wrong and suggest:\n",
+          "1. The root cause of the failures\n",
+          "2. Alternative approaches to accomplish this task\n",
+          "3. Whether this task is feasible or if we should skip it"
+        )
+
+        explanation <- tryCatch(
+          {
+            result <- generate_text(
+              model = model,
+              prompt = explanation_prompt,
+              system = "You are a helpful assistant analyzing task failures. Be concise and actionable.",
+              max_tokens = 1000
+            )
+            result$text
+          },
+          error = function(e) {
+            paste("Failed to get explanation:", conditionMessage(e))
+          }
+        )
+
+        cli::cli_h3("Agent's analysis:")
+        cli::cli_text(explanation)
+
+        # Ask again what to do
+        response2 <- utils::menu(
+          c(
+            "Retry with this new understanding",
+            "Skip this step",
+            "Abort the mission"
+          ),
+          title = "\nBased on this analysis, what should we do?"
+        )
+
+        if (response2 == 1) {
+          # Retry: reset retry count to allow one more attempt
+          step$retry_count <- max(0, step$max_retries - 1)
+          step$status <- "pending"
+          # Add explanation to error history as context
+          step$error_history <- c(step$error_history, list(list(
+            attempt = step$retry_count + 1,
+            error = paste0("[AGENT ANALYSIS] ", explanation),
+            timestamp = Sys.time()
+          )))
+          private$log_event("escalation_retry", list(step_id = step$id))
+        } else if (response2 == 2) {
+          step$status <- "done"
+          step$result <- "[SKIPPED: user decision after escalation]"
+          private$log_event("escalation_skip", list(step_id = step$id))
+        } else {
+          step$status <- "failed"
+          private$log_event("escalation_abort", list(step_id = step$id))
+        }
+
+      } else if (response == 2) {
+        # Retry: reset retry count to allow one more attempt
+        step$retry_count <- max(0, step$max_retries - 1)
+        step$status <- "pending"
+        private$log_event("escalation_retry", list(step_id = step$id))
+
+      } else if (response == 3) {
+        # Skip
+        step$status <- "done"
+        step$result <- "[SKIPPED: user decision]"
+        private$log_event("escalation_skip", list(step_id = step$id))
+
+      } else {
+        # Abort
+        step$status <- "failed"
+        private$log_event("escalation_abort", list(step_id = step$id))
+      }
     }
   )
 )

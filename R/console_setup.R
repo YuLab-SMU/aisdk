@@ -386,12 +386,32 @@ resolve_console_startup_model <- function(project_path = ".Renviron",
                                           project_rprofile_path = ".Rprofile",
                                           global_rprofile_path = "~/.Rprofile",
                                           apply_profile_fn = apply_console_profile) {
-  saved_default <- discover_console_default_model(
-    project_path = project_rprofile_path,
-    global_path = global_rprofile_path
-  )
+  # Priority 1: Check runtime default from set_model() first
+  runtime_default <- tryCatch(get_model(default = NULL), error = function(e) NULL)
+  model_id <- ""
 
-  model_id <- trimws(saved_default$model_id %||% "")
+  if (!is.null(runtime_default)) {
+    if (is.character(runtime_default) && nzchar(runtime_default)) {
+      model_id <- runtime_default
+    } else if (inherits(runtime_default, "LanguageModelV1")) {
+      provider <- runtime_default$provider %||% NULL
+      model_name <- runtime_default$model_id %||% NULL
+      if (!is.null(provider) && !is.null(model_name)) {
+        model_id <- paste0(provider, ":", model_name)
+      }
+    }
+  }
+
+  # Priority 2: Fall back to saved default from .Rprofile
+  if (!nzchar(model_id)) {
+    saved_default <- discover_console_default_model(
+      project_path = project_rprofile_path,
+      global_path = global_rprofile_path
+    )
+    model_id <- trimws(saved_default$model_id %||% "")
+  }
+
+  # Priority 3: If still nothing, return NULL (will prompt user)
   if (!nzchar(model_id)) {
     return(list(model_id = NULL, source = "prompt", profile = NULL))
   }
@@ -410,7 +430,8 @@ resolve_console_startup_model <- function(project_path = ".Renviron",
     return(list(model_id = NULL, source = "invalid_default", profile = profile))
   }
 
-  list(model_id = model_id, source = saved_default$source %||% "default", profile = profile)
+  source_label <- if (!is.null(runtime_default)) "runtime_default" else "saved_default"
+  list(model_id = model_id, source = source_label, profile = profile)
 }
 
 #' @keywords internal

@@ -17,6 +17,8 @@ ask_ai(
   verbose = FALSE,
   show_context = FALSE,
   max_context_chars = Inf,
+  max_error_age_secs = 300,
+  confirm_stale_errors = TRUE,
   ...
 )
 }
@@ -48,6 +50,13 @@ launching \code{console_chat()}.}
 
 \item{max_context_chars}{Maximum formatted context characters. Defaults to
 \code{Inf}, meaning no explicit truncation.}
+
+\item{max_error_age_secs}{Maximum age in seconds for errors/warnings to be
+included. Defaults to 300 (5 minutes). Set to \code{Inf} to include all errors
+regardless of age.}
+
+\item{confirm_stale_errors}{If \code{TRUE} (default), show a warning and prompt
+for confirmation when errors/warnings are detected but appear stale.}
 
 \item{...}{Additional arguments passed to \code{collect_ai_context()}.}
 }

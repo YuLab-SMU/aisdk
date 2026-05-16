@@ -345,6 +345,7 @@ console_send_user_message <- function(input,
 
   ok <- TRUE
   md_renderer <- NULL
+  generation_result <- NULL
   tryCatch(
     {
       with_console_chat_display(
@@ -366,25 +367,32 @@ console_send_user_message <- function(input,
                 }
               }
             )
+            # For streaming, we can't easily get the result, so skip failure detection
+            # This is a limitation we'll document
           } else {
             md_renderer <- create_markdown_stream_renderer()
-            result <- session$send(input, turn_system_prompt = turn_system_prompt)
-            if (!is.null(result$text)) {
+            generation_result <- session$send(input, turn_system_prompt = turn_system_prompt)
+            if (!is.null(generation_result$text)) {
               if (!is.null(app_state)) {
-                console_app_append_assistant_text(app_state, result$text)
+                console_app_append_assistant_text(app_state, generation_result$text)
               }
-              md_renderer$process_chunk(result$text, FALSE)
+              md_renderer$process_chunk(generation_result$text, FALSE)
               md_renderer$process_chunk(NULL, TRUE)
             }
 
-            if (isTRUE(verbose) && !is.null(result$tool_calls) && length(result$tool_calls) > 0) {
-              cli::cli_alert_info("Tool calls made: {.val {length(result$tool_calls)}}")
+            if (isTRUE(verbose) && !is.null(generation_result$tool_calls) && length(generation_result$tool_calls) > 0) {
+              cli::cli_alert_info("Tool calls made: {.val {length(generation_result$tool_calls)}}")
             }
           }
         }
       )
       if (!is.null(app_state)) {
         console_app_finish_turn(app_state, failed = FALSE)
+      }
+
+      # Failure detection: check if any tools failed repeatedly
+      if (!is.null(generation_result) && !is.null(generation_result$all_tool_results)) {
+        console_check_tool_failures(generation_result$all_tool_results, session)
       }
     },
     interrupt = function(e) {
@@ -2180,4 +2188,74 @@ with_console_chat_display <- function(verbose = FALSE,
   on.exit(options(old_opts), add = TRUE)
 
   force(code)
+}
+
+#' Check for Tool Failures and Prompt User
+#'
+#' Analyzes tool results from a generation and prompts the user if any tool
+#' has failed multiple times.
+#'
+#' @param tool_results List of tool results from generation
+#' @param session ChatSession object
+#' @param threshold Minimum number of failures to trigger prompt (default: 2)
+#' @return Invisible NULL
+#' @keywords internal
+console_check_tool_failures <- function(tool_results, session, threshold = 2) {
+  if (!interactive()) {
+    return(invisible(NULL))
+  }
+
+  if (is.null(tool_results) || length(tool_results) == 0) {
+    return(invisible(NULL))
+  }
+
+  # Analyze failures
+  failure_counts <- analyze_tool_failures(tool_results)
+
+  if (length(failure_counts) == 0) {
+    return(invisible(NULL))
+  }
+
+  # Check each tool that has failures
+  for (tool_name in names(failure_counts)) {
+    count <- failure_counts[[tool_name]]
+
+    if (count >= threshold) {
+      # Display warning
+      cat("\n")
+      if (requireNamespace("cli", quietly = TRUE)) {
+        cli::cli_alert_warning(
+          "Tool '{tool_name}' failed {count} time{?s} in this turn."
+        )
+      } else {
+        cat("Warning: Tool '", tool_name, "' failed ", count, " times in this turn.\n", sep = "")
+      }
+
+      # Get and display last error
+      last_error <- get_last_error_for_tool(tool_results, tool_name)
+      if (!is.null(last_error)) {
+        error_preview <- substr(last_error, 1, 200)
+        if (nchar(last_error) > 200) {
+          error_preview <- paste0(error_preview, "...")
+        }
+        cat("Last error: ", error_preview, "\n\n", sep = "")
+      }
+
+      # Prompt user for action
+      response <- readline_with_options(
+        prompt = "How would you like to proceed?",
+        options = c(
+          "1" = "Continue (let agent keep trying)",
+          "2" = "Give up (stop using this tool)",
+          "3" = "Explain (ask agent to explain the problem)",
+          "4" = "Manual (I'll fix it myself)"
+        )
+      )
+
+      # Handle user's choice
+      handle_user_choice(response, tool_name, session)
+    }
+  }
+
+  invisible(NULL)
 }

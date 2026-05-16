@@ -13,6 +13,7 @@ stream_text(
   max_tokens = NULL,
   tools = NULL,
   max_steps = 1,
+  max_tool_result_errors = 2,
   sandbox = FALSE,
   skills = NULL,
   session = NULL,
@@ -38,6 +39,10 @@ stream_text(
 
 \item{max_steps}{Maximum number of generation steps (tool execution loops).
 Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.}
+
+\item{max_tool_result_errors}{Maximum number of consecutive tool result errors
+before triggering the circuit breaker. Default 2. Tool result errors are when
+tools return error messages (not exceptions). Set to Inf to disable this check.}
 
 \item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
 See \code{generate_text} for details. Default FALSE.}
