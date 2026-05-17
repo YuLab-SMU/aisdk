@@ -39,7 +39,10 @@ test_that("collect_ai_context reads R last.warning messages", {
   expect_match(ctx$warnings, "call: i.p", fixed = TRUE)
 })
 
-test_that("package-install warnings suppress stale geterrmessage context", {
+test_that("package-install warnings keep the captured error and tag it as possibly stale", {
+  # Regression for issue #24: the old behavior deleted ctx$error whenever
+  # warnings looked like an install failure, which destroyed the real
+  # error in install-failure-shaped scenarios. New behavior keeps it.
   invisible(try(stop("attempt to use zero-length variable name"), silent = TRUE))
   assign(
     "last.warning",
@@ -53,27 +56,50 @@ test_that("package-install warnings suppress stale geterrmessage context", {
     max_error_age_secs = Inf
   )
 
-  expect_equal(ctx$error, "")
-  expect_equal(ctx$traceback, "")
+  expect_match(ctx$error, "zero-length variable name", fixed = TRUE)
+  expect_true(isTRUE(ctx$error_possibly_stale))
   expect_match(ctx$warnings, "confuns", fixed = TRUE)
-  expect_match(ctx$stale_error, "zero-length variable name", fixed = TRUE)
+  expect_null(ctx$stale_error)
 })
 
-test_that("format_ai_context includes ignored stale errors and recent commands", {
+test_that("format_ai_context surfaces the possibly-stale tag inline with the error", {
   ctx <- collect_ai_context(
-    error = "",
+    error = "Error: attempt to use zero-length variable name",
     warnings = "installation of package 'confuns' had non-zero exit status",
     include = c("error", "warnings", "history"),
     include_history = FALSE
   )
-  ctx$stale_error <- "Error: attempt to use zero-length variable name"
+  # mimic what the new collect_ai_context would set when warnings hint at install
+  ctx$error_possibly_stale <- TRUE
   ctx$history <- "devtools::install_github(repo=\"kueckelj/confuns\")"
 
   text <- aisdk:::format_ai_context(ctx)
 
-  expect_match(text, "[stale_error_ignored_begin]", fixed = TRUE)
   expect_match(text, "zero-length variable name", fixed = TRUE)
+  expect_match(text, "this error may be from a previous command", fixed = TRUE)
   expect_match(text, "devtools::install_github", fixed = TRUE)
+})
+
+test_that("build_ask_ai_prompt frames context as fingerprint and mandates exploration", {
+  ctx <- collect_ai_context(
+    error = "Error in install.packages(...): non-zero exit status",
+    warnings = "installation of package 'confuns' had non-zero exit status",
+    include = c("error", "warnings")
+  )
+  prompt <- aisdk:::build_ask_ai_prompt(ctx)
+
+  # framing references the limitations of geterrmessage / scrollback
+  expect_match(prompt, "FINGERPRINT", fixed = TRUE)
+  expect_match(prompt, "scrollback", fixed = TRUE)
+
+  # mandate references the three classes of tools the agent should use
+  expect_match(prompt, "r_session_state", fixed = TRUE)
+  expect_match(prompt, "r_eval", fixed = TRUE)
+  expect_match(prompt, "read_file", fixed = TRUE)
+
+  # install hint is appended for install-shaped warnings
+  expect_match(prompt, "install", fixed = FALSE)
+  expect_match(prompt, "00install.out", fixed = TRUE)
 })
 
 test_that("clear_error_context ignores current geterrmessage without replacing it", {

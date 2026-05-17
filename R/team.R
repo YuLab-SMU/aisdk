@@ -185,7 +185,14 @@ AgentTeam <- R6::R6Class(
         "3. You can call multiple agents if needed.\n",
         "4. Synthesize their responses into a final answer for the user.\n",
         "5. If an agent fails, try to fix the instructions or ask another agent.\n",
-        "6. Do NOT try to do the work yourself if an agent is better suited."
+        "6. Do NOT try to do the work yourself if an agent is better suited.\n\n",
+        "**Diagnostic safety net**:\n",
+        "When a worker returns an opaque R error (\"non-zero exit status\",\n",
+        "\"installation failed\", lost stderr, locale/encoding noise), use `r_eval`\n",
+        "to re-run the suspect command in a clean subprocess and capture the\n",
+        "real stderr, or `r_session_state` to inspect libpaths/repos/env vars\n",
+        "before re-delegating. The bundled `r-debug` skill (load via the skill\n",
+        "tools when available) catalogs symptom-to-root-cause mappings."
       )
       
       # 2. Create the Delegate Tool
@@ -234,11 +241,14 @@ AgentTeam <- R6::R6Class(
       )
       
       # 3. Create Manager Agent
+      # Inject R diagnostic primitives so the Manager can sanity-check workers
+      # and recover from opaque R errors without re-delegating blindly.
+      manager_tools <- c(list(delegate_tool), create_r_introspect_tools())
       Agent$new(
         name = "Manager",
         description = "Team Manager",
         system_prompt = system_prompt,
-        tools = list(delegate_tool)
+        tools = manager_tools
       )
     }
   )

@@ -311,8 +311,16 @@ Flow <- R6::R6Class(
         }
       }
 
-      # Combine agent's own tools with delegate tools
-      all_tools <- c(agent$tools, delegate_tools)
+      # Combine agent's own tools with delegate tools and R diagnostic
+      # primitives. The introspect tools let the manager re-run opaque sub-agent
+      # results in a clean R subprocess (captures real stderr / value / error)
+      # and inspect the live session state, without re-delegating blindly.
+      introspect_tools <- create_r_introspect_tools()
+      existing_names <- vapply(c(agent$tools, delegate_tools),
+                               function(t) t$name, character(1))
+      introspect_tools <- Filter(function(t) !(t$name %in% existing_names),
+                                 introspect_tools)
+      all_tools <- c(agent$tools, delegate_tools, introspect_tools)
 
       # Run the primary agent
       result <- generate_text(
@@ -554,6 +562,15 @@ Flow <- R6::R6Class(
       parts <- c(parts, "- Synthesize results from multiple agents when needed")
       parts <- c(parts, "- Handle errors gracefully and retry with different approaches")
       parts <- c(parts, paste0("- Maximum delegation depth: ", private$.max_depth))
+
+      parts <- c(parts, "", "[DIAGNOSTIC SAFETY NET]")
+      parts <- c(parts, "When a sub-agent returns an opaque R error -- 'non-zero exit status',")
+      parts <- c(parts, "'installation failed', lost stderr, locale/encoding noise -- use the")
+      parts <- c(parts, "available `r_eval` tool to re-run the suspect command in a clean")
+      parts <- c(parts, "subprocess (captures stdout/stderr from grandchildren, messages,")
+      parts <- c(parts, "warnings, value, error), and `r_session_state` to inspect")
+      parts <- c(parts, "libpaths/repos/env vars before re-delegating. The bundled `r-debug`")
+      parts <- c(parts, "skill catalogs symptom-to-root-cause mappings; load it on demand.")
 
       # Registry prompt section
       if (!is.null(private$.registry)) {

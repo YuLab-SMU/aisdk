@@ -2,7 +2,10 @@ test_that("create_console_agent creates valid agent", {
     agent <- create_console_agent()
     expect_s3_class(agent, "Agent")
     expect_equal(agent$name, "ConsoleAgent")
-    expect_equal(vapply(agent$tools, function(t) t$name, character(1)), c("bash", "read_file", "write_file", "edit_file"))
+    expect_equal(
+      vapply(agent$tools, function(t) t$name, character(1)),
+      c("bash", "read_file", "write_file", "edit_file", "r_eval", "r_session_state")
+    )
 })
 
 test_that("create_console_agent auto-loads local skill tools when available", {
@@ -221,7 +224,10 @@ test_that("create_console_tools includes all expected tools", {
     tools <- create_console_tools()
     tool_names <- sapply(tools, function(t) t$name)
 
-    expect_equal(tool_names, c("bash", "read_file", "write_file", "edit_file"))
+    expect_equal(
+      tool_names,
+      c("bash", "read_file", "write_file", "edit_file", "r_eval", "r_session_state")
+    )
 })
 
 test_that("legacy console tools include extended tool surface", {

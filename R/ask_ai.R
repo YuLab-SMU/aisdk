@@ -401,6 +401,7 @@ collect_ai_context <- function(script = NULL,
     collected_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%OS3%z"),
     working_dir = normalizePath(getwd(), winslash = "/", mustWork = FALSE),
     error = NULL,
+    error_possibly_stale = FALSE,
     traceback = NULL,
     warnings = NULL,
     script = NULL,
@@ -419,14 +420,15 @@ collect_ai_context <- function(script = NULL,
   if ("warnings" %in% include) {
     ctx$warnings <- ai_collapse_text(ai_format_warning_object(warnings) %||% ai_read_last_warnings(max_age_secs = max_error_age_secs))
   }
+  # Tag the captured error so the agent can judge staleness itself, rather than
+  # having ask_ai() silently discard it. R's geterrmessage() only ever returns
+  # the LAST top-level error, and the install-failure heuristic used to delete
+  # it when warnings indicated a package install failure -- that fired even
+  # when the deleted error WAS the real install error (issue #24).
   if (is.null(error) &&
       nzchar(ctx$error %||% "") &&
       ai_warning_indicates_package_install_failure(ctx$warnings %||% "")) {
-    ctx$stale_error <- ctx$error
-    ctx$error <- ""
-    if (is.null(traceback)) {
-      ctx$traceback <- ""
-    }
+    ctx$error_possibly_stale <- TRUE
   }
   if ("script" %in% include) {
     ctx$script <- ai_collect_script_context(script)
@@ -484,12 +486,17 @@ format_ai_context <- function(context) {
     )
   }
 
+  error_header <- if (isTRUE(context$error_possibly_stale)) {
+    "[last_error_begin]  # note: warnings suggest a package install failure -- this error may be from a previous command. Verify by re-running with r_eval() or by reading the install log."
+  } else {
+    "[last_error_begin]"
+  }
+
   sections <- c(
     "[aisdk_r_context_begin]",
     paste0("collected_at: ", context$collected_at %||% ""),
     paste0("working_dir: ", context$working_dir %||% ""),
-    if (nzchar(context$error %||% "")) c("[last_error_begin]", context$error, "[last_error_end]") else NULL,
-    if (nzchar(context$stale_error %||% "")) c("[stale_error_ignored_begin]", context$stale_error, "[stale_error_ignored_end]") else NULL,
+    if (nzchar(context$error %||% "")) c(error_header, context$error, "[last_error_end]") else NULL,
     if (nzchar(context$traceback %||% "")) c("[traceback_begin]", context$traceback, "[traceback_end]") else NULL,
     if (nzchar(context$warnings %||% "")) c("[warnings_begin]", context$warnings, "[warnings_end]") else NULL,
     if (nzchar(context$history %||% "")) c("[recent_commands_begin]", context$history, "[recent_commands_end]") else NULL,
@@ -507,21 +514,77 @@ format_ai_context <- function(context) {
 build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
   context_text <- format_ai_context(context)
 
-  # Check if we have command history but no error/warning
   has_history <- !is.null(context$history) && nzchar(context$history)
   has_error <- !is.null(context$error) && nzchar(context$error)
   has_warning <- !is.null(context$warnings) && nzchar(context$warnings)
+  install_failure_hint <- !is.null(context$warnings) &&
+    ai_warning_indicates_package_install_failure(context$warnings)
 
-  # Adjust prompt based on what context we have
-  if (has_history && !has_error && !has_warning) {
-    analysis_prompt <- "Please analyze the recent R commands and session context. The commands may have produced errors or warnings that weren't captured. Diagnose any likely issues, then suggest concrete next steps."
+  framing <- paste(
+    "You are diagnosing an R session.",
+    "",
+    "IMPORTANT: the block below is a FINGERPRINT, not a transcript. R does not",
+    "expose the console scrollback buffer to programs. `geterrmessage()` returns",
+    "only the LAST top-level error, `last.warning` returns only the most recent",
+    "warning batch, and stderr from child processes (compilers, install.packages,",
+    "system()/system2()/processx calls) is written directly to the terminal and",
+    "is NOT in this fingerprint. Anything the user saw scroll past that isn't",
+    "below is missing on purpose -- you must fetch it yourself when needed.",
+    "",
+    "Mandate -- enrich the context autonomously before concluding:",
+    "  1. Use `r_session_state` once early when an error mentions paths,",
+    "     packages, locale, proxies, or before suggesting any install/library fix.",
+    "  2. Use `r_eval` to re-run a suspect command in a clean subprocess --",
+    "     this captures stdout + stderr (including from grandchild processes),",
+    "     messages, warnings, and the final value/error, structured.",
+    "  3. Use `bash` and `read_file` to inspect logs the R process wrote",
+    "     (`tempdir()` artifacts, `~/.R/Makevars`, BiocManager logs, etc.).",
+    "     `find $TMPDIR -name '00install.out' -mmin -30` is one example;",
+    "     decide what's appropriate for the symptom you see.",
+    "  4. Load a skill when a SKILL.md description matches the symptom",
+    "     class (e.g. an R-error triage skill). Don't inline a guess of",
+    "     what it might say -- read it.",
+    "",
+    "Discipline:",
+    "  - Treat the surface error as a SYMPTOM, not the root cause, whenever it",
+    "    contains phrases like \"non-zero exit status\", \"had warnings\",",
+    "    \"installation failed\", \"command not found\", or just looks like the",
+    "    tail of a longer story.",
+    "  - State a hypothesis, gather evidence with the tools above, then revise.",
+    "    Do not stop at the first plausible cause.",
+    "  - If you genuinely cannot get further evidence (e.g. the user must run",
+    "    something interactively), say exactly what command to run and what to",
+    "    look for in its output.",
+    sep = "\n"
+  )
+
+  install_hint <- if (install_failure_hint) {
+    paste(
+      "",
+      "Hint -- the warnings below look like a package install failure. The",
+      "real root cause (missing system library, unavailable dependency,",
+      "compilation error) is almost always in `00install.out` under `tempdir()`",
+      "or in stderr from the install subprocess, neither of which is in the",
+      "fingerprint. Re-run the install with `r_eval` or read the log.",
+      sep = "\n"
+    )
+  } else if (has_history && !has_error && !has_warning) {
+    paste(
+      "",
+      "Hint -- only command history is in the fingerprint (no error/warning",
+      "captured). The previous command(s) may have produced output that was",
+      "not retained. Consider re-running a suspect line via `r_eval` to see",
+      "what actually happens.",
+      sep = "\n"
+    )
   } else {
-    analysis_prompt <- "Please analyze the following R error/session context. Diagnose the likely cause first, then suggest concrete next steps. If information is missing, say exactly what to inspect next."
+    ""
   }
 
   lines <- c(
     if (!is.null(skill) && nzchar(skill)) paste0("@", skill) else NULL,
-    analysis_prompt,
+    framing,
+    install_hint,
     if (!is.null(user_prompt) && nzchar(user_prompt)) c("", "[user_request_begin]", user_prompt, "[user_request_end]") else NULL,
     "",
     context_text
@@ -614,10 +677,8 @@ ask_ai <- function(prompt = NULL,
           if (nchar(ai_context$warnings) > 200) warning_preview <- paste0(warning_preview, "...")
           cat("\u2502 Warning: ", warning_preview, "\n", sep = "")
         }
-        if (!has_error && nzchar(ai_context$stale_error %||% "")) {
-          stale_preview <- substr(ai_context$stale_error, 1, 160)
-          if (nchar(ai_context$stale_error) > 160) stale_preview <- paste0(stale_preview, "...")
-          cat("\u2502 Ignored stale error: ", stale_preview, "\n", sep = "")
+        if (has_error && isTRUE(ai_context$error_possibly_stale)) {
+          cat("\u2502 Note: warnings suggest an install failure; the error above may be from a previous command.\n", sep = "")
         }
         if (has_history) {
           history_lines <- unlist(strsplit(ai_context$history, "\n", fixed = TRUE), use.names = FALSE)

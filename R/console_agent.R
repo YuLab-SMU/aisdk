@@ -49,10 +49,11 @@ create_console_tools <- function(working_dir = tempdir(),
         computer = computer
     )
     if (identical(profile, "minimal")) {
-        return(Filter(
+        minimal_computer <- Filter(
             function(tool_obj) tool_obj$name %in% c("bash", "read_file", "write_file", "edit_file"),
             computer_tools
-        ))
+        )
+        return(c(minimal_computer, create_r_introspect_tools()))
     }
 
     computer_tools <- Filter(
@@ -1230,7 +1231,7 @@ create_console_tools <- function(working_dir = tempdir(),
     )
 
     # Combine all tools
-    c(computer_tools, r_context_tools, console_specific)
+    c(computer_tools, r_context_tools, create_r_introspect_tools(), console_specific)
 }
 
 
