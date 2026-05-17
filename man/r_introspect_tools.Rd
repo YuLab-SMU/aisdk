@@ -9,8 +9,8 @@ context on its own when R's \code{geterrmessage()} / \code{last.warning} /
 \code{traceback()} snapshots are incomplete.
 
 These tools are intentionally \strong{broad} (not problem-specific). Domain
-tactics — e.g. where to look for an install log, how to interpret an
-Rcpp compilation error — live in the \code{r-debug} skill (\verb{inst/skills/r-debug/}).
+tactics -- e.g. where to look for an install log, how to interpret an
+Rcpp compilation error -- live in the \code{r-debug} skill (\verb{inst/skills/r-debug/}).
 The tools provide eyes and hands; the skill provides the playbook.
 
 Provided tools:

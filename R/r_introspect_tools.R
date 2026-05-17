@@ -5,8 +5,8 @@
 #' `traceback()` snapshots are incomplete.
 #'
 #' These tools are intentionally **broad** (not problem-specific). Domain
-#' tactics — e.g. where to look for an install log, how to interpret an
-#' Rcpp compilation error — live in the `r-debug` skill (`inst/skills/r-debug/`).
+#' tactics -- e.g. where to look for an install log, how to interpret an
+#' Rcpp compilation error -- live in the `r-debug` skill (`inst/skills/r-debug/`).
 #' The tools provide eyes and hands; the skill provides the playbook.
 #'
 #' Provided tools:
@@ -475,7 +475,7 @@ create_r_introspect_tools <- function() {
       description = paste(
         "Run R code in an isolated subprocess (callr) and capture stdout, stderr,",
         "messages, warnings, the expression's value (if any), and any error.",
-        "Stderr capture includes output from grandchild processes — useful for",
+        "Stderr capture includes output from grandchild processes -- useful for",
         "re-running install.packages(), system(), compilation, or any command",
         "whose real error message was lost from the parent session.",
         "The subprocess does NOT inherit the user's loaded packages; it starts",

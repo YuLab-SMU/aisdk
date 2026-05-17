@@ -43,8 +43,8 @@ agent <- Agent$new(
 
 # The agent can then use it when stuck:
 # ask_user(
-#   question = "I've tried 3 different approaches to parse this file and all failed. How should I proceed?",
-#   context = "Attempts: 1) JSON parse - syntax error, 2) CSV parse - wrong delimiter, 3) XML parse - not valid XML",
+#   question = "Tried 3 parse approaches, all failed. How should I proceed?",
+#   context = "Attempts: 1) JSON - syntax error, 2) CSV - wrong delimiter, 3) XML - invalid",
 #   options = ["Try a different file format", "Show me the raw file content", "Skip this file"]
 # )
 }
