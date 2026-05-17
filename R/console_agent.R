@@ -478,14 +478,17 @@ create_console_tools <- function(working_dir = tempdir(),
         tool(
             name = "read_file",
             description = paste(
-                "Read the contents of a file.",
+                "Read the contents of a text file with automatic encoding fallback.",
                 "Relative paths prefer the R startup directory so requests about the user's current project work naturally.",
-                "Absolute paths are also allowed."
+                "Absolute paths are also allowed.",
+                "Returns UTF-8 text; if output looks garbled, retry with explicit encoding such as GB18030, GBK, latin1, or CP1252."
             ),
             parameters = z_object(
-                path = z_string("Path to the file to read")
+                path = z_string("Path to the file to read"),
+                encoding = z_string("Optional source file encoding to try first, for example UTF-8, GB18030, GBK, BIG5, latin1, or CP1252.", nullable = TRUE),
+                .required = "path"
             ),
-            execute = function(path) {
+            execute = function(path, encoding = NULL) {
                 result <- tryCatch(
                     {
                         full_path <- resolve_console_existing_path(path)
@@ -494,10 +497,7 @@ create_console_tools <- function(working_dir = tempdir(),
                         } else if (is_console_binary_file(full_path)) {
                             list(error = TRUE, message = console_binary_file_message(path))
                         } else {
-                            list(
-                                error = FALSE,
-                                content = paste(readLines(full_path, encoding = "UTF-8", warn = FALSE), collapse = "\n")
-                            )
+                            computer$read_file(full_path, encoding = encoding %||% "UTF-8")
                         }
                     },
                     error = function(e) list(error = TRUE, message = conditionMessage(e))
@@ -1345,6 +1345,7 @@ build_console_system_prompt <- function(working_dir, startup_dir, sandbox_mode, 
             "Use a small computer tool set: `bash`, `read_file`, `write_file`, and `edit_file`.\n",
             "Act directly when the task is clear. For file edits, read the file first, then use `edit_file` for targeted replacements or `write_file` for complete writes.\n",
             "If a tool fails, use the error as evidence and change approach instead of repeating the same call.\n",
+            "For file encoding errors or garbled text, retry `read_file` with explicit encodings such as `GB18030`, `GBK`, `latin1`, or `CP1252`; use `bash` diagnostics like `file` or `iconv` only when needed.\n",
             "Ask the user only when a decision or missing input blocks progress.\n\n",
             "Language: ", lang_hint, "\n\n",
             "Safety: you operate in ", sandbox_mode, " sandbox mode. Confirm destructive operations before proceeding.\n\n",
@@ -1420,6 +1421,7 @@ Prefer interactive prompts over generating text that asks the user to reply. Thi
 19. **Use sandbox R helpers correctly**: Inside `execute_r_code`, relative paths still point at the sandbox working directory. Use `.aisdk_startup_dir` or `aisdk_resolve_startup_path()` to read files from the user's project
 20. **Inspect workspace objects before guessing**: `list_r_objects` and `inspect_r_object` are read-only and can inspect both the session environment and `.GlobalEnv`. If an object name exists in both, the session environment wins. Use `execute_r_code_local` only when you must create, modify, or run side-effectful code in the user's workspace
 21. **Single-cell and spatial debugging**: When the user reports Seurat, RCTD, SPOTlight, spatial transcriptomics, or S4 object errors, first inspect the relevant live object structure with `list_r_objects` and `inspect_r_object`. Confirm assays, default assay, layers/slots, reductions, images, metadata columns, and cell/feature scale before proposing script changes
+22. **Handle file encodings autonomously**: `read_file` returns UTF-8 text and can accept an optional `encoding`. If a read fails or the content looks garbled, do not ask the user first; retry with plausible encodings such as `GB18030`, `GBK`, `latin1`, and `CP1252`, and use `bash` diagnostics like `file` or `iconv` only when needed
 
 ## Default Persona
 

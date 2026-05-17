@@ -58,6 +58,45 @@ test_that("Computer.read_file reads file contents", {
   unlink(test_file)
 })
 
+test_that("Computer.read_file falls back for non-UTF-8 text", {
+  skip_on_cran()
+  workdir <- tempfile("computer-encoding-")
+  dir.create(workdir, recursive = TRUE)
+  on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+  comp <- Computer$new(working_dir = workdir, sandbox_mode = "permissive")
+  latin1_file <- file.path(workdir, "latin1.txt")
+  writeBin(c(charToRaw("caf"), as.raw(0xe9), as.raw(0x0a)), latin1_file)
+
+  result <- comp$read_file("latin1.txt")
+
+  expect_false(result$error)
+  expect_equal(result$content, "café")
+  expect_true(validUTF8(result$content))
+})
+
+test_that("computer read_file tool exposes optional encoding override", {
+  skip_on_cran()
+  workdir <- tempfile("computer-tool-encoding-")
+  dir.create(workdir, recursive = TRUE)
+  on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+  latin1_file <- file.path(workdir, "latin1.txt")
+  writeBin(c(charToRaw("caf"), as.raw(0xe9), as.raw(0x0a)), latin1_file)
+
+  tools <- create_computer_tools(working_dir = workdir)
+  read_tool <- find_tool(tools, "read_file")
+  schema <- schema_to_list(read_tool$parameters)
+
+  expect_true("encoding" %in% names(schema$properties))
+  expect_equal(unlist(schema$required), "path")
+
+  result <- read_tool$run(list(path = "latin1.txt", encoding = "latin1"))
+
+  expect_equal(result, "café")
+  expect_true(validUTF8(result))
+})
+
 test_that("Computer.read_file handles missing files", {
   skip_on_cran()
   comp <- Computer$new(working_dir = tempdir(), sandbox_mode = "permissive")

@@ -344,6 +344,42 @@ test_that("read_file reports image files instead of reading binary bytes", {
     expect_true(grepl("cannot be read as UTF-8 text", result, fixed = TRUE))
 })
 
+test_that("console read_file falls back for non-UTF-8 text", {
+    workdir <- tempfile("console-encoding-read-")
+    dir.create(workdir, recursive = TRUE)
+    latin1_path <- file.path(workdir, "latin1.R")
+    writeBin(c(charToRaw("# caf"), as.raw(0xe9), as.raw(0x0a)), latin1_path)
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir, startup_dir = workdir, sandbox_mode = "permissive", profile = "legacy")
+    read_tool <- tools[[which(sapply(tools, function(t) t$name) == "read_file")]]
+
+    result <- read_tool$run(list(path = "latin1.R"))
+
+    expect_equal(result, "# café")
+    expect_true(validUTF8(result))
+})
+
+test_that("console read_file exposes optional explicit encoding", {
+    workdir <- tempfile("console-explicit-encoding-")
+    dir.create(workdir, recursive = TRUE)
+    latin1_path <- file.path(workdir, "latin1.R")
+    writeBin(c(charToRaw("# caf"), as.raw(0xe9), as.raw(0x0a)), latin1_path)
+    on.exit(unlink(workdir, recursive = TRUE), add = TRUE)
+
+    tools <- create_console_tools(working_dir = workdir, startup_dir = workdir, sandbox_mode = "permissive", profile = "legacy")
+    read_tool <- find_tool(tools, "read_file")
+    schema <- schema_to_list(read_tool$parameters)
+
+    expect_true("encoding" %in% names(schema$properties))
+    expect_equal(unlist(schema$required), "path")
+
+    result <- read_tool$run(list(path = "latin1.R", encoding = "latin1"))
+
+    expect_equal(result, "# café")
+    expect_true(validUTF8(result))
+})
+
 test_that("get_system_info tool works", {
     tools <- create_console_tools(profile = "legacy")
     sys_info_tool <- tools[[which(sapply(tools, function(t) t$name) == "get_system_info")]]
@@ -429,6 +465,17 @@ test_that("console agent system prompt includes key elements", {
     expect_true(grepl("Interpret 'current directory' as the R startup directory", prompt, fixed = TRUE))
     expect_true(grepl("Inspect workspace objects before guessing", prompt, fixed = TRUE))
     expect_true(grepl("Single-cell and spatial debugging", prompt, fixed = TRUE))
+    expect_true(grepl("Handle file encodings autonomously", prompt, fixed = TRUE))
+    expect_true(grepl("GB18030", prompt, fixed = TRUE))
+})
+
+test_that("minimal console prompt tells agent to retry file encodings", {
+    agent <- create_console_agent(profile = "minimal")
+    prompt <- agent$system_prompt
+
+    expect_true(grepl("For file encoding errors or garbled text", prompt, fixed = TRUE))
+    expect_true(grepl("retry `read_file` with explicit encodings", prompt, fixed = TRUE))
+    expect_true(grepl("GB18030", prompt, fixed = TRUE))
 })
 
 test_that("find_image_files ranks relevant local image candidates", {

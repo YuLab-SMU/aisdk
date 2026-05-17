@@ -131,7 +131,7 @@ Computer <- R6::R6Class("Computer",
       # Read file
       tryCatch(
         {
-          content <- paste(readLines(full_path, encoding = encoding, warn = FALSE), collapse = "\n")
+          content <- private$read_text_file(full_path, encoding = encoding)
           list(
             content = content,
             error = FALSE,
@@ -246,7 +246,7 @@ Computer <- R6::R6Class("Computer",
 
       tryCatch(
         {
-          content <- paste(readLines(full_path, encoding = encoding, warn = FALSE), collapse = "\n")
+          content <- private$read_text_file(full_path, encoding = encoding)
           matches <- gregexpr(pattern, content, fixed = TRUE)[[1]]
           count <- if (identical(matches[[1]], -1L)) 0L else length(matches)
           if (count == 0L) {
@@ -444,6 +444,56 @@ Computer <- R6::R6Class("Computer",
       normalizePath(created, winslash = "/", mustWork = FALSE)
     },
 
+    read_text_file = function(path, encoding = "UTF-8") {
+      bytes <- readBin(path, what = "raw", n = file.info(path)$size %||% 0L)
+      if (any(bytes == as.raw(0))) {
+        stop("File contains NUL bytes and appears to be binary; cannot decode as text.")
+      }
+      text <- if (length(bytes) == 0L) "" else rawToChar(bytes, multiple = FALSE)
+
+      normalize_lines <- function(decoded) {
+        decoded <- sub("\\r\\n$|\\n$|\\r$", "", decoded, perl = TRUE)
+        decoded <- gsub("\r\n", "\n", decoded, fixed = TRUE)
+        gsub("\r", "\n", decoded, fixed = TRUE)
+      }
+
+      guessed <- character(0)
+      if (requireNamespace("readr", quietly = TRUE)) {
+        guessed <- tryCatch(
+          readr::guess_encoding(bytes)$encoding,
+          error = function(e) character(0)
+        )
+      }
+
+      try_encodings <- unique(c(
+        encoding,
+        guessed,
+        "UTF-8",
+        "GB18030",
+        "GBK",
+        "BIG5",
+        "SJIS",
+        "EUC-JP",
+        "latin1",
+        "CP1252"
+      ))
+
+      for (enc in try_encodings) {
+        if (!is.character(enc) || length(enc) != 1L || !nzchar(enc) || enc %in% c("UTF-8-BOM", "native.enc")) {
+          next
+        }
+        decoded <- tryCatch(
+          iconv(text, from = enc, to = "UTF-8", sub = NA_character_),
+          error = function(e) NA_character_
+        )
+        if (!is.na(decoded) && validUTF8(decoded)) {
+          return(normalize_lines(decoded))
+        }
+      }
+
+      stop("Unable to decode file as UTF-8 text.")
+    },
+
     #' Check bash command for sandbox violations
     check_bash_violation = function(command) {
       # Strict mode: block dangerous commands
@@ -570,15 +620,18 @@ create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sand
     tool(
       name = "read_file",
       description = paste(
-        "Read the contents of a file.",
+        "Read the contents of a text file with automatic encoding fallback.",
         "Path can be relative to working directory or absolute.",
-        "Returns file contents as text."
+        "Returns file contents as UTF-8 text.",
+        "If automatic detection fails or output looks garbled, retry with explicit encoding such as GB18030, GBK, latin1, or CP1252."
       ),
       parameters = z_object(
-        path = z_string("Path to the file to read")
+        path = z_string("Path to the file to read"),
+        encoding = z_string("Optional source file encoding to try first, for example UTF-8, GB18030, GBK, BIG5, latin1, or CP1252.", nullable = TRUE),
+        .required = "path"
       ),
-      execute = function(path) {
-        result <- computer$read_file(path)
+      execute = function(path, encoding = NULL) {
+        result <- computer$read_file(path, encoding = encoding %||% "UTF-8")
         if (result$error) {
           result$message
         } else {
