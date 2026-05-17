@@ -1409,6 +1409,13 @@ OpenAIImageModel <- R6::R6Class(
     },
 
     #' @description Generate images.
+    #'
+    #' Tries the classic `POST /v1/images/generations` endpoint first. If that
+    #' returns a 404 with `invalid_api_path` / "not available" — the signal
+    #' some OpenAI-compatible proxies emit when they only expose the newer
+    #' Responses API — falls back to `POST /v1/responses` with the
+    #' `image_generation` tool and decodes the returned base64 PNG.
+    #'
     #' @param params A list of call options.
     #' @return A GenerateImageResult object.
     do_generate_image = function(params) {
@@ -1416,6 +1423,26 @@ OpenAIImageModel <- R6::R6Class(
         rlang::abort("`prompt` must be a non-empty string.")
       }
 
+      classic <- tryCatch(
+        self$do_generate_image_classic(params),
+        error = function(e) e
+      )
+      if (!inherits(classic, "error")) {
+        return(classic)
+      }
+
+      if (self$looks_like_missing_classic_endpoint(classic)) {
+        message(
+          "OpenAI image generation: classic /v1/images/generations is unreachable on this endpoint. ",
+          "Falling back to /v1/responses with the `image_generation` tool."
+        )
+        return(self$do_generate_image_via_responses(params))
+      }
+
+      stop(classic)
+    },
+
+    do_generate_image_classic = function(params) {
       url <- paste0(private$config$base_url, "/images/generations")
       headers <- private$get_headers(include_content_type = TRUE)
       body <- private$build_generation_body(params)
@@ -1440,6 +1467,69 @@ OpenAIImageModel <- R6::R6Class(
         usage = response$usage %||% NULL,
         raw_response = response
       )
+    },
+
+    do_generate_image_via_responses = function(params) {
+      url <- paste0(private$config$base_url, "/responses")
+      # Force identity transfer-encoding: some OpenAI-compatible proxies
+      # advertise gzip but send a malformed Content-Encoding header on the
+      # /v1/responses route. With `Accept-Encoding: identity` the proxy
+      # streams uncompressed and httr2 parses cleanly.
+      headers <- c(
+        private$get_headers(include_content_type = TRUE),
+        list(`Accept-Encoding` = "identity")
+      )
+      body <- list(
+        model = self$model_id,
+        input = params$prompt,
+        tools = list(list(type = "image_generation"))
+      )
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
+
+      images <- list()
+      for (item in response$output %||% list()) {
+        if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
+          images <- c(images, list(list(
+            bytes = base64enc::base64decode(item$result),
+            media_type = "image/png",
+            revised_prompt = item$revised_prompt %||% NULL
+          )))
+        }
+      }
+
+      if (!length(images)) {
+        rlang::abort(c(
+          "Responses API returned no `image_generation_call` output.",
+          i = "The proxy accepted the request but produced no image; this is usually a model or prompt issue."
+        ))
+      }
+
+      GenerateImageResult$new(
+        images = finalize_image_artifacts(
+          images,
+          output_dir = params$output_dir %||% tempdir(),
+          prefix = "openai_image_responses"
+        ),
+        usage = response$usage %||% NULL,
+        raw_response = response
+      )
+    },
+
+    looks_like_missing_classic_endpoint = function(err) {
+      msg <- conditionMessage(err) %||% ""
+      isTRUE(grepl("404", msg, fixed = TRUE)) &&
+        (grepl("invalid_api_path", msg, fixed = TRUE) ||
+         grepl("not available", msg, fixed = TRUE) ||
+         grepl("images/generations", msg, fixed = TRUE))
     },
 
     #' @description Edit images.
