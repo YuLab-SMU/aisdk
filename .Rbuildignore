@@ -52,3 +52,4 @@
 ^cran-comments\.md$
 ^TODO\.md$
 ^verify_context_extension\.R$
+^tools$
