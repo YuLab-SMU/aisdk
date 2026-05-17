@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 ### Added
 - Added provider-neutral multimodal content blocks via `input_text()` and `input_image()`.
