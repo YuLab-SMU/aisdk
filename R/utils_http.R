@@ -21,6 +21,50 @@ should_skip_internet_check <- function() {
   identical(tolower(trimws(env)), "true") || identical(trimws(env), "1")
 }
 
+# Tracks which URLs we've already warned about so a single false-negative
+# from curl::has_internet() doesn't spam the console on every retry.
+.aisdk_preflight_warned <- new.env(parent = emptyenv())
+
+# Connectivity preflight that no longer short-circuits the request.
+#
+# Historically aisdk returned NULL immediately when `curl::has_internet()`
+# returned FALSE — this caused silent empty results behind corporate proxies,
+# VPNs and certain custom DNS setups where the libcurl heuristic produces a
+# false negative even though specific API endpoints are reachable (see
+# https://github.com/jeroen/curl/issues/277). The real HTTP error is always
+# a more useful signal than a generic preflight, so we now:
+#
+#   - log a one-time message per URL when the preflight looks bad,
+#   - return TRUE/FALSE without aborting so callers proceed with the actual
+#     request and surface the authoritative error (timeout, 5xx, DNS, ...).
+#
+# Set `options(aisdk.preflight_mode = "abort")` (or
+# `AISDK_PREFLIGHT_MODE=abort`) to restore the old short-circuit behavior.
+preflight_internet <- function(url) {
+  if (should_skip_internet_check()) {
+    return(TRUE)
+  }
+  ok <- tryCatch(curl::has_internet(), error = function(e) NA)
+  if (isTRUE(ok)) {
+    return(TRUE)
+  }
+  # Soft path: warn once per URL and keep going.
+  mode <- getOption("aisdk.preflight_mode",
+                    Sys.getenv("AISDK_PREFLIGHT_MODE", "warn"))
+  if (identical(tolower(mode), "abort")) {
+    message("Internet connection is not available. Cannot reach: ", url)
+    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
+    return(FALSE)
+  }
+  key <- substr(url %||% "<no url>", 1, 200)
+  if (is.null(.aisdk_preflight_warned[[key]])) {
+    .aisdk_preflight_warned[[key]] <- TRUE
+    message("aisdk: curl::has_internet() reports no connectivity for ", url,
+            "; attempting request anyway (set AISDK_PREFLIGHT_MODE=abort to restore the old short-circuit).")
+  }
+  TRUE
+}
+
 resolve_positive_timeout_seconds <- function(value, arg_name = "timeout_seconds") {
   if (is.null(value)) {
     return(NULL)
@@ -344,10 +388,9 @@ post_to_api <- function(url, headers, body,
                         first_byte_timeout_seconds = NULL,
                         connect_timeout_seconds = NULL,
                         idle_timeout_seconds = NULL) {
-  # CRAN policy: fail gracefully when internet is unavailable
-  if (!should_skip_internet_check() && !curl::has_internet()) {
-    message("Internet connection is not available. Cannot reach: ", url)
-    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
+  # CRAN policy: fail gracefully when internet is unavailable. The preflight
+  # is non-fatal by default; see `preflight_internet()` for the rationale.
+  if (!preflight_internet(url)) {
     return(NULL)
   }
 
@@ -466,9 +509,7 @@ post_multipart_to_api <- function(url, headers, body,
                                   first_byte_timeout_seconds = NULL,
                                   connect_timeout_seconds = NULL,
                                   idle_timeout_seconds = NULL) {
-  if (!should_skip_internet_check() && !curl::has_internet()) {
-    message("Internet connection is not available. Cannot reach: ", url)
-    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
+  if (!preflight_internet(url)) {
     return(NULL)
   }
 
@@ -594,10 +635,9 @@ stream_from_api <- function(url, headers, body, callback,
                             first_byte_timeout_seconds = NULL,
                             connect_timeout_seconds = NULL,
                             idle_timeout_seconds = NULL) {
-  # CRAN policy: fail gracefully when internet is unavailable
-  if (!should_skip_internet_check() && !curl::has_internet()) {
-    message("Internet connection is not available. Cannot reach: ", url)
-    message("Hint: Run check_api(url = '", url, "') to diagnose connection issues.")
+  # CRAN policy: fail gracefully when internet is unavailable. The preflight
+  # is non-fatal by default; see `preflight_internet()` for the rationale.
+  if (!preflight_internet(url)) {
     return(invisible(NULL))
   }
 

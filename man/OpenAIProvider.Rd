@@ -19,6 +19,7 @@ Provider class for OpenAI. Can create language and embedding models.
 \item \href{#method-OpenAIProvider-new}{\code{OpenAIProvider$new()}}
 \item \href{#method-OpenAIProvider-language_model}{\code{OpenAIProvider$language_model()}}
 \item \href{#method-OpenAIProvider-responses_model}{\code{OpenAIProvider$responses_model()}}
+\item \href{#method-OpenAIProvider-model}{\code{OpenAIProvider$model()}}
 \item \href{#method-OpenAIProvider-smart_model}{\code{OpenAIProvider$smart_model()}}
 \item \href{#method-OpenAIProvider-embedding_model}{\code{OpenAIProvider$embedding_model()}}
 \item \href{#method-OpenAIProvider-image_model}{\code{OpenAIProvider$image_model()}}
@@ -46,7 +47,8 @@ Initialize the OpenAI provider.
   first_byte_timeout_seconds = NULL,
   connect_timeout_seconds = NULL,
   idle_timeout_seconds = NULL,
-  disable_stream_options = FALSE
+  disable_stream_options = FALSE,
+  api_format = c("auto", "chat", "responses")
 )}\if{html}{\out{</div>}}
 }
 
@@ -76,6 +78,14 @@ Initialize the OpenAI provider.
 \item{\code{idle_timeout_seconds}}{Optional stall timeout in seconds for API calls.}
 
 \item{\code{disable_stream_options}}{Disable stream_options parameter (for providers that don't support it).}
+
+\item{\code{api_format}}{Default API surface for \code{smart_model()} / \code{model()}:
+"auto" (route reasoning models to Responses, others to Chat — the
+canonical OpenAI behavior), "chat" (always Chat Completions — useful
+for proxies that don't expose /responses, or that surface reasoning
+models like gpt-5.x via /chat/completions), or "responses" (always
+Responses API). The explicit \code{language_model()} and \code{responses_model()}
+methods continue to ignore this setting.}
 }
 \if{html}{\out{</div>}}
 }
@@ -84,7 +94,7 @@ Initialize the OpenAI provider.
 \if{html}{\out{<a id="method-OpenAIProvider-language_model"></a>}}
 \if{latex}{\out{\hypertarget{method-OpenAIProvider-language_model}{}}}
 \subsection{Method \code{language_model()}}{
-Create a language model.
+Create a language model (always Chat Completions API).
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$language_model(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o"))}\if{html}{\out{</div>}}
 }
@@ -133,14 +143,36 @@ An OpenAIResponsesLanguageModel object.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIProvider-model"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIProvider-model}{}}}
+\subsection{Method \code{model()}}{
+Default-route factory. Picks chat vs responses based on the
+\code{api_format} set in \code{create_openai()}. Recommended entry point for
+callers that don't care which surface is used.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$model(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o"))}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{model_id}}{The model ID. Defaults to \code{OPENAI_MODEL} env var.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A LanguageModelV1 instance.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-OpenAIProvider-smart_model"></a>}}
 \if{latex}{\out{\hypertarget{method-OpenAIProvider-smart_model}{}}}
 \subsection{Method \code{smart_model()}}{
-Smart model factory that automatically selects the best API.
+Smart model factory that selects the API surface.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$smart_model(
   model_id,
-  api_format = c("auto", "chat", "responses")
+  api_format = private$config$api_format \%||\% "auto"
 )}\if{html}{\out{</div>}}
 }
 
@@ -149,18 +181,21 @@ Smart model factory that automatically selects the best API.
 \describe{
 \item{\code{model_id}}{The model ID.}
 
-\item{\code{api_format}}{API format to use: "auto" (default), "chat", or "responses".}
+\item{\code{api_format}}{API format: "auto" (default — reasoning → Responses,
+others → Chat), "chat", or "responses". Defaults to the
+\code{api_format} passed to \code{create_openai()}.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-When \code{api_format = "auto"} (default), the method automatically selects:
+When \code{api_format = "auto"}, the method picks:
 \itemize{
-\item Responses API for reasoning models (o1, o3, o1-mini, o3-mini)
-\item Chat Completions API for all other models (gpt-4o, gpt-4, etc.)
+\item Responses API for reasoning models (o1, o3, gpt-5, ...)
+\item Chat Completions API for everything else
 }
 
-You can override this by explicitly setting \code{api_format}.
+Override per-call when the provider's default doesn't match the
+specific model you're about to use.
 }
 
 \subsection{Returns}{

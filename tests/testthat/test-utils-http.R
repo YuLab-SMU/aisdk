@@ -281,3 +281,54 @@ test_that("stream_from_api does not retry after a stream event is delivered", {
   expect_length(chunks, 1)
   expect_equal(chunks[[1]]$choices[[1]]$delta$content, "partial")
 })
+
+# --- Issue 2: preflight is non-fatal by default ---------------------------
+
+test_that("preflight_internet returns TRUE when has_internet() is TRUE", {
+  testthat::local_mocked_bindings(
+    has_internet = function() TRUE, .package = "curl"
+  )
+  withr::with_envvar(c(AISDK_SKIP_INTERNET_CHECK = NA, AISDK_PREFLIGHT_MODE = NA), {
+    expect_true(aisdk:::preflight_internet("https://example.test"))
+  })
+})
+
+test_that("preflight_internet warns once but returns TRUE when has_internet=FALSE (default mode)", {
+  testthat::local_mocked_bindings(
+    has_internet = function() FALSE, .package = "curl"
+  )
+  rm(list = ls(envir = aisdk:::.aisdk_preflight_warned),
+     envir = aisdk:::.aisdk_preflight_warned)
+  withr::with_envvar(c(AISDK_SKIP_INTERNET_CHECK = NA, AISDK_PREFLIGHT_MODE = NA), {
+    expect_message(
+      result <- aisdk:::preflight_internet("https://uncrawlable.test/v1/x"),
+      "attempting request anyway"
+    )
+    expect_true(result)
+    expect_silent(aisdk:::preflight_internet("https://uncrawlable.test/v1/x"))
+  })
+})
+
+test_that("preflight_internet returns FALSE when AISDK_PREFLIGHT_MODE=abort and offline", {
+  testthat::local_mocked_bindings(
+    has_internet = function() FALSE, .package = "curl"
+  )
+  withr::with_envvar(
+    c(AISDK_SKIP_INTERNET_CHECK = NA, AISDK_PREFLIGHT_MODE = "abort"),
+    {
+      expect_message(result <- aisdk:::preflight_internet("https://offline.test"),
+                     "Internet connection is not available")
+      expect_false(result)
+    }
+  )
+})
+
+test_that("preflight_internet honors AISDK_SKIP_INTERNET_CHECK=1", {
+  testthat::local_mocked_bindings(
+    has_internet = function() FALSE, .package = "curl"
+  )
+  withr::with_envvar(c(AISDK_SKIP_INTERNET_CHECK = "1"), {
+    expect_silent(result <- aisdk:::preflight_internet("https://skipped.test"))
+    expect_true(result)
+  })
+})

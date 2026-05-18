@@ -25,6 +25,7 @@ Provider class for Moonshot AI Kimi models.
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="embedding_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-embedding_model'><code>aisdk::OpenAIProvider$embedding_model()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="get_conversation"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-get_conversation'><code>aisdk::OpenAIProvider$get_conversation()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="image_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-image_model'><code>aisdk::OpenAIProvider$image_model()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-model'><code>aisdk::OpenAIProvider$model()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="responses_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-responses_model'><code>aisdk::OpenAIProvider$responses_model()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="smart_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-smart_model'><code>aisdk::OpenAIProvider$smart_model()</code></a></span></li>
 </ul>

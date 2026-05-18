@@ -16,7 +16,8 @@ create_openai(
   first_byte_timeout_seconds = NULL,
   connect_timeout_seconds = NULL,
   idle_timeout_seconds = NULL,
-  disable_stream_options = FALSE
+  disable_stream_options = FALSE,
+  api_format = c("auto", "chat", "responses")
 )
 }
 \arguments{

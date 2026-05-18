@@ -126,8 +126,21 @@ OpenAILanguageModel <- R6::R6Class(
         stream = FALSE
       )
 
-      if (!is.null(params$temperature)) {
+      # Reasoning models (o-series, gpt-5) reject sampling params with HTTP 400
+      # ("Unsupported value: 'temperature' does not support X with this model").
+      # See: https://platform.openai.com/docs/guides/reasoning
+      is_reasoning <- self$has_capability("is_reasoning_model")
+      if (!is.null(params$temperature) && !is_reasoning) {
         body$temperature <- params$temperature
+      }
+      if (!is.null(params$top_p) && !is_reasoning) {
+        body$top_p <- params$top_p
+      }
+      if (!is.null(params$presence_penalty) && !is_reasoning) {
+        body$presence_penalty <- params$presence_penalty
+      }
+      if (!is.null(params$frequency_penalty) && !is_reasoning) {
+        body$frequency_penalty <- params$frequency_penalty
       }
 
       # ==========================================================
@@ -138,7 +151,7 @@ OpenAILanguageModel <- R6::R6Class(
       if (!is.null(explicit_completion_tokens)) {
         body$max_completion_tokens <- explicit_completion_tokens
       } else if (!is.null(params$max_tokens)) {
-        if (self$has_capability("is_reasoning_model")) {
+        if (is_reasoning) {
           body$max_completion_tokens <- params$max_tokens
         } else {
           body$max_tokens <- params$max_tokens
@@ -159,13 +172,18 @@ OpenAILanguageModel <- R6::R6Class(
 
       # Pass through any extra parameters
       handled_params <- c(
-        "messages", "temperature", "max_tokens", "max_completion_tokens",
+        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
+        "max_tokens", "max_completion_tokens",
         "tools", "stream", "model",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
+        if (is_reasoning) {
+          extra_params <- extra_params[setdiff(names(extra_params),
+            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
+        }
         body <- utils::modifyList(body, extra_params)
       }
 
@@ -263,8 +281,19 @@ OpenAILanguageModel <- R6::R6Class(
         stream = TRUE
       )
 
-      if (!is.null(params$temperature)) {
+      # Reasoning models (o-series, gpt-5) reject sampling params — silently skip.
+      is_reasoning <- self$has_capability("is_reasoning_model")
+      if (!is.null(params$temperature) && !is_reasoning) {
         body$temperature <- params$temperature
+      }
+      if (!is.null(params$top_p) && !is_reasoning) {
+        body$top_p <- params$top_p
+      }
+      if (!is.null(params$presence_penalty) && !is_reasoning) {
+        body$presence_penalty <- params$presence_penalty
+      }
+      if (!is.null(params$frequency_penalty) && !is_reasoning) {
+        body$frequency_penalty <- params$frequency_penalty
       }
 
       # Smart Token Limit Mapping (capability-driven)
@@ -272,7 +301,7 @@ OpenAILanguageModel <- R6::R6Class(
       if (!is.null(explicit_completion_tokens)) {
         body$max_completion_tokens <- explicit_completion_tokens
       } else if (!is.null(params$max_tokens)) {
-        if (self$has_capability("is_reasoning_model")) {
+        if (is_reasoning) {
           body$max_completion_tokens <- params$max_tokens
         } else {
           body$max_tokens <- params$max_tokens
@@ -281,13 +310,18 @@ OpenAILanguageModel <- R6::R6Class(
 
       # Pass through any extra parameters
       handled_params <- c(
-        "messages", "temperature", "max_tokens", "max_completion_tokens",
+        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
+        "max_tokens", "max_completion_tokens",
         "tools", "stream", "model",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
+        if (is_reasoning) {
+          extra_params <- extra_params[setdiff(names(extra_params),
+            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
+        }
         body <- utils::modifyList(body, extra_params)
       }
 
@@ -553,6 +587,14 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     #' @param config Configuration list with api_key, base_url, headers, etc.
     #' @param capabilities Optional list of capability flags.
     initialize = function(model_id, config, capabilities = list()) {
+      # Auto-detect reasoning model so downstream `has_capability()` calls work.
+      # Matches OpenAI o-series (o1, o3, o4-mini, ...), gpt-5 family (gpt-5,
+      # gpt-5-pro, gpt-5-mini, ...), and proxy variants like gpt-5.4-mini.
+      if (is.null(capabilities$is_reasoning_model)) {
+        capabilities$is_reasoning_model <- grepl(
+          "^o[0-9]|^gpt-5", model_id, ignore.case = TRUE
+        )
+      }
       super$initialize(
         provider = config$provider_name %||% "openai",
         model_id = model_id,
@@ -614,9 +656,25 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         body$previous_response_id <- private$last_response_id
       }
 
-      # Optional parameters
-      if (!is.null(params$temperature)) {
+      # Optional sampling parameters.
+      # Reasoning models on the Responses API (gpt-5, o-series, and most
+      # gpt-5.x variants on third-party proxies) reject `temperature`/`top_p`
+      # with HTTP 400 ("Unsupported value: 'temperature' ... Only the default
+      # value is supported"). We silently skip these for any model exposed via
+      # the Responses API since that surface is reasoning-only on OpenAI.
+      # See: https://platform.openai.com/docs/guides/reasoning
+      is_reasoning <- self$has_capability("is_reasoning_model")
+      if (!is.null(params$temperature) && !is_reasoning) {
         body$temperature <- params$temperature
+      }
+      if (!is.null(params$top_p) && !is_reasoning) {
+        body$top_p <- params$top_p
+      }
+      if (!is.null(params$presence_penalty) && !is_reasoning) {
+        body$presence_penalty <- params$presence_penalty
+      }
+      if (!is.null(params$frequency_penalty) && !is_reasoning) {
+        body$frequency_penalty <- params$frequency_penalty
       }
 
       # ==========================================================
@@ -684,7 +742,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
 
       # Pass through extra parameters (e.g., store)
       handled_params <- c(
-        "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
+        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
+        "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "include",
         "conversation",
@@ -693,6 +752,10 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
+        if (is_reasoning) {
+          extra_params <- extra_params[setdiff(names(extra_params),
+            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
+        }
         body <- utils::modifyList(body, extra_params)
       }
 
@@ -768,9 +831,20 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         body$previous_response_id <- private$last_response_id
       }
 
-      # Optional parameters
-      if (!is.null(params$temperature)) {
+      # Optional sampling parameters — silently skip for reasoning models
+      # (see notes in do_generate above).
+      is_reasoning <- self$has_capability("is_reasoning_model")
+      if (!is.null(params$temperature) && !is_reasoning) {
         body$temperature <- params$temperature
+      }
+      if (!is.null(params$top_p) && !is_reasoning) {
+        body$top_p <- params$top_p
+      }
+      if (!is.null(params$presence_penalty) && !is_reasoning) {
+        body$presence_penalty <- params$presence_penalty
+      }
+      if (!is.null(params$frequency_penalty) && !is_reasoning) {
+        body$frequency_penalty <- params$frequency_penalty
       }
 
       # Smart Token Limit Mapping (same logic as do_generate)
@@ -818,7 +892,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
 
       # Pass through extra parameters
       handled_params <- c(
-        "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
+        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
+        "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "include",
         "conversation",
@@ -827,6 +902,10 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
+        if (is_reasoning) {
+          extra_params <- extra_params[setdiff(names(extra_params),
+            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
+        }
         body <- utils::modifyList(body, extra_params)
       }
 
@@ -2095,6 +2174,13 @@ OpenAIProvider <- R6::R6Class(
     #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
     #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
     #' @param disable_stream_options Disable stream_options parameter (for providers that don't support it).
+    #' @param api_format Default API surface for `smart_model()` / `model()`:
+    #'   "auto" (route reasoning models to Responses, others to Chat — the
+    #'   canonical OpenAI behavior), "chat" (always Chat Completions — useful
+    #'   for proxies that don't expose /responses, or that surface reasoning
+    #'   models like gpt-5.x via /chat/completions), or "responses" (always
+    #'   Responses API). The explicit `language_model()` and `responses_model()`
+    #'   methods continue to ignore this setting.
     initialize = function(api_key = NULL,
                           base_url = NULL,
                           organization = NULL,
@@ -2106,7 +2192,9 @@ OpenAIProvider <- R6::R6Class(
                           first_byte_timeout_seconds = NULL,
                           connect_timeout_seconds = NULL,
                           idle_timeout_seconds = NULL,
-                          disable_stream_options = FALSE) {
+                          disable_stream_options = FALSE,
+                          api_format = c("auto", "chat", "responses")) {
+      api_format <- match.arg(api_format)
       private$config <- list(
         api_key = api_key %||% Sys.getenv("OPENAI_API_KEY"),
         base_url = sub("/$", "", base_url %||% Sys.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")),
@@ -2119,7 +2207,8 @@ OpenAIProvider <- R6::R6Class(
         first_byte_timeout_seconds = first_byte_timeout_seconds,
         connect_timeout_seconds = connect_timeout_seconds,
         idle_timeout_seconds = idle_timeout_seconds,
-        disable_stream_options = disable_stream_options
+        disable_stream_options = disable_stream_options,
+        api_format = api_format
       )
 
       if (nchar(private$config$api_key) == 0) {
@@ -2127,7 +2216,7 @@ OpenAIProvider <- R6::R6Class(
       }
     },
 
-    #' @description Create a language model.
+    #' @description Create a language model (always Chat Completions API).
     #' @param model_id The model ID (e.g., "gpt-4o", "gpt-4o-mini").
     #' @return An OpenAILanguageModel object.
     language_model = function(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o")) {
@@ -2149,19 +2238,31 @@ OpenAIProvider <- R6::R6Class(
       OpenAIResponsesLanguageModel$new(model_id, private$config)
     },
 
-    #' @description Smart model factory that automatically selects the best API.
+    #' @description Default-route factory. Picks chat vs responses based on the
+    #' `api_format` set in `create_openai()`. Recommended entry point for
+    #' callers that don't care which surface is used.
+    #' @param model_id The model ID. Defaults to `OPENAI_MODEL` env var.
+    #' @return A LanguageModelV1 instance.
+    model = function(model_id = Sys.getenv("OPENAI_MODEL", "gpt-4o")) {
+      self$smart_model(model_id, api_format = private$config$api_format %||% "auto")
+    },
+
+    #' @description Smart model factory that selects the API surface.
     #' @param model_id The model ID.
-    #' @param api_format API format to use: "auto" (default), "chat", or "responses".
+    #' @param api_format API format: "auto" (default — reasoning → Responses,
+    #'   others → Chat), "chat", or "responses". Defaults to the
+    #'   `api_format` passed to `create_openai()`.
     #' @return A language model object (either OpenAILanguageModel or OpenAIResponsesLanguageModel).
     #' @details
-
-    #' When `api_format = "auto"` (default), the method automatically selects:
-    #' - Responses API for reasoning models (o1, o3, o1-mini, o3-mini)
-    #' - Chat Completions API for all other models (gpt-4o, gpt-4, etc.)
+    #' When `api_format = "auto"`, the method picks:
+    #' - Responses API for reasoning models (o1, o3, gpt-5, ...)
+    #' - Chat Completions API for everything else
     #'
-    #' You can override this by explicitly setting `api_format`.
-    smart_model = function(model_id, api_format = c("auto", "chat", "responses")) {
-      api_format <- match.arg(api_format)
+    #' Override per-call when the provider's default doesn't match the
+    #' specific model you're about to use.
+    smart_model = function(model_id,
+                           api_format = private$config$api_format %||% "auto") {
+      api_format <- match.arg(api_format, c("auto", "chat", "responses"))
 
       if (api_format == "auto") {
         # Reasoning models use Responses API
@@ -2366,7 +2467,9 @@ create_openai <- function(api_key = NULL,
                           first_byte_timeout_seconds = NULL,
                           connect_timeout_seconds = NULL,
                           idle_timeout_seconds = NULL,
-                          disable_stream_options = FALSE) {
+                          disable_stream_options = FALSE,
+                          api_format = c("auto", "chat", "responses")) {
+  api_format <- match.arg(api_format)
   OpenAIProvider$new(
     api_key = api_key,
     base_url = base_url,
@@ -2379,7 +2482,8 @@ create_openai <- function(api_key = NULL,
     first_byte_timeout_seconds = first_byte_timeout_seconds,
     connect_timeout_seconds = connect_timeout_seconds,
     idle_timeout_seconds = idle_timeout_seconds,
-    disable_stream_options = disable_stream_options
+    disable_stream_options = disable_stream_options,
+    api_format = api_format
   )
 }
 

@@ -83,7 +83,10 @@ MoonshotLanguageModel <- R6::R6Class(
         payload$body$prompt_cache_key <- private$config$prompt_cache_key
       }
 
-      if (private$is_temperature_locked_model() && !is.null(payload$body$temperature)) {
+      if (private$is_temperature_locked_model()) {
+        # Kimi K2 / Kimi-for-Coding require temperature=1. Force-set even when
+        # the OpenAI parent class drops the field (it drops sampling params for
+        # reasoning models, but Moonshot's API still requires the literal 1).
         payload$body$temperature <- 1
       }
 

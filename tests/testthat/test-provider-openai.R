@@ -1545,3 +1545,58 @@ test_that("OpenAI-compatible AiHubMix base_url maps generation width and transpa
   expect_false("height" %in% names(captured_body))
   expect_false("transparent_background" %in% names(captured_body))
 })
+
+# --- Issue 1: reasoning models drop sampling params ------------------------
+
+test_that("Chat Completions drops temperature/top_p for reasoning models", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  model <- provider$language_model("gpt-5")
+  expect_true(model$has_capability("is_reasoning_model"))
+
+  payload <- model$build_payload(list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.7,
+    top_p = 0.9,
+    presence_penalty = 0.1,
+    frequency_penalty = 0.1
+  ))
+  expect_null(payload$body$temperature)
+  expect_null(payload$body$top_p)
+  expect_null(payload$body$presence_penalty)
+  expect_null(payload$body$frequency_penalty)
+})
+
+test_that("Chat Completions keeps sampling params for non-reasoning models", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  model <- provider$language_model("gpt-4o")
+  expect_false(model$has_capability("is_reasoning_model"))
+
+  payload <- model$build_payload(list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.3,
+    top_p = 0.5
+  ))
+  expect_equal(payload$body$temperature, 0.3)
+  expect_equal(payload$body$top_p, 0.5)
+})
+
+test_that("Responses API auto-detects reasoning and drops temperature", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  m_reason <- provider$responses_model("gpt-5.4-mini")
+  m_chat   <- provider$responses_model("some-non-reasoning")
+  expect_true(m_reason$has_capability("is_reasoning_model"))
+  expect_false(m_chat$has_capability("is_reasoning_model"))
+})
+
+# --- Issue 3: api_format on create_openai() --------------------------------
+
+test_that("create_openai(api_format=) routes provider$model() to the right surface", {
+  prov_auto <- create_openai(api_key = "sk-test", api_format = "auto")
+  prov_chat <- create_openai(api_key = "sk-test", api_format = "chat")
+  prov_resp <- create_openai(api_key = "sk-test", api_format = "responses")
+
+  expect_s3_class(prov_auto$model("gpt-4o"),       "OpenAILanguageModel")
+  expect_s3_class(prov_auto$model("gpt-5"),        "OpenAIResponsesLanguageModel")
+  expect_s3_class(prov_chat$model("gpt-5"),        "OpenAILanguageModel")
+  expect_s3_class(prov_resp$model("gpt-4o"),       "OpenAIResponsesLanguageModel")
+})
