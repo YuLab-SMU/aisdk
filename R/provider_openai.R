@@ -2414,6 +2414,7 @@ OpenAIProvider <- R6::R6Class(
 #' @param connect_timeout_seconds Optional connection-establishment timeout in seconds for API calls.
 #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @param disable_stream_options Disable stream_options parameter (for providers like Volcengine that don't support it).
+#' @param api_format Default API surface for `smart_model()` / `model()`: `"auto"` (default, picks Chat or Responses based on model), `"chat"` (always Chat Completions), or `"responses"` (always Responses API).
 #' @return An OpenAIProvider object.
 #' @export
 #' @examples

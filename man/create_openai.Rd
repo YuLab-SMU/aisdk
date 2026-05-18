@@ -44,6 +44,8 @@ create_openai(
 \item{idle_timeout_seconds}{Optional stall timeout in seconds for API calls.}
 
 \item{disable_stream_options}{Disable stream_options parameter (for providers like Volcengine that don't support it).}
+
+\item{api_format}{Default API surface for \code{smart_model()} / \code{model()}: \code{"auto"} (default, picks Chat or Responses based on model), \code{"chat"} (always Chat Completions), or \code{"responses"} (always Responses API).}
 }
 \value{
 An OpenAIProvider object.
