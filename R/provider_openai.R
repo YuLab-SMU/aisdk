@@ -1156,6 +1156,7 @@ OpenAIImageModel <- R6::R6Class(
   inherit = ImageModelV1,
   private = list(
     config = NULL,
+    last_response_id = NULL,
     get_headers = function(include_content_type = TRUE) {
       h <- list()
       if (nzchar(private$config$api_key %||% "")) {
@@ -1304,6 +1305,28 @@ OpenAIImageModel <- R6::R6Class(
 
       body[!sapply(body, is.null)]
     },
+    build_responses_tool_config = function(params) {
+      # Build the `image_generation` tool config block for the Responses-API
+      # fallback. Mirrors the field subset documented for the tool; keeps the
+      # same normalize + validate sequence as build_generation_body so behavior
+      # is consistent across the two paths.
+      params <- private$normalize_aihubmix_generation_params(params)
+      private$validate_image_params(params, request_type = "generate")
+
+      tool <- list(
+        type = "image_generation",
+        model = params$image_model %||% self$model_id
+      )
+      if (!is.null(params$quality))            tool$quality <- params$quality
+      if (!is.null(params$size))               tool$size <- params$size
+      if (!is.null(params$output_format))      tool$output_format <- params$output_format
+      if (!is.null(params$output_compression)) tool$output_compression <- params$output_compression
+      if (!is.null(params$background))         tool$background <- params$background
+      if (!is.null(params$moderation))         tool$moderation <- params$moderation
+      if (!is.null(params$n))                  tool$n <- params$n
+
+      tool[!sapply(tool, is.null)]
+    },
     build_edit_body = function(params) {
       upload_dir <- params$output_dir %||% tempdir()
       private$validate_image_params(params, request_type = "edit")
@@ -1414,7 +1437,14 @@ OpenAIImageModel <- R6::R6Class(
     #' returns a 404 with `invalid_api_path` / "not available" — the signal
     #' some OpenAI-compatible proxies emit when they only expose the newer
     #' Responses API — falls back to `POST /v1/responses` with the
-    #' `image_generation` tool and decodes the returned base64 PNG.
+    #' `image_generation` tool and decodes the returned base64 image.
+    #'
+    #' On the fallback path, the standard image params (`quality`, `size`,
+    #' `output_format`, `output_compression`, `background`, `moderation`, `n`)
+    #' are forwarded into the tool config, and a `previous_response_id` from a
+    #' prior fallback call is auto-attached so multi-turn edits ("now make it
+    #' realistic") work the same as on the language-model path. Use
+    #' `get_last_response_id()` / `reset()` to inspect or clear that state.
     #'
     #' @param params A list of call options.
     #' @return A GenerateImageResult object.
@@ -1442,6 +1472,11 @@ OpenAIImageModel <- R6::R6Class(
       stop(classic)
     },
 
+    #' @description Generate images via the classic `POST /v1/images/generations`
+    #'   endpoint. Called by `do_generate_image()`; exposed for callers that want
+    #'   to bypass the Responses-API fallback on proxies they trust.
+    #' @param params A list of call options (see `do_generate_image`).
+    #' @return A GenerateImageResult object.
     do_generate_image_classic = function(params) {
       url <- paste0(private$config$base_url, "/images/generations")
       headers <- private$get_headers(include_content_type = TRUE)
@@ -1469,6 +1504,12 @@ OpenAIImageModel <- R6::R6Class(
       )
     },
 
+    #' @description Generate images via `POST /v1/responses` with the
+    #'   `image_generation` tool. Used as a fallback when the classic
+    #'   `/v1/images/generations` endpoint is unreachable (e.g. OpenAI-compatible
+    #'   proxies that only expose the Responses API).
+    #' @param params A list of call options (see `do_generate_image`).
+    #' @return A GenerateImageResult object.
     do_generate_image_via_responses = function(params) {
       url <- paste0(private$config$base_url, "/responses")
       # Force identity transfer-encoding: some OpenAI-compatible proxies
@@ -1482,8 +1523,11 @@ OpenAIImageModel <- R6::R6Class(
       body <- list(
         model = self$model_id,
         input = params$prompt,
-        tools = list(list(type = "image_generation"))
+        tools = list(private$build_responses_tool_config(params))
       )
+      if (!is.null(private$last_response_id)) {
+        body$previous_response_id <- private$last_response_id
+      }
       response <- post_to_api(
         url,
         headers,
@@ -1495,12 +1539,28 @@ OpenAIImageModel <- R6::R6Class(
         idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
       )
 
+      # Record the conversation id even before parsing output, so a callback
+      # like "now make it realistic" can chain off this turn even if the
+      # current response yielded no image.
+      if (!is.null(response$id)) {
+        private$last_response_id <- response$id
+      }
+
+      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
+      media_type <- switch(requested_format,
+        png = "image/png",
+        jpeg = "image/jpeg",
+        jpg = "image/jpeg",
+        webp = "image/webp",
+        "image/png"
+      )
+
       images <- list()
       for (item in response$output %||% list()) {
         if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
           images <- c(images, list(list(
             bytes = base64enc::base64decode(item$result),
-            media_type = "image/png",
+            media_type = media_type,
             revised_prompt = item$revised_prompt %||% NULL
           )))
         }
@@ -1524,12 +1584,33 @@ OpenAIImageModel <- R6::R6Class(
       )
     },
 
+    #' @description Heuristic check used by `do_generate_image()` to decide
+    #'   whether a classic-endpoint error looks like "endpoint not available"
+    #'   on the proxy, in which case the Responses-API fallback is taken.
+    #' @param err An error condition raised by the classic-endpoint call.
+    #' @return `TRUE` if the error message matches the "missing endpoint" shape.
     looks_like_missing_classic_endpoint = function(err) {
       msg <- conditionMessage(err) %||% ""
       isTRUE(grepl("404", msg, fixed = TRUE)) &&
         (grepl("invalid_api_path", msg, fixed = TRUE) ||
          grepl("not available", msg, fixed = TRUE) ||
          grepl("images/generations", msg, fixed = TRUE))
+    },
+
+    #' @description Return the most recent Responses-API response id captured
+    #' during the `/v1/responses` fallback path. Used to chain multi-turn
+    #' image edits via `previous_response_id`.
+    #' @return Character scalar or `NULL` if no fallback call has succeeded yet.
+    get_last_response_id = function() {
+      private$last_response_id
+    },
+
+    #' @description Clear any stored `previous_response_id`, ending the current
+    #' multi-turn image session on the Responses-API fallback path.
+    #' @return The model, invisibly.
+    reset = function() {
+      private$last_response_id <- NULL
+      invisible(self)
     },
 
     #' @description Edit images.

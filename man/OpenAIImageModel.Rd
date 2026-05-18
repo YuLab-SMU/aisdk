@@ -15,6 +15,11 @@ Image model implementation for OpenAI's image generation and editing APIs.
 \itemize{
 \item \href{#method-OpenAIImageModel-new}{\code{OpenAIImageModel$new()}}
 \item \href{#method-OpenAIImageModel-do_generate_image}{\code{OpenAIImageModel$do_generate_image()}}
+\item \href{#method-OpenAIImageModel-do_generate_image_classic}{\code{OpenAIImageModel$do_generate_image_classic()}}
+\item \href{#method-OpenAIImageModel-do_generate_image_via_responses}{\code{OpenAIImageModel$do_generate_image_via_responses()}}
+\item \href{#method-OpenAIImageModel-looks_like_missing_classic_endpoint}{\code{OpenAIImageModel$looks_like_missing_classic_endpoint()}}
+\item \href{#method-OpenAIImageModel-get_last_response_id}{\code{OpenAIImageModel$get_last_response_id()}}
+\item \href{#method-OpenAIImageModel-reset}{\code{OpenAIImageModel$reset()}}
 \item \href{#method-OpenAIImageModel-do_edit_image}{\code{OpenAIImageModel$do_edit_image()}}
 \item \href{#method-OpenAIImageModel-clone}{\code{OpenAIImageModel$clone()}}
 }
@@ -52,6 +57,19 @@ Initialize the OpenAI image model.
 \if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_generate_image}{}}}
 \subsection{Method \code{do_generate_image()}}{
 Generate images.
+
+Tries the classic \code{POST /v1/images/generations} endpoint first. If that
+returns a 404 with \code{invalid_api_path} / "not available" — the signal
+some OpenAI-compatible proxies emit when they only expose the newer
+Responses API — falls back to \code{POST /v1/responses} with the
+\code{image_generation} tool and decodes the returned base64 image.
+
+On the fallback path, the standard image params (\code{quality}, \code{size},
+\code{output_format}, \code{output_compression}, \code{background}, \code{moderation}, \code{n})
+are forwarded into the tool config, and a \code{previous_response_id} from a
+prior fallback call is auto-attached so multi-turn edits ("now make it
+realistic") work the same as on the language-model path. Use
+\code{get_last_response_id()} / \code{reset()} to inspect or clear that state.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_generate_image(params)}\if{html}{\out{</div>}}
 }
@@ -65,6 +83,102 @@ Generate images.
 }
 \subsection{Returns}{
 A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-do_generate_image_classic"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_generate_image_classic}{}}}
+\subsection{Method \code{do_generate_image_classic()}}{
+Generate images via the classic \code{POST /v1/images/generations}
+endpoint. Called by \code{do_generate_image()}; exposed for callers that want
+to bypass the Responses-API fallback on proxies they trust.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_generate_image_classic(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (see \code{do_generate_image}).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-do_generate_image_via_responses"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_generate_image_via_responses}{}}}
+\subsection{Method \code{do_generate_image_via_responses()}}{
+Generate images via \code{POST /v1/responses} with the
+\code{image_generation} tool. Used as a fallback when the classic
+\verb{/v1/images/generations} endpoint is unreachable (e.g. OpenAI-compatible
+proxies that only expose the Responses API).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_generate_image_via_responses(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (see \code{do_generate_image}).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-looks_like_missing_classic_endpoint"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-looks_like_missing_classic_endpoint}{}}}
+\subsection{Method \code{looks_like_missing_classic_endpoint()}}{
+Heuristic check used by \code{do_generate_image()} to decide
+whether a classic-endpoint error looks like "endpoint not available"
+on the proxy, in which case the Responses-API fallback is taken.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$looks_like_missing_classic_endpoint(err)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{err}}{An error condition raised by the classic-endpoint call.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{TRUE} if the error message matches the "missing endpoint" shape.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-get_last_response_id"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-get_last_response_id}{}}}
+\subsection{Method \code{get_last_response_id()}}{
+Return the most recent Responses-API response id captured
+during the \verb{/v1/responses} fallback path. Used to chain multi-turn
+image edits via \code{previous_response_id}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$get_last_response_id()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Character scalar or \code{NULL} if no fallback call has succeeded yet.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-reset"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-reset}{}}}
+\subsection{Method \code{reset()}}{
+Clear any stored \code{previous_response_id}, ending the current
+multi-turn image session on the Responses-API fallback path.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$reset()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+The model, invisibly.
 }
 }
 \if{html}{\out{<hr>}}

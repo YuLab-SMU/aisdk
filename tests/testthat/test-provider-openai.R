@@ -639,6 +639,151 @@ test_that("OpenAI image generation forwards latest image parameters", {
   expect_equal(result$images[[1]]$media_type, "image/jpeg")
 })
 
+test_that("OpenAI image responses fallback forwards image params into the tool config", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://proxy.example/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  fallback_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      if (grepl("/images/generations$", url)) {
+        rlang::abort("HTTP 404 invalid_api_path: images/generations not available on this endpoint")
+      }
+      fallback_body <<- body
+      list(
+        id = "resp_first",
+        output = list(list(
+          type = "image_generation_call",
+          result = base64enc::base64encode(charToRaw("webp-bytes")),
+          revised_prompt = "neon"
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- suppressMessages(generate_image(
+    model = model,
+    prompt = "Draw a green triangle",
+    output_dir = tempdir(),
+    quality = "high",
+    output_format = "webp",
+    background = "transparent",
+    output_compression = 80,
+    moderation = "low"
+  ))
+
+  expect_equal(fallback_body$model, "gpt-image-1.5")
+  expect_equal(fallback_body$input, "Draw a green triangle")
+  expect_length(fallback_body$tools, 1)
+  tool <- fallback_body$tools[[1]]
+  expect_equal(tool$type, "image_generation")
+  expect_equal(tool$model, "gpt-image-1.5")
+  expect_equal(tool$quality, "high")
+  expect_equal(tool$output_format, "webp")
+  expect_equal(tool$output_compression, 80)
+  expect_equal(tool$background, "transparent")
+  expect_equal(tool$moderation, "low")
+  expect_null(fallback_body$previous_response_id)
+  expect_equal(result$images[[1]]$media_type, "image/webp")
+})
+
+test_that("OpenAI image responses fallback injects previous_response_id on multi-turn", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://proxy.example/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  call_log <- list()
+  next_id <- "resp_first"
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      if (grepl("/images/generations$", url)) {
+        rlang::abort("HTTP 404 invalid_api_path: not available")
+      }
+      call_log[[length(call_log) + 1]] <<- body
+      out <- list(
+        id = next_id,
+        output = list(list(
+          type = "image_generation_call",
+          result = base64enc::base64encode(charToRaw("img-bytes"))
+        ))
+      )
+      next_id <<- "resp_second"
+      out
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(generate_image(model = model, prompt = "a cat", output_dir = tempdir()))
+  expect_equal(model$get_last_response_id(), "resp_first")
+  expect_null(call_log[[1]]$previous_response_id)
+
+  suppressMessages(generate_image(model = model, prompt = "now make it realistic", output_dir = tempdir()))
+  expect_equal(call_log[[2]]$previous_response_id, "resp_first")
+  expect_equal(model$get_last_response_id(), "resp_second")
+
+  model$reset()
+  expect_null(model$get_last_response_id())
+})
+
+test_that("OpenAI image responses fallback omits unsupported fields from tool config", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://proxy.example/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  fallback_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      if (grepl("/images/generations$", url)) {
+        rlang::abort("HTTP 404 invalid_api_path: images/generations not available")
+      }
+      fallback_body <<- body
+      list(
+        id = "resp_xyz",
+        output = list(list(
+          type = "image_generation_call",
+          result = base64enc::base64encode(charToRaw("ok"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(generate_image(
+    model = model,
+    prompt = "a tree",
+    output_dir = tempdir(),
+    response_format = "b64_json",
+    timeout_seconds = 30
+  ))
+
+  tool <- fallback_body$tools[[1]]
+  expect_null(tool$response_format)
+  expect_null(tool$timeout_seconds)
+  expect_null(tool$output_dir)
+  expect_null(tool$prompt)
+  expect_null(fallback_body$response_format)
+})
+
 test_that("OpenAI image model posts multipart edit payload and parses images", {
   skip_on_ci()
   skip_on_cran()
