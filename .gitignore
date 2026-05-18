@@ -6,6 +6,10 @@
 .RData
 .Ruserdata
 
+# Environment files
+.Renviron
+.env
+
 # User-specific files
 .Rproj.user/
 *.Rproj
