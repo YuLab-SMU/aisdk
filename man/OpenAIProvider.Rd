@@ -22,6 +22,9 @@ Provider class for OpenAI. Can create language and embedding models.
 \item \href{#method-OpenAIProvider-smart_model}{\code{OpenAIProvider$smart_model()}}
 \item \href{#method-OpenAIProvider-embedding_model}{\code{OpenAIProvider$embedding_model()}}
 \item \href{#method-OpenAIProvider-image_model}{\code{OpenAIProvider$image_model()}}
+\item \href{#method-OpenAIProvider-create_conversation}{\code{OpenAIProvider$create_conversation()}}
+\item \href{#method-OpenAIProvider-get_conversation}{\code{OpenAIProvider$get_conversation()}}
+\item \href{#method-OpenAIProvider-delete_conversation}{\code{OpenAIProvider$delete_conversation()}}
 \item \href{#method-OpenAIProvider-clone}{\code{OpenAIProvider$clone()}}
 }
 }
@@ -204,6 +207,76 @@ Create an image model.
 }
 \subsection{Returns}{
 An OpenAIImageModel object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIProvider-create_conversation"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIProvider-create_conversation}{}}}
+\subsection{Method \code{create_conversation()}}{
+Create a server-side conversation object via
+\code{POST /v1/conversations}. Returns the parsed response, including the
+conversation \code{id} you can pass as \code{conversation = "conv_..."} to
+\code{generate_text()} / \code{stream_text()} so OpenAI manages the message
+history server-side instead of you sending the full transcript each
+turn.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$create_conversation(items = NULL, metadata = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{items}}{Optional list of initial conversation items, each shaped
+like \code{list(type = "message", role = "user", content = "Hello!")}.}
+
+\item{\code{metadata}}{Optional named list (up to 16 keys, values stringified).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Parsed response list with at least \code{id}, \code{object}, \code{created_at},
+\code{metadata}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIProvider-get_conversation"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIProvider-get_conversation}{}}}
+\subsection{Method \code{get_conversation()}}{
+Retrieve a conversation object by id.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$get_conversation(conversation_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{conversation_id}}{Conversation id returned from \code{create_conversation()}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Parsed response list.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIProvider-delete_conversation"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIProvider-delete_conversation}{}}}
+\subsection{Method \code{delete_conversation()}}{
+Delete a conversation object by id. Server-side history
+is irrecoverable after this call.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIProvider$delete_conversation(conversation_id)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{conversation_id}}{Conversation id returned from \code{create_conversation()}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Parsed response list (typically \code{list(id, object, deleted)}).
 }
 }
 \if{html}{\out{<hr>}}

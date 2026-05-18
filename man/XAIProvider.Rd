@@ -19,9 +19,12 @@ Provider class for xAI.
 }
 }
 \if{html}{\out{
-<details open><summary>Inherited methods</summary>
+<details><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="create_conversation"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-create_conversation'><code>aisdk::OpenAIProvider$create_conversation()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="delete_conversation"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-delete_conversation'><code>aisdk::OpenAIProvider$delete_conversation()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="embedding_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-embedding_model'><code>aisdk::OpenAIProvider$embedding_model()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="get_conversation"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-get_conversation'><code>aisdk::OpenAIProvider$get_conversation()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="responses_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-responses_model'><code>aisdk::OpenAIProvider$responses_model()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="OpenAIProvider" data-id="smart_model"><a href='../../aisdk/html/OpenAIProvider.html#method-OpenAIProvider-smart_model'><code>aisdk::OpenAIProvider$smart_model()</code></a></span></li>
 </ul>

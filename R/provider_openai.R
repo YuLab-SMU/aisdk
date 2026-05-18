@@ -531,6 +531,20 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       inc <- params$include
       if (is.null(inc)) return(NULL)
       as.list(unlist(inc, use.names = FALSE))
+    },
+
+    # Accept conversation as either a string id or a list with $id (the shape
+    # the server returns from POST /v1/conversations). Returns the bare id
+    # string or NULL.
+    resolve_conversation_id = function(conversation) {
+      if (is.null(conversation)) return(NULL)
+      if (is.character(conversation) && length(conversation) == 1 && nzchar(conversation)) {
+        return(conversation)
+      }
+      if (is.list(conversation) && !is.null(conversation$id) && nzchar(conversation$id)) {
+        return(conversation$id)
+      }
+      rlang::abort("`conversation` must be a conversation id string or a list with `$id`.")
     }
   ),
   public = list(
@@ -659,12 +673,21 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       if (!is.null(include_field)) {
         body$include <- include_field
       }
+      # Optional server-side conversation handle. Accepts a string id or a
+      # list with `$id`. When set, OpenAI manages message history server-side
+      # — the caller is responsible for sending only the new turn rather than
+      # the full transcript, otherwise tokens are paid twice.
+      conv_id <- private$resolve_conversation_id(params$conversation)
+      if (!is.null(conv_id)) {
+        body$conversation <- conv_id
+      }
 
       # Pass through extra parameters (e.g., store)
       handled_params <- c(
         "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "include",
+        "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -788,12 +811,17 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       if (!is.null(include_field)) {
         body$include <- include_field
       }
+      conv_id <- private$resolve_conversation_id(params$conversation)
+      if (!is.null(conv_id)) {
+        body$conversation <- conv_id
+      }
 
       # Pass through extra parameters
       handled_params <- c(
         "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "include",
+        "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -2166,10 +2194,87 @@ OpenAIProvider <- R6::R6Class(
     #' @return An OpenAIImageModel object.
     image_model = function(model_id = Sys.getenv("OPENAI_IMAGE_MODEL", "gpt-image-2")) {
       OpenAIImageModel$new(model_id, private$config)
+    },
+
+    #' @description Create a server-side conversation object via
+    #'   `POST /v1/conversations`. Returns the parsed response, including the
+    #'   conversation `id` you can pass as `conversation = "conv_..."` to
+    #'   `generate_text()` / `stream_text()` so OpenAI manages the message
+    #'   history server-side instead of you sending the full transcript each
+    #'   turn.
+    #' @param items Optional list of initial conversation items, each shaped
+    #'   like `list(type = "message", role = "user", content = "Hello!")`.
+    #' @param metadata Optional named list (up to 16 keys, values stringified).
+    #' @return Parsed response list with at least `id`, `object`, `created_at`,
+    #'   `metadata`.
+    create_conversation = function(items = NULL, metadata = NULL) {
+      body <- list()
+      if (!is.null(items))    body$items    <- items
+      if (!is.null(metadata)) body$metadata <- metadata
+      private$request_conversations_api("POST", path = "", body = body)
+    },
+
+    #' @description Retrieve a conversation object by id.
+    #' @param conversation_id Conversation id returned from `create_conversation()`.
+    #' @return Parsed response list.
+    get_conversation = function(conversation_id) {
+      if (!is.character(conversation_id) || !nzchar(conversation_id)) {
+        rlang::abort("`conversation_id` must be a non-empty string.")
+      }
+      private$request_conversations_api("GET", path = conversation_id)
+    },
+
+    #' @description Delete a conversation object by id. Server-side history
+    #'   is irrecoverable after this call.
+    #' @param conversation_id Conversation id returned from `create_conversation()`.
+    #' @return Parsed response list (typically `list(id, object, deleted)`).
+    delete_conversation = function(conversation_id) {
+      if (!is.character(conversation_id) || !nzchar(conversation_id)) {
+        rlang::abort("`conversation_id` must be a non-empty string.")
+      }
+      private$request_conversations_api("DELETE", path = conversation_id)
     }
   ),
   private = list(
-    config = NULL
+    config = NULL,
+    request_conversations_api = function(method, path = "", body = NULL) {
+      base <- private$config$base_url
+      url <- paste0(base, "/conversations", if (nzchar(path)) paste0("/", path) else "")
+      headers <- list(`Content-Type` = "application/json")
+      if (nzchar(private$config$api_key %||% "")) {
+        headers$Authorization <- paste("Bearer", private$config$api_key)
+      }
+      if (!is.null(private$config$organization)) {
+        headers$`OpenAI-Organization` <- private$config$organization
+      }
+      if (!is.null(private$config$headers)) {
+        headers <- c(headers, private$config$headers)
+      }
+
+      req <- httr2::request(url)
+      req <- httr2::req_headers(req, !!!headers)
+      req <- httr2::req_method(req, method)
+      if (!is.null(body) && length(body) > 0) {
+        req <- httr2::req_body_json(req, body, auto_unbox = TRUE)
+      }
+      req <- httr2::req_error(req, is_error = function(resp) FALSE)
+
+      resp <- httr2::req_perform(req)
+      status <- httr2::resp_status(resp)
+      if (status >= 400) {
+        error_text <- tryCatch(
+          httr2::resp_body_string(resp),
+          error = function(e) "Unknown error (could not read body)"
+        )
+        rlang::abort(c(
+          paste0("Conversations API ", method, " ", url, " failed with status ", status),
+          x = error_text
+        ), class = "aisdk_api_error")
+      }
+      resp_text <- httr2::resp_body_string(resp)
+      if (!nzchar(resp_text)) return(invisible(NULL))
+      jsonlite::fromJSON(resp_text, simplifyVector = FALSE)
+    }
   )
 )
 

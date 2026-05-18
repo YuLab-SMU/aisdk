@@ -600,6 +600,125 @@ test_that("flat reasoning_effort takes precedence over nested reasoning$effort",
   expect_equal(captured_body$reasoning$summary, "concise")
 })
 
+test_that("OpenAI responses model forwards conversation id (string and list forms)", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  bodies <- list()
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      bodies[[length(bodies) + 1]] <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  # String form
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    conversation = "conv_abc123"
+  ))
+  expect_equal(bodies[[1]]$conversation, "conv_abc123")
+
+  # List-with-$id form (the shape returned by create_conversation())
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    conversation = list(id = "conv_xyz789", object = "conversation")
+  ))
+  expect_equal(bodies[[2]]$conversation, "conv_xyz789")
+})
+
+test_that("OpenAI responses model rejects malformed conversation argument", {
+  skip_on_ci()
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  expect_error(
+    model$do_generate(list(
+      messages = list(list(role = "user", content = "hi")),
+      conversation = 42
+    )),
+    "conversation id string"
+  )
+})
+
+test_that("OpenAIProvider conversations CRUD hits the right endpoints", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+
+  calls <- list()
+  fake_perform <- function(req) {
+    calls[[length(calls) + 1]] <<- list(
+      method = req$method %||% "GET",
+      url = req$url,
+      body = req$body
+    )
+    structure(
+      list(status = 200L, body_text = '{"id":"conv_new","object":"conversation","created_at":1}'),
+      class = "fake_resp"
+    )
+  }
+  fake_status <- function(resp) resp$status
+  fake_body_string <- function(resp) resp$body_text
+
+  testthat::local_mocked_bindings(
+    req_perform = fake_perform,
+    resp_status = fake_status,
+    resp_body_string = fake_body_string,
+    .package = "httr2"
+  )
+
+  created <- provider$create_conversation(metadata = list(topic = "demo"))
+  expect_equal(created$id, "conv_new")
+  expect_equal(calls[[1]]$method, "POST")
+  expect_match(calls[[1]]$url, "/conversations$")
+
+  provider$get_conversation("conv_new")
+  expect_equal(calls[[2]]$method, "GET")
+  expect_match(calls[[2]]$url, "/conversations/conv_new$")
+
+  provider$delete_conversation("conv_new")
+  expect_equal(calls[[3]]$method, "DELETE")
+  expect_match(calls[[3]]$url, "/conversations/conv_new$")
+})
+
+test_that("create_conversation surfaces API errors with body text", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+
+  testthat::local_mocked_bindings(
+    req_perform = function(req) {
+      structure(list(status = 401L, body_text = '{"error":{"message":"bad key"}}'),
+                class = "fake_resp")
+    },
+    resp_status = function(resp) resp$status,
+    resp_body_string = function(resp) resp$body_text,
+    .package = "httr2"
+  )
+
+  expect_error(
+    provider$create_conversation(),
+    "401"
+  )
+})
+
+test_that("get_conversation / delete_conversation validate the id argument", {
+  provider <- safe_create_provider(create_openai)
+  expect_error(provider$get_conversation(""), "non-empty string")
+  expect_error(provider$delete_conversation(NULL), "non-empty string")
+})
+
 test_that("reasoning_effort enum accepts none/minimal/xhigh and rejects typos", {
   expect_error(
     aisdk:::normalize_model_runtime_options(list(call_options = list(reasoning_effort = "nope"))),
