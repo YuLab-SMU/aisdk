@@ -21,6 +21,8 @@ Image model implementation for OpenAI's image generation and editing APIs.
 \item \href{#method-OpenAIImageModel-get_last_response_id}{\code{OpenAIImageModel$get_last_response_id()}}
 \item \href{#method-OpenAIImageModel-reset}{\code{OpenAIImageModel$reset()}}
 \item \href{#method-OpenAIImageModel-do_edit_image}{\code{OpenAIImageModel$do_edit_image()}}
+\item \href{#method-OpenAIImageModel-do_edit_image_classic}{\code{OpenAIImageModel$do_edit_image_classic()}}
+\item \href{#method-OpenAIImageModel-do_edit_image_via_responses}{\code{OpenAIImageModel$do_edit_image_via_responses()}}
 \item \href{#method-OpenAIImageModel-clone}{\code{OpenAIImageModel$clone()}}
 }
 }
@@ -134,9 +136,11 @@ A GenerateImageResult object.
 \if{html}{\out{<a id="method-OpenAIImageModel-looks_like_missing_classic_endpoint"></a>}}
 \if{latex}{\out{\hypertarget{method-OpenAIImageModel-looks_like_missing_classic_endpoint}{}}}
 \subsection{Method \code{looks_like_missing_classic_endpoint()}}{
-Heuristic check used by \code{do_generate_image()} to decide
-whether a classic-endpoint error looks like "endpoint not available"
-on the proxy, in which case the Responses-API fallback is taken.
+Heuristic check used by \code{do_generate_image()} /
+\code{do_edit_image()} to decide whether a classic-endpoint error looks
+like "endpoint not available" on the proxy, in which case the
+Responses-API fallback is taken. Matches both the \verb{/images/generations}
+and \verb{/images/edits} paths.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$looks_like_missing_classic_endpoint(err)}\if{html}{\out{</div>}}
 }
@@ -186,6 +190,19 @@ The model, invisibly.
 \if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_edit_image}{}}}
 \subsection{Method \code{do_edit_image()}}{
 Edit images.
+
+Tries the classic \code{POST /v1/images/edits} multipart endpoint first.
+If that returns the same "missing endpoint" 404 signal handled by
+\code{do_generate_image()}, falls back to \code{POST /v1/responses} with the
+source image inlined as an \code{input_image} data URL and the optional
+mask passed via \code{input_image_mask} on the \code{image_generation} tool.
+
+The Responses fallback accepts a single source image per turn
+(multi-reference edit is classic-only). Image params (\code{quality},
+\code{size}, \code{output_format}, \code{background}, \code{output_compression},
+\code{moderation}, \code{input_fidelity}) are forwarded into the tool config,
+and \code{previous_response_id} is auto-attached from any prior fallback
+call so iterative edits chain.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_edit_image(params)}\if{html}{\out{</div>}}
 }
@@ -194,6 +211,51 @@ Edit images.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-do_edit_image_classic"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_edit_image_classic}{}}}
+\subsection{Method \code{do_edit_image_classic()}}{
+Edit images via the classic \code{POST /v1/images/edits}
+multipart endpoint. Called by \code{do_edit_image()}; exposed for callers
+that want to bypass the Responses-API fallback.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_edit_image_classic(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (see \code{do_edit_image}).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-do_edit_image_via_responses"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_edit_image_via_responses}{}}}
+\subsection{Method \code{do_edit_image_via_responses()}}{
+Edit images via \code{POST /v1/responses} with the
+\code{image_generation} tool in edit mode. Inlines the source image as a
+base64 data URL inside an \code{input_image} block; passes the optional
+mask via the tool's \code{input_image_mask} field.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_edit_image_via_responses(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (see \code{do_edit_image}).}
 }
 \if{html}{\out{</div>}}
 }

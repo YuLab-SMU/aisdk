@@ -1026,6 +1026,150 @@ test_that("OpenAI image edit supports multiple reference images and latest edit 
   expect_equal(rawToChar(result$images[[1]]$bytes), "edited-multi")
 })
 
+test_that("OpenAI image edit falls back to Responses API on 404 invalid_api_path", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://proxy.example/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  fallback_body <- NULL
+
+  src_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("source-png-bytes"), src_path)
+  on.exit(unlink(src_path), add = TRUE)
+
+  testthat::local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      rlang::abort("HTTP 404 invalid_api_path: images/edits not available on this endpoint")
+    },
+    post_to_api = function(url, headers, body, ...) {
+      fallback_body <<- body
+      list(
+        id = "resp_edit_first",
+        output = list(list(
+          type = "image_generation_call",
+          result = base64enc::base64encode(charToRaw("edited-via-responses"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- suppressMessages(edit_image(
+    model = model,
+    image = src_path,
+    prompt = "Add a flamingo",
+    output_dir = tempdir(),
+    quality = "high",
+    output_format = "webp",
+    input_fidelity = "high"
+  ))
+
+  expect_equal(fallback_body$model, "gpt-image-1.5")
+  expect_length(fallback_body$input, 1)
+  user_msg <- fallback_body$input[[1]]
+  expect_equal(user_msg$role, "user")
+  expect_equal(user_msg$content[[1]]$type, "input_text")
+  expect_equal(user_msg$content[[1]]$text, "Add a flamingo")
+  expect_equal(user_msg$content[[2]]$type, "input_image")
+  expect_match(user_msg$content[[2]]$image_url, "^data:image/png;base64,")
+
+  tool <- fallback_body$tools[[1]]
+  expect_equal(tool$type, "image_generation")
+  expect_equal(tool$action, "edit")
+  expect_equal(tool$quality, "high")
+  expect_equal(tool$output_format, "webp")
+  expect_equal(tool$input_fidelity, "high")
+  expect_null(tool$input_image_mask)
+
+  expect_equal(rawToChar(result$images[[1]]$bytes), "edited-via-responses")
+  expect_equal(result$images[[1]]$media_type, "image/webp")
+  expect_equal(model$get_last_response_id(), "resp_edit_first")
+})
+
+test_that("OpenAI image edit fallback inlines mask into input_image_mask", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://proxy.example/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  fallback_body <- NULL
+
+  src_path <- tempfile(fileext = ".png")
+  mask_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("source-bytes"), src_path)
+  writeBin(charToRaw("mask-bytes"), mask_path)
+  on.exit(unlink(c(src_path, mask_path)), add = TRUE)
+
+  testthat::local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      rlang::abort("HTTP 404 invalid_api_path: images/edits not available")
+    },
+    post_to_api = function(url, headers, body, ...) {
+      fallback_body <<- body
+      list(
+        id = "resp_edit_masked",
+        output = list(list(
+          type = "image_generation_call",
+          result = base64enc::base64encode(charToRaw("masked-out"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(edit_image(
+    model = model,
+    image = src_path,
+    mask = mask_path,
+    prompt = "Replace the masked area with a flamingo",
+    output_dir = tempdir()
+  ))
+
+  tool <- fallback_body$tools[[1]]
+  expect_equal(tool$action, "edit")
+  expect_match(tool$input_image_mask$image_url, "^data:image/png;base64,")
+})
+
+test_that("OpenAI image edit fallback re-raises non-fallback errors untouched", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+  model <- provider$image_model("gpt-image-2")
+
+  src_path <- tempfile(fileext = ".png")
+  writeBin(charToRaw("src"), src_path)
+  on.exit(unlink(src_path), add = TRUE)
+
+  testthat::local_mocked_bindings(
+    post_multipart_to_api = function(url, headers, body, ...) {
+      rlang::abort("HTTP 401 invalid_api_key: bad token")
+    },
+    post_to_api = function(url, headers, body, ...) {
+      stop("post_to_api should not be reached for non-404 errors")
+    },
+    .package = "aisdk"
+  )
+
+  expect_error(
+    edit_image(model = model, image = src_path, prompt = "anything"),
+    "invalid_api_key"
+  )
+})
+
 test_that("OpenAI image param validation enforces latest model constraints", {
   provider <- safe_create_provider(create_openai)
   image_path <- tempfile(fileext = ".png")

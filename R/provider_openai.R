@@ -1390,6 +1390,33 @@ OpenAIImageModel <- R6::R6Class(
 
       tool[!sapply(tool, is.null)]
     },
+    build_responses_edit_tool_config = function(params, mask_data_url = NULL) {
+      # Edit-flavored variant of build_responses_tool_config: sets
+      # action = "edit" explicitly (the tool's `auto` default also works,
+      # but explicit is safer), forwards `input_fidelity` (only allowed for
+      # edits per validate_image_params), and adds `input_image_mask` when a
+      # mask was supplied. The source image goes into the request `input`
+      # array as an input_image block — not into the tool config.
+      private$validate_image_params(params, request_type = "edit")
+
+      tool <- list(
+        type = "image_generation",
+        action = "edit",
+        model = params$image_model %||% self$model_id
+      )
+      if (!is.null(params$quality))            tool$quality <- params$quality
+      if (!is.null(params$size))               tool$size <- params$size
+      if (!is.null(params$output_format))      tool$output_format <- params$output_format
+      if (!is.null(params$output_compression)) tool$output_compression <- params$output_compression
+      if (!is.null(params$background))         tool$background <- params$background
+      if (!is.null(params$moderation))         tool$moderation <- params$moderation
+      if (!is.null(params$input_fidelity))     tool$input_fidelity <- params$input_fidelity
+      if (!is.null(mask_data_url)) {
+        tool$input_image_mask <- list(image_url = mask_data_url)
+      }
+
+      tool[!sapply(tool, is.null)]
+    },
     build_edit_body = function(params) {
       upload_dir <- params$output_dir %||% tempdir()
       private$validate_image_params(params, request_type = "edit")
@@ -1647,9 +1674,11 @@ OpenAIImageModel <- R6::R6Class(
       )
     },
 
-    #' @description Heuristic check used by `do_generate_image()` to decide
-    #'   whether a classic-endpoint error looks like "endpoint not available"
-    #'   on the proxy, in which case the Responses-API fallback is taken.
+    #' @description Heuristic check used by `do_generate_image()` /
+    #'   `do_edit_image()` to decide whether a classic-endpoint error looks
+    #'   like "endpoint not available" on the proxy, in which case the
+    #'   Responses-API fallback is taken. Matches both the `/images/generations`
+    #'   and `/images/edits` paths.
     #' @param err An error condition raised by the classic-endpoint call.
     #' @return `TRUE` if the error message matches the "missing endpoint" shape.
     looks_like_missing_classic_endpoint = function(err) {
@@ -1657,7 +1686,7 @@ OpenAIImageModel <- R6::R6Class(
       isTRUE(grepl("404", msg, fixed = TRUE)) &&
         (grepl("invalid_api_path", msg, fixed = TRUE) ||
          grepl("not available", msg, fixed = TRUE) ||
-         grepl("images/generations", msg, fixed = TRUE))
+         grepl("images/(generations|edits)", msg))
     },
 
     #' @description Return the most recent Responses-API response id captured
@@ -1677,6 +1706,20 @@ OpenAIImageModel <- R6::R6Class(
     },
 
     #' @description Edit images.
+    #'
+    #' Tries the classic `POST /v1/images/edits` multipart endpoint first.
+    #' If that returns the same "missing endpoint" 404 signal handled by
+    #' `do_generate_image()`, falls back to `POST /v1/responses` with the
+    #' source image inlined as an `input_image` data URL and the optional
+    #' mask passed via `input_image_mask` on the `image_generation` tool.
+    #'
+    #' The Responses fallback accepts a single source image per turn
+    #' (multi-reference edit is classic-only). Image params (`quality`,
+    #' `size`, `output_format`, `background`, `output_compression`,
+    #' `moderation`, `input_fidelity`) are forwarded into the tool config,
+    #' and `previous_response_id` is auto-attached from any prior fallback
+    #' call so iterative edits chain.
+    #'
     #' @param params A list of call options.
     #' @return A GenerateImageResult object.
     do_edit_image = function(params) {
@@ -1684,6 +1727,31 @@ OpenAIImageModel <- R6::R6Class(
         rlang::abort("`image` must be supplied for OpenAI image editing.")
       }
 
+      classic <- tryCatch(
+        self$do_edit_image_classic(params),
+        error = function(e) e
+      )
+      if (!inherits(classic, "error")) {
+        return(classic)
+      }
+
+      if (self$looks_like_missing_classic_endpoint(classic)) {
+        message(
+          "OpenAI image edit: classic /v1/images/edits is unreachable on this endpoint. ",
+          "Falling back to /v1/responses with the `image_generation` tool."
+        )
+        return(self$do_edit_image_via_responses(params))
+      }
+
+      stop(classic)
+    },
+
+    #' @description Edit images via the classic `POST /v1/images/edits`
+    #'   multipart endpoint. Called by `do_edit_image()`; exposed for callers
+    #'   that want to bypass the Responses-API fallback.
+    #' @param params A list of call options (see `do_edit_image`).
+    #' @return A GenerateImageResult object.
+    do_edit_image_classic = function(params) {
       url <- paste0(private$config$base_url, "/images/edits")
       headers <- private$get_headers(include_content_type = FALSE)
       body <- private$build_edit_body(params)
@@ -1704,6 +1772,110 @@ OpenAIImageModel <- R6::R6Class(
           output_dir = params$output_dir %||% tempdir(),
           prefix = "openai_edit",
           requested_output_format = body$output_format %||% NULL
+        ),
+        usage = response$usage %||% NULL,
+        raw_response = response
+      )
+    },
+
+    #' @description Edit images via `POST /v1/responses` with the
+    #'   `image_generation` tool in edit mode. Inlines the source image as a
+    #'   base64 data URL inside an `input_image` block; passes the optional
+    #'   mask via the tool's `input_image_mask` field.
+    #' @param params A list of call options (see `do_edit_image`).
+    #' @return A GenerateImageResult object.
+    do_edit_image_via_responses = function(params) {
+      url <- paste0(private$config$base_url, "/responses")
+      headers <- c(
+        private$get_headers(include_content_type = TRUE),
+        list(`Accept-Encoding` = "identity")
+      )
+
+      upload_dir <- params$output_dir %||% tempdir()
+      image_inputs <- coerce_image_inputs(params$image)
+      if (length(image_inputs) > 1) {
+        rlang::warn(
+          "Responses-API image edit accepts a single source image per turn; using only the first. Use the classic endpoint for multi-reference edits."
+        )
+      }
+      src_data_url <- normalize_image_input_to_url_like(image_inputs[[1]])
+      if (!grepl("^(data:|https?:)", src_data_url)) {
+        # normalize_image_input_to_url_like returns either a URL/data-URI or
+        # a bare base64 string — but for the Responses input_image block we
+        # always want a data URI. Wrap the bare path case.
+        src_data_url <- paste0("data:image/png;base64,", base64enc::base64encode(src_data_url))
+      }
+
+      mask_data_url <- NULL
+      if (!is.null(params$mask)) {
+        mask_inputs <- coerce_image_inputs(params$mask, arg = "`mask`")
+        mask_data_url <- normalize_image_input_to_url_like(mask_inputs[[1]])
+        if (!grepl("^(data:|https?:)", mask_data_url)) {
+          mask_data_url <- paste0("data:image/png;base64,", base64enc::base64encode(mask_data_url))
+        }
+      }
+
+      body <- list(
+        model = self$model_id,
+        input = list(list(
+          role = "user",
+          content = list(
+            list(type = "input_text", text = params$prompt %||% "Edit this image."),
+            list(type = "input_image", image_url = src_data_url)
+          )
+        )),
+        tools = list(private$build_responses_edit_tool_config(params, mask_data_url))
+      )
+      if (!is.null(private$last_response_id)) {
+        body$previous_response_id <- private$last_response_id
+      }
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
+
+      if (!is.null(response$id)) {
+        private$last_response_id <- response$id
+      }
+
+      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
+      media_type <- switch(requested_format,
+        png = "image/png",
+        jpeg = "image/jpeg",
+        jpg = "image/jpeg",
+        webp = "image/webp",
+        "image/png"
+      )
+
+      images <- list()
+      for (item in response$output %||% list()) {
+        if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
+          images <- c(images, list(list(
+            bytes = base64enc::base64decode(item$result),
+            media_type = media_type,
+            revised_prompt = item$revised_prompt %||% NULL
+          )))
+        }
+      }
+
+      if (!length(images)) {
+        rlang::abort(c(
+          "Responses API returned no `image_generation_call` output for the edit request.",
+          i = "The proxy accepted the request but produced no edited image; this is usually a model or prompt issue."
+        ))
+      }
+
+      GenerateImageResult$new(
+        images = finalize_image_artifacts(
+          images,
+          output_dir = upload_dir,
+          prefix = "openai_edit_responses"
         ),
         usage = response$usage %||% NULL,
         raw_response = response
