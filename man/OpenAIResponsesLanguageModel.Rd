@@ -109,6 +109,14 @@ Call this to start a fresh conversation.
 \if{latex}{\out{\hypertarget{method-OpenAIResponsesLanguageModel-do_generate}{}}}
 \subsection{Method \code{do_generate()}}{
 Generate text (non-streaming) using Responses API.
+
+Reasoning controls (\code{reasoning_effort}, \code{reasoning_summary}, nested
+\code{reasoning = list(effort, summary, ...)}) are translated into the
+Responses-API \code{body$reasoning} block. The \code{include} argument (character
+vector or list) is forwarded to \code{body$include} — pass
+\code{c("reasoning.encrypted_content")} to keep reasoning tokens across
+stateless turns. Any other unrecognized parameter falls through into
+the body via \code{modifyList}, matching the previous escape-hatch behavior.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{OpenAIResponsesLanguageModel$do_generate(params)}\if{html}{\out{</div>}}
 }

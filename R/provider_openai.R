@@ -501,6 +501,36 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         reasoning = reasoning_content,
         tool_calls = tool_calls
       )
+    },
+
+    # Build the Responses-API `reasoning` body block from flat (reasoning_effort,
+    # reasoning_summary) and/or nested (reasoning = list(...)) inputs. Returns
+    # NULL when neither was supplied — callers should skip setting body$reasoning
+    # in that case so the API can apply its own default.
+    build_responses_reasoning_block = function(params) {
+      nested <- params$reasoning
+      if (!is.null(nested) && !is.list(nested)) {
+        rlang::abort("`reasoning` must be a named list (e.g. list(effort = \"low\", summary = \"auto\")).")
+      }
+      effort <- params$reasoning_effort %||% nested$effort
+      summary <- params$reasoning_summary %||% nested$summary
+      extras <- if (is.list(nested)) nested[setdiff(names(nested), c("effort", "summary"))] else list()
+      if (is.null(effort) && is.null(summary) && length(extras) == 0) {
+        return(NULL)
+      }
+      out <- list()
+      if (!is.null(effort))  out$effort  <- effort
+      if (!is.null(summary)) out$summary <- summary
+      for (nm in names(extras)) out[[nm]] <- extras[[nm]]
+      out
+    },
+
+    # Normalize `include` (character vector or list) into a list of strings, the
+    # shape the Responses API expects. Returns NULL if no include was provided.
+    build_responses_include_field = function(params) {
+      inc <- params$include
+      if (is.null(inc)) return(NULL)
+      as.list(unlist(inc, use.names = FALSE))
     }
   ),
   public = list(
@@ -537,6 +567,15 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     },
 
     #' @description Generate text (non-streaming) using Responses API.
+    #'
+    #' Reasoning controls (`reasoning_effort`, `reasoning_summary`, nested
+    #' `reasoning = list(effort, summary, ...)`) are translated into the
+    #' Responses-API `body$reasoning` block. The `include` argument (character
+    #' vector or list) is forwarded to `body$include` — pass
+    #' `c("reasoning.encrypted_content")` to keep reasoning tokens across
+    #' stateless turns. Any other unrecognized parameter falls through into
+    #' the body via `modifyList`, matching the previous escape-hatch behavior.
+    #'
     #' @param params A list of call options including messages, temperature, etc.
     #' @return A GenerateResult object.
     do_generate = function(params) {
@@ -609,10 +648,23 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         })
       }
 
-      # Pass through extra parameters (e.g., reasoning effort, store)
+      # Reasoning controls: support flat (reasoning_effort, reasoning_summary)
+      # and nested (reasoning = list(...)) forms, plus the `include` field for
+      # stateless reasoning continuity (e.g. "reasoning.encrypted_content").
+      reasoning_block <- private$build_responses_reasoning_block(params)
+      if (!is.null(reasoning_block)) {
+        body$reasoning <- reasoning_block
+      }
+      include_field <- private$build_responses_include_field(params)
+      if (!is.null(include_field)) {
+        body$include <- include_field
+      }
+
+      # Pass through extra parameters (e.g., store)
       handled_params <- c(
         "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
+        "reasoning", "reasoning_effort", "reasoning_summary", "include",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -727,10 +779,21 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         })
       }
 
+      # Reasoning controls (mirrors do_generate).
+      reasoning_block <- private$build_responses_reasoning_block(params)
+      if (!is.null(reasoning_block)) {
+        body$reasoning <- reasoning_block
+      }
+      include_field <- private$build_responses_include_field(params)
+      if (!is.null(include_field)) {
+        body$include <- include_field
+      }
+
       # Pass through extra parameters
       handled_params <- c(
         "messages", "temperature", "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
+        "reasoning", "reasoning_effort", "reasoning_summary", "include",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )

@@ -72,8 +72,18 @@ normalize_model_runtime_options <- function(options = list()) {
   }
   if (!is.null(list_get_exact(call_options, "reasoning_effort"))) {
     call_options$reasoning_effort <- tolower(as.character(list_get_exact(call_options, "reasoning_effort")))
-    if (!call_options$reasoning_effort %in% c("low", "medium", "high")) {
-      rlang::abort("`reasoning_effort` must be one of 'low', 'medium', or 'high'.")
+    # Allowed values follow the OpenAI Responses-API enum (May 2026):
+    # - "none" / "minimal": GPT-5.1 default and low-latency tiers
+    # - "low" / "medium" / "high": classic o-series scale
+    # - "xhigh": extended reasoning for the latest reasoning models
+    # Provider-specific normalizers (e.g. DeepSeek) may downcast unsupported
+    # values; values outside this set are still rejected to catch typos.
+    allowed_efforts <- c("none", "minimal", "low", "medium", "high", "xhigh")
+    if (!call_options$reasoning_effort %in% allowed_efforts) {
+      rlang::abort(sprintf(
+        "`reasoning_effort` must be one of %s.",
+        paste(shQuote(allowed_efforts), collapse = ", ")
+      ))
     }
   }
   if (!is.null(list_get_exact(call_options, "thinking"))) {

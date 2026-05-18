@@ -499,6 +499,118 @@ test_that("OpenAI responses API translates multimodal input blocks", {
   expect_match(captured_body$input[[1]]$content[[2]]$image_url, "^data:image/png;base64,")
 })
 
+test_that("OpenAI responses model nests flat reasoning_effort/summary into body$reasoning", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    reasoning_effort = "high",
+    reasoning_summary = "detailed"
+  ))
+
+  expect_equal(captured_body$reasoning$effort, "high")
+  expect_equal(captured_body$reasoning$summary, "detailed")
+  # The flat keys must NOT leak into the body alongside the nested form
+  expect_null(captured_body$reasoning_effort)
+  expect_null(captured_body$reasoning_summary)
+})
+
+test_that("OpenAI responses model accepts nested reasoning list and preserves extra keys", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    reasoning = list(effort = "minimal", summary = "auto", generate_summary = TRUE)
+  ))
+
+  expect_equal(captured_body$reasoning$effort, "minimal")
+  expect_equal(captured_body$reasoning$summary, "auto")
+  expect_true(captured_body$reasoning$generate_summary)
+})
+
+test_that("OpenAI responses model forwards `include` for stateless reasoning continuity", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    include = c("reasoning.encrypted_content")
+  ))
+
+  expect_equal(captured_body$include, list("reasoning.encrypted_content"))
+})
+
+test_that("flat reasoning_effort takes precedence over nested reasoning$effort", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(create_openai)
+  model <- provider$responses_model("gpt-5")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    reasoning_effort = "high",
+    reasoning = list(effort = "low", summary = "concise")
+  ))
+
+  expect_equal(captured_body$reasoning$effort, "high")
+  expect_equal(captured_body$reasoning$summary, "concise")
+})
+
+test_that("reasoning_effort enum accepts none/minimal/xhigh and rejects typos", {
+  expect_error(
+    aisdk:::normalize_model_runtime_options(list(call_options = list(reasoning_effort = "nope"))),
+    "reasoning_effort"
+  )
+  for (v in c("none", "minimal", "low", "medium", "high", "xhigh")) {
+    opts <- aisdk:::normalize_model_runtime_options(list(call_options = list(reasoning_effort = v)))
+    expect_equal(opts$call_options$reasoning_effort, v)
+  }
+})
+
 # Live API tests for Responses API (only run when API key is available)
 test_that("OpenAI Responses API can make real API calls", {
   skip_if_no_api_key("OpenAI")
