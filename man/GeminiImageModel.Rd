@@ -22,9 +22,11 @@ Image model implementation for Gemini image generation models.
 \if{html}{\out{
 <details open><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="do_stream_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-do_stream_image'><code>aisdk::ImageModelV1$do_stream_image()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="edit_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-edit_image'><code>aisdk::ImageModelV1$edit_image()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="generate_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-generate_image'><code>aisdk::ImageModelV1$generate_image()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="has_capability"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-has_capability'><code>aisdk::ImageModelV1$has_capability()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="stream_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-stream_image'><code>aisdk::ImageModelV1$stream_image()</code></a></span></li>
 </ul>
 </details>
 }}

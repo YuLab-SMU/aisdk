@@ -28,6 +28,8 @@ Abstract interface for image generation and editing models.
 \item \href{#method-ImageModelV1-edit_image}{\code{ImageModelV1$edit_image()}}
 \item \href{#method-ImageModelV1-do_generate_image}{\code{ImageModelV1$do_generate_image()}}
 \item \href{#method-ImageModelV1-do_edit_image}{\code{ImageModelV1$do_edit_image()}}
+\item \href{#method-ImageModelV1-do_stream_image}{\code{ImageModelV1$do_stream_image()}}
+\item \href{#method-ImageModelV1-stream_image}{\code{ImageModelV1$stream_image()}}
 \item \href{#method-ImageModelV1-clone}{\code{ImageModelV1$clone()}}
 }
 }
@@ -145,6 +147,53 @@ Edit images. Abstract method.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{params}}{A list of call options.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ImageModelV1-do_stream_image"></a>}}
+\if{latex}{\out{\hypertarget{method-ImageModelV1-do_stream_image}{}}}
+\subsection{Method \code{do_stream_image()}}{
+Stream image generation with partial-image previews.
+Optional — subclasses that support it override. Default raises an
+informative error so \code{stream_image()} callers can fall back to
+\code{generate_image()} on providers without streaming support.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ImageModelV1$do_stream_image(params, callback)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options.}
+
+\item{\code{callback}}{A function called with each event list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult object with the final image.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ImageModelV1-stream_image"></a>}}
+\if{latex}{\out{\hypertarget{method-ImageModelV1-stream_image}{}}}
+\subsection{Method \code{stream_image()}}{
+Public image streaming method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ImageModelV1$stream_image(callback, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{callback}}{A function receiving each event list.}
+
+\item{\code{...}}{Call options passed to \code{do_stream_image()}.}
 }
 \if{html}{\out{</div>}}
 }

@@ -1026,6 +1026,176 @@ test_that("OpenAI image edit supports multiple reference images and latest edit 
   expect_equal(rawToChar(result$images[[1]]$bytes), "edited-multi")
 })
 
+test_that("stream_image emits partial events, captures final image, and chains response id", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+
+  captured_body <- NULL
+  events <- list()
+
+  testthat::local_mocked_bindings(
+    stream_responses_api = function(url, headers, body, callback, ...) {
+      captured_body <<- body
+      # Synthetic SSE: 2 partials, one per-call completion with the final result,
+      # then a response.completed envelope with usage and the response id.
+      callback("response.created", list(response = list(id = "resp_stream_1")), done = FALSE)
+      for (i in 1:2) {
+        callback(
+          "response.image_generation_call.partial_image",
+          list(
+            partial_image_index = i,
+            partial_image_b64 = base64enc::base64encode(charToRaw(paste0("preview-", i)))
+          ),
+          done = FALSE
+        )
+      }
+      callback(
+        "response.image_generation_call.completed",
+        list(result = base64enc::base64encode(charToRaw("final-img")), revised_prompt = "shiny"),
+        done = FALSE
+      )
+      callback(
+        "response.completed",
+        list(response = list(id = "resp_stream_1", usage = list(total_tokens = 42))),
+        done = FALSE
+      )
+      callback(NULL, NULL, done = TRUE)
+    },
+    .package = "aisdk"
+  )
+
+  result <- stream_image(
+    model = model,
+    prompt = "Draw a glowing nebula",
+    callback = function(event) {
+      events[[length(events) + 1]] <<- event
+    },
+    output_dir = tempdir(),
+    partial_images = 2,
+    quality = "high",
+    output_format = "png"
+  )
+
+  # Body shape
+  expect_true(captured_body$stream)
+  expect_equal(captured_body$input, "Draw a glowing nebula")
+  expect_equal(captured_body$tools[[1]]$type, "image_generation")
+  expect_identical(captured_body$tools[[1]]$partial_images, 2L)
+  expect_equal(captured_body$tools[[1]]$quality, "high")
+
+  # Callback event sequence: 2 partial + 1 completed
+  expect_length(events, 3)
+  expect_equal(events[[1]]$type, "partial")
+  expect_identical(events[[1]]$index, 1L)
+  expect_equal(rawToChar(events[[1]]$bytes), "preview-1")
+  expect_equal(events[[2]]$type, "partial")
+  expect_identical(events[[2]]$index, 2L)
+  expect_equal(events[[3]]$type, "completed")
+  expect_true(events[[3]]$done)
+  expect_equal(rawToChar(events[[3]]$bytes), "final-img")
+
+  # Result
+  expect_length(result$images, 1)
+  expect_equal(rawToChar(result$images[[1]]$bytes), "final-img")
+  expect_equal(result$images[[1]]$media_type, "image/png")
+  expect_equal(result$usage$total_tokens, 42)
+
+  # Response id captured for chaining
+  expect_equal(model$get_last_response_id(), "resp_stream_1")
+})
+
+test_that("stream_image second call attaches previous_response_id", {
+  skip_on_ci()
+  skip_on_cran()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+  bodies <- list()
+  next_id <- "resp_a"
+
+  testthat::local_mocked_bindings(
+    stream_responses_api = function(url, headers, body, callback, ...) {
+      bodies[[length(bodies) + 1]] <<- body
+      callback("response.image_generation_call.completed",
+               list(result = base64enc::base64encode(charToRaw("img"))),
+               done = FALSE)
+      callback("response.completed",
+               list(response = list(id = next_id)),
+               done = FALSE)
+      callback(NULL, NULL, done = TRUE)
+      next_id <<- "resp_b"
+    },
+    .package = "aisdk"
+  )
+
+  noop <- function(event) invisible(NULL)
+  stream_image(model, "a cat", callback = noop, output_dir = tempdir(), partial_images = 0)
+  stream_image(model, "now neon", callback = noop, output_dir = tempdir(), partial_images = 0)
+
+  expect_null(bodies[[1]]$previous_response_id)
+  expect_equal(bodies[[2]]$previous_response_id, "resp_a")
+  # partial_images = 0 -> tool config does not include the field
+  expect_null(bodies[[1]]$tools[[1]]$partial_images)
+})
+
+test_that("stream_image rejects out-of-range partial_images and non-function callback", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+
+  expect_error(
+    stream_image(model, "x", callback = "not a function"),
+    "callback"
+  )
+  expect_error(
+    stream_image(model, "x", callback = function(e) NULL, partial_images = 99),
+    "0\\.\\.3"
+  )
+})
+
+test_that("stream_image errors when the stream completes without a final image", {
+  skip_on_ci()
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "test-key",
+    base_url = "https://api.openai.com/v1"
+  )
+  model <- provider$image_model("gpt-image-1.5")
+
+  testthat::local_mocked_bindings(
+    stream_responses_api = function(url, headers, body, callback, ...) {
+      # Only partials, no completion event
+      callback("response.image_generation_call.partial_image",
+               list(partial_image_b64 = base64enc::base64encode(charToRaw("p"))),
+               done = FALSE)
+      callback(NULL, NULL, done = TRUE)
+    },
+    .package = "aisdk"
+  )
+
+  expect_error(
+    stream_image(model, "x", callback = function(e) NULL, output_dir = tempdir()),
+    "no final image"
+  )
+})
+
 test_that("OpenAI image edit falls back to Responses API on 404 invalid_api_path", {
   skip_on_ci()
   skip_on_cran()

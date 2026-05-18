@@ -1778,6 +1778,166 @@ OpenAIImageModel <- R6::R6Class(
       )
     },
 
+    #' @description Stream image generation with partial-image previews via
+    #'   `POST /v1/responses`. Sets `stream = TRUE` and `partial_images` on
+    #'   the `image_generation` tool config; dispatches SSE events to the
+    #'   user-supplied `callback` (one per partial frame, one final). Uses
+    #'   the same Responses-API path as the non-streaming fallback, with the
+    #'   same `previous_response_id` chaining.
+    #' @param params A list of call options. The `partial_images` field
+    #'   (0–3) controls how many preview frames the API emits before the
+    #'   final image; default `2`.
+    #' @param callback A function receiving each event list.
+    #' @return A GenerateImageResult with the final image.
+    do_stream_image = function(params, callback) {
+      if (is.null(params$prompt) || !nzchar(params$prompt)) {
+        rlang::abort("`prompt` must be a non-empty string.")
+      }
+
+      url <- paste0(private$config$base_url, "/responses")
+      headers <- c(
+        private$get_headers(include_content_type = TRUE),
+        list(`Accept-Encoding` = "identity")
+      )
+
+      tool_cfg <- private$build_responses_tool_config(params)
+      partial_n <- as.integer(params$partial_images %||% 2)
+      if (is.na(partial_n) || partial_n < 0 || partial_n > 3) {
+        rlang::abort("`partial_images` must be an integer in 0..3.")
+      }
+      if (partial_n > 0) {
+        tool_cfg$partial_images <- partial_n
+      }
+
+      body <- list(
+        model = self$model_id,
+        input = params$prompt,
+        stream = TRUE,
+        tools = list(tool_cfg)
+      )
+      if (!is.null(private$last_response_id)) {
+        body$previous_response_id <- private$last_response_id
+      }
+
+      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
+      media_type <- switch(requested_format,
+        png = "image/png",
+        jpeg = "image/jpeg",
+        jpg = "image/jpeg",
+        webp = "image/webp",
+        "image/png"
+      )
+
+      state <- new.env(parent = emptyenv())
+      state$partial_count <- 0L
+      state$final_images <- list()
+      state$response_id <- NULL
+      state$usage <- NULL
+
+      stream_responses_api(
+        url = url,
+        headers = headers,
+        body = body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds,
+        callback = function(event_type, data, done) {
+          if (isTRUE(done)) return(invisible(NULL))
+          if (is.null(event_type) || is.null(data)) return(invisible(NULL))
+
+          # Pick up the response id from response.created (or the first event
+          # that carries it) so multi-turn chaining works even if completion
+          # arrives via a different event shape.
+          if (is.null(state$response_id)) {
+            state$response_id <- data$response$id %||% data$id %||% NULL
+          }
+
+          # Partial previews. The documented event type is
+          # `response.image_generation_call.partial_image` with a
+          # `partial_image_b64` field; accept a few aliases for proxy
+          # quirks.
+          if (grepl("partial_image", event_type, fixed = TRUE)) {
+            b64 <- data$partial_image_b64 %||% data$b64 %||% data$result
+            if (!is.null(b64) && nzchar(b64)) {
+              bytes <- base64enc::base64decode(b64)
+              state$partial_count <- state$partial_count + 1L
+              idx <- as.integer(data$partial_image_index %||% state$partial_count)
+              callback(list(
+                type = "partial",
+                index = idx,
+                bytes = bytes,
+                media_type = media_type,
+                done = FALSE
+              ))
+            }
+            return(invisible(NULL))
+          }
+
+          # Per-call completion event.
+          if (event_type == "response.image_generation_call.completed" &&
+              !is.null(data$result)) {
+            state$final_images <- c(state$final_images, list(list(
+              bytes = base64enc::base64decode(data$result),
+              media_type = media_type,
+              revised_prompt = data$revised_prompt %||% NULL
+            )))
+            return(invisible(NULL))
+          }
+
+          # Final response envelope — has usage and any image calls we
+          # haven't already collected via the per-call completion event.
+          if (event_type == "response.completed" && is.list(data$response)) {
+            if (is.null(state$response_id)) state$response_id <- data$response$id
+            state$usage <- data$response$usage %||% NULL
+            if (!length(state$final_images)) {
+              for (item in data$response$output %||% list()) {
+                if (identical(item$type %||% "", "image_generation_call") &&
+                    !is.null(item$result)) {
+                  state$final_images <- c(state$final_images, list(list(
+                    bytes = base64enc::base64decode(item$result),
+                    media_type = media_type,
+                    revised_prompt = item$revised_prompt %||% NULL
+                  )))
+                }
+              }
+            }
+          }
+
+          invisible(NULL)
+        }
+      )
+
+      if (!is.null(state$response_id)) {
+        private$last_response_id <- state$response_id
+      }
+
+      if (!length(state$final_images)) {
+        rlang::abort(c(
+          "Streaming completed but no final image was received.",
+          i = "The API may have sent partials only, or the connection ended before the final image_generation_call event."
+        ))
+      }
+
+      callback(list(
+        type = "completed",
+        bytes = state$final_images[[1]]$bytes,
+        media_type = media_type,
+        done = TRUE
+      ))
+
+      GenerateImageResult$new(
+        images = finalize_image_artifacts(
+          state$final_images,
+          output_dir = params$output_dir %||% tempdir(),
+          prefix = "openai_image_stream"
+        ),
+        usage = state$usage,
+        raw_response = list(response_id = state$response_id, partial_count = state$partial_count)
+      )
+    },
+
     #' @description Edit images via `POST /v1/responses` with the
     #'   `image_generation` tool in edit mode. Inlines the source image as a
     #'   base64 data URL inside an `input_image` block; passes the optional

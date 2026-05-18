@@ -300,6 +300,28 @@ ImageModelV1 <- R6::R6Class(
     #' @return A GenerateImageResult object.
     do_edit_image = function(params) {
       rlang::abort("ImageModelV1$do_edit_image() must be implemented by subclass.")
+    },
+
+    #' @description Stream image generation with partial-image previews.
+    #' Optional — subclasses that support it override. Default raises an
+    #' informative error so `stream_image()` callers can fall back to
+    #' `generate_image()` on providers without streaming support.
+    #' @param params A list of call options.
+    #' @param callback A function called with each event list.
+    #' @return A GenerateImageResult object with the final image.
+    do_stream_image = function(params, callback) {
+      rlang::abort(sprintf(
+        "%s does not support image streaming. Use `generate_image()` instead.",
+        class(self)[1]
+      ))
+    },
+
+    #' @description Public image streaming method.
+    #' @param callback A function receiving each event list.
+    #' @param ... Call options passed to `do_stream_image()`.
+    #' @return A GenerateImageResult object.
+    stream_image = function(callback, ...) {
+      self$do_stream_image(list(...), callback)
     }
   )
 )

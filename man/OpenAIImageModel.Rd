@@ -22,6 +22,7 @@ Image model implementation for OpenAI's image generation and editing APIs.
 \item \href{#method-OpenAIImageModel-reset}{\code{OpenAIImageModel$reset()}}
 \item \href{#method-OpenAIImageModel-do_edit_image}{\code{OpenAIImageModel$do_edit_image()}}
 \item \href{#method-OpenAIImageModel-do_edit_image_classic}{\code{OpenAIImageModel$do_edit_image_classic()}}
+\item \href{#method-OpenAIImageModel-do_stream_image}{\code{OpenAIImageModel$do_stream_image()}}
 \item \href{#method-OpenAIImageModel-do_edit_image_via_responses}{\code{OpenAIImageModel$do_edit_image_via_responses()}}
 \item \href{#method-OpenAIImageModel-clone}{\code{OpenAIImageModel$clone()}}
 }
@@ -32,6 +33,7 @@ Image model implementation for OpenAI's image generation and editing APIs.
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="edit_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-edit_image'><code>aisdk::ImageModelV1$edit_image()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="generate_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-generate_image'><code>aisdk::ImageModelV1$generate_image()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="has_capability"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-has_capability'><code>aisdk::ImageModelV1$has_capability()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="ImageModelV1" data-id="stream_image"><a href='../../aisdk/html/ImageModelV1.html#method-ImageModelV1-stream_image'><code>aisdk::ImageModelV1$stream_image()</code></a></span></li>
 </ul>
 </details>
 }}
@@ -238,6 +240,35 @@ that want to bypass the Responses-API fallback.
 }
 \subsection{Returns}{
 A GenerateImageResult object.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-OpenAIImageModel-do_stream_image"></a>}}
+\if{latex}{\out{\hypertarget{method-OpenAIImageModel-do_stream_image}{}}}
+\subsection{Method \code{do_stream_image()}}{
+Stream image generation with partial-image previews via
+\code{POST /v1/responses}. Sets \code{stream = TRUE} and \code{partial_images} on
+the \code{image_generation} tool config; dispatches SSE events to the
+user-supplied \code{callback} (one per partial frame, one final). Uses
+the same Responses-API path as the non-streaming fallback, with the
+same \code{previous_response_id} chaining.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIImageModel$do_stream_image(params, callback)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options. The \code{partial_images} field
+(0–3) controls how many preview frames the API emits before the
+final image; default \code{2}.}
+
+\item{\code{callback}}{A function receiving each event list.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A GenerateImageResult with the final image.
 }
 }
 \if{html}{\out{<hr>}}
