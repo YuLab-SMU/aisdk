@@ -485,7 +485,11 @@ console_send_user_message <- function(input,
         )
         generation_result$run_state <- incomplete_state
         session$set_run_state(incomplete_state)
-        cli::cli_alert_info("Assistant ended after promising another action; continuing once.")
+        if (!nzchar(trimws(generation_result$text %||% ""))) {
+          cli::cli_alert_info("Assistant ran tools but did not write an answer; asking it to summarize.")
+        } else {
+          cli::cli_alert_info("Assistant ended after promising another action; continuing once.")
+        }
         console_continue_run_action(
           session = session,
           action = "continue",
@@ -545,8 +549,12 @@ console_generation_looks_incomplete <- function(generation_result) {
   }
 
   text <- trimws(generation_result$text %||% "")
+  # Tools ran but the model produced no visible final answer (e.g., it spent the
+  # turn in a reasoning block and then stopped). Treat as incomplete so the
+  # console can ask the model to summarize instead of dropping the user into
+  # the prompt with nothing to read.
   if (!nzchar(text)) {
-    return(FALSE)
+    return(TRUE)
   }
   if (grepl("[.!?\u3002\uff01\uff1f]$", text)) {
     return(FALSE)
@@ -632,6 +640,14 @@ console_record_generation_events <- function(session, generation_result) {
 
 #' @keywords internal
 console_incomplete_continuation_prompt <- function(generation_result) {
+  text <- trimws(generation_result$text %||% "")
+  if (!nzchar(text)) {
+    return(paste(
+      "Your previous turn executed one or more tools but did not produce any visible answer for the user.",
+      "Write the final answer now: summarize what the tool results showed and respond to the user's original request.",
+      "Do not start new tool calls unless strictly necessary to answer."
+    ))
+  }
   paste(
     "Your previous assistant message appeared to promise another action, but it ended without a tool call.",
     "Continue now by either calling the appropriate tool immediately or, if no further tool call is needed, give the final answer.",
@@ -745,7 +761,11 @@ console_continuation_still_incomplete <- function(generation_result) {
   if (isTRUE(has_tool_calls)) {
     return(FALSE)
   }
-  console_text_promises_action(generation_result$text %||% "")
+  text <- trimws(generation_result$text %||% "")
+  if (!nzchar(text)) {
+    return(TRUE)
+  }
+  console_text_promises_action(text)
 }
 
 #' @keywords internal

@@ -289,3 +289,46 @@ test_that("console continuation detects repeated incomplete action", {
 
   expect_true(aisdk:::console_continuation_still_incomplete(result))
 })
+
+test_that("console detects empty final text after tool execution", {
+  # Tools ran (e.g. r_eval) but the model produced no visible answer for the
+  # user. This is the silent-stop case from issue #26: user sees only
+  # "Thinking complete (N lines)" and is dropped back to the prompt.
+  result <- list(
+    text = "",
+    tool_calls = NULL,
+    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
+    finish_reason = "stop"
+  )
+
+  expect_true(aisdk:::console_generation_looks_incomplete(result))
+
+  prompt <- aisdk:::console_incomplete_continuation_prompt(result)
+  expect_match(prompt, "did not produce any visible answer", fixed = TRUE)
+  expect_match(prompt, "Write the final answer now", fixed = TRUE)
+})
+
+test_that("console marks empty continuation as still incomplete", {
+  # After one re-prompt, if the model still produces no text and no tool
+  # calls, we must escalate (mark needs_user) rather than fall through silently.
+  result <- list(
+    text = "",
+    tool_calls = NULL,
+    all_tool_calls = list(),
+    all_tool_results = list(),
+    finish_reason = "stop"
+  )
+
+  expect_true(aisdk:::console_continuation_still_incomplete(result))
+})
+
+test_that("console does not flag whitespace-only text after tools as complete", {
+  result <- list(
+    text = "   \n  ",
+    tool_calls = NULL,
+    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
+    finish_reason = "stop"
+  )
+
+  expect_true(aisdk:::console_generation_looks_incomplete(result))
+})
