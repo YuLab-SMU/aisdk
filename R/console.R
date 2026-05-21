@@ -118,6 +118,26 @@ console_chat <- function(session = NULL,
     rlang::abort("Package 'cli' is required for console_chat(). Install with: install.packages('cli')")
   }
 
+  # Layer B (issue #26): if we are running inside an r_eval subprocess, refuse
+  # to launch the REPL. r_eval's pre-flight (layer A) already catches direct
+  # console_chat() calls, but dynamic dispatch (do.call("console_chat", ...),
+  # get("console_chat")()) can sneak past name-based parsing -- this marker
+  # closes that hole. The error condition class is structured so the parent
+  # r_eval result envelope can render a teaching message.
+  if (nzchar(Sys.getenv("AISDK_INSIDE_R_EVAL", unset = ""))) {
+    rlang::abort(
+      paste(
+        "console_chat() refused to start inside an r_eval subprocess.",
+        "The subprocess has no stdin/TTY, so the REPL would block until timeout",
+        "and waste the user's time. If you want to test an agent's reasoning,",
+        "use generate_text() or create_chat_session() + session$send() once.",
+        "If you want to test the UI itself, ask the user to run it -- you",
+        "cannot drive a TTY from inside r_eval."
+      ),
+      class = c("aisdk_r_eval_repl_blocked", "aisdk_error")
+    )
+  }
+
   working_dir <- if (missing(working_dir) && inherits(session, "ChatSession")) {
     console_session_directory(session, key = "console_working_dir", default = tempdir())
   } else {
