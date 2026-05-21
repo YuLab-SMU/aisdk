@@ -27,12 +27,16 @@ test_that("DeepSeek provider creates language model correctly", {
 })
 
 test_that("DeepSeek provider uses default model when none specified", {
-    provider <- safe_create_provider(create_deepseek)
-    model <- provider$language_model()
+    # Isolate from a user's local .Renviron override of DEEPSEEK_MODEL so the
+    # test asserts the *built-in* default, not whatever the developer set.
+    withr::with_envvar(c(DEEPSEEK_MODEL = NA), {
+        provider <- safe_create_provider(create_deepseek)
+        model <- provider$language_model()
 
-    expect_s3_class(model, "DeepSeekLanguageModel")
-    # Default is deepseek-chat
-    expect_equal(model$model_id, "deepseek-chat")
+        expect_s3_class(model, "DeepSeekLanguageModel")
+        # Default is deepseek-chat
+        expect_equal(model$model_id, "deepseek-chat")
+    })
 })
 
 test_that("DeepSeek v4 models are marked as reasoning-capable", {
