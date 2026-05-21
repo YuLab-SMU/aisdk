@@ -251,9 +251,62 @@ Agents load skills dynamically using `load_skill` and `execute_skill_script` too
 - Mock objects in `helper-mock.R` for unit tests
 - Snapshot tests for complex outputs (use `testthat::expect_snapshot()`)
 
+### Tests must be hermetic — do not trust the local environment
+
+These bite repeatedly in this repo; check for them before pushing:
+
+- **Isolate from `.Renviron`.** Anything that reads `Sys.getenv("FOO", default)`
+  in package code must be wrapped with `withr::with_envvar(c(FOO = NA), ...)`
+  in the test that asserts the "default" branch. Reason: `devtools::test()`
+  reuses the current session env, but `devtools::check()` + GitHub Actions
+  spin up a fresh R that re-reads `.Renviron`, and the developer's local
+  override silently fails the test only there. Real precedent: the deepseek
+  default-model test (`test-provider-deepseek.R:29`).
+- **Never assert on async OS state with a single check.** If the test
+  inspects external state that the kernel/OS reaps asynchronously
+  (`pgrep` for child processes, `file.exists()` for unlinked temp files,
+  port-listening, etc.), poll with a deadline instead of `Sys.sleep(0.5)`
+  + one assertion. macOS reaps in milliseconds; a busy Linux CI runner can
+  take seconds. Pattern:
+  ```r
+  ok <- FALSE
+  for (i in seq_len(80)) {
+    Sys.sleep(0.1)
+    if (<condition>) { ok <- TRUE; break }
+  }
+  expect_true(ok, info = "...")
+  ```
+- **Subprocess credentials and env behavior:** `callr::r()` / `callr::r_bg()`'s
+  `env` argument is **additive** (child inherits parent env + your additions).
+  To actually *remove* a sensitive var from the subprocess, set it to `""`
+  AND start the subprocess with `--no-environ` so `.Renviron` cannot put it
+  back. Just unsetting it in `Sys.getenv()` accounting is not enough.
+  See `R/r_introspect_tools.R::r_eval_build_env()`.
+
+### CI ≠ local check: always check both
+
+A clean `devtools::check()` locally does **not** mean GitHub Actions will pass.
+Differences that have caused real failures:
+
+| Difference | Why it matters |
+| --- | --- |
+| Fresh R subprocess re-reads `.Renviron` | Local overrides invisibly leak in |
+| Linux process-reaping latency | Race-y `pgrep`/`ps`-based assertions |
+| Different default locale (`LANG`, `LC_*`) | String collation, encoding tests |
+| `tempdir()` on Linux is `/tmp` (shorter) | Path-length tests behave differently |
+| GA runners have no network for many providers | More `SKIP`s than locally, may surface a latent test that *only* runs in skip-fallback paths |
+
+After pushing a non-trivial PR, run
+`gh run watch` or `gh run view --log-failed <run-id>` and treat a red run as
+unfinished work, not "flaky CI". Re-running rarely fixes a real race.
+
 ## CI/CD
 
 - GitHub Actions: `.github/workflows/R-CMD-check.yaml`
 - Runs on Windows and Ubuntu with R release version
 - Checks: R CMD check with `--no-manual`, `--as-cran`, `--no-vignettes`
 - pkgdown site deployed via `.github/workflows/pkgdown.yaml`
+- After `git push`, check the run: `gh run list --branch main --limit 1`.
+  If it failed, pull the failing test name with
+  `gh run view <id> --log-failed | grep -E "Failure|Error"`. Do not assume
+  a CI failure is unrelated to the push without reading the log.

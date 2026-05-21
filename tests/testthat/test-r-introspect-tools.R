@@ -293,20 +293,32 @@ test_that("[D2] non-truncated runs do NOT leave a log file behind", {
 test_that("r_eval kills the whole process tree on timeout (no orphaned grandchildren)", {
   skip_if_no_callr()
   testthat::skip_on_os("windows") # uses /bin/sh + pgrep
+  skip_if(Sys.which("pgrep") == "", "pgrep not available")
   tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
-  marker <- paste0("aisdk_orphan_marker_", as.integer(Sys.time()))
+  # Use a unique marker that does not appear in any common command string.
+  marker <- paste0("aisdk_orphan_marker_", as.integer(Sys.time()), "_", sample.int(1e6, 1))
   cmd <- sprintf("sleep 30 # %s", marker)
   out <- tool$run(list(
     code = sprintf("system(\"%s\")", cmd),
     timeout_secs = 1L
   ))
   expect_match(out, "status: TIMEOUT", fixed = TRUE)
-  # Give the OS a beat to reap children
-  Sys.sleep(0.5)
-  pgrep_out <- suppressWarnings(system2(
-    "pgrep", c("-f", marker), stdout = TRUE, stderr = FALSE
-  ))
-  expect_length(pgrep_out, 0)
+
+  # Reaping the orphan tree is asynchronous and varies a lot by host (fast on
+  # local macOS, much slower on a loaded CI runner). Poll up to ~8s instead of
+  # asserting once -- a one-shot check is flaky on Linux CI, see issue #26.
+  no_match <- FALSE
+  for (i in seq_len(80)) {
+    Sys.sleep(0.1)
+    pgrep_out <- suppressWarnings(system2(
+      "pgrep", c("-f", marker), stdout = TRUE, stderr = FALSE
+    ))
+    if (length(pgrep_out) == 0) {
+      no_match <- TRUE
+      break
+    }
+  }
+  expect_true(no_match, info = "process tree was not fully reaped within 8s")
 })
 
 test_that("r_eval does not mutate the parent session", {

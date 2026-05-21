@@ -17,6 +17,14 @@ Use standard R style with 2-space indentation and clear, descriptive names. Pref
 ## Testing Guidelines
 Tests use `testthat` edition 3. Name new files `test-<feature>.R` and keep fixtures/helpers in `tests/testthat/helper-*.R` or `tests/testthat/setup.R`. Add or update tests for any behavior change, especially around providers, streaming, sessions, and sandbox execution. Avoid committing generated `Rplots*.pdf` artifacts.
 
+### Hermetic tests + local-vs-CI parity
+- **`.Renviron` will silently break "default value" tests.** Any test that asserts the built-in default of something resolved via `Sys.getenv("X", default)` must wrap the body in `withr::with_envvar(c(X = NA), { ... })`. `devtools::test()` reuses the dev session env and passes; `devtools::check()` + GitHub Actions start fresh R and re-read `.Renviron`, exposing the override. Precedent: `test-provider-deepseek.R:29` (`DEEPSEEK_MODEL`).
+- **Do not assert async OS state with one shot.** Process reaping (`pgrep`/`ps`), temp-file unlink, port release, etc. are fast on macOS and noticeably slower on Linux CI. Poll with a deadline (`for (i in 1:80) { Sys.sleep(0.1); if (<cond>) break }`) instead of `Sys.sleep(0.5)` + a single check. Pattern lives in `test-r-introspect-tools.R` ("kills the whole process tree").
+- **`callr::r(env=...)` is additive, not replacement.** The child inherits the parent env + your additions. To scrub a sensitive var, explicitly set it to `""` AND start the child with `cmdargs = c(..., "--no-environ")` so `.Renviron` cannot re-add it. See `r_eval_build_env()` for the working pattern.
+
+### After every push, watch the CI run
+A green `devtools::check()` locally does not imply green GitHub Actions. After pushing a non-trivial change, run `gh run list --branch <branch> --limit 1` and, on failure, `gh run view <id> --log-failed | grep -E "Failure|Error"` to read the actual assertion. CI failures are work-in-progress, not noise; do not re-trigger without investigating.
+
 ## Commit & Pull Request Guidelines
 Recent history favors short, imperative subjects such as `Fix inspector overlay CLI rendering`, `fix: resolve R CMD check warning`, and `feat(knitr): refactor {ai} engine`. Follow that pattern: keep the first line concise and optionally use prefixes like `fix:`, `feat(...)`, `docs:`, or `chore:`. For pull requests, include a clear summary, the user-facing impact, linked issues, and the exact commands you ran (`devtools::document()`, `R CMD build`, `R CMD check`). Add screenshots or terminal output when changing console UI, review panels, or Quarto docs.
 
