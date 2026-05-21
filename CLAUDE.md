@@ -282,6 +282,16 @@ These bite repeatedly in this repo; check for them before pushing:
   AND start the subprocess with `--no-environ` so `.Renviron` cannot put it
   back. Just unsetting it in `Sys.getenv()` accounting is not enough.
   See `R/r_introspect_tools.R::r_eval_build_env()`.
+- **Don't assert upstream library/kernel behavior you don't own.** If a test
+  is checking "callr's kill_tree leaves no orphans", "Linux PID reaping is
+  prompt", or "the kernel never reparents this fast", it is asserting on
+  someone else's guarantee. Either skip it where the guarantee is flaky
+  (`testthat::skip_on_ci()`, `skip_on_os()`), or replace the assertion with
+  one about *your* code's user-visible behavior (status code, return value,
+  error class). The "kills the whole process tree" test in
+  `test-r-introspect-tools.R` is skipped on CI for exactly this reason --
+  the user-visible `status: TIMEOUT` guarantee is covered by a separate
+  test that *is* our responsibility.
 
 ### CI ≠ local check: always check both
 
