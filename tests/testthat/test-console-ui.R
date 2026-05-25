@@ -1125,6 +1125,56 @@ test_that("streaming chunks accumulate into app state assistant text", {
   expect_equal(app_state$phase, "idle")
 })
 
+test_that("console agent suppresses native post-tool prose until explicit final answer", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  model <- MockModel$new(list(
+    list(
+      text = "",
+      tool_calls = list(list(
+        id = "call_1",
+        name = "echo",
+        arguments = list(message = "console")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "Installing the missing package and rerunning.",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "<final_answer>Console protocol worked.</final_answer>",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  ))
+  model$capabilities <- list(native_tool_calling = TRUE)
+  session <- aisdk::create_chat_session(model = model, tools = list(echo_tool))
+  session$merge_metadata(list(console_agent_enabled = TRUE))
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  ok <- aisdk:::console_send_user_message(
+    "Use the echo tool",
+    session = session,
+    stream = TRUE,
+    app_state = app_state
+  )
+
+  turn <- aisdk:::console_app_get_last_turn(app_state)
+  expect_true(ok)
+  expect_match(turn$assistant_text, "Console protocol worked", fixed = TRUE)
+  expect_false(grepl("Installing the missing package", turn$assistant_text, fixed = TRUE))
+})
+
 test_that("turn and tool inspector helpers expose structured details", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "inspect")

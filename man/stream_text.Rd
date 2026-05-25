@@ -14,6 +14,7 @@ stream_text(
   tools = NULL,
   max_steps = 1,
   max_tool_result_errors = 2,
+  require_post_tool_protocol = FALSE,
   sandbox = FALSE,
   skills = NULL,
   session = NULL,
@@ -43,6 +44,11 @@ Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.}
 \item{max_tool_result_errors}{Maximum number of consecutive tool result errors
 before triggering the circuit breaker. Default 2. Tool result errors are when
 tools return error messages (not exceptions). Set to Inf to disable this check.}
+
+\item{require_post_tool_protocol}{Logical. If TRUE, after any tool results
+are returned the model must either make another tool call or wrap its final
+answer in a \verb{<final_answer>...</final_answer>} block. This is enabled
+automatically for text-based tool fallback.}
 
 \item{sandbox}{Logical. If TRUE, enables R-native programmatic sandbox mode.
 See \code{generate_text} for details. Default FALSE.}

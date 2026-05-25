@@ -304,6 +304,111 @@ test_that("text tool fallback rejects prose outside post-tool protocol tags", {
   expect_match(correction_prompt, "Here is the answer", fixed = TRUE)
 })
 
+test_that("post-tool protocol can require explicit final answers with native tool calling", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  correction_prompt <- NULL
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = TRUE)
+  mock_model$responses <- list(
+    list(
+      text = "",
+      tool_calls = list(list(
+        id = "call_1",
+        name = "echo",
+        arguments = list(message = "native")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "I checked the result. Now I will continue.",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    function(params) {
+      correction_prompt <<- params$messages[[length(params$messages)]]$content
+      list(
+        text = "<final_answer>Native protocol worked.</final_answer>",
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    }
+  )
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 4,
+    require_post_tool_protocol = TRUE
+  )
+
+  expect_equal(result$text, "Native protocol worked.")
+  expect_match(correction_prompt, "provider's native/API tool-call interface", fixed = TRUE)
+  expect_match(correction_prompt, "I checked the result", fixed = TRUE)
+})
+
+test_that("stream_text suppresses non-protocol native post-tool text while correcting", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = TRUE)
+  mock_model$responses <- list(
+    list(
+      text = "",
+      tool_calls = list(list(
+        id = "call_1",
+        name = "echo",
+        arguments = list(message = "native stream")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "Installing the missing package and rerunning.",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "<final_answer>Native stream protocol worked.</final_answer>",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  )
+
+  chunks <- character(0)
+  result <- stream_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 4,
+    require_post_tool_protocol = TRUE,
+    callback = function(text, done) {
+      if (!isTRUE(done) && nzchar(text %||% "")) {
+        chunks <<- c(chunks, text)
+      }
+    }
+  )
+
+  expect_equal(result$text, "Native stream protocol worked.")
+  expect_false(any(grepl("Installing the missing package", chunks, fixed = TRUE)))
+})
+
 test_that("stream_text suppresses non-protocol post-tool text while correcting", {
   echo_tool <- tool(
     name = "echo",

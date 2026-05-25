@@ -246,7 +246,12 @@ console_chat <- function(session = NULL,
     console_working_dir = working_dir,
     console_startup_dir = startup_dir,
     console_profile = profile,
-    console_session_store_root = file.path(startup_dir, ".aisdk", "sessions")
+    console_agent_enabled = isTRUE(agent_mode),
+    console_session_store_root = file.path(startup_dir, ".aisdk", "sessions"),
+    model_call_options = merge_call_options(
+      session$get_model_call_options(),
+      list(require_post_tool_protocol = isTRUE(agent_mode))
+    )
   ))
   session_id <- console_session_id(session)
   branch_tree <- console_branch_tree(session)
@@ -444,6 +449,7 @@ console_send_user_message <- function(input,
             generation_result <- session$send_stream(
               input,
               turn_system_prompt = turn_system_prompt,
+              require_post_tool_protocol = isTRUE(session$get_metadata("console_agent_enabled", default = FALSE)),
               callback = function(text, done) {
                 display_text <- tool_markup_filter$process(text, done)
                 if (isTRUE(done)) {
@@ -466,7 +472,11 @@ console_send_user_message <- function(input,
             )
           } else {
             md_renderer <- create_markdown_stream_renderer()
-            generation_result <- session$send(input, turn_system_prompt = turn_system_prompt)
+            generation_result <- session$send(
+              input,
+              turn_system_prompt = turn_system_prompt,
+              require_post_tool_protocol = isTRUE(session$get_metadata("console_agent_enabled", default = FALSE))
+            )
             if (!is.null(generation_result$text)) {
               if (!is.null(app_state)) {
                 console_app_append_assistant_text(app_state, generation_result$text)
@@ -693,6 +703,7 @@ console_continue_run_action <- function(session,
               action = action,
               guidance = guidance,
               stream = TRUE,
+              require_post_tool_protocol = TRUE,
               callback = function(text, done) {
                 if (isTRUE(done)) {
                   md_renderer$process_chunk(NULL, TRUE)
@@ -708,7 +719,8 @@ console_continue_run_action <- function(session,
             result <- session$continue_run(
               action = action,
               guidance = guidance,
-              stream = FALSE
+              stream = FALSE,
+              require_post_tool_protocol = TRUE
             )
             if (!is.null(result$text)) {
               if (!is.null(app_state)) {

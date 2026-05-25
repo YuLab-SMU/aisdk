@@ -219,7 +219,56 @@ text_tool_protocol_missing <- function(result, awaiting_protocol = FALSE) {
 }
 
 #' @keywords internal
-text_tool_protocol_correction_message <- function(result) {
+post_tool_protocol_tool_call_instruction <- function(use_text_tool_fallback = FALSE) {
+  if (isTRUE(use_text_tool_fallback)) {
+    return(paste(
+      "Continue with another tool call:",
+      "<tool_call>",
+      "{\"name\":\"tool_name\",\"arguments\":{}}",
+      "</tool_call>",
+      sep = "\n"
+    ))
+  }
+
+  "Continue with another tool call by using the provider's native/API tool-call interface. Do not write prose while doing so."
+}
+
+#' @keywords internal
+post_tool_protocol_final_answer_instruction <- function() {
+  paste(
+    "Or finish the task for the user:",
+    "<final_answer>",
+    "Your final answer to the user.",
+    "</final_answer>",
+    sep = "\n"
+  )
+}
+
+#' @keywords internal
+post_tool_protocol_system_prompt <- function(use_text_tool_fallback = FALSE) {
+  paste(
+    "Post-tool response protocol:",
+    "After tool results are provided, your next response must be exactly one next action and no prose outside the required structure.",
+    post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
+    post_tool_protocol_final_answer_instruction(),
+    sep = "\n\n"
+  )
+}
+
+#' @keywords internal
+append_post_tool_protocol_message <- function(messages, use_text_tool_fallback = FALSE) {
+  content <- paste(
+    "Post-tool response protocol:",
+    "Return exactly one of the following shapes and no prose outside the required structure:",
+    post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
+    post_tool_protocol_final_answer_instruction(),
+    sep = "\n\n"
+  )
+  c(messages, list(list(role = "user", content = content)))
+}
+
+#' @keywords internal
+text_tool_protocol_correction_message <- function(result, use_text_tool_fallback = TRUE) {
   preview_source <- result$final_answer_protocol_text %||%
     result$text_tool_call_protocol_text %||%
     result$text %||%
@@ -227,17 +276,11 @@ text_tool_protocol_correction_message <- function(result) {
   preview <- compact_text_preview(preview_source, width = 800)
   content <- paste(
     "Your previous response after tool results did not follow the required post-tool protocol.",
-    "Do not explain the protocol. Re-emit the next action in exactly one of these forms and no prose outside the tags:",
+    "Do not explain the protocol. Re-emit the next action in exactly one of these forms and no prose outside the required structure:",
     "",
-    "Continue with another tool call:",
-    "<tool_call>",
-    "{\"name\":\"tool_name\",\"arguments\":{}}",
-    "</tool_call>",
+    post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
     "",
-    "Or finish the task for the user:",
-    "<final_answer>",
-    "Your final answer to the user.",
-    "</final_answer>",
+    post_tool_protocol_final_answer_instruction(),
     if (nzchar(preview)) paste0("\nPrevious non-protocol response was:\n", preview) else NULL,
     sep = "\n"
   )
@@ -348,6 +391,10 @@ append_text_tool_result_messages <- function(messages, result, tool_results) {
 #' @param max_tool_result_errors Maximum number of consecutive tool result errors
 #'   before triggering the circuit breaker. Default 2. Tool result errors are when
 #'   tools return error messages (not exceptions). Set to Inf to disable this check.
+#' @param require_post_tool_protocol Logical. If TRUE, after any tool results
+#'   are returned the model must either make another tool call or wrap its final
+#'   answer in a `<final_answer>...</final_answer>` block. This is enabled
+#'   automatically for text-based tool fallback.
 #' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
 #'   All tools are bound into an isolated R environment and replaced by a single
 #'   `execute_r_code` meta-tool. The LLM writes R code to batch-invoke tools,
@@ -387,6 +434,7 @@ generate_text <- function(model = NULL,
                           tools = NULL,
                           max_steps = 1,
                           max_tool_result_errors = 2,
+                          require_post_tool_protocol = FALSE,
                           sandbox = FALSE,
                           skills = NULL,
                           session = NULL,
@@ -427,6 +475,7 @@ generate_text <- function(model = NULL,
 
   tools <- filter_tools_for_model_capabilities(tools, model, session = session)
   use_text_tool_fallback <- !native_tool_calling_enabled(model)
+  require_post_tool_protocol <- isTRUE(require_post_tool_protocol) || isTRUE(use_text_tool_fallback)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -453,6 +502,10 @@ generate_text <- function(model = NULL,
       system <- if (is.null(system)) tool_prompt else paste(system, "\n\n", tool_prompt, sep = "")
     }
   }
+  if (isTRUE(require_post_tool_protocol) && !is.null(tools) && length(tools) > 0) {
+    protocol_prompt <- post_tool_protocol_system_prompt(use_text_tool_fallback = use_text_tool_fallback)
+    system <- if (is.null(system)) protocol_prompt else paste(system, "\n\n", protocol_prompt, sep = "")
+  }
 
   # Build initial messages
   messages <- build_messages(prompt, system)
@@ -476,7 +529,7 @@ generate_text <- function(model = NULL,
   step <- 0
   result <- NULL
   run_id <- paste0("run_", generate_stable_id("generate_text", Sys.time(), stats::runif(1)))
-  awaiting_text_tool_protocol <- FALSE
+  awaiting_post_tool_protocol <- FALSE
 
   # Circuit breaker state
   breaker_state <- new.env(parent = emptyenv())
@@ -515,17 +568,20 @@ generate_text <- function(model = NULL,
           }
         }
 
-        if (text_tool_protocol_missing(result, awaiting_text_tool_protocol)) {
+        if (text_tool_protocol_missing(result, awaiting_post_tool_protocol)) {
           if (step >= max_steps) {
             warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
             result$finish_reason <- "tool_failure"
             break
           }
-          messages <- c(messages, list(text_tool_protocol_correction_message(result)))
+          messages <- c(messages, list(text_tool_protocol_correction_message(
+            result,
+            use_text_tool_fallback = use_text_tool_fallback
+          )))
           next
         }
 
-        awaiting_text_tool_protocol <- FALSE
+        awaiting_post_tool_protocol <- FALSE
 
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
@@ -651,7 +707,7 @@ generate_text <- function(model = NULL,
 
           if (isTRUE(use_text_tool_fallback)) {
             messages <- append_text_tool_result_messages(messages, result, tool_results)
-            awaiting_text_tool_protocol <- TRUE
+            awaiting_post_tool_protocol <- TRUE
           } else if (history_format == "openai") {
             # For OpenAI, we need to include tool_calls in the assistant message
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
@@ -681,6 +737,13 @@ generate_text <- function(model = NULL,
             for (tr in tool_results) {
               tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
               messages <- c(messages, list(tool_result_msg))
+            }
+            if (isTRUE(require_post_tool_protocol)) {
+              messages <- append_post_tool_protocol_message(
+                messages,
+                use_text_tool_fallback = FALSE
+              )
+              awaiting_post_tool_protocol <- TRUE
             }
           }
 
@@ -763,6 +826,10 @@ generate_text <- function(model = NULL,
 #' @param max_tool_result_errors Maximum number of consecutive tool result errors
 #'   before triggering the circuit breaker. Default 2. Tool result errors are when
 #'   tools return error messages (not exceptions). Set to Inf to disable this check.
+#' @param require_post_tool_protocol Logical. If TRUE, after any tool results
+#'   are returned the model must either make another tool call or wrap its final
+#'   answer in a `<final_answer>...</final_answer>` block. This is enabled
+#'   automatically for text-based tool fallback.
 #' @param sandbox Logical. If TRUE, enables R-native programmatic sandbox mode.
 #'   See \code{generate_text} for details. Default FALSE.
 #' @param skills Optional path to skills directory, or a SkillRegistry object.
@@ -790,6 +857,7 @@ stream_text <- function(model = NULL,
                         tools = NULL,
                         max_steps = 1,
                         max_tool_result_errors = 2,
+                        require_post_tool_protocol = FALSE,
                         sandbox = FALSE,
                         skills = NULL,
                         session = NULL,
@@ -829,6 +897,7 @@ stream_text <- function(model = NULL,
 
   tools <- filter_tools_for_model_capabilities(tools, model, session = session)
   use_text_tool_fallback <- !native_tool_calling_enabled(model)
+  require_post_tool_protocol <- isTRUE(require_post_tool_protocol) || isTRUE(use_text_tool_fallback)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -855,6 +924,10 @@ stream_text <- function(model = NULL,
       system <- if (is.null(system)) tool_prompt else paste(system, "\n\n", tool_prompt, sep = "")
     }
   }
+  if (isTRUE(require_post_tool_protocol) && !is.null(tools) && length(tools) > 0) {
+    protocol_prompt <- post_tool_protocol_system_prompt(use_text_tool_fallback = use_text_tool_fallback)
+    system <- if (is.null(system)) protocol_prompt else paste(system, "\n\n", protocol_prompt, sep = "")
+  }
 
   messages <- build_messages(prompt, system)
   validate_model_messages(model, messages)
@@ -876,7 +949,7 @@ stream_text <- function(model = NULL,
   step <- 0
   result <- NULL
   run_id <- paste0("run_", generate_stable_id("stream_text", Sys.time(), stats::runif(1)))
-  awaiting_text_tool_protocol <- FALSE
+  awaiting_post_tool_protocol <- FALSE
 
   renderer <- create_stream_renderer()
 
@@ -900,8 +973,8 @@ stream_text <- function(model = NULL,
         # Call the model via do_stream
         if (interactive()) renderer$start_thinking()
 
-        buffer_protocol_output <- isTRUE(use_text_tool_fallback) &&
-          isTRUE(awaiting_text_tool_protocol)
+        buffer_protocol_output <- isTRUE(require_post_tool_protocol) &&
+          isTRUE(awaiting_post_tool_protocol)
 
         result <- model$do_stream(params, function(chunk, done) {
           if (isTRUE(buffer_protocol_output)) {
@@ -920,13 +993,16 @@ stream_text <- function(model = NULL,
         result <- recover_text_tool_calls(result)
         result <- recover_text_final_answer(result)
 
-        if (text_tool_protocol_missing(result, awaiting_text_tool_protocol)) {
+        if (text_tool_protocol_missing(result, awaiting_post_tool_protocol)) {
           if (step >= max_steps) {
             warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
             result$finish_reason <- "tool_failure"
             break
           }
-          messages <- c(messages, list(text_tool_protocol_correction_message(result)))
+          messages <- c(messages, list(text_tool_protocol_correction_message(
+            result,
+            use_text_tool_fallback = use_text_tool_fallback
+          )))
           if (interactive()) {
             renderer$reset_for_new_step()
           }
@@ -950,7 +1026,7 @@ stream_text <- function(model = NULL,
           }
         }
 
-        awaiting_text_tool_protocol <- FALSE
+        awaiting_post_tool_protocol <- FALSE
 
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
@@ -1075,7 +1151,7 @@ stream_text <- function(model = NULL,
 
           if (isTRUE(use_text_tool_fallback)) {
             messages <- append_text_tool_result_messages(messages, result, tool_results)
-            awaiting_text_tool_protocol <- TRUE
+            awaiting_post_tool_protocol <- TRUE
           } else if (history_format == "openai") {
             # Provider-specific tool call formatting (copied from generate_text)
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
@@ -1104,6 +1180,13 @@ stream_text <- function(model = NULL,
             for (tr in tool_results) {
               tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
               messages <- c(messages, list(tool_result_msg))
+            }
+            if (isTRUE(require_post_tool_protocol)) {
+              messages <- append_post_tool_protocol_message(
+                messages,
+                use_text_tool_fallback = FALSE
+              )
+              awaiting_post_tool_protocol <- TRUE
             }
           }
 
