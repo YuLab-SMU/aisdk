@@ -56,6 +56,15 @@ test_that("create_openai() accepts custom base_url", {
   expect_s3_class(model, "OpenAILanguageModel")
 })
 
+test_that("create_openai() falls back when base URL env vars are empty", {
+  withr::with_envvar(c(OPENAI_BASE_URL = "", OPENAI_BASE_URLS = ""), {
+    provider <- safe_create_provider(create_openai, api_key = "sk-test")
+    model <- provider$language_model(openai_model)
+
+    expect_s3_class(model, "OpenAILanguageModel")
+  })
+})
+
 test_that("create_openai() warns when API key is missing", {
   # Temporarily unset API key
   old_key <- Sys.getenv("OPENAI_API_KEY")

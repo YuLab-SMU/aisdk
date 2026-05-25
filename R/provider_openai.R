@@ -2195,14 +2195,15 @@ OpenAIProvider <- R6::R6Class(
                           disable_stream_options = FALSE,
                           api_format = c("auto", "chat", "responses")) {
       api_format <- match.arg(api_format)
-      raw_base_url <- base_url %||% paste(
-        c(
-          Sys.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-          Sys.getenv("OPENAI_BASE_URLS", unset = "")
-        ),
-        collapse = ","
+      env_base_url <- Sys.getenv("OPENAI_BASE_URL", unset = "")
+      raw_base_url <- base_url %||% c(
+        if (nzchar(trimws(env_base_url))) env_base_url else "https://api.openai.com/v1",
+        Sys.getenv("OPENAI_BASE_URLS", unset = "")
       )
       base_urls <- normalize_base_urls(raw_base_url)
+      if (length(base_urls) == 0L) {
+        base_urls <- "https://api.openai.com/v1"
+      }
       private$config <- list(
         api_key = api_key %||% Sys.getenv("OPENAI_API_KEY"),
         base_url = base_urls[[1]],
