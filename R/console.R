@@ -289,7 +289,7 @@ console_chat <- function(session = NULL,
   render_console_frame(build_console_frame(app_state), state = app_state, force = TRUE)
   cli::cli_text("Type {.code /help} for commands, {.code /quit} to exit.")
 
-  input_state <- console_create_input_state(session)
+  input_state <- console_create_input_state(session, history_path = console_chat_history_path())
   if (!is.null(initial_prompt) && nzchar(trimws(initial_prompt))) {
     console_input_history_add(input_state, initial_prompt)
     console_append_session_event(
@@ -940,7 +940,8 @@ readline_multiline <- function(input_state = NULL,
 
   input_event <- console_read_input_event(
     prompt = if (draining_paste) "" else if (!is.null(input_state$pending_paste)) "  [paste pending] " else "  ",
-    readline_fn = readline_fn
+    readline_fn = readline_fn,
+    input_state = input_state
   )
   if (identical(input_event$type, "eof")) {
     return(NULL)
@@ -999,21 +1000,21 @@ readline_multiline <- function(input_state = NULL,
 }
 
 #' @keywords internal
-console_read_input_event <- function(prompt = "  ", readline_fn = NULL) {
+console_read_input_event <- function(prompt = "  ", readline_fn = NULL, input_state = NULL) {
   if (!is.null(readline_fn)) {
     return(list(type = "line", text = readline_fn(prompt)))
   }
 
-  event <- console_read_bracketed_input(prompt)
+  event <- console_read_bracketed_input(prompt, input_state = input_state)
   if (!is.null(event)) {
     return(event)
   }
 
-  list(type = "line", text = readline(prompt))
+  list(type = "line", text = console_readline_with_input_history(prompt, input_state))
 }
 
 #' @keywords internal
-console_read_bracketed_input <- function(prompt = "  ") {
+console_read_bracketed_input <- function(prompt = "  ", input_state = NULL) {
   if (!console_can_use_raw_input()) {
     return(NULL)
   }
@@ -1050,6 +1051,18 @@ console_read_bracketed_input <- function(prompt = "  ") {
       byte <- console_read_raw_byte(con)
       if (identical(byte, as.raw(0x1b))) {
         seq <- console_read_escape_sequence(con)
+        if (identical(seq, "[A") || identical(seq, "[B")) {
+          current <- paste0(chars, collapse = "")
+          recalled <- console_input_history_recall(
+            input_state = input_state,
+            current = current,
+            direction = if (identical(seq, "[A")) "previous" else "next"
+          )
+          chars <- if (nzchar(recalled)) strsplit(recalled, "", fixed = TRUE)[[1]] else character(0)
+          char_bytes <- raw(0)
+          console_redraw_raw_input(prompt, chars)
+          next
+        }
         if (identical(seq, "[200~")) {
           in_paste <- TRUE
           paste_bytes <- raw(0)
@@ -1131,10 +1144,16 @@ console_read_escape_sequence <- function(con) {
     byte <- console_read_raw_byte(con)
     bytes <- c(bytes, byte)
     seq <- rawToChar(bytes)
-    if (grepl("~$", seq) || length(bytes) >= 8L) {
+    if (seq %in% c("[A", "[B", "[C", "[D") || grepl("~$", seq) || length(bytes) >= 8L) {
       return(seq)
     }
   }
+}
+
+#' @keywords internal
+console_redraw_raw_input <- function(prompt, chars) {
+  cat("\r\033[2K", prompt, paste0(chars, collapse = ""), sep = "")
+  utils::flush.console()
 }
 
 #' @keywords internal
@@ -1715,19 +1734,57 @@ console_image_message <- function(path, instruction = NULL, include_path_context
 }
 
 #' @keywords internal
-console_create_input_state <- function(session = NULL) {
-  history <- character(0)
+console_chat_history_path <- function() {
+  custom <- Sys.getenv("AISDK_CONSOLE_HISTORY", unset = "")
+  if (nzchar(custom)) {
+    return(path.expand(custom))
+  }
+
+  file.path(tools::R_user_dir("aisdk", "cache"), "console_chat_history")
+}
+
+#' @keywords internal
+console_read_input_history_file <- function(path) {
+  if (is.null(path) || !nzchar(path) || !file.exists(path)) {
+    return(character(0))
+  }
+
+  history <- tryCatch(readLines(path, warn = FALSE, encoding = "UTF-8"), error = function(e) character(0))
+  history[nzchar(history)]
+}
+
+#' @keywords internal
+console_write_input_history_file <- function(path, history) {
+  if (is.null(path) || !nzchar(path)) {
+    return(invisible(FALSE))
+  }
+
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  tryCatch(
+    {
+      writeLines(enc2utf8(history %||% character(0)), path, useBytes = TRUE)
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+}
+
+#' @keywords internal
+console_create_input_state <- function(session = NULL, history_path = NULL) {
+  history <- console_read_input_history_file(history_path)
   if (!is.null(session) && inherits(session, "ChatSession")) {
     messages <- session$get_history()
-    history <- vapply(Filter(function(msg) {
+    session_history <- vapply(Filter(function(msg) {
       identical(msg$role %||% "", "user") && is.character(msg$content %||% NULL) &&
         length(msg$content) == 1L && nzchar(msg$content)
     }, messages), function(msg) msg$content, character(1))
+    history <- c(history, session_history)
   }
 
   history <- utils::tail(history, 100L)
   env <- new.env(parent = emptyenv())
   env$history <- history
+  env$history_path <- history_path
   env$history_index <- length(history) + 1L
   env$saved_input <- ""
   env$pending_paste <- NULL
@@ -1750,7 +1807,83 @@ console_input_history_add <- function(input_state, input) {
   input_state$history <- utils::tail(history, 100L)
   input_state$history_index <- length(input_state$history) + 1L
   input_state$saved_input <- ""
+  console_write_input_history_file(input_state$history_path %||% NULL, input_state$history)
   invisible(input_state)
+}
+
+#' @keywords internal
+console_input_history_recall <- function(input_state,
+                                         current = "",
+                                         direction = c("previous", "next")) {
+  if (is.null(input_state)) {
+    return(current %||% "")
+  }
+
+  direction <- match.arg(direction)
+  history <- input_state$history %||% character(0)
+  if (length(history) == 0L) {
+    return(current %||% "")
+  }
+
+  idx <- input_state$history_index %||% (length(history) + 1L)
+  if (identical(direction, "previous")) {
+    if (idx > length(history)) {
+      input_state$saved_input <- current %||% ""
+    }
+    idx <- max(1L, idx - 1L)
+  } else {
+    idx <- min(length(history) + 1L, idx + 1L)
+  }
+
+  input_state$history_index <- idx
+  if (idx > length(history)) {
+    return(input_state$saved_input %||% "")
+  }
+
+  history[[idx]]
+}
+
+#' @keywords internal
+console_readline_with_input_history <- function(prompt = "  ", input_state = NULL) {
+  history_path <- input_state$history_path %||% NULL
+  if (is.null(input_state) || is.null(history_path) || !interactive()) {
+    return(readline(prompt))
+  }
+
+  previous_history <- tempfile("aisdk-r-history-")
+  saved_previous <- tryCatch(
+    {
+      utils::savehistory(previous_history)
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+  on.exit({
+    if (isTRUE(saved_previous)) {
+      tryCatch(utils::loadhistory(previous_history), error = function(e) NULL)
+    }
+    unlink(previous_history)
+  }, add = TRUE)
+
+  console_write_input_history_file(history_path, input_state$history %||% character(0))
+  loaded_chat_history <- tryCatch(
+    {
+      utils::loadhistory(history_path)
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+  if (!isTRUE(loaded_chat_history)) {
+    return(readline(prompt))
+  }
+
+  value <- readline(prompt)
+
+  tryCatch(utils::savehistory(history_path), error = function(e) NULL)
+  input_state$history <- utils::tail(console_read_input_history_file(history_path), 100L)
+  input_state$history_index <- length(input_state$history) + 1L
+
+  value
 }
 
 #' @keywords internal

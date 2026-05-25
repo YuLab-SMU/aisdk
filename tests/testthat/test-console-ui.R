@@ -63,6 +63,29 @@ test_that("console input state initializes with user chat messages", {
   expect_equal(state$history_index, 3L)
 })
 
+test_that("console input state uses a separate persisted chat history", {
+  history_path <- tempfile("aisdk-console-history-")
+  writeLines(c("previous chat", "another chat"), history_path)
+
+  state <- aisdk:::console_create_input_state(history_path = history_path)
+  expect_equal(state$history, c("previous chat", "another chat"))
+
+  aisdk:::console_input_history_add(state, "new chat")
+  expect_equal(readLines(history_path, warn = FALSE), c("previous chat", "another chat", "new chat"))
+  expect_false(identical(basename(aisdk:::console_chat_history_path()), ".Rhistory"))
+})
+
+test_that("console input history recall navigates only chat input state", {
+  state <- aisdk:::console_create_input_state()
+  aisdk:::console_input_history_add(state, "first")
+  aisdk:::console_input_history_add(state, "second")
+
+  expect_equal(aisdk:::console_input_history_recall(state, "draft", "previous"), "second")
+  expect_equal(aisdk:::console_input_history_recall(state, "", "previous"), "first")
+  expect_equal(aisdk:::console_input_history_recall(state, "", "next"), "second")
+  expect_equal(aisdk:::console_input_history_recall(state, "", "next"), "draft")
+})
+
 test_that("console readline returns a simple line immediately", {
   state <- aisdk:::console_create_input_state()
   lines <- c("alpha", "ignored")
