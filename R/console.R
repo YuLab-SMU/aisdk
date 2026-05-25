@@ -603,9 +603,6 @@ console_text_promises_action <- function(text) {
   if (!nzchar(text)) {
     return(FALSE)
   }
-  if (grepl("[.!?\u3002\uff01\uff1f]$", text)) {
-    return(FALSE)
-  }
 
   starts_like_action <- grepl(
     "^(now|next|then|let me|i'?ll|i will|retrying|installing|checking|running|trying|found it\\b)",
@@ -618,7 +615,20 @@ console_text_promises_action <- function(text) {
     ignore.case = TRUE
   )
 
-  starts_like_action || contains_action_promise
+  zh_action <- paste(
+    "我(先|现在|接下来|马上|继续|重新|再|来)(查|看|检查|安装|运行|执行|跑|生成|保存|画|修复|补|试|改|处理|确认)",
+    "我(把|来|再)?(查一下|看一下|检查|安装|运行|执行|跑|生成|保存|画|修复|补上|重新跑|继续跑)",
+    "(先|现在|接下来|马上|继续|重新|再).*(查|看|检查|安装|运行|执行|跑|生成|保存|画|修复|补上|一口气出)",
+    "(查清楚了|找到.*了|看起来.*问题|忘了.*补上|小修一下|修复一下|重新跑一下|继续跑|一口气)",
+    sep = "|"
+  )
+  contains_zh_action_promise <- grepl(zh_action, text, perl = TRUE)
+
+  if (grepl("[.!?\u3002\uff01\uff1f]$", text) && !contains_zh_action_promise) {
+    return(FALSE)
+  }
+
+  starts_like_action || contains_action_promise || contains_zh_action_promise
 }
 
 #' @keywords internal
@@ -3133,11 +3143,11 @@ with_console_chat_display <- function(verbose = FALSE,
 
 #' @keywords internal
 new_console_tool_call_markup_filter <- function() {
-  start_tag <- "<tool_call>"
-  end_tag <- "</tool_call>"
+  tags <- c("tool_calls", "tool_call")
+  start_patterns <- paste0("<", tags)
   state <- new.env(parent = emptyenv())
   state$buffer <- ""
-  state$in_tool_call <- FALSE
+  state$current_tag <- NULL
 
   keep_suffix <- function(text, n) {
     len <- nchar(text, type = "chars")
@@ -3148,6 +3158,32 @@ new_console_tool_call_markup_filter <- function() {
     }
   }
 
+  find_next_start <- function(buffer) {
+    positions <- vapply(start_patterns, function(pattern) {
+      regexpr(pattern, buffer, fixed = TRUE)[[1]]
+    }, integer(1))
+    valid <- which(positions > 0)
+    if (length(valid) == 0) {
+      return(NULL)
+    }
+    idx <- valid[[which.min(positions[valid])]]
+    list(pos = positions[[idx]], tag = tags[[idx]], pattern = start_patterns[[idx]])
+  }
+
+  detect_open_tag <- function(buffer, tag, pattern) {
+    gt_pos <- regexpr(">", buffer, fixed = TRUE)[[1]]
+    if (identical(gt_pos, -1L)) {
+      return(NULL)
+    }
+
+    open_text <- substr(buffer, 1L, gt_pos)
+    if (!grepl(sprintf("^<%s\\s*>$", tag), open_text, perl = TRUE)) {
+      return(FALSE)
+    }
+
+    list(after = gt_pos + 1L)
+  }
+
   state$process <- function(text, done = FALSE) {
     if (!is.null(text) && nzchar(text)) {
       state$buffer <- paste0(state$buffer, text)
@@ -3156,7 +3192,8 @@ new_console_tool_call_markup_filter <- function() {
     out <- ""
 
     repeat {
-      if (isTRUE(state$in_tool_call)) {
+      if (!is.null(state$current_tag)) {
+        end_tag <- paste0("</", state$current_tag, ">")
         end_pos <- regexpr(end_tag, state$buffer, fixed = TRUE)[[1]]
         if (identical(end_pos, -1L)) {
           state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
@@ -3165,17 +3202,29 @@ new_console_tool_call_markup_filter <- function() {
 
         end_after <- end_pos + nchar(end_tag) - 1L
         state$buffer <- substr(state$buffer, end_after + 1L, nchar(state$buffer))
-        state$in_tool_call <- FALSE
+        state$current_tag <- NULL
         next
       }
 
-      start_pos <- regexpr(start_tag, state$buffer, fixed = TRUE)[[1]]
-      if (!identical(start_pos, -1L)) {
-        if (start_pos > 1L) {
-          out <- paste0(out, substr(state$buffer, 1L, start_pos - 1L))
+      start <- find_next_start(state$buffer)
+      if (!is.null(start)) {
+        if (start$pos > 1L) {
+          out <- paste0(out, substr(state$buffer, 1L, start$pos - 1L))
         }
-        state$buffer <- substr(state$buffer, start_pos + nchar(start_tag), nchar(state$buffer))
-        state$in_tool_call <- TRUE
+        state$buffer <- substr(state$buffer, start$pos, nchar(state$buffer))
+
+        open <- detect_open_tag(state$buffer, start$tag, start$pattern)
+        if (is.null(open)) {
+          break
+        }
+        if (identical(open, FALSE)) {
+          out <- paste0(out, substr(state$buffer, 1L, nchar(start$pattern)))
+          state$buffer <- substr(state$buffer, nchar(start$pattern) + 1L, nchar(state$buffer))
+          next
+        }
+
+        state$buffer <- substr(state$buffer, open$after, nchar(state$buffer))
+        state$current_tag <- start$tag
         next
       }
 
@@ -3183,7 +3232,7 @@ new_console_tool_call_markup_filter <- function() {
         out <- paste0(out, state$buffer)
         state$buffer <- ""
       } else {
-        keep <- nchar(start_tag) - 1L
+        keep <- max(nchar(start_patterns)) - 1L
         len <- nchar(state$buffer, type = "chars")
         if (len > keep) {
           safe_len <- len - keep
@@ -3196,7 +3245,7 @@ new_console_tool_call_markup_filter <- function() {
 
     if (isTRUE(done)) {
       state$buffer <- ""
-      state$in_tool_call <- FALSE
+      state$current_tag <- NULL
     }
 
     out

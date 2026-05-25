@@ -5,56 +5,123 @@
 NULL
 
 #' @keywords internal
+parse_tool_call_json_payload <- function(payload, fallback_index = 1L) {
+  payload <- trimws(payload %||% "")
+  if (!nzchar(payload)) {
+    return(list())
+  }
+
+  parsed <- tryCatch(
+    jsonlite::fromJSON(payload, simplifyVector = FALSE),
+    error = function(e) {
+      repaired <- repair_json_string(payload)
+      tryCatch(
+        jsonlite::fromJSON(repaired, simplifyVector = FALSE),
+        error = function(e2) NULL
+      )
+    }
+  )
+
+  normalize_one <- function(item, idx) {
+    if (is.null(item) || !is.list(item)) {
+      return(NULL)
+    }
+
+    fn <- item$`function` %||% NULL
+    name <- item$name %||% item$tool_name %||% fn$name %||% ""
+    if (!nzchar(name)) {
+      return(NULL)
+    }
+
+    arguments <- item$arguments %||% fn$arguments %||% item$input %||% list()
+    list(
+      id = item$id %||% item$tool_call_id %||% sprintf("text_tool_call_%02d", idx),
+      name = name,
+      arguments = parse_tool_arguments(arguments, tool_name = name)
+    )
+  }
+
+  normalize_many <- function(value, offset = fallback_index) {
+    if (is.null(value) || !is.list(value)) {
+      return(list())
+    }
+
+    if (!is.null(value$tool_calls) && is.list(value$tool_calls)) {
+      return(normalize_many(value$tool_calls, offset = offset))
+    }
+
+    if (!is.null(value$name) || !is.null(value$tool_name) || !is.null(value$`function`$name)) {
+      one <- normalize_one(value, offset)
+      return(if (is.null(one)) list() else list(one))
+    }
+
+    calls <- list()
+    for (i in seq_along(value)) {
+      item <- normalize_one(value[[i]], offset + i - 1L)
+      if (!is.null(item)) {
+        calls[[length(calls) + 1L]] <- item
+      }
+    }
+    calls
+  }
+
+  normalize_many(parsed, offset = fallback_index)
+}
+
+#' @keywords internal
 parse_tool_call_blocks <- function(text) {
   if (is.null(text) || !nzchar(text)) {
     return(list(tool_calls = NULL, text = text))
   }
 
-  matches <- gregexpr("(?s)<tool_call>\\s*.*?\\s*</tool_call>", text, perl = TRUE)[[1]]
-  if (length(matches) == 1L && identical(matches[[1]], -1L)) {
-    return(list(tool_calls = NULL, text = text))
-  }
-
-  blocks <- regmatches(text, list(matches))[[1]]
-  tool_calls <- list()
-
-  for (i in seq_along(blocks)) {
-    inner <- sub("(?s)^\\s*<tool_call>\\s*", "", blocks[[i]], perl = TRUE)
-    inner <- sub("(?s)\\s*</tool_call>\\s*$", "", inner, perl = TRUE)
-    inner <- trimws(inner)
-    if (!nzchar(inner)) {
-      next
+  parse_tag_blocks <- function(current_text, tag, parse_block) {
+    pattern <- sprintf("(?is)<%s>\\s*.*?\\s*</%s>", tag, tag)
+    matches <- gregexpr(pattern, current_text, perl = TRUE)[[1]]
+    if (length(matches) == 1L && identical(matches[[1]], -1L)) {
+      return(list(tool_calls = list(), text = current_text))
     }
 
-    parsed <- tryCatch(
-      jsonlite::fromJSON(inner, simplifyVector = FALSE),
-      error = function(e) {
-        repaired <- repair_json_string(inner)
-        tryCatch(
-          jsonlite::fromJSON(repaired, simplifyVector = FALSE),
-          error = function(e2) NULL
-        )
+    blocks <- regmatches(current_text, list(matches))[[1]]
+    calls <- list()
+    for (i in seq_along(blocks)) {
+      inner <- sub(sprintf("(?is)^\\s*<%s>\\s*", tag), "", blocks[[i]], perl = TRUE)
+      inner <- sub(sprintf("(?is)\\s*</%s>\\s*$", tag), "", inner, perl = TRUE)
+      block_calls <- parse_block(trimws(inner), length(calls) + 1L)
+      if (length(block_calls) > 0) {
+        calls <- c(calls, block_calls)
       }
-    )
-
-    if (is.null(parsed) || !is.list(parsed) || !nzchar(parsed$name %||% "")) {
-      next
     }
 
-    tool_calls[[length(tool_calls) + 1L]] <- list(
-      id = parsed$id %||% sprintf("text_tool_call_%02d", i),
-      name = parsed$name,
-      arguments = parse_tool_arguments(parsed$arguments %||% list(), tool_name = parsed$name)
-    )
+    cleaned <- current_text
+    regmatches(cleaned, list(matches)) <- list(rep("", length(blocks)))
+    list(tool_calls = calls, text = cleaned)
   }
+
+  tool_calls <- list()
+  cleaned_text <- text
+
+  plural <- parse_tag_blocks(cleaned_text, "tool_calls", function(inner, fallback_index) {
+    nested <- parse_tool_call_blocks(inner)
+    if (!is.null(nested$tool_calls) && length(nested$tool_calls) > 0) {
+      return(nested$tool_calls)
+    }
+    parse_tool_call_json_payload(inner, fallback_index = fallback_index)
+  })
+  tool_calls <- c(tool_calls, plural$tool_calls)
+  cleaned_text <- plural$text
+
+  singular <- parse_tag_blocks(cleaned_text, "tool_call", function(inner, fallback_index) {
+    parse_tool_call_json_payload(inner, fallback_index = fallback_index)
+  })
+  tool_calls <- c(tool_calls, singular$tool_calls)
+  cleaned_text <- singular$text
+
+  cleaned_text <- gsub("(?is)<tool_calls>\\s*</tool_calls>", "", cleaned_text, perl = TRUE)
+  cleaned_text <- trimws(cleaned_text)
 
   if (length(tool_calls) == 0) {
     return(list(tool_calls = NULL, text = text))
   }
-
-  cleaned_text <- text
-  regmatches(cleaned_text, list(matches)) <- list(rep("", length(blocks)))
-  cleaned_text <- trimws(cleaned_text)
 
   list(tool_calls = tool_calls, text = cleaned_text)
 }

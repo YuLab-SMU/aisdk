@@ -184,6 +184,25 @@ test_that("console stream filter hides text tool call markup", {
   expect_false(grepl("r_eval", rendered, fixed = TRUE))
 })
 
+test_that("console stream filter hides plural text tool call markup", {
+  filter <- aisdk:::new_console_tool_call_markup_filter()
+  chunks <- c(
+    "我先检查。\n<tool_",
+    "calls>\n[{\"name\":\"r_eval\",\"arguments\":{\"code\":\"1+1\"}}]\n",
+    "</tool_",
+    "calls>\n",
+    "继续处理。\n"
+  )
+
+  rendered <- paste0(vapply(chunks, filter$process, character(1), done = FALSE), collapse = "")
+  rendered <- paste0(rendered, filter$process(NULL, done = TRUE))
+
+  expect_match(rendered, "我先检查", fixed = TRUE)
+  expect_match(rendered, "继续处理", fixed = TRUE)
+  expect_false(grepl("<tool_calls>", rendered, fixed = TRUE))
+  expect_false(grepl("r_eval", rendered, fixed = TRUE))
+})
+
 test_that("console detects action-promising assistant text after tool use", {
   result <- list(
     text = "`ggmosaic` installed. Now installing `confuns`",
@@ -197,6 +216,17 @@ test_that("console detects action-promising assistant text after tool use", {
   prompt <- aisdk:::console_incomplete_continuation_prompt(result)
   expect_match(prompt, "ended without a tool call", fixed = TRUE)
   expect_match(prompt, "Now installing", fixed = TRUE)
+})
+
+test_that("console detects Chinese action-promising assistant text after tool use", {
+  result <- list(
+    text = "参数查清楚了！修正后把 5/6/7 一口气跑完——",
+    tool_calls = NULL,
+    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
+    finish_reason = "stop"
+  )
+
+  expect_true(aisdk:::console_generation_looks_incomplete(result))
 })
 
 test_that("generate_text marks max steps as recoverable run state", {

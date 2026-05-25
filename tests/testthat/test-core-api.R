@@ -104,6 +104,43 @@ test_that("generate_text recovers tool calls embedded in assistant text", {
   expect_equal(result$all_tool_calls[[1]]$arguments$message, "hello from text")
 })
 
+test_that("generate_text recovers plural text tool call containers", {
+  tool_invocations <- list()
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) {
+      tool_invocations[[length(tool_invocations) + 1L]] <<- args$message
+      paste("Echo:", args$message)
+    }
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$add_response(
+    text = paste0(
+      "我先跑一下。\n",
+      "<tool_calls>\n",
+      "[{\"name\":\"echo\",\"arguments\":{\"message\":\"plural\"}}]\n",
+      "</tool_calls>"
+    ),
+    tool_calls = NULL
+  )
+  mock_model$add_response(text = "Plural fallback tools worked.")
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 3
+  )
+
+  expect_equal(result$text, "Plural fallback tools worked.")
+  expect_equal(tool_invocations, list("plural"))
+  expect_length(result$all_tool_calls, 1)
+  expect_equal(result$all_tool_calls[[1]]$name, "echo")
+})
+
 test_that("generate_text falls back to text tool protocol when native tool calling is unavailable", {
   tool_invocations <- list()
   first_params <- NULL
