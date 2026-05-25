@@ -1151,6 +1151,31 @@ test_that("streaming chunks accumulate into app state assistant text", {
   expect_equal(app_state$phase, "idle")
 })
 
+test_that("console typed stream events render assistant text deltas once", {
+  session <- aisdk::create_chat_session()
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+  aisdk:::console_app_start_turn(app_state, "Say hello")
+
+  aisdk:::console_handle_stream_event(
+    list(type = "text_delta", text = "hello "),
+    app_state = app_state,
+    md_renderer = NULL
+  )
+  aisdk:::console_handle_stream_event(
+    list(type = "text_delta", text = "world"),
+    app_state = app_state,
+    md_renderer = NULL
+  )
+  aisdk:::console_handle_stream_event(
+    list(type = "final_text", text = "hello world", already_streamed = TRUE),
+    app_state = app_state,
+    md_renderer = NULL
+  )
+
+  turn <- aisdk:::console_app_get_current_turn(app_state)
+  expect_equal(turn$assistant_text, "hello world")
+})
+
 test_that("console stream events render thinking without storing it as final text", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")

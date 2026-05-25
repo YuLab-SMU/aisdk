@@ -429,6 +429,10 @@ console_handle_stream_event <- function(event,
         return(invisible(TRUE))
       }
 
+      if (identical(event_type, "final_text") && isTRUE(event$already_streamed)) {
+        return(invisible(TRUE))
+      }
+
       should_render <- TRUE
       if (!is.null(app_state)) {
         if (identical(event_type, "intermediate_text")) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.6
+
+### Fixed
+- Fixed `console_chat()` typed streaming so assistant body text streams incrementally like thinking text instead of appearing only at turn completion.
+
+### Verification
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-core-api.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-console-ui.R', reporter = 'summary')"`.
+
 ## 1.4.5
 
 ### Fixed

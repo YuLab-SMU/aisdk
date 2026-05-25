@@ -502,10 +502,13 @@ test_that("stream_text keeps provider thinking separate from visible answers", {
 
   event_types <- vapply(events, `[[`, character(1), "type")
   final_events <- Filter(function(event) identical(event$type, "final_text"), events)
+  text_delta_events <- Filter(function(event) identical(event$type, "text_delta"), events)
   expect_equal(result$text, "Visible answer.")
   expect_equal(model$call_count, 2L)
   expect_true(any(event_types == "thinking_text"))
+  expect_equal(paste(vapply(text_delta_events, `[[`, character(1), "text"), collapse = ""), "Visible answer.")
   expect_equal(final_events[[1]]$text, "Visible answer.")
+  expect_true(isTRUE(final_events[[1]]$already_streamed))
   expect_false(grepl("<think>", result$text, fixed = TRUE))
 })
 

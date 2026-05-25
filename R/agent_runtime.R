@@ -896,6 +896,7 @@ run_agent_runtime <- function(model,
         trace <- run_trace_add(trace, "model_call", list(step = step, window = execution_windows))
         if (isTRUE(stream)) {
           step_stream_chunks <- character()
+          step_stream_has_visible_text <- FALSE
           thinking_markup_filter <- if (is.function(stream_event_callback)) {
             new_agent_runtime_thinking_markup_filter()
           } else {
@@ -920,7 +921,18 @@ run_agent_runtime <- function(model,
                 )
               }
               if (nzchar(split_chunk$visible %||% "")) {
-                step_stream_chunks <<- c(step_stream_chunks, split_chunk$visible)
+                visible_has_content <- nzchar(trimws(split_chunk$visible))
+                if (isTRUE(visible_has_content) || isTRUE(step_stream_has_visible_text)) {
+                  step_stream_chunks <<- c(step_stream_chunks, split_chunk$visible)
+                  if (isTRUE(visible_has_content)) {
+                    step_stream_has_visible_text <<- TRUE
+                  }
+                  record_stream_event(
+                    "text_delta",
+                    text = split_chunk$visible,
+                    metadata = list(reason = "assistant_text")
+                  )
+                }
               }
               if (interactive() && !is.null(renderer)) {
                 renderer$stop_thinking()
@@ -1216,10 +1228,16 @@ run_agent_runtime <- function(model,
         decision <- new_agent_decision("finalize", reason = "completed")
         task_state <- task_state_set_decision(task_state, decision)
         if (isTRUE(stream) && is.function(stream_event_callback)) {
+          final_already_streamed <- length(step_stream_chunks) > 0 &&
+            identical(paste(step_stream_chunks, collapse = ""), result$text %||% "")
           record_stream_event(
             "final_text",
             text = result$text %||% "",
-            metadata = list(reason = "completed", blocked = FALSE)
+            metadata = list(
+              reason = "completed",
+              blocked = FALSE,
+              already_streamed = isTRUE(final_already_streamed)
+            )
           )
           record_stream_event("done", done = TRUE)
         }
