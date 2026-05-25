@@ -166,6 +166,25 @@ test_that("console only prompts tool recovery for failed turns", {
   expect_true(aisdk:::console_should_prompt_tool_recovery(failed))
 })
 
+test_that("console failure analysis ignores tool argument validation errors", {
+  validation_results <- list(
+    list(
+      name = "r_eval",
+      result = "Error: invalid arguments for tool 'r_eval': Missing required argument `code`.",
+      is_error = TRUE,
+      is_validation_error = TRUE
+    ),
+    list(
+      name = "r_eval",
+      result = "Error: invalid arguments for tool 'r_eval': Argument `code` must contain at least 1 character.",
+      is_error = TRUE,
+      is_validation_error = TRUE
+    )
+  )
+
+  expect_equal(aisdk:::analyze_tool_failures(validation_results), integer(0))
+})
+
 test_that("console stream filter hides text tool call markup", {
   filter <- aisdk:::new_console_tool_call_markup_filter()
   chunks <- c(
@@ -294,6 +313,65 @@ test_that("ChatSession continue_run sends structured continuation guidance", {
 
   expect_equal(continued$text, "I will stop retrying and explain.")
   expect_equal(session$get_run_state()$status, "assistant_final")
+})
+
+test_that("tool argument validation errors are fed back for self-correction", {
+  ran <- FALSE
+  validating_tool <- tool(
+    name = "r_eval",
+    description = "Run R code",
+    parameters = z_object(
+      code = z_string("R code", min_length = 1),
+      .required = "code"
+    ),
+    execute = function(args) {
+      ran <<- TRUE
+      paste0("value: ", args$code)
+    },
+    meta = list(validate_arguments = TRUE)
+  )
+
+  model <- MockModel$new(list(
+    list(
+      text = "",
+      tool_calls = list(list(id = "call_1", name = "r_eval", arguments = list())),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 1)
+    ),
+    function(params) {
+      tool_messages <- Filter(function(msg) identical(msg$role, "tool"), params$messages)
+      expect_length(tool_messages, 1)
+      expect_match(tool_messages[[1]]$content, "invalid_tool_arguments", fixed = TRUE)
+      list(
+        text = "",
+        tool_calls = list(list(id = "call_2", name = "r_eval", arguments = list(code = "1 + 1"))),
+        finish_reason = "tool_calls",
+        usage = list(total_tokens = 1)
+      )
+    },
+    list(
+      text = "done",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 1)
+    )
+  ))
+
+  result <- generate_text(
+    model = model,
+    prompt = "run code",
+    tools = list(validating_tool),
+    max_steps = 5,
+    max_tool_result_errors = 1
+  )
+
+  expect_true(ran)
+  expect_equal(result$text, "done")
+  expect_equal(result$finish_reason, "stop")
+  expect_equal(result$run_state$status, "assistant_final")
+  expect_length(result$all_tool_results, 2)
+  expect_true(result$all_tool_results[[1]]$is_validation_error)
+  expect_false(result$all_tool_results[[2]]$is_error)
 })
 
 test_that("generate_text converts network errors into blocked_network run state", {

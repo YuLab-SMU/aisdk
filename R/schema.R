@@ -14,17 +14,26 @@ NULL
 #' @param description Optional description of the field.
 #' @param nullable If TRUE, allows null values.
 #' @param default Optional default value.
+#' @param min_length Optional minimum string length.
+#' @param max_length Optional maximum string length.
 #' @return A list representing JSON Schema for string.
 #' @export
 #' @examples
 #' z_string(description = "The city name")
-z_string <- function(description = NULL, nullable = FALSE, default = NULL) {
+z_string <- function(description = NULL, nullable = FALSE, default = NULL,
+                     min_length = NULL, max_length = NULL) {
   schema <- list(type = "string")
   if (!is.null(description)) {
     schema$description <- description
   }
   if (!is.null(default)) {
     schema$default <- default
+  }
+  if (!is.null(min_length)) {
+    schema$minLength <- as.integer(min_length)
+  }
+  if (!is.null(max_length)) {
+    schema$maxLength <- as.integer(max_length)
   }
   if (nullable) {
     schema$type <- c("string", "null")

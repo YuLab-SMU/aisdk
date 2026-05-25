@@ -93,6 +93,25 @@ test_that("r_eval rejects empty code", {
   expect_match(tool$run(list(code = "")), "non-empty", fixed = TRUE)
 })
 
+test_that("r_eval tool schema rejects missing and empty code before execution", {
+  tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
+  expect_true(isTRUE(tool$meta$validate_arguments))
+
+  missing <- aisdk:::execute_tool_calls(
+    list(list(id = "call_1", name = "r_eval", arguments = list())),
+    list(tool)
+  )
+  empty <- aisdk:::execute_tool_calls(
+    list(list(id = "call_2", name = "r_eval", arguments = list(code = ""))),
+    list(tool)
+  )
+
+  expect_true(missing[[1]]$is_validation_error)
+  expect_match(missing[[1]]$result, "Missing required argument `code`", fixed = TRUE)
+  expect_true(empty[[1]]$is_validation_error)
+  expect_match(empty[[1]]$result, "at least 1 character", fixed = TRUE)
+})
+
 test_that("r_eval times out on long-running code without hanging", {
   skip_if_no_callr()
   tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")

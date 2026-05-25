@@ -867,7 +867,10 @@ create_r_introspect_tools <- function() {
         "The subprocess cannot modify the user's session."
       ),
       parameters = z_object(
-        code = z_string("R code to evaluate (one or more expressions)."),
+        code = z_string(
+          "R code to evaluate (one or more expressions).",
+          min_length = 1
+        ),
         timeout_secs = z_integer(
           "Maximum seconds to wait before killing the subprocess (default 30, hard cap 120).",
           nullable = TRUE
@@ -888,7 +891,8 @@ create_r_introspect_tools <- function() {
             "you to test a real API call."
           ),
           nullable = TRUE
-        )
+        ),
+        .required = "code"
       ),
       execute = function(args) {
         code <- args$code
@@ -941,7 +945,8 @@ create_r_introspect_tools <- function() {
         )
 
         format_r_eval_result(captured, code = code, timeout_secs = timeout_secs)
-      }
+      },
+      meta = list(validate_arguments = TRUE)
     ),
     tool(
       name = "r_session_state",

@@ -541,8 +541,18 @@ console_app_record_tool_result <- function(state, name, result, success = TRUE, 
 
   item <- turn$tool_calls[[match_idx]]
   item$end_time <- Sys.time()
+  display_status <- if (is.list(raw_result) && identical(raw_result$error_type %||% NULL, "invalid_tool_arguments")) {
+    "invalid_arguments"
+  } else {
+    NULL
+  }
   item$status <- if (failed) "failed" else "done"
-  item$result_summary <- compact_tool_result_label(name, result, success = !failed)
+  item$result_summary <- compact_tool_result_label(
+    name,
+    result,
+    success = !failed,
+    display_status = display_status
+  )
   item$raw_result <- raw_result
 
   diagnostics <- extract_console_tool_diagnostics(raw_result, rendered_result = result)

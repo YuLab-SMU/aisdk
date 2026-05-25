@@ -4,7 +4,13 @@
 \alias{z_string}
 \title{Create String Schema}
 \usage{
-z_string(description = NULL, nullable = FALSE, default = NULL)
+z_string(
+  description = NULL,
+  nullable = FALSE,
+  default = NULL,
+  min_length = NULL,
+  max_length = NULL
+)
 }
 \arguments{
 \item{description}{Optional description of the field.}
@@ -12,6 +18,10 @@ z_string(description = NULL, nullable = FALSE, default = NULL)
 \item{nullable}{If TRUE, allows null values.}
 
 \item{default}{Optional default value.}
+
+\item{min_length}{Optional minimum string length.}
+
+\item{max_length}{Optional maximum string length.}
 }
 \value{
 A list representing JSON Schema for string.

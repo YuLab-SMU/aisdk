@@ -22,6 +22,10 @@ analyze_tool_failures <- function(tool_results) {
   failure_counts <- list()
 
   for (tr in tool_results) {
+    if (isTRUE(tr$is_validation_error)) {
+      next
+    }
+
     tool_name <- tr$name %||% "unknown"
 
     # Check if this tool result represents a failure

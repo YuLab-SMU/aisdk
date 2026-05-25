@@ -667,6 +667,9 @@ generate_text <- function(model = NULL,
           # --- Circuit Breaker: Detect consecutive tool result errors ---
           # Check if any tools returned errors (not exceptions, but error results)
           error_count <- sum(vapply(tool_results, function(tr) {
+            if (isTRUE(tr$is_validation_error)) {
+              return(FALSE)
+            }
             tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
           }, logical(1)))
           tool_result_breaker_triggered <- FALSE
@@ -1110,6 +1113,9 @@ stream_text <- function(model = NULL,
 
           # --- Circuit Breaker: Detect tool result errors ---
           tool_result_error_count <- sum(vapply(tool_results, function(tr) {
+            if (isTRUE(tr$is_validation_error)) {
+              return(FALSE)
+            }
             tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
           }, logical(1)))
           tool_result_breaker_triggered <- FALSE

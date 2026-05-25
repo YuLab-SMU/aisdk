@@ -235,6 +235,71 @@ test_that("Tool$run handles JSON string arguments", {
   expect_equal(result, "Echo: Hello")
 })
 
+test_that("validate_tool_arguments catches missing required arguments before execution", {
+  t <- tool(
+    name = "r_eval",
+    description = "Run R code",
+    parameters = z_object(
+      code = z_string("R code", min_length = 1),
+      .required = "code"
+    ),
+    execute = function(args) "should not run",
+    meta = list(validate_arguments = TRUE)
+  )
+
+  validation <- validate_tool_arguments(t, list())
+
+  expect_false(validation$valid)
+  expect_match(validation$errors[[1]], "Missing required argument `code`", fixed = TRUE)
+})
+
+test_that("validate_tool_arguments catches empty strings when minLength is set", {
+  t <- tool(
+    name = "r_eval",
+    description = "Run R code",
+    parameters = z_object(
+      code = z_string("R code", min_length = 1),
+      .required = "code"
+    ),
+    execute = function(args) "should not run",
+    meta = list(validate_arguments = TRUE)
+  )
+
+  validation <- validate_tool_arguments(t, list(code = ""))
+
+  expect_false(validation$valid)
+  expect_match(validation$errors[[1]], "at least 1 character", fixed = TRUE)
+})
+
+test_that("execute_tool_calls returns validation errors without running tool body", {
+  ran <- FALSE
+  t <- tool(
+    name = "r_eval",
+    description = "Run R code",
+    parameters = z_object(
+      code = z_string("R code", min_length = 1),
+      .required = "code"
+    ),
+    execute = function(args) {
+      ran <<- TRUE
+      "ran"
+    },
+    meta = list(validate_arguments = TRUE)
+  )
+
+  results <- execute_tool_calls(
+    list(list(id = "call_1", name = "r_eval", arguments = list(code = ""))),
+    list(t)
+  )
+
+  expect_false(ran)
+  expect_length(results, 1)
+  expect_true(results[[1]]$is_error)
+  expect_true(results[[1]]$is_validation_error)
+  expect_equal(results[[1]]$raw_result$error_type, "invalid_tool_arguments")
+  expect_match(results[[1]]$result, "invalid arguments for tool 'r_eval'", fixed = TRUE)
+})
+
 # === Tests for find_tool ===
 
 test_that("find_tool finds tool by name", {

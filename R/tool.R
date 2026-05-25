@@ -776,6 +776,201 @@ tool_result_indicates_error <- function(result, raw_result = result) {
   FALSE
 }
 
+#' @keywords internal
+tool_argument_validation_enabled <- function(tool_obj) {
+  isTRUE(tool_obj$meta$validate_arguments)
+}
+
+#' @keywords internal
+schema_allows_null <- function(schema) {
+  "null" %in% (schema$type %||% character(0))
+}
+
+#' @keywords internal
+schema_type_label <- function(schema) {
+  paste(schema$type %||% class(schema)[[1]], collapse = " or ")
+}
+
+#' @keywords internal
+validate_schema_value <- function(value, schema, path) {
+  errors <- character(0)
+  label <- if (nzchar(path)) paste0("`", path, "`") else "value"
+
+  if (is.null(value)) {
+    if (schema_allows_null(schema)) {
+      return(errors)
+    }
+    return(sprintf("Argument %s must not be null.", label))
+  }
+
+  if (inherits(schema, "z_any")) {
+    return(errors)
+  }
+
+  if (inherits(schema, "z_string") || inherits(schema, "z_enum")) {
+    if (!is.character(value) || length(value) != 1 || is.na(value)) {
+      return(sprintf("Argument %s must be a single string.", label))
+    }
+    min_length <- schema$minLength %||% NULL
+    if (!is.null(min_length) && nchar(value, type = "chars", allowNA = FALSE) < min_length) {
+      errors <- c(errors, sprintf(
+        "Argument %s must contain at least %d character%s.",
+        label,
+        min_length,
+        if (identical(as.integer(min_length), 1L)) "" else "s"
+      ))
+    }
+    max_length <- schema$maxLength %||% NULL
+    if (!is.null(max_length) && nchar(value, type = "chars", allowNA = FALSE) > max_length) {
+      errors <- c(errors, sprintf(
+        "Argument %s must contain at most %d character%s.",
+        label,
+        max_length,
+        if (identical(as.integer(max_length), 1L)) "" else "s"
+      ))
+    }
+    enum_values <- unlist(schema$enum %||% list(), use.names = FALSE)
+    if (length(enum_values) > 0 && !value %in% enum_values) {
+      errors <- c(errors, sprintf(
+        "Argument %s must be one of: %s.",
+        label,
+        paste(sprintf("`%s`", enum_values), collapse = ", ")
+      ))
+    }
+    return(errors)
+  }
+
+  if (inherits(schema, "z_boolean")) {
+    if (!is.logical(value) || length(value) != 1 || is.na(value)) {
+      return(sprintf("Argument %s must be a single boolean.", label))
+    }
+    return(errors)
+  }
+
+  if (inherits(schema, "z_integer")) {
+    if (!is.numeric(value) || length(value) != 1 || is.na(value) || value != as.integer(value)) {
+      return(sprintf("Argument %s must be a single integer.", label))
+    }
+  } else if (inherits(schema, "z_number")) {
+    if (!is.numeric(value) || length(value) != 1 || is.na(value)) {
+      return(sprintf("Argument %s must be a single number.", label))
+    }
+  }
+
+  if (inherits(schema, "z_integer") || inherits(schema, "z_number")) {
+    if (!is.null(schema$minimum) && value < schema$minimum) {
+      errors <- c(errors, sprintf("Argument %s must be >= %s.", label, schema$minimum))
+    }
+    if (!is.null(schema$maximum) && value > schema$maximum) {
+      errors <- c(errors, sprintf("Argument %s must be <= %s.", label, schema$maximum))
+    }
+    return(errors)
+  }
+
+  if (inherits(schema, "z_array")) {
+    if (!is.list(value) && !is.atomic(value)) {
+      return(sprintf("Argument %s must be an array.", label))
+    }
+    n_items <- length(value)
+    if (!is.null(schema$minItems) && n_items < schema$minItems) {
+      errors <- c(errors, sprintf("Argument %s must contain at least %d item(s).", label, schema$minItems))
+    }
+    if (!is.null(schema$maxItems) && n_items > schema$maxItems) {
+      errors <- c(errors, sprintf("Argument %s must contain at most %d item(s).", label, schema$maxItems))
+    }
+    if (!is.null(schema$items) && inherits(schema$items, "z_schema")) {
+      for (i in seq_along(value)) {
+        errors <- c(errors, validate_schema_value(value[[i]], schema$items, paste0(path, "[", i, "]")))
+      }
+    }
+    return(errors)
+  }
+
+  if (inherits(schema, "z_object") || inherits(schema, "z_any_object")) {
+    if (!is.list(value)) {
+      return(sprintf("Argument %s must be an object.", label))
+    }
+    return(validate_object_arguments(value, schema, path = path))
+  }
+
+  errors
+}
+
+#' @keywords internal
+validate_object_arguments <- function(args, schema, path = "") {
+  errors <- character(0)
+  props <- schema$properties %||% list()
+  required <- unlist(schema$required %||% character(0), use.names = FALSE)
+  arg_names <- names(args) %||% character(0)
+
+  for (name in required) {
+    if (!name %in% arg_names) {
+      field_path <- if (nzchar(path)) paste0(path, ".", name) else name
+      errors <- c(errors, sprintf("Missing required argument `%s`.", field_path))
+    }
+  }
+
+  for (name in intersect(names(props), arg_names)) {
+    field_path <- if (nzchar(path)) paste0(path, ".", name) else name
+    value <- args[[which(arg_names == name)[[1]]]]
+    errors <- c(errors, validate_schema_value(value, props[[name]], field_path))
+  }
+
+  errors
+}
+
+#' @keywords internal
+validate_tool_arguments <- function(tool_obj, args) {
+  parsed <- parse_tool_arguments(args, tool_name = tool_obj$name)
+
+  if (!inherits(tool_obj$parameters, "z_schema")) {
+    return(list(valid = TRUE, arguments = parsed, errors = character(0)))
+  }
+
+  errors <- validate_schema_value(parsed, tool_obj$parameters, "")
+  list(
+    valid = length(errors) == 0,
+    arguments = parsed,
+    errors = errors
+  )
+}
+
+#' @keywords internal
+tool_argument_validation_result <- function(tc, tool_obj, validation) {
+  required <- unlist(tool_obj$parameters$required %||% character(0), use.names = FALSE)
+  expected <- list(
+    required = as.list(required),
+    schema = schema_to_list(tool_obj$parameters)
+  )
+  payload <- list(
+    error = TRUE,
+    error_type = "invalid_tool_arguments",
+    tool = tool_obj$name,
+    message = paste(validation$errors, collapse = " "),
+    expected = expected,
+    received_arguments = validation$arguments,
+    suggestion = paste(
+      "Re-emit the tool call with arguments that match the tool schema.",
+      "Do not switch tools solely to work around an argument validation error."
+    )
+  )
+
+  list(
+    id = tc$id,
+    name = tc$name,
+    result = paste0(
+      "Error: invalid arguments for tool '", tool_obj$name, "': ",
+      payload$message,
+      "\n",
+      safe_to_json(payload, auto_unbox = TRUE)
+    ),
+    raw_result = payload,
+    is_error = TRUE,
+    is_validation_error = TRUE,
+    display_status = "invalid_arguments"
+  )
+}
+
 #' @title Execute Tool Calls
 #' @description
 #' Execute a list of tool calls returned by an LLM. This function safely
@@ -848,6 +1043,14 @@ execute_tool_calls <- function(tool_calls, tools, hooks = NULL, envir = NULL,
         result = paste0("Error: Tool '", tc$name, "' not found"),
         is_error = TRUE
       ))
+    }
+
+    if (tool_argument_validation_enabled(tool_obj)) {
+      validation <- validate_tool_arguments(tool_obj, tc$arguments)
+      if (!isTRUE(validation$valid)) {
+        return(tool_argument_validation_result(tc, tool_obj, validation))
+      }
+      tc$arguments <- validation$arguments
     }
 
     # Execute the tool with error handling (including hook errors)

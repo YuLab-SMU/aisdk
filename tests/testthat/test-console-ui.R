@@ -1036,6 +1036,32 @@ test_that("tool events are captured into the current turn timeline", {
   expect_match(lines[[1]], "\\[done\\]")
 })
 
+test_that("invalid tool arguments use a distinct compact result label", {
+  session <- aisdk::create_chat_session()
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "inspect")
+  aisdk:::console_app_start_turn(app_state, "Run diagnostic code")
+
+  old_opts <- options(
+    aisdk.console_app_state = app_state,
+    aisdk.tool_log_mode = "compact"
+  )
+  on.exit(options(old_opts), add = TRUE)
+
+  raw_result <- list(error = TRUE, error_type = "invalid_tool_arguments")
+  aisdk:::cli_tool_start("r_eval", list())
+  aisdk:::cli_tool_result(
+    "r_eval",
+    "Error: invalid arguments for tool 'r_eval': Missing required argument `code`.",
+    success = FALSE,
+    raw_result = raw_result
+  )
+  aisdk:::console_app_finish_turn(app_state)
+
+  turn <- aisdk:::console_app_get_current_turn(app_state)
+  expect_match(turn$tool_calls[[1]]$result_summary, "r_eval call had invalid arguments", fixed = TRUE)
+  expect_false(grepl("r_eval failed", turn$tool_calls[[1]]$result_summary, fixed = TRUE))
+})
+
 test_that("tool diagnostics are stored separately from tool summaries", {
   session <- aisdk::create_chat_session()
   app_state <- aisdk:::create_console_app_state(session, view_mode = "inspect")
