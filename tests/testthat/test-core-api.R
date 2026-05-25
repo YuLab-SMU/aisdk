@@ -171,7 +171,7 @@ test_that("generate_text falls back to text tool protocol when native tool calli
       )
     },
     list(
-      text = "Fallback tools worked.",
+      text = "<final_answer>Fallback tools worked.</final_answer>",
       tool_calls = NULL,
       finish_reason = "stop",
       usage = list(total_tokens = 10)
@@ -194,6 +194,166 @@ test_that("generate_text falls back to text tool protocol when native tool calli
       grepl("Native API tool calling is unavailable", msg$content %||% "", fixed = TRUE),
     logical(1)
   )))
+})
+
+test_that("text tool fallback requires a structured post-tool response", {
+  tool_invocations <- list()
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) {
+      tool_invocations[[length(tool_invocations) + 1L]] <<- args$message
+      paste("Echo:", args$message)
+    }
+  )
+
+  correction_prompt <- NULL
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = FALSE)
+  mock_model$responses <- list(
+    list(
+      text = paste0(
+        "<tool_call>\n",
+        "{\"name\":\"echo\",\"arguments\":{\"message\":\"protocol\"}}\n",
+        "</tool_call>"
+      ),
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    function(params) {
+      list(
+        text = "先看看结果，没问题就继续。",
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    },
+    function(params) {
+      correction_prompt <<- params$messages[[length(params$messages)]]$content
+      list(
+        text = "<final_answer>Protocol tools worked.</final_answer>",
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    }
+  )
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 4
+  )
+
+  expect_equal(result$text, "Protocol tools worked.")
+  expect_equal(tool_invocations, list("protocol"))
+  expect_match(correction_prompt, "did not follow the required post-tool protocol", fixed = TRUE)
+  expect_match(correction_prompt, "<final_answer>", fixed = TRUE)
+})
+
+test_that("text tool fallback rejects prose outside post-tool protocol tags", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  correction_prompt <- NULL
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = FALSE)
+  mock_model$responses <- list(
+    list(
+      text = paste0(
+        "<tool_call>\n",
+        "{\"name\":\"echo\",\"arguments\":{\"message\":\"strict\"}}\n",
+        "</tool_call>"
+      ),
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "Here is the answer:\n<final_answer>Too loose.</final_answer>",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    function(params) {
+      correction_prompt <<- params$messages[[length(params$messages)]]$content
+      list(
+        text = "<final_answer>Strict protocol worked.</final_answer>",
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    }
+  )
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 4
+  )
+
+  expect_equal(result$text, "Strict protocol worked.")
+  expect_match(correction_prompt, "Here is the answer", fixed = TRUE)
+})
+
+test_that("stream_text suppresses non-protocol post-tool text while correcting", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = FALSE)
+  mock_model$responses <- list(
+    list(
+      text = paste0(
+        "<tool_call>\n",
+        "{\"name\":\"echo\",\"arguments\":{\"message\":\"stream\"}}\n",
+        "</tool_call>"
+      ),
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "Checking the result before answering.",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "<final_answer>Stream protocol worked.</final_answer>",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  )
+
+  chunks <- character(0)
+  result <- stream_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 4,
+    callback = function(text, done) {
+      if (!isTRUE(done) && nzchar(text %||% "")) {
+        chunks <<- c(chunks, text)
+      }
+    }
+  )
+
+  expect_equal(result$text, "Stream protocol worked.")
+  expect_false(any(grepl("Checking the result", chunks, fixed = TRUE)))
 })
 
 test_that("generate_text hides tools that require unavailable model capabilities", {

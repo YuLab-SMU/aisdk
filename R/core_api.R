@@ -132,6 +132,7 @@ recover_text_tool_calls <- function(result) {
     return(result)
   }
 
+  original_text <- result$text %||% ""
   parsed <- parse_tool_call_blocks(result$text %||% "")
   if (is.null(parsed$tool_calls) || length(parsed$tool_calls) == 0) {
     return(result)
@@ -139,10 +140,108 @@ recover_text_tool_calls <- function(result) {
 
   result$tool_calls <- parsed$tool_calls
   result$text <- parsed$text
+  result$text_tool_call_explicit <- TRUE
+  result$text_tool_call_extra_text <- parsed$text
+  result$text_tool_call_protocol_text <- original_text
   if (is.null(result$finish_reason) || !nzchar(result$finish_reason %||% "")) {
     result$finish_reason <- "tool_calls"
   }
   result
+}
+
+#' @keywords internal
+parse_final_answer_block <- function(text) {
+  if (is.null(text) || !nzchar(text)) {
+    return(list(final_answer = NULL, text = text, explicit = FALSE))
+  }
+
+  matches <- gregexpr("(?is)<final_answer>\\s*.*?\\s*</final_answer>", text, perl = TRUE)[[1]]
+  if (length(matches) == 1L && identical(matches[[1]], -1L)) {
+    return(list(final_answer = NULL, text = text, explicit = FALSE))
+  }
+
+  blocks <- regmatches(text, list(matches))[[1]]
+  answers <- vapply(blocks, function(block) {
+    inner <- sub("(?is)^\\s*<final_answer>\\s*", "", block, perl = TRUE)
+    inner <- sub("(?is)\\s*</final_answer>\\s*$", "", inner, perl = TRUE)
+    trimws(inner)
+  }, character(1))
+  answers <- answers[nzchar(answers)]
+
+  if (length(answers) == 0) {
+    return(list(final_answer = NULL, text = text, explicit = FALSE))
+  }
+
+  cleaned <- text
+  regmatches(cleaned, list(matches)) <- list(rep("", length(blocks)))
+  cleaned <- trimws(cleaned)
+
+  list(
+    final_answer = paste(answers, collapse = "\n\n"),
+    text = cleaned,
+    explicit = TRUE
+  )
+}
+
+#' @keywords internal
+recover_text_final_answer <- function(result) {
+  original_text <- result$text %||% ""
+  parsed <- parse_final_answer_block(result$text %||% "")
+  result$final_answer_explicit <- isTRUE(parsed$explicit)
+  result$final_answer_extra_text <- parsed$text %||% ""
+  if (!isTRUE(parsed$explicit)) {
+    return(result)
+  }
+
+  result$final_answer_protocol_text <- original_text
+  result$text <- parsed$final_answer
+  result
+}
+
+#' @keywords internal
+text_tool_protocol_missing <- function(result, awaiting_protocol = FALSE) {
+  if (!isTRUE(awaiting_protocol)) {
+    return(FALSE)
+  }
+
+  has_tool_call <- length(result$tool_calls %||% list()) > 0
+  has_final_answer <- isTRUE(result$final_answer_explicit)
+  if (isTRUE(has_tool_call) && isTRUE(has_final_answer)) {
+    return(TRUE)
+  }
+  if (isTRUE(has_tool_call)) {
+    return(nzchar(trimws(result$text %||% "")))
+  }
+  if (isTRUE(has_final_answer)) {
+    return(nzchar(trimws(result$final_answer_extra_text %||% "")))
+  }
+  TRUE
+}
+
+#' @keywords internal
+text_tool_protocol_correction_message <- function(result) {
+  preview_source <- result$final_answer_protocol_text %||%
+    result$text_tool_call_protocol_text %||%
+    result$text %||%
+    ""
+  preview <- compact_text_preview(preview_source, width = 800)
+  content <- paste(
+    "Your previous response after tool results did not follow the required post-tool protocol.",
+    "Do not explain the protocol. Re-emit the next action in exactly one of these forms and no prose outside the tags:",
+    "",
+    "Continue with another tool call:",
+    "<tool_call>",
+    "{\"name\":\"tool_name\",\"arguments\":{}}",
+    "</tool_call>",
+    "",
+    "Or finish the task for the user:",
+    "<final_answer>",
+    "Your final answer to the user.",
+    "</final_answer>",
+    if (nzchar(preview)) paste0("\nPrevious non-protocol response was:\n", preview) else NULL,
+    sep = "\n"
+  )
+  list(role = "user", content = content)
 }
 
 #' @keywords internal
@@ -186,7 +285,8 @@ build_text_tool_system_prompt <- function(tools) {
     "Native API tool calling is unavailable for this model/provider.",
     "When you need a tool, emit one or more tool-call blocks in plain text using exactly this format:",
     "<tool_call>\n{\"name\":\"tool_name\",\"arguments\":{}}\n</tool_call>",
-    "Do not wrap ordinary prose in `<tool_call>` blocks. After tool results are provided, either emit another `<tool_call>` block or answer normally.",
+    "Do not wrap ordinary prose in `<tool_call>` blocks.",
+    "After tool results are provided, emit exactly one next-action block: either another `<tool_call>` block or a `<final_answer>...</final_answer>` block. Do not write prose outside those tags.",
     paste0("Available tools:\n\n", tool_defs),
     sep = "\n\n"
   )
@@ -210,7 +310,17 @@ append_text_tool_result_messages <- function(messages, result, tool_results) {
   }
   lines <- c(
     lines,
-    "If you need another tool, emit a new `<tool_call>` block. Otherwise answer the user normally."
+    "",
+    "Post-tool response protocol:",
+    "Return exactly one of the following shapes and no prose outside the tags:",
+    "1. Continue with another tool call:",
+    "<tool_call>",
+    "{\"name\":\"tool_name\",\"arguments\":{}}",
+    "</tool_call>",
+    "2. Finish the task for the user:",
+    "<final_answer>",
+    "Your final answer to the user.",
+    "</final_answer>"
   )
 
   messages <- c(messages, list(list(role = "user", content = paste(lines, collapse = "\n"))))
@@ -366,6 +476,7 @@ generate_text <- function(model = NULL,
   step <- 0
   result <- NULL
   run_id <- paste0("run_", generate_stable_id("generate_text", Sys.time(), stats::runif(1)))
+  awaiting_text_tool_protocol <- FALSE
 
   # Circuit breaker state
   breaker_state <- new.env(parent = emptyenv())
@@ -389,6 +500,7 @@ generate_text <- function(model = NULL,
         # Call the model
         result <- model$do_generate(params)
         result <- recover_text_tool_calls(result)
+        result <- recover_text_final_answer(result)
 
         if (isTRUE(getOption("aisdk.debug", FALSE))) {
           message("[DEBUG] generate_text step ", step, " | finish_reason: ", result$finish_reason)
@@ -402,6 +514,18 @@ generate_text <- function(model = NULL,
                     " total=", result$usage$total_tokens)
           }
         }
+
+        if (text_tool_protocol_missing(result, awaiting_text_tool_protocol)) {
+          if (step >= max_steps) {
+            warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
+            result$finish_reason <- "tool_failure"
+            break
+          }
+          messages <- c(messages, list(text_tool_protocol_correction_message(result)))
+          next
+        }
+
+        awaiting_text_tool_protocol <- FALSE
 
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
@@ -527,6 +651,7 @@ generate_text <- function(model = NULL,
 
           if (isTRUE(use_text_tool_fallback)) {
             messages <- append_text_tool_result_messages(messages, result, tool_results)
+            awaiting_text_tool_protocol <- TRUE
           } else if (history_format == "openai") {
             # For OpenAI, we need to include tool_calls in the assistant message
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
@@ -751,6 +876,7 @@ stream_text <- function(model = NULL,
   step <- 0
   result <- NULL
   run_id <- paste0("run_", generate_stable_id("stream_text", Sys.time(), stats::runif(1)))
+  awaiting_text_tool_protocol <- FALSE
 
   renderer <- create_stream_renderer()
 
@@ -774,7 +900,14 @@ stream_text <- function(model = NULL,
         # Call the model via do_stream
         if (interactive()) renderer$start_thinking()
 
+        buffer_protocol_output <- isTRUE(use_text_tool_fallback) &&
+          isTRUE(awaiting_text_tool_protocol)
+
         result <- model$do_stream(params, function(chunk, done) {
+          if (isTRUE(buffer_protocol_output)) {
+            return(invisible(NULL))
+          }
+
           if (interactive()) {
             if (!is.null(callback)) {
               renderer$stop_thinking()
@@ -785,6 +918,39 @@ stream_text <- function(model = NULL,
           if (!is.null(callback)) callback(chunk, done)
         })
         result <- recover_text_tool_calls(result)
+        result <- recover_text_final_answer(result)
+
+        if (text_tool_protocol_missing(result, awaiting_text_tool_protocol)) {
+          if (step >= max_steps) {
+            warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
+            result$finish_reason <- "tool_failure"
+            break
+          }
+          messages <- c(messages, list(text_tool_protocol_correction_message(result)))
+          if (interactive()) {
+            renderer$reset_for_new_step()
+          }
+          next
+        }
+
+        if (isTRUE(buffer_protocol_output) &&
+            isTRUE(result$final_answer_explicit) &&
+            length(result$tool_calls %||% list()) == 0) {
+          if (interactive()) {
+            if (!is.null(callback)) {
+              renderer$stop_thinking()
+            } else {
+              renderer$process_chunk(result$text, FALSE)
+              renderer$process_chunk(NULL, TRUE)
+            }
+          }
+          if (!is.null(callback)) {
+            callback(result$text, FALSE)
+            callback(NULL, TRUE)
+          }
+        }
+
+        awaiting_text_tool_protocol <- FALSE
 
         # Check if there are tool calls to process
         if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
@@ -909,6 +1075,7 @@ stream_text <- function(model = NULL,
 
           if (isTRUE(use_text_tool_fallback)) {
             messages <- append_text_tool_result_messages(messages, result, tool_results)
+            awaiting_text_tool_protocol <- TRUE
           } else if (history_format == "openai") {
             # Provider-specific tool call formatting (copied from generate_text)
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {

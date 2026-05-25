@@ -203,30 +203,21 @@ test_that("console stream filter hides plural text tool call markup", {
   expect_false(grepl("r_eval", rendered, fixed = TRUE))
 })
 
-test_that("console detects action-promising assistant text after tool use", {
-  result <- list(
-    text = "`ggmosaic` installed. Now installing `confuns`",
-    tool_calls = NULL,
-    all_tool_results = list(list(name = "bash", result = "ok", is_error = FALSE)),
-    finish_reason = "stop"
+test_that("console stream filter unwraps final answer markup", {
+  filter <- aisdk:::new_console_tool_call_markup_filter()
+  chunks <- c(
+    "<final_",
+    "answer>\n最终答案",
+    "在这里。\n</final_",
+    "answer>"
   )
 
-  expect_true(aisdk:::console_generation_looks_incomplete(result))
+  rendered <- paste0(vapply(chunks, filter$process, character(1), done = FALSE), collapse = "")
+  rendered <- paste0(rendered, filter$process(NULL, done = TRUE))
 
-  prompt <- aisdk:::console_incomplete_continuation_prompt(result)
-  expect_match(prompt, "ended without a tool call", fixed = TRUE)
-  expect_match(prompt, "Now installing", fixed = TRUE)
-})
-
-test_that("console detects Chinese action-promising assistant text after tool use", {
-  result <- list(
-    text = "参数查清楚了！修正后把 5/6/7 一口气跑完——",
-    tool_calls = NULL,
-    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
-    finish_reason = "stop"
-  )
-
-  expect_true(aisdk:::console_generation_looks_incomplete(result))
+  expect_match(rendered, "最终答案", fixed = TRUE)
+  expect_match(rendered, "在这里", fixed = TRUE)
+  expect_false(grepl("<final_answer>", rendered, fixed = TRUE))
 })
 
 test_that("generate_text marks max steps as recoverable run state", {
@@ -344,7 +335,7 @@ test_that("console does not continue normal final answers", {
   expect_false(aisdk:::console_generation_looks_incomplete(result))
 })
 
-test_that("console continuation detects repeated incomplete action", {
+test_that("console continuation does not infer state from action words", {
   result <- list(
     text = "Now checking the package",
     tool_calls = NULL,
@@ -353,7 +344,7 @@ test_that("console continuation detects repeated incomplete action", {
     finish_reason = "stop"
   )
 
-  expect_true(aisdk:::console_continuation_still_incomplete(result))
+  expect_false(aisdk:::console_continuation_still_incomplete(result))
 })
 
 test_that("console detects empty final text after tool execution", {

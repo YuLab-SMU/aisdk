@@ -510,8 +510,8 @@ console_send_user_message <- function(input,
 
       if (isTRUE(continue_incomplete) && console_generation_looks_incomplete(generation_result)) {
         incomplete_state <- new_run_state(
-          status = "incomplete_action",
-          stop_reason = "assistant_promised_action_without_tool_call",
+          status = "missing_final_answer",
+          stop_reason = "missing_post_tool_response",
           recoverable = TRUE,
           failure_summary = generation_result$text %||% NULL,
           pending_action = "continue",
@@ -522,7 +522,7 @@ console_send_user_message <- function(input,
         if (!nzchar(trimws(generation_result$text %||% ""))) {
           cli::cli_alert_info("Assistant ran tools but did not write an answer; asking it to summarize.")
         } else {
-          cli::cli_alert_info("Assistant ended after promising another action; continuing once.")
+          cli::cli_alert_info("Assistant did not provide a final answer after tool execution; continuing once.")
         }
         console_continue_run_action(
           session = session,
@@ -583,52 +583,7 @@ console_generation_looks_incomplete <- function(generation_result) {
   }
 
   text <- trimws(generation_result$text %||% "")
-  # Tools ran but the model produced no visible final answer (e.g., it spent the
-  # turn in a reasoning block and then stopped). Treat as incomplete so the
-  # console can ask the model to summarize instead of dropping the user into
-  # the prompt with nothing to read.
-  if (!nzchar(text)) {
-    return(TRUE)
-  }
-  if (grepl("[.!?\u3002\uff01\uff1f]$", text)) {
-    return(FALSE)
-  }
-
-  console_text_promises_action(text)
-}
-
-#' @keywords internal
-console_text_promises_action <- function(text) {
-  text <- trimws(text %||% "")
-  if (!nzchar(text)) {
-    return(FALSE)
-  }
-
-  starts_like_action <- grepl(
-    "^(now|next|then|let me|i'?ll|i will|retrying|installing|checking|running|trying|found it\\b)",
-    text,
-    ignore.case = TRUE
-  )
-  contains_action_promise <- grepl(
-    "\\b(now|next|let me|i'?ll|i will|going to|retry|install|check|run|try)\\b",
-    text,
-    ignore.case = TRUE
-  )
-
-  zh_action <- paste(
-    "我(先|现在|接下来|马上|继续|重新|再|来)(查|看|检查|安装|运行|执行|跑|生成|保存|画|修复|补|试|改|处理|确认)",
-    "我(把|来|再)?(查一下|看一下|检查|安装|运行|执行|跑|生成|保存|画|修复|补上|重新跑|继续跑)",
-    "(先|现在|接下来|马上|继续|重新|再).*(查|看|检查|安装|运行|执行|跑|生成|保存|画|修复|补上|一口气出)",
-    "(查清楚了|找到.*了|看起来.*问题|忘了.*补上|小修一下|修复一下|重新跑一下|继续跑|一口气)",
-    sep = "|"
-  )
-  contains_zh_action_promise <- grepl(zh_action, text, perl = TRUE)
-
-  if (grepl("[.!?\u3002\uff01\uff1f]$", text) && !contains_zh_action_promise) {
-    return(FALSE)
-  }
-
-  starts_like_action || contains_action_promise || contains_zh_action_promise
+  !nzchar(text)
 }
 
 #' @keywords internal
@@ -693,9 +648,9 @@ console_incomplete_continuation_prompt <- function(generation_result) {
     ))
   }
   paste(
-    "Your previous assistant message appeared to promise another action, but it ended without a tool call.",
-    "Continue now by either calling the appropriate tool immediately or, if no further tool call is needed, give the final answer.",
-    "Do not restate the plan without acting.",
+    "Your previous turn executed one or more tools but did not produce a final answer for the user.",
+    "Continue now by either calling the appropriate tool immediately or giving the final answer.",
+    "Do not restate progress without either using a tool or answering the user.",
     paste0("Previous assistant message: ", generation_result$text %||% "")
   )
 }
@@ -772,7 +727,7 @@ console_continue_run_action <- function(session,
       if (!is.null(result) && console_continuation_still_incomplete(result)) {
         needs_user_state <- new_run_state(
           status = "needs_user",
-          stop_reason = "repeated_incomplete_action",
+          stop_reason = "repeated_missing_final_answer",
           recoverable = TRUE,
           failure_summary = result$text %||% NULL,
           pending_action = "ask_user",
@@ -780,7 +735,7 @@ console_continue_run_action <- function(session,
         )
         result$run_state <- needs_user_state
         session$set_run_state(needs_user_state)
-        cli::cli_alert_warning("Assistant still did not act after continuation. Marked run as needing user input.")
+        cli::cli_alert_warning("Assistant still did not provide a final answer after continuation. Marked run as needing user input.")
       }
       console_record_generation_events(session, result)
       invisible(TRUE)
@@ -809,7 +764,7 @@ console_continuation_still_incomplete <- function(generation_result) {
   if (!nzchar(text)) {
     return(TRUE)
   }
-  console_text_promises_action(text)
+  FALSE
 }
 
 #' @keywords internal
@@ -3143,8 +3098,9 @@ with_console_chat_display <- function(verbose = FALSE,
 
 #' @keywords internal
 new_console_tool_call_markup_filter <- function() {
-  tags <- c("tool_calls", "tool_call")
+  tags <- c("tool_calls", "tool_call", "final_answer")
   start_patterns <- paste0("<", tags)
+  hidden_tags <- c("tool_calls", "tool_call")
   state <- new.env(parent = emptyenv())
   state$buffer <- ""
   state$current_tag <- NULL
@@ -3196,10 +3152,23 @@ new_console_tool_call_markup_filter <- function() {
         end_tag <- paste0("</", state$current_tag, ">")
         end_pos <- regexpr(end_tag, state$buffer, fixed = TRUE)[[1]]
         if (identical(end_pos, -1L)) {
-          state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
+          if (state$current_tag %in% hidden_tags) {
+            state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
+          } else {
+            keep <- nchar(end_tag) - 1L
+            len <- nchar(state$buffer, type = "chars")
+            if (len > keep) {
+              safe_len <- len - keep
+              out <- paste0(out, substr(state$buffer, 1L, safe_len))
+              state$buffer <- substr(state$buffer, safe_len + 1L, len)
+            }
+          }
           break
         }
 
+        if (!state$current_tag %in% hidden_tags && end_pos > 1L) {
+          out <- paste0(out, substr(state$buffer, 1L, end_pos - 1L))
+        }
         end_after <- end_pos + nchar(end_tag) - 1L
         state$buffer <- substr(state$buffer, end_after + 1L, nchar(state$buffer))
         state$current_tag <- NULL

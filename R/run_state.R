@@ -14,6 +14,7 @@ aisdk_run_state_statuses <- c(
   "max_steps",
   "needs_user",
   "aborted",
+  "missing_final_answer",
   "incomplete_action"
 )
 
