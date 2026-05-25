@@ -712,6 +712,31 @@ test_that("skills command reloads the session skill registry", {
   expect_equal(registry$get_skill("live_skill")$description, "Updated live skill")
 })
 
+test_that("skills command defaults to list with no arguments", {
+  agent <- create_console_agent(profile = "minimal")
+  session <- create_chat_session(model = "mock:test", agent = agent)
+
+  expect_error(
+    result <- aisdk:::handle_command(
+      "/skills",
+      session,
+      stream = TRUE,
+      verbose = FALSE,
+      show_thinking = FALSE
+    ),
+    NA
+  )
+
+  expect_false(result$refresh_status)
+})
+
+test_that("console_subcommand treats missing and blank args as default", {
+  expect_equal(aisdk:::console_subcommand(character(0), default = "list"), "list")
+  expect_equal(aisdk:::console_subcommand(NA_character_, default = "list"), "list")
+  expect_equal(aisdk:::console_subcommand("", default = "list"), "list")
+  expect_equal(aisdk:::console_subcommand("ROOTS", default = "list"), "roots")
+})
+
 test_that("model command updates context and thinking settings", {
   session <- aisdk::create_chat_session(model = "deepseek:deepseek-v4-flash")
   app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")

@@ -864,7 +864,7 @@ console_get_extension_runtime <- function(session) {
 #' @keywords internal
 console_handle_extension_command <- function(session, args = character()) {
   runtime <- console_get_extension_runtime(session)
-  subcmd <- tolower(args[1] %||% "list")
+  subcmd <- console_subcommand(args, default = "list")
   startup <- console_session_directory(session, key = "console_startup_dir", default = getwd())
 
   if (subcmd %in% c("list", "ls")) {
@@ -1251,6 +1251,20 @@ console_read_paste_to_file <- function(input_state = NULL,
   }
 
   paste_ref
+}
+
+#' @keywords internal
+console_subcommand <- function(args, default = "") {
+  if (length(args) == 0L || is.na(args[[1]]) || is.null(args[[1]])) {
+    return(tolower(default %||% ""))
+  }
+
+  value <- trimws(as.character(args[[1]] %||% ""))
+  if (!nzchar(value)) {
+    return(tolower(default %||% ""))
+  }
+
+  tolower(value)
 }
 
 #' @keywords internal
@@ -2362,7 +2376,7 @@ handle_command <- function(input,
           )
         }
       } else {
-        subcmd <- tolower(args[1])
+        subcmd <- console_subcommand(args)
         if (identical(subcmd, "current")) {
           cli::cli_text("Current model: {.val {session$get_model_id() %||% '(not set)'}}")
         } else if (subcmd %in% c("settings", "config", "options")) {
@@ -2521,7 +2535,7 @@ handle_command <- function(input,
           cli::cli_text("Evolution: {.val {paste(active$notes, collapse = ' | ')}}")
         }
       } else {
-        subcmd <- tolower(args[1] %||% "")
+        subcmd <- console_subcommand(args)
         if (subcmd %in% c("default", "clear", "reset")) {
           console_reset_persona(session)
           if (!is.null(app_state)) {
@@ -2584,7 +2598,7 @@ handle_command <- function(input,
       if (is.null(registry)) {
         cli::cli_alert_danger("No skill registry is attached to this session.")
       } else {
-        subcmd <- tolower(args[1] %||% "list")
+        subcmd <- console_subcommand(args, default = "list")
         if (subcmd %in% c("list", "ls", "available")) {
           skills <- registry$list_skills()
           if (nrow(skills) == 0) {
