@@ -440,17 +440,27 @@ console_send_user_message <- function(input,
         code = {
           if (stream) {
             md_renderer <- create_markdown_stream_renderer()
+            tool_markup_filter <- new_console_tool_call_markup_filter()
             generation_result <- session$send_stream(
               input,
               turn_system_prompt = turn_system_prompt,
               callback = function(text, done) {
+                display_text <- tool_markup_filter$process(text, done)
                 if (isTRUE(done)) {
+                  if (!is.null(display_text) && nzchar(display_text)) {
+                    if (!is.null(app_state)) {
+                      console_app_append_assistant_text(app_state, display_text)
+                    }
+                    md_renderer$process_chunk(display_text, FALSE)
+                  }
                   md_renderer$process_chunk(NULL, TRUE)
                 } else {
-                  if (!is.null(app_state)) {
-                    console_app_append_assistant_text(app_state, text)
+                  if (!is.null(display_text) && nzchar(display_text)) {
+                    if (!is.null(app_state)) {
+                      console_app_append_assistant_text(app_state, display_text)
+                    }
+                    md_renderer$process_chunk(display_text, FALSE)
                   }
-                  md_renderer$process_chunk(text, FALSE)
                 }
               }
             )
@@ -2967,6 +2977,80 @@ with_console_chat_display <- function(verbose = FALSE,
   on.exit(options(old_opts), add = TRUE)
 
   force(code)
+}
+
+#' @keywords internal
+new_console_tool_call_markup_filter <- function() {
+  start_tag <- "<tool_call>"
+  end_tag <- "</tool_call>"
+  state <- new.env(parent = emptyenv())
+  state$buffer <- ""
+  state$in_tool_call <- FALSE
+
+  keep_suffix <- function(text, n) {
+    len <- nchar(text, type = "chars")
+    if (len <= n) {
+      text
+    } else {
+      substr(text, len - n + 1L, len)
+    }
+  }
+
+  state$process <- function(text, done = FALSE) {
+    if (!is.null(text) && nzchar(text)) {
+      state$buffer <- paste0(state$buffer, text)
+    }
+
+    out <- ""
+
+    repeat {
+      if (isTRUE(state$in_tool_call)) {
+        end_pos <- regexpr(end_tag, state$buffer, fixed = TRUE)[[1]]
+        if (identical(end_pos, -1L)) {
+          state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
+          break
+        }
+
+        end_after <- end_pos + nchar(end_tag) - 1L
+        state$buffer <- substr(state$buffer, end_after + 1L, nchar(state$buffer))
+        state$in_tool_call <- FALSE
+        next
+      }
+
+      start_pos <- regexpr(start_tag, state$buffer, fixed = TRUE)[[1]]
+      if (!identical(start_pos, -1L)) {
+        if (start_pos > 1L) {
+          out <- paste0(out, substr(state$buffer, 1L, start_pos - 1L))
+        }
+        state$buffer <- substr(state$buffer, start_pos + nchar(start_tag), nchar(state$buffer))
+        state$in_tool_call <- TRUE
+        next
+      }
+
+      if (isTRUE(done)) {
+        out <- paste0(out, state$buffer)
+        state$buffer <- ""
+      } else {
+        keep <- nchar(start_tag) - 1L
+        len <- nchar(state$buffer, type = "chars")
+        if (len > keep) {
+          safe_len <- len - keep
+          out <- paste0(out, substr(state$buffer, 1L, safe_len))
+          state$buffer <- substr(state$buffer, safe_len + 1L, len)
+        }
+      }
+      break
+    }
+
+    if (isTRUE(done)) {
+      state$buffer <- ""
+      state$in_tool_call <- FALSE
+    }
+
+    out
+  }
+
+  state
 }
 
 #' @keywords internal

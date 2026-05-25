@@ -166,6 +166,24 @@ test_that("console only prompts tool recovery for failed turns", {
   expect_true(aisdk:::console_should_prompt_tool_recovery(failed))
 })
 
+test_that("console stream filter hides text tool call markup", {
+  filter <- aisdk:::new_console_tool_call_markup_filter()
+  chunks <- c(
+    "我先生成图片。\n<tool_",
+    "call>\n{\"name\":\"r_eval\",\"arguments\":{\"code\":\"1+1\"}}\n",
+    "</tool_call>\n",
+    "图片已保存。\n"
+  )
+
+  rendered <- paste0(vapply(chunks, filter$process, character(1), done = FALSE), collapse = "")
+  rendered <- paste0(rendered, filter$process(NULL, done = TRUE))
+
+  expect_match(rendered, "我先生成图片", fixed = TRUE)
+  expect_match(rendered, "图片已保存", fixed = TRUE)
+  expect_false(grepl("<tool_call>", rendered, fixed = TRUE))
+  expect_false(grepl("r_eval", rendered, fixed = TRUE))
+})
+
 test_that("console detects action-promising assistant text after tool use", {
   result <- list(
     text = "`ggmosaic` installed. Now installing `confuns`",
