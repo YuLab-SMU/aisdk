@@ -86,6 +86,17 @@ test_that("console input history recall navigates only chat input state", {
   expect_equal(aisdk:::console_input_history_recall(state, "", "next"), "draft")
 })
 
+test_that("raw console backspace redraws wide-character input", {
+  output <- capture.output(
+    remaining <- aisdk:::console_delete_last_raw_input_char("  ", c("你", "好")),
+    type = "output"
+  )
+
+  expect_equal(remaining, "你")
+  expect_match(paste(output, collapse = "\n"), "\033\\[2K  你")
+  expect_false(any(grepl("\b \b", output, fixed = TRUE)))
+})
+
 test_that("console readline returns a simple line immediately", {
   state <- aisdk:::console_create_input_state()
   lines <- c("alpha", "ignored")

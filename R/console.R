@@ -1110,11 +1110,7 @@ console_read_bracketed_input <- function(prompt = "  ", input_state = NULL) {
       }
 
       if (identical(byte, as.raw(0x7f)) || identical(byte, as.raw(0x08))) {
-        if (length(chars) > 0L) {
-          chars <- chars[-length(chars)]
-          cat("\b \b")
-          utils::flush.console()
-        }
+        chars <- console_delete_last_raw_input_char(prompt, chars)
         next
       }
 
@@ -1154,6 +1150,15 @@ console_read_escape_sequence <- function(con) {
 console_redraw_raw_input <- function(prompt, chars) {
   cat("\r\033[2K", prompt, paste0(chars, collapse = ""), sep = "")
   utils::flush.console()
+}
+
+#' @keywords internal
+console_delete_last_raw_input_char <- function(prompt, chars) {
+  if (length(chars) > 0L) {
+    chars <- chars[-length(chars)]
+    console_redraw_raw_input(prompt, chars)
+  }
+  chars
 }
 
 #' @keywords internal
