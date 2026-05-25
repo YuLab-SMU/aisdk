@@ -117,7 +117,7 @@ XAIImageModel <- R6::R6Class(
             body <- body[!sapply(body, is.null)]
 
             response <- post_to_api(
-                paste0(private$config$base_url, "/images/generations"),
+                api_endpoint_urls(private$config, "/images/generations"),
                 private$get_headers(),
                 body
             )
@@ -172,7 +172,7 @@ XAIImageModel <- R6::R6Class(
             body <- body[!sapply(body, is.null)]
 
             response <- post_to_api(
-                paste0(private$config$base_url, "/images/edits"),
+                api_endpoint_urls(private$config, "/images/edits"),
                 private$get_headers(),
                 body
             )
@@ -217,7 +217,13 @@ XAIProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("XAI_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("XAI_BASE_URL", "https://api.x.ai/v1"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("XAI_BASE_URL", "https://api.x.ai/v1"),
+                            Sys.getenv("XAI_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "xai",
                     timeout_seconds = timeout_seconds,

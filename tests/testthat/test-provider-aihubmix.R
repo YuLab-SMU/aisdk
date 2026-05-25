@@ -22,6 +22,20 @@ test_that("create_aihubmix() initializes correctly", {
     expect_equal(config$provider_name, "aihubmix")
 })
 
+test_that("create_aihubmix() stores multiple base URLs for failover", {
+    provider <- create_aihubmix(
+        api_key = "test_key",
+        base_url = "https://primary.aihubmix.com/v1, https://backup.aihubmix.com/v1"
+    )
+    config <- provider$language_model("test-model")$get_config()
+
+    expect_equal(config$base_url, "https://primary.aihubmix.com/v1")
+    expect_equal(config$base_urls, c(
+        "https://primary.aihubmix.com/v1",
+        "https://backup.aihubmix.com/v1"
+    ))
+})
+
 test_that("create_aihubmix() uses environment variables", {
     # Save current env vars
     old_key <- Sys.getenv("AIHUBMIX_API_KEY")

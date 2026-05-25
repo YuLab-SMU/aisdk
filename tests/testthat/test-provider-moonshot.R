@@ -16,6 +16,21 @@ test_that("create_moonshot() creates Open Platform provider by default", {
   expect_equal(model$get_config()$base_url, "https://api.moonshot.cn/v1")
 })
 
+test_that("create_moonshot() stores multiple base URLs for failover", {
+  provider <- safe_create_provider(
+    create_moonshot,
+    api_key = "sk-test",
+    base_url = "https://primary.moonshot.example/v1, https://backup.moonshot.example/v1"
+  )
+  config <- provider$language_model("kimi-k2.6")$get_config()
+
+  expect_equal(config$base_url, "https://primary.moonshot.example/v1")
+  expect_equal(config$base_urls, c(
+    "https://primary.moonshot.example/v1",
+    "https://backup.moonshot.example/v1"
+  ))
+})
+
 test_that("create_kimi_code() defaults to Anthropic-compatible Kimi Code", {
   provider <- safe_create_provider(create_kimi_code, api_key = "sk-kimi-test")
   model <- provider$language_model()

@@ -9,7 +9,9 @@ create_custom_provider(
   base_url,
   api_key = NULL,
   api_format = c("chat_completions", "responses", "anthropic_messages"),
-  use_max_completion_tokens = FALSE
+  use_max_completion_tokens = FALSE,
+  disable_stream_options = TRUE,
+  supports_native_tools = FALSE
 )
 }
 \arguments{
@@ -24,6 +26,14 @@ create_custom_provider(
 
 \item{use_max_completion_tokens}{A boolean flag. If TRUE, injects the \code{is_reasoning_model} capability
 to ensure the model uses \code{max_completion_tokens} instead of \code{max_tokens}.}
+
+\item{disable_stream_options}{A boolean flag. If TRUE, omit OpenAI-style
+\code{stream_options} from streaming requests. Useful for self-hosted
+OpenAI-compatible gateways that only implement the basic streaming shape.}
+
+\item{supports_native_tools}{A boolean flag. If FALSE, do not send native
+OpenAI/Anthropic tool definitions or tool-result message formats. The SDK
+will fall back to text-embedded \verb{<tool_call>\{...\}</tool_call>} blocks.}
 }
 \value{
 A custom provider object with a \code{language_model(model_id)} method.

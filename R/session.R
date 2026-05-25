@@ -83,6 +83,7 @@ ChatSession <- R6::R6Class(
       private$.history <- history %||% list()
       private$.max_steps <- max_steps
       private$.registry <- registry
+      configured_model_options <- model_config_runtime_options(private$.model_id %||% if (is.null(model)) get_model() else NULL)
       # Multi-agent support: shared memory and environment
       private$.memory <- if (is.null(memory)) list() else memory
       private$.metadata <- if (is.null(metadata)) list() else metadata
@@ -90,6 +91,13 @@ ChatSession <- R6::R6Class(
         private$.metadata$capability_models <- utils::modifyList(
           agent$capability_models,
           private$.metadata$capability_models %||% list(),
+          keep.null = TRUE
+        )
+      }
+      if (length(configured_model_options) > 0) {
+        private$.metadata <- utils::modifyList(
+          model_runtime_session_metadata(configured_model_options),
+          private$.metadata,
           keep.null = TRUE
         )
       }
@@ -313,6 +321,11 @@ ChatSession <- R6::R6Class(
       if (is.character(model)) {
         private$.model_id <- model
         private$.model <- NULL
+        configured_model_options <- model_config_runtime_options(private$.model_id)
+        if (length(configured_model_options) > 0) {
+          metadata <- model_runtime_session_metadata(configured_model_options)
+          private$.metadata <- utils::modifyList(private$.metadata, metadata, keep.null = TRUE)
+        }
       } else if (inherits(model, "LanguageModelV1")) {
         private$.model <- model
         private$.model_id <- paste0(model$provider, ":", model$model_id)

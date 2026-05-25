@@ -131,7 +131,7 @@ VolcengineImageModel <- R6::R6Class(
                 rlang::abort("`prompt` must be a non-empty string.")
             }
 
-            url <- paste0(private$config$base_url, "/images/generations")
+            url <- api_endpoint_urls(private$config, "/images/generations")
             response <- post_to_api(url, private$get_headers(), private$build_body(params))
 
             GenerateImageResult$new(
@@ -193,7 +193,13 @@ VolcengineProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("ARK_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+                            Sys.getenv("ARK_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "volcengine",
                     timeout_seconds = timeout_seconds,

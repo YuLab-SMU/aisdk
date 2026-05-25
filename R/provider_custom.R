@@ -21,6 +21,12 @@ NULL
 #' "responses" (OpenAI Responses API), and "anthropic_messages" (Anthropic Messages API).
 #' @param use_max_completion_tokens A boolean flag. If TRUE, injects the `is_reasoning_model` capability
 #' to ensure the model uses `max_completion_tokens` instead of `max_tokens`.
+#' @param disable_stream_options A boolean flag. If TRUE, omit OpenAI-style
+#'   `stream_options` from streaming requests. Useful for self-hosted
+#'   OpenAI-compatible gateways that only implement the basic streaming shape.
+#' @param supports_native_tools A boolean flag. If FALSE, do not send native
+#'   OpenAI/Anthropic tool definitions or tool-result message formats. The SDK
+#'   will fall back to text-embedded `<tool_call>{...}</tool_call>` blocks.
 #'
 #' @return A custom provider object with a `language_model(model_id)` method.
 #' @export
@@ -29,7 +35,9 @@ create_custom_provider <- function(
   base_url,
   api_key = NULL,
   api_format = c("chat_completions", "responses", "anthropic_messages"),
-  use_max_completion_tokens = FALSE
+  use_max_completion_tokens = FALSE,
+  disable_stream_options = TRUE,
+  supports_native_tools = FALSE
 ) {
     api_format <- match.arg(api_format)
 
@@ -37,20 +45,25 @@ create_custom_provider <- function(
         rlang::abort("`provider_name` must be a non-empty string.")
     }
 
-    if (is.null(base_url) || trimws(base_url) == "") {
+    base_urls <- normalize_base_urls(base_url)
+    if (length(base_urls) == 0) {
         rlang::abort("`base_url` must be a valid URL string.")
     }
 
     # Build the base configuration to be injected into the underlying model
     config <- list(
         api_key = api_key,
-        base_url = base_url
+        base_url = base_urls[[1]],
+        base_urls = base_urls,
+        provider_name = provider_name,
+        disable_stream_options = isTRUE(disable_stream_options)
     )
 
     # Inject capabilities
     # Currently, the only configurable capability in this factory is `is_reasoning_model`.
     capabilities <- list(
-        is_reasoning_model = isTRUE(use_max_completion_tokens)
+        is_reasoning_model = isTRUE(use_max_completion_tokens),
+        native_tool_calling = isTRUE(supports_native_tools)
     )
 
     # Dynamically generate the Provider wrapper class

@@ -146,6 +146,154 @@ test_that("request_error_classes separates timeout from generic network failures
   expect_true("aisdk_api_network_error" %in% aisdk:::request_error_classes(network_err))
 })
 
+test_that("normalize_base_urls accepts comma and newline separated URLs", {
+  urls <- aisdk:::normalize_base_urls("https://one.test/v1, https://two.test/v1\nhttps://one.test/v1/")
+
+  expect_equal(urls, c("https://one.test/v1", "https://two.test/v1"))
+})
+
+test_that("post_to_api fails over to the next configured endpoint", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+     envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(
+    rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+       envir = aisdk:::.aisdk_api_route_state)
+  )
+
+  attempts <- character()
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = function(req) {
+      attempts <<- c(attempts, req$url)
+      if (grepl("primary", req$url, fixed = TRUE)) {
+        stop(simpleError("Could not resolve host"))
+      }
+      httr2::response(
+        status_code = 200L,
+        url = req$url,
+        method = req$method %||% "POST",
+        body = charToRaw('{"ok":true}')
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- suppressMessages(
+    aisdk:::post_to_api(
+      url = c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"),
+      headers = list(),
+      body = list(model = "mock"),
+      max_retries = 0,
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_true(isTRUE(result$ok))
+  expect_equal(attempts, c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"))
+})
+
+test_that("post_to_api fails over on retryable HTTP statuses", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+     envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(
+    rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+       envir = aisdk:::.aisdk_api_route_state)
+  )
+
+  attempts <- character()
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = function(req) {
+      attempts <<- c(attempts, req$url)
+      if (grepl("primary", req$url, fixed = TRUE)) {
+        return(httr2::response(
+          status_code = 429L,
+          url = req$url,
+          method = req$method %||% "POST",
+          headers = list(`retry-after-ms` = "0"),
+          body = charToRaw('{"error":{"message":"rate limited"}}')
+        ))
+      }
+      httr2::response(
+        status_code = 200L,
+        url = req$url,
+        method = req$method %||% "POST",
+        body = charToRaw('{"ok":true}')
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- suppressMessages(
+    aisdk:::post_to_api(
+      url = c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"),
+      headers = list(),
+      body = list(model = "mock"),
+      max_retries = 0,
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_true(isTRUE(result$ok))
+  expect_equal(attempts, c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"))
+})
+
+test_that("failover preserves retryable HTTP error classes when all endpoints fail", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+     envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(
+    rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+       envir = aisdk:::.aisdk_api_route_state)
+  )
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = function(req) {
+      httr2::response(
+        status_code = 429L,
+        url = req$url,
+        method = req$method %||% "POST",
+        headers = list(`retry-after-ms` = "0"),
+        body = charToRaw('{"error":{"message":"rate limited"}}')
+      )
+    },
+    .package = "aisdk"
+  )
+
+  expect_error(
+    suppressMessages(
+      aisdk:::post_to_api(
+        url = c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"),
+        headers = list(),
+        body = list(model = "mock"),
+        max_retries = 0,
+        initial_delay_ms = 0
+      )
+    ),
+    class = "aisdk_api_rate_limit_error"
+  )
+})
+
+test_that("failed routes cool down and are de-prioritized", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+     envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(
+    rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+       envir = aisdk:::.aisdk_api_route_state)
+  )
+
+  primary <- "https://primary.test/v1/chat/completions"
+  backup <- "https://backup.test/v1/chat/completions"
+
+  aisdk:::mark_api_route_failure(primary, "network error")
+  expect_equal(aisdk:::order_api_url_candidates(c(primary, backup)), c(backup, primary))
+
+  aisdk:::mark_api_route_success(primary)
+  expect_equal(aisdk:::order_api_url_candidates(c(primary, backup)), c(primary, backup))
+})
+
 test_that("stream_from_api retries connection failures before any event is delivered", {
   attempts <- 0L
   chunks <- list()
@@ -194,6 +342,64 @@ test_that("stream_from_api retries connection failures before any event is deliv
   expect_equal(attempts, 2L)
   expect_length(chunks, 1)
   expect_equal(chunks[[1]]$choices[[1]]$delta$content, "ok")
+  expect_true(done_seen)
+})
+
+test_that("stream_from_api fails over before the first event", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+     envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(
+    rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+       envir = aisdk:::.aisdk_api_route_state)
+  )
+
+  attempts <- character()
+  chunks <- list()
+  done_seen <- FALSE
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      attempts <<- c(attempts, req$url)
+      if (grepl("primary", req$url, fixed = TRUE)) {
+        stop(simpleError("cannot open the connection"))
+      }
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(
+        list(data = "{\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}"),
+        list(data = "[DONE]")
+      )
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    stream_response_is_complete = function(resp) FALSE,
+    stream_response_sse = function(resp) {
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      event
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(
+    aisdk:::stream_from_api(
+      url = c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"),
+      headers = list(),
+      body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) {
+        if (isTRUE(done)) {
+          done_seen <<- TRUE
+        } else {
+          chunks <<- c(chunks, list(data))
+        }
+      },
+      max_retries = 0,
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_equal(attempts, c("https://primary.test/v1/chat/completions", "https://backup.test/v1/chat/completions"))
+  expect_length(chunks, 1)
   expect_true(done_seen)
 })
 

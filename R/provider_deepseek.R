@@ -185,7 +185,13 @@ DeepSeekProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("DEEPSEEK_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+                            Sys.getenv("DEEPSEEK_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "deepseek",
                     timeout_seconds = timeout_seconds,

@@ -78,6 +78,78 @@ recover_text_tool_calls <- function(result) {
   result
 }
 
+#' @keywords internal
+native_tool_calling_enabled <- function(model) {
+  !identical(model$capabilities$native_tool_calling %||% TRUE, FALSE)
+}
+
+#' @keywords internal
+format_tools_for_text_fallback <- function(tools) {
+  if (is.null(tools) || length(tools) == 0) {
+    return("")
+  }
+
+  rendered <- vapply(tools, function(tool_obj) {
+    if (!inherits(tool_obj, "Tool")) {
+      return("")
+    }
+    schema_json <- tryCatch(
+      schema_to_json(tool_obj$parameters, pretty = TRUE),
+      error = function(e) "{}"
+    )
+    paste0(
+      "- ", tool_obj$name, ": ", tool_obj$description, "\n",
+      "  Parameters JSON schema:\n",
+      gsub("(?m)^", "  ", schema_json, perl = TRUE)
+    )
+  }, character(1))
+
+  rendered <- rendered[nzchar(rendered)]
+  paste(rendered, collapse = "\n\n")
+}
+
+#' @keywords internal
+build_text_tool_system_prompt <- function(tools) {
+  tool_defs <- format_tools_for_text_fallback(tools)
+  if (!nzchar(tool_defs)) {
+    return("")
+  }
+
+  paste(
+    "Native API tool calling is unavailable for this model/provider.",
+    "When you need a tool, emit one or more tool-call blocks in plain text using exactly this format:",
+    "<tool_call>\n{\"name\":\"tool_name\",\"arguments\":{}}\n</tool_call>",
+    "Do not wrap ordinary prose in `<tool_call>` blocks. After tool results are provided, either emit another `<tool_call>` block or answer normally.",
+    paste0("Available tools:\n\n", tool_defs),
+    sep = "\n\n"
+  )
+}
+
+#' @keywords internal
+append_text_tool_result_messages <- function(messages, result, tool_results) {
+  assistant_text <- result$text %||% ""
+  if (nzchar(assistant_text)) {
+    messages <- c(messages, list(list(role = "assistant", content = assistant_text)))
+  }
+
+  lines <- c("Tool execution results:")
+  for (tr in tool_results) {
+    status <- if (isTRUE(tr$is_error)) "error" else "ok"
+    lines <- c(
+      lines,
+      paste0("- ", tr$name, " [", status, "]"),
+      tr$result %||% ""
+    )
+  }
+  lines <- c(
+    lines,
+    "If you need another tool, emit a new `<tool_call>` block. Otherwise answer the user normally."
+  )
+
+  messages <- c(messages, list(list(role = "user", content = paste(lines, collapse = "\n"))))
+  messages
+}
+
 #' @title Generate Text
 #' @description
 #' Generate text using a language model. This is the primary high-level function
@@ -144,8 +216,15 @@ generate_text <- function(model = NULL,
                           hooks = NULL,
                           registry = NULL,
                           ...) {
-  default_call_options <- if (is.null(model) && is.null(session)) {
-    get_default_model_runtime_options()$call_options %||% list()
+  requested_model_id <- if (is.character(model) && length(model) == 1) model else NULL
+  effective_model_id <- requested_model_id %||% if (is.null(model) && is.null(session)) get_model() else NULL
+  default_call_options <- if (is.null(session)) {
+    configured <- model_config_runtime_options(effective_model_id)$call_options %||% list()
+    if (is.null(model)) {
+      merge_call_options(configured, get_default_model_runtime_options()$call_options %||% list())
+    } else {
+      configured
+    }
   } else {
     list()
   }
@@ -170,6 +249,7 @@ generate_text <- function(model = NULL,
   }
 
   tools <- filter_tools_for_model_capabilities(tools, model, session = session)
+  use_text_tool_fallback <- !native_tool_calling_enabled(model)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -190,6 +270,13 @@ generate_text <- function(model = NULL,
     hooks$trigger_generation_start(model, prompt, tools)
   }
 
+  if (isTRUE(use_text_tool_fallback) && !is.null(tools) && length(tools) > 0) {
+    tool_prompt <- build_text_tool_system_prompt(tools)
+    if (nzchar(tool_prompt)) {
+      system <- if (is.null(system)) tool_prompt else paste(system, "\n\n", tool_prompt, sep = "")
+    }
+  }
+
   # Build initial messages
   messages <- build_messages(prompt, system)
   validate_model_messages(model, messages)
@@ -200,7 +287,7 @@ generate_text <- function(model = NULL,
     list(
       temperature = temperature,
       max_tokens = max_tokens,
-      tools = tools,
+      tools = if (isTRUE(use_text_tool_fallback)) NULL else tools,
       ...
     )
   )
@@ -371,8 +458,10 @@ generate_text <- function(model = NULL,
 
           history_format <- model$get_history_format()
 
-          # For OpenAI, we need to include tool_calls in the assistant message
-          if (history_format == "openai") {
+          if (isTRUE(use_text_tool_fallback)) {
+            messages <- append_text_tool_result_messages(messages, result, tool_results)
+          } else if (history_format == "openai") {
+            # For OpenAI, we need to include tool_calls in the assistant message
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
               list(
                 id = tc$id,
@@ -393,12 +482,14 @@ generate_text <- function(model = NULL,
             assistant_message$content <- result$raw_response$content
           }
 
-          messages <- c(messages, list(assistant_message))
+          if (!isTRUE(use_text_tool_fallback)) {
+            messages <- c(messages, list(assistant_message))
 
-          # Append tool results to history using provider-specific formatting
-          for (tr in tool_results) {
-            tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-            messages <- c(messages, list(tool_result_msg))
+            # Append tool results to history using provider-specific formatting
+            for (tr in tool_results) {
+              tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
+              messages <- c(messages, list(tool_result_msg))
+            }
           }
 
           if (isTRUE(tool_result_breaker_triggered)) {
@@ -513,8 +604,15 @@ stream_text <- function(model = NULL,
                         hooks = NULL,
                         registry = NULL,
                         ...) {
-  default_call_options <- if (is.null(model) && is.null(session)) {
-    get_default_model_runtime_options()$call_options %||% list()
+  requested_model_id <- if (is.character(model) && length(model) == 1) model else NULL
+  effective_model_id <- requested_model_id %||% if (is.null(model) && is.null(session)) get_model() else NULL
+  default_call_options <- if (is.null(session)) {
+    configured <- model_config_runtime_options(effective_model_id)$call_options %||% list()
+    if (is.null(model)) {
+      merge_call_options(configured, get_default_model_runtime_options()$call_options %||% list())
+    } else {
+      configured
+    }
   } else {
     list()
   }
@@ -538,6 +636,7 @@ stream_text <- function(model = NULL,
   }
 
   tools <- filter_tools_for_model_capabilities(tools, model, session = session)
+  use_text_tool_fallback <- !native_tool_calling_enabled(model)
 
   # Handle sandbox mode: bind tools into SandboxManager, replace with meta-tool
   if (isTRUE(sandbox) && !is.null(tools) && length(tools) > 0) {
@@ -558,6 +657,13 @@ stream_text <- function(model = NULL,
     hooks$trigger_generation_start(model, prompt, tools)
   }
 
+  if (isTRUE(use_text_tool_fallback) && !is.null(tools) && length(tools) > 0) {
+    tool_prompt <- build_text_tool_system_prompt(tools)
+    if (nzchar(tool_prompt)) {
+      system <- if (is.null(system)) tool_prompt else paste(system, "\n\n", tool_prompt, sep = "")
+    }
+  }
+
   messages <- build_messages(prompt, system)
   validate_model_messages(model, messages)
 
@@ -567,7 +673,7 @@ stream_text <- function(model = NULL,
     list(
       temperature = temperature,
       max_tokens = max_tokens,
-      tools = tools,
+      tools = if (isTRUE(use_text_tool_fallback)) NULL else tools,
       ...
     )
   )
@@ -734,8 +840,10 @@ stream_text <- function(model = NULL,
 
           history_format <- model$get_history_format()
 
-          # Provider-specific tool call formatting (copied from generate_text)
-          if (history_format == "openai") {
+          if (isTRUE(use_text_tool_fallback)) {
+            messages <- append_text_tool_result_messages(messages, result, tool_results)
+          } else if (history_format == "openai") {
+            # Provider-specific tool call formatting (copied from generate_text)
             assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
               list(
                 id = tc$id,
@@ -755,12 +863,14 @@ stream_text <- function(model = NULL,
             assistant_message$content <- result$raw_response$content
           }
 
-          messages <- c(messages, list(assistant_message))
+          if (!isTRUE(use_text_tool_fallback)) {
+            messages <- c(messages, list(assistant_message))
 
-          # Append tool results to history
-          for (tr in tool_results) {
-            tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-            messages <- c(messages, list(tool_result_msg))
+            # Append tool results to history
+            for (tr in tool_results) {
+              tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
+              messages <- c(messages, list(tool_result_msg))
+            }
           }
 
           # Reset renderer state for next step

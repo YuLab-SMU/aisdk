@@ -5,6 +5,18 @@
 #' @keywords internal
 NULL
 
+#' @keywords internal
+gemini_endpoint_urls <- function(config, model_id, endpoint) {
+    bases <- normalize_base_urls(config$base_urls %||% config$base_url)
+    bases <- vapply(bases, function(base) {
+        if (!grepl("/models$", base)) {
+            base <- paste0(base, "/models")
+        }
+        base
+    }, character(1), USE.NAMES = FALSE)
+    paste0(bases, "/", model_id, ":", endpoint, config$api_key)
+}
+
 #' @title Gemini Language Model Class
 #' @description
 #' Language model implementation for Gemini's generateContent API.
@@ -174,12 +186,7 @@ GeminiLanguageModel <- R6::R6Class(
         #' @return A list with url, headers, and body.
         build_payload_internal = function(params, stream = FALSE) {
             endpoint <- if (stream) "streamGenerateContent?alt=sse&key=" else "generateContent?key="
-
-            base <- private$config$base_url
-            if (!grepl("/models$", base)) {
-                base <- paste0(base, "/models")
-            }
-            url <- paste0(base, "/", self$model_id, ":", endpoint, private$config$api_key)
+            url <- gemini_endpoint_urls(private$config, self$model_id, endpoint)
             headers <- private$get_headers()
 
             formatted <- private$format_messages(params$messages)
@@ -420,12 +427,7 @@ GeminiImageModel <- R6::R6Class(
             config
         },
         build_payload = function(params) {
-            base <- private$config$base_url
-            if (!grepl("/models$", base)) {
-                base <- paste0(base, "/models")
-            }
-
-            url <- paste0(base, "/", self$model_id, ":generateContent?key=", private$config$api_key)
+            url <- gemini_endpoint_urls(private$config, self$model_id, "generateContent?key=")
             headers <- private$get_headers()
 
             parts <- list()
@@ -593,9 +595,18 @@ GeminiProvider <- R6::R6Class(
                               first_byte_timeout_seconds = NULL,
                               connect_timeout_seconds = NULL,
                               idle_timeout_seconds = NULL) {
+            raw_base_url <- base_url %||% paste(
+                c(
+                    Sys.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/models"),
+                    Sys.getenv("GEMINI_BASE_URLS", unset = "")
+                ),
+                collapse = ","
+            )
+            base_urls <- normalize_base_urls(raw_base_url)
             private$config <- list(
                 api_key = api_key %||% Sys.getenv("GEMINI_API_KEY"),
-                base_url = sub("/$", "", base_url %||% Sys.getenv("GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/models")),
+                base_url = base_urls[[1]],
+                base_urls = base_urls,
                 headers = headers,
                 provider_name = name %||% "gemini",
                 timeout_seconds = timeout_seconds,

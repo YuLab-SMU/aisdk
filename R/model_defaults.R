@@ -120,7 +120,9 @@ compact_model_runtime_options <- function(options = list()) {
 
 #' @keywords internal
 get_default_model_runtime_options <- function() {
-  compact_model_runtime_options(.model_env$options %||% getOption("aisdk.default_model_options", list()))
+  configured <- model_config_runtime_options(get_model())
+  explicit <- .model_env$options %||% getOption("aisdk.default_model_options", list())
+  compact_model_runtime_options(utils::modifyList(configured, explicit %||% list(), keep.null = TRUE))
 }
 
 #' @keywords internal
@@ -183,8 +185,8 @@ default_model_id <- function(model) {
 #' @description
 #' Returns the current package-wide default language model. This is used by
 #' high-level helpers when `model = NULL`. If no explicit default has been set,
-#' `get_model()` falls back to `getOption("aisdk.default_model")` and then to
-#' `"openai:gpt-4o"`.
+#' `get_model()` falls back to `getOption("aisdk.default_model")`, then to
+#' `default_model` in `aisdk.yaml`, and then to `"openai:gpt-4o"`.
 #' @param default Fallback model identifier when no explicit default has been set.
 #' @return A model identifier string or a `LanguageModelV1` object.
 #' @export
@@ -192,12 +194,12 @@ default_model_id <- function(model) {
 #' get_model()
 get_model <- function(default = "openai:gpt-4o") {
   current <- .model_env$default %||% getOption("aisdk.default_model")
-  current %||% default
+  current %||% default_model_from_config() %||% default
 }
 
 #' @keywords internal
 get_explicit_default_model <- function() {
-  .model_env$default %||% getOption("aisdk.default_model", NULL)
+  .model_env$default
 }
 
 #' @title Set Default Model

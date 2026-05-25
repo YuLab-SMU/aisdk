@@ -44,6 +44,62 @@ test_that("discover_console_model_profiles finds project and global profiles", {
   expect_equal(profiles[[2]]$model_id, "anthropic:claude-sonnet-4-20250514")
 })
 
+test_that("discover_console_model_profiles includes backup base URLs", {
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+
+  writeLines(c(
+    "AISDK_CUSTOM_API_KEY=sk-project",
+    "AISDK_CUSTOM_BASE_URL=https://primary.example/v1",
+    "AISDK_CUSTOM_BASE_URLS=https://backup.example/v1",
+    "AISDK_CUSTOM_MODEL=proxy-model"
+  ), project_path)
+
+  profiles <- aisdk:::discover_console_model_profiles(
+    project_path = project_path,
+    global_path = global_path
+  )
+
+  custom_idx <- which(vapply(profiles, function(p) identical(p$provider, "custom"), logical(1)))[[1]]
+  custom <- profiles[[custom_idx]]
+  expect_equal(custom$base_url, "https://primary.example/v1")
+  expect_equal(custom$backup_base_urls, "https://backup.example/v1")
+  expect_equal(custom$values$AISDK_CUSTOM_BASE_URLS, "https://backup.example/v1")
+})
+
+test_that("discover_console_model_profiles includes aisdk.yaml profiles", {
+  tmp <- tempfile("aisdk-config-")
+  dir.create(tmp)
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(tmp)
+
+  writeLines(c(
+    "default_model: yulab:gpt-5.5",
+    "model_providers:",
+    "  yulab:",
+    "    type: custom",
+    "    name: openai-yulab",
+    "    base_url: http://186.244.210.51:8080/v1",
+    "    wire_api: responses",
+    "    api_key_env: YULAB_OPENAI_API_KEY",
+    "models:",
+    "  yulab:gpt-5.5:",
+    "    reasoning_effort: xhigh"
+  ), "aisdk.yaml")
+
+  profiles <- aisdk:::discover_console_model_profiles(
+    project_path = file.path(tmp, ".Renviron"),
+    global_path = tempfile(fileext = ".Renviron")
+  )
+
+  yulab <- profiles[[which(vapply(profiles, function(p) identical(p$model_id, "yulab:gpt-5.5"), logical(1)))[[1]]]]
+  expect_equal(yulab$provider, "yulab")
+  expect_equal(yulab$storage, "yaml")
+  expect_equal(yulab$base_url, "http://186.244.210.51:8080/v1")
+  expect_equal(yulab$api_format, "responses")
+})
+
 test_that("apply_console_profile exports provider values into current env", {
   profile <- list(
     values = list(
@@ -167,6 +223,16 @@ test_that("resolve_console_startup_model falls back when saved default is unusab
 
   expect_null(resolved_invalid$model_id)
   expect_equal(resolved_invalid$source, "invalid_default")
+})
+
+test_that("console_model_id_is_usable allows custom profiles without API keys", {
+  profile <- list(
+    provider = "custom",
+    api_key = "",
+    base_url = "http://127.0.0.1:3000/v1"
+  )
+
+  expect_true(aisdk:::console_model_id_is_usable("custom:local-model", profile = profile))
 })
 
 test_that("console status line includes context metrics when available", {
@@ -428,8 +494,159 @@ test_that("prompt_console_provider_profile supports custom API setup", {
   expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "https://proxy.example.com/v1")
   expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "proxy-model")
   expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
+  expect_equal(saved$updates$AISDK_CUSTOM_ENABLE_STREAM_OPTIONS, "false")
+  expect_equal(saved$updates$AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS, "false")
   expect_equal(remembered$model_id, "custom:proxy-model")
   expect_equal(remembered$path, "project-custom.Rprofile")
+})
+
+test_that("prompt_console_provider_profile can save custom API setup to aisdk.yaml", {
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+  project_config_path <- tempfile(fileext = ".yaml")
+  registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+  old_registry <- registry_env$default %||% NULL
+  registry_env$default <- ProviderRegistry$new()
+  on.exit({
+    registry_env$default <- old_registry
+  }, add = TRUE)
+
+  menu_answers <- c(
+    10L, # provider: Custom API
+    1L,  # api format: OpenAI Chat Completions
+    1L,  # select first fetched/static model
+    3L   # save project aisdk.yaml
+  )
+  input_answers <- c(
+    "https://proxy.example.com/v1",
+    "sk-custom",
+    "yulab"
+  )
+  saved_env <- list()
+  remembered <- list()
+
+  hooks <- list(
+    menu = function(title, choices) {
+      answer <- menu_answers[[1]]
+      menu_answers <<- menu_answers[-1]
+      answer
+    },
+    input = function(prompt, default = NULL) {
+      answer <- input_answers[[1]]
+      input_answers <<- input_answers[-1]
+      answer %||% default
+    },
+    model_choices = function(provider, api_key = NULL, base_url = NULL) {
+      c("gpt-5.5")
+    },
+    save = function(updates, path) {
+      saved_env <<- list(updates = updates, path = path)
+      TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
+    }
+  )
+
+  model_id <- aisdk:::prompt_console_provider_profile(
+    project_path = project_path,
+    global_path = global_path,
+    project_config_path = project_config_path,
+    project_rprofile_path = "project-yaml.Rprofile",
+    global_rprofile_path = "global-yaml.Rprofile",
+    prompt_hooks = hooks
+  )
+
+  cfg <- yaml::read_yaml(project_config_path)
+  expect_equal(model_id, "yulab:gpt-5.5")
+  expect_equal(cfg$default_model, "yulab:gpt-5.5")
+  expect_equal(cfg$model_providers$yulab$base_url, "https://proxy.example.com/v1")
+  expect_equal(cfg$model_providers$yulab$api_key_env, "AISDK_YULAB_API_KEY")
+  expect_equal(saved_env$updates$AISDK_YULAB_API_KEY, "sk-custom")
+  expect_equal(saved_env$path, project_path)
+  expect_equal(remembered$model_id, "yulab:gpt-5.5")
+  expect_null(registry_env$default)
+})
+
+test_that("prompt_console_provider_profile can edit dynamic YAML custom providers", {
+  tmp <- tempfile("aisdk-config-")
+  dir.create(tmp)
+  project_path <- file.path(tmp, ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+  project_config_path <- file.path(tmp, "aisdk.yaml")
+
+  writeLines(c(
+    "default_model: yulab:gpt-5.5",
+    "model_providers:",
+    "  yulab:",
+    "    type: custom",
+    "    name: openai-yulab",
+    "    base_url: https://proxy.example.com/v1",
+    "    wire_api: responses",
+    "    api_key_env: AISDK_YULAB_API_KEY",
+    "models:",
+    "  yulab:gpt-5.5:",
+    "    reasoning_effort: xhigh"
+  ), project_config_path)
+
+  Sys.setenv(AISDK_YULAB_API_KEY = "sk-existing")
+  on.exit(Sys.unsetenv("AISDK_YULAB_API_KEY"), add = TRUE)
+
+  menu_answers <- c(
+    2L, # edit saved setup
+    1L, # edit first profile
+    1L, # keep API format
+    1L, # keep base URL
+    1L, # keep API key
+    1L, # keep model
+    1L  # overwrite saved YAML
+  )
+  input_answers <- list(NULL)
+  saved_env <- list()
+  remembered <- list()
+
+  hooks <- list(
+    menu = function(title, choices) {
+      answer <- menu_answers[[1]]
+      menu_answers <<- menu_answers[-1]
+      answer
+    },
+    input = function(prompt, default = NULL) {
+      answer <- input_answers[[1]]
+      input_answers <<- input_answers[-1]
+      answer %||% default
+    },
+    model_choices = function(provider, api_key = NULL, base_url = NULL) {
+      c("gpt-5.5")
+    },
+    save = function(updates, path) {
+      saved_env <<- list(updates = updates, path = path)
+      TRUE
+    },
+    remember_model = function(model_id, path = NULL) {
+      remembered <<- list(model_id = model_id, path = path)
+      model_id
+    }
+  )
+
+  model_id <- aisdk:::prompt_console_provider_profile(
+    project_path = project_path,
+    global_path = global_path,
+    project_config_path = project_config_path,
+    global_config_path = tempfile(fileext = ".yaml"),
+    project_rprofile_path = "project-yaml.Rprofile",
+    global_rprofile_path = "global-yaml.Rprofile",
+    prompt_hooks = hooks
+  )
+
+  cfg <- yaml::read_yaml(project_config_path)
+  expect_equal(model_id, "yulab:gpt-5.5")
+  expect_equal(cfg$default_model, "yulab:gpt-5.5")
+  expect_equal(cfg$model_providers$yulab$base_url, "https://proxy.example.com/v1")
+  expect_equal(saved_env$updates$AISDK_YULAB_API_KEY, "sk-existing")
+  expect_equal(saved_env$path, project_path)
+  expect_equal(remembered$model_id, "yulab:gpt-5.5")
 })
 
 test_that("prompt_console_provider_profile supports custom API setup without API key", {
@@ -490,6 +707,8 @@ test_that("prompt_console_provider_profile supports custom API setup without API
   expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "http://172.16.153.230:8010/v1")
   expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "qwen3-8b-dflash")
   expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
+  expect_equal(saved$updates$AISDK_CUSTOM_ENABLE_STREAM_OPTIONS, "false")
+  expect_equal(saved$updates$AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS, "false")
   expect_equal(remembered$model_id, "custom:qwen3-8b-dflash")
   expect_equal(remembered$path, "project-custom-no-key.Rprofile")
 })

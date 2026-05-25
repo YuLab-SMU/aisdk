@@ -117,7 +117,7 @@ OpenAILanguageModel <- R6::R6Class(
     #' @return A list with url, headers, and body.
     build_payload = function(params) {
       params <- private$process_response_format(params)
-      url <- paste0(private$config$base_url, "/chat/completions")
+      url <- api_endpoint_urls(private$config, "/chat/completions")
       headers <- private$get_headers()
 
       body <- list(
@@ -272,7 +272,7 @@ OpenAILanguageModel <- R6::R6Class(
     #' @return A list with url, headers, and body.
     build_stream_payload = function(params) {
       params <- private$process_response_format(params)
-      url <- paste0(private$config$base_url, "/chat/completions")
+      url <- api_endpoint_urls(private$config, "/chat/completions")
       headers <- private$get_headers()
 
       body <- list(
@@ -635,7 +635,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     #' @param params A list of call options including messages, temperature, etc.
     #' @return A GenerateResult object.
     do_generate = function(params) {
-      url <- paste0(private$config$base_url, "/responses")
+      url <- api_endpoint_urls(private$config, "/responses")
       headers <- private$get_headers()
 
       # Convert messages to Responses API format
@@ -809,7 +809,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     #' @param callback A function called for each chunk: callback(text, done).
     #' @return A GenerateResult object.
     do_stream = function(params, callback) {
-      url <- paste0(private$config$base_url, "/responses")
+      url <- api_endpoint_urls(private$config, "/responses")
       headers <- private$get_headers()
 
       # Convert messages to Responses API format
@@ -1287,7 +1287,7 @@ OpenAIEmbeddingModel <- R6::R6Class(
     #' @param value A character string or vector to embed.
     #' @return A list with embeddings and usage.
     do_embed = function(value) {
-      url <- paste0(private$config$base_url, "/embeddings")
+      url <- api_endpoint_urls(private$config, "/embeddings")
       headers <- list(
         `Content-Type` = "application/json",
         Authorization = paste("Bearer", private$config$api_key)
@@ -1675,7 +1675,7 @@ OpenAIImageModel <- R6::R6Class(
     #' @param params A list of call options (see `do_generate_image`).
     #' @return A GenerateImageResult object.
     do_generate_image_classic = function(params) {
-      url <- paste0(private$config$base_url, "/images/generations")
+      url <- api_endpoint_urls(private$config, "/images/generations")
       headers <- private$get_headers(include_content_type = TRUE)
       body <- private$build_generation_body(params)
       response <- post_to_api(
@@ -1708,7 +1708,7 @@ OpenAIImageModel <- R6::R6Class(
     #' @param params A list of call options (see `do_generate_image`).
     #' @return A GenerateImageResult object.
     do_generate_image_via_responses = function(params) {
-      url <- paste0(private$config$base_url, "/responses")
+      url <- api_endpoint_urls(private$config, "/responses")
       # Force identity transfer-encoding: some OpenAI-compatible proxies
       # advertise gzip but send a malformed Content-Encoding header on the
       # /v1/responses route. With `Accept-Encoding: identity` the proxy
@@ -1859,7 +1859,7 @@ OpenAIImageModel <- R6::R6Class(
     #' @param params A list of call options (see `do_edit_image`).
     #' @return A GenerateImageResult object.
     do_edit_image_classic = function(params) {
-      url <- paste0(private$config$base_url, "/images/edits")
+      url <- api_endpoint_urls(private$config, "/images/edits")
       headers <- private$get_headers(include_content_type = FALSE)
       body <- private$build_edit_body(params)
       response <- post_multipart_to_api(
@@ -1901,7 +1901,7 @@ OpenAIImageModel <- R6::R6Class(
         rlang::abort("`prompt` must be a non-empty string.")
       }
 
-      url <- paste0(private$config$base_url, "/responses")
+      url <- api_endpoint_urls(private$config, "/responses")
       headers <- c(
         private$get_headers(include_content_type = TRUE),
         list(`Accept-Encoding` = "identity")
@@ -2052,7 +2052,7 @@ OpenAIImageModel <- R6::R6Class(
     #' @param params A list of call options (see `do_edit_image`).
     #' @return A GenerateImageResult object.
     do_edit_image_via_responses = function(params) {
-      url <- paste0(private$config$base_url, "/responses")
+      url <- api_endpoint_urls(private$config, "/responses")
       headers <- c(
         private$get_headers(include_content_type = TRUE),
         list(`Accept-Encoding` = "identity")
@@ -2195,9 +2195,18 @@ OpenAIProvider <- R6::R6Class(
                           disable_stream_options = FALSE,
                           api_format = c("auto", "chat", "responses")) {
       api_format <- match.arg(api_format)
+      raw_base_url <- base_url %||% paste(
+        c(
+          Sys.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+          Sys.getenv("OPENAI_BASE_URLS", unset = "")
+        ),
+        collapse = ","
+      )
+      base_urls <- normalize_base_urls(raw_base_url)
       private$config <- list(
         api_key = api_key %||% Sys.getenv("OPENAI_API_KEY"),
-        base_url = sub("/$", "", base_url %||% Sys.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")),
+        base_url = base_urls[[1]],
+        base_urls = base_urls,
         organization = organization,
         project = project,
         headers = headers,
@@ -2339,8 +2348,7 @@ OpenAIProvider <- R6::R6Class(
   private = list(
     config = NULL,
     request_conversations_api = function(method, path = "", body = NULL) {
-      base <- private$config$base_url
-      url <- paste0(base, "/conversations", if (nzchar(path)) paste0("/", path) else "")
+      url <- api_endpoint_urls(private$config, paste0("/conversations", if (nzchar(path)) paste0("/", path) else ""))
       headers <- list(`Content-Type` = "application/json")
       if (nzchar(private$config$api_key %||% "")) {
         headers$Authorization <- paste("Bearer", private$config$api_key)
@@ -2352,29 +2360,17 @@ OpenAIProvider <- R6::R6Class(
         headers <- c(headers, private$config$headers)
       }
 
-      req <- httr2::request(url)
-      req <- httr2::req_headers(req, !!!headers)
-      req <- httr2::req_method(req, method)
-      if (!is.null(body) && length(body) > 0) {
-        req <- httr2::req_body_json(req, body, auto_unbox = TRUE)
-      }
-      req <- httr2::req_error(req, is_error = function(resp) FALSE)
-
-      resp <- httr2::req_perform(req)
-      status <- httr2::resp_status(resp)
-      if (status >= 400) {
-        error_text <- tryCatch(
-          httr2::resp_body_string(resp),
-          error = function(e) "Unknown error (could not read body)"
-        )
-        rlang::abort(c(
-          paste0("Conversations API ", method, " ", url, " failed with status ", status),
-          x = error_text
-        ), class = "aisdk_api_error")
-      }
-      resp_text <- httr2::resp_body_string(resp)
-      if (!nzchar(resp_text)) return(invisible(NULL))
-      jsonlite::fromJSON(resp_text, simplifyVector = FALSE)
+      request_json_from_api(
+        url,
+        headers,
+        method = method,
+        body = body,
+        timeout_seconds = private$config$timeout_seconds,
+        total_timeout_seconds = private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = private$config$connect_timeout_seconds,
+        idle_timeout_seconds = private$config$idle_timeout_seconds
+      )
     }
   )
 )

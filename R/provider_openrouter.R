@@ -61,7 +61,13 @@ OpenRouterProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("OPENROUTER_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                            Sys.getenv("OPENROUTER_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "openrouter",
                     timeout_seconds = timeout_seconds,

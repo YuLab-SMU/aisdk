@@ -104,6 +104,61 @@ test_that("generate_text recovers tool calls embedded in assistant text", {
   expect_equal(result$all_tool_calls[[1]]$arguments$message, "hello from text")
 })
 
+test_that("generate_text falls back to text tool protocol when native tool calling is unavailable", {
+  tool_invocations <- list()
+  first_params <- NULL
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) {
+      tool_invocations[[length(tool_invocations) + 1L]] <<- args$message
+      paste("Echo:", args$message)
+    }
+  )
+
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = FALSE)
+  mock_model$responses <- list(
+    function(params) {
+      first_params <<- params
+      list(
+        text = paste0(
+          "<tool_call>\n",
+          "{\"name\":\"echo\",\"arguments\":{\"message\":\"fallback\"}}\n",
+          "</tool_call>"
+        ),
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    },
+    list(
+      text = "Fallback tools worked.",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  )
+
+  result <- generate_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 3
+  )
+
+  expect_equal(result$text, "Fallback tools worked.")
+  expect_equal(tool_invocations, list("fallback"))
+  expect_null(first_params$tools)
+  expect_true(any(vapply(
+    first_params$messages,
+    function(msg) grepl("<tool_call>", msg$content %||% "", fixed = TRUE) ||
+      grepl("Native API tool calling is unavailable", msg$content %||% "", fixed = TRUE),
+    logical(1)
+  )))
+})
+
 test_that("generate_text hides tools that require unavailable model capabilities", {
   vision_tool <- tool(
     name = "inspect_image",

@@ -63,7 +63,13 @@ BailianProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("DASHSCOPE_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+                            Sys.getenv("DASHSCOPE_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "bailian",
                     timeout_seconds = timeout_seconds,

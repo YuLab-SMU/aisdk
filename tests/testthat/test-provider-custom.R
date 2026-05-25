@@ -1,3 +1,5 @@
+library(aisdk)
+
 test_that("Custom provider validates inputs", {
     expect_error(
         create_custom_provider(provider_name = "", base_url = "https://api.example.com"),
@@ -65,6 +67,60 @@ test_that("Custom provider injects capabilities correctly", {
     m_reasoning <- p_reasoning$language_model("model-y")
 
     expect_true(m_reasoning$has_capability("is_reasoning_model"))
+})
+
+test_that("Custom provider defaults to conservative compatibility flags", {
+    p <- create_custom_provider(
+        "compat",
+        "https://api.example.com/v1"
+    )
+    m <- p$language_model("test-model")
+
+    expect_false(m$has_capability("native_tool_calling"))
+    expect_true(isTRUE(m$get_config()$disable_stream_options))
+})
+
+test_that("Custom provider stores multiple base URLs for failover", {
+    p <- create_custom_provider(
+        "failover",
+        "https://primary.example/v1, https://backup.example/v1"
+    )
+    m <- p$language_model("test-model")
+
+    expect_equal(m$get_config()$base_url, "https://primary.example/v1")
+    expect_equal(m$get_config()$base_urls, c("https://primary.example/v1", "https://backup.example/v1"))
+})
+
+test_that("Custom Anthropic provider builds failover endpoint URLs", {
+    p <- create_custom_provider(
+        "failover_anthropic",
+        "https://primary.example/v1, https://backup.example/v1",
+        api_format = "anthropic_messages"
+    )
+    m <- p$language_model("test-model")
+    captured_url <- NULL
+
+    testthat::local_mocked_bindings(
+        post_to_api = function(url, headers, body, ...) {
+            captured_url <<- url
+            list(
+                content = list(list(type = "text", text = "ok")),
+                stop_reason = "end_turn",
+                usage = list(input_tokens = 1, output_tokens = 1)
+            )
+        },
+        .package = "aisdk"
+    )
+
+    m$do_generate(list(
+        messages = list(list(role = "user", content = "test")),
+        max_tokens = 16
+    ))
+
+    expect_equal(captured_url, c(
+        "https://primary.example/v1/messages",
+        "https://backup.example/v1/messages"
+    ))
 })
 
 test_that("Custom provider overrides endpoint correctly", {
@@ -145,6 +201,7 @@ test_that("Custom provider integrates with Registry", {
 test_that("Default registry resolves custom provider from environment", {
     registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
     old_base <- Sys.getenv("AISDK_CUSTOM_BASE_URL", unset = "")
+    old_bases <- Sys.getenv("AISDK_CUSTOM_BASE_URLS", unset = "")
     old_key <- Sys.getenv("AISDK_CUSTOM_API_KEY", unset = "")
     old_format <- Sys.getenv("AISDK_CUSTOM_API_FORMAT", unset = "")
     old_reasoning <- Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "")
@@ -152,6 +209,7 @@ test_that("Default registry resolves custom provider from environment", {
 
     on.exit({
         if (nzchar(old_base)) Sys.setenv(AISDK_CUSTOM_BASE_URL = old_base) else Sys.unsetenv("AISDK_CUSTOM_BASE_URL")
+        if (nzchar(old_bases)) Sys.setenv(AISDK_CUSTOM_BASE_URLS = old_bases) else Sys.unsetenv("AISDK_CUSTOM_BASE_URLS")
         if (nzchar(old_key)) Sys.setenv(AISDK_CUSTOM_API_KEY = old_key) else Sys.unsetenv("AISDK_CUSTOM_API_KEY")
         if (nzchar(old_format)) Sys.setenv(AISDK_CUSTOM_API_FORMAT = old_format) else Sys.unsetenv("AISDK_CUSTOM_API_FORMAT")
         if (nzchar(old_reasoning)) Sys.setenv(AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS = old_reasoning) else Sys.unsetenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS")
@@ -160,6 +218,7 @@ test_that("Default registry resolves custom provider from environment", {
 
     Sys.setenv(
         AISDK_CUSTOM_BASE_URL = "https://api.custom-env.example/v1",
+        AISDK_CUSTOM_BASE_URLS = "https://api.custom-env-backup.example/v1",
         AISDK_CUSTOM_API_KEY = "sk-custom-env",
         AISDK_CUSTOM_API_FORMAT = "chat_completions"
     )
@@ -170,4 +229,79 @@ test_that("Default registry resolves custom provider from environment", {
     model <- registry$language_model("custom:test-model")
 
     expect_s3_class(model, "OpenAILanguageModel")
+    expect_equal(model$get_config()$base_urls, c(
+        "https://api.custom-env.example/v1",
+        "https://api.custom-env-backup.example/v1"
+    ))
+})
+
+test_that("Default registry resolves custom providers from aisdk.yaml", {
+    registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+    old_default <- registry_env$default %||% NULL
+    old_wd <- getwd()
+    tmp <- tempfile("aisdk-config-")
+    dir.create(tmp)
+    on.exit({
+        setwd(old_wd)
+        registry_env$default <- old_default
+    }, add = TRUE)
+    setwd(tmp)
+
+    writeLines(c(
+        "model_providers:",
+        "  yulab:",
+        "    type: custom",
+        "    base_url: https://primary.yulab.example/v1",
+        "    backup_base_urls:",
+        "      - https://backup.yulab.example/v1",
+        "    wire_api: responses",
+        "    api_key_env: YULAB_TEST_API_KEY",
+        "    disable_stream_options: true",
+        "    supports_native_tools: false"
+    ), "aisdk.yaml")
+    Sys.setenv(YULAB_TEST_API_KEY = "sk-yulab")
+    on.exit(Sys.unsetenv("YULAB_TEST_API_KEY"), add = TRUE)
+
+    registry_env$default <- NULL
+    model <- get_default_registry()$language_model("yulab:gpt-5.5")
+
+    expect_s3_class(model, "OpenAIResponsesLanguageModel")
+    expect_equal(model$get_config()$provider_name, "yulab")
+    expect_equal(model$get_config()$api_key, "sk-yulab")
+    expect_equal(model$get_config()$base_urls, c(
+        "https://primary.yulab.example/v1",
+        "https://backup.yulab.example/v1"
+    ))
+})
+
+test_that("Configured providers accept base_urls without separate base_url", {
+    registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+    old_default <- registry_env$default %||% NULL
+    old_wd <- getwd()
+    tmp <- tempfile("aisdk-config-")
+    dir.create(tmp)
+    on.exit({
+        setwd(old_wd)
+        registry_env$default <- old_default
+    }, add = TRUE)
+    setwd(tmp)
+
+    writeLines(c(
+        "model_providers:",
+        "  yulab:",
+        "    type: custom",
+        "    base_urls:",
+        "      - https://primary.yulab.example/v1",
+        "      - https://backup.yulab.example/v1",
+        "    wire_api: responses"
+    ), "aisdk.yaml")
+
+    registry_env$default <- NULL
+    model <- get_default_registry()$language_model("yulab:gpt-5.5")
+
+    expect_equal(model$get_config()$base_url, "https://primary.yulab.example/v1")
+    expect_equal(model$get_config()$base_urls, c(
+        "https://primary.yulab.example/v1",
+        "https://backup.yulab.example/v1"
+    ))
 })

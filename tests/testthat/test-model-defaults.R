@@ -1,6 +1,24 @@
+local_restore_model_defaults <- function() {
+  caller <- parent.frame()
+  env <- get(".model_env", envir = asNamespace("aisdk"))
+  old_default <- env$default %||% NULL
+  old_options_env <- env$options %||% NULL
+  old_default_option <- getOption("aisdk.default_model")
+  old_options_option <- getOption("aisdk.default_model_options")
+
+  withr::defer({
+    env$default <- old_default
+    env$options <- old_options_env
+    options(
+      aisdk.default_model = old_default_option,
+      aisdk.default_model_options = old_options_option
+    )
+  }, envir = caller)
+}
+
 test_that("set_model and model manage the package default", {
+  local_restore_model_defaults()
   old <- get_model()
-  on.exit(set_model(old, reset_options = TRUE), add = TRUE)
 
   previous <- set_model("mock:test-model")
   expect_identical(previous, old)
@@ -13,8 +31,8 @@ test_that("set_model and model manage the package default", {
 })
 
 test_that("set_model can adjust runtime options without changing the model", {
+  local_restore_model_defaults()
   old <- get_model()
-  on.exit(set_model(old, reset_options = TRUE), add = TRUE)
 
   set_model("mock:runtime-target")
   previous <- set_model(context_window = 64000, thinking = "on")
@@ -30,8 +48,7 @@ test_that("set_model can adjust runtime options without changing the model", {
 })
 
 test_that("set_model stores runtime options for default model calls and sessions", {
-  old <- get_model()
-  on.exit(set_model(old, reset_options = TRUE), add = TRUE)
+  local_restore_model_defaults()
 
   captured <- NULL
   mock_model <- structure(
@@ -76,9 +93,117 @@ test_that("set_model stores runtime options for default model calls and sessions
   expect_equal(session_options$call_options$max_tokens, 700)
 })
 
+test_that("aisdk.yaml can define default model and runtime options", {
+  local_restore_model_defaults()
+  old_wd <- getwd()
+  tmp <- tempfile("aisdk-config-")
+  dir.create(tmp)
+  on.exit({
+    setwd(old_wd)
+  }, add = TRUE)
+  setwd(tmp)
+  set_model(NULL, reset_options = TRUE)
+  options(aisdk.default_model = NULL)
+
+  writeLines(c(
+    "default_model: yulab:gpt-5.5",
+    "model_providers:",
+    "  yulab:",
+    "    type: custom",
+    "    base_url: https://api.yulab.example/v1",
+    "    wire_api: responses",
+    "models:",
+    "  yulab:gpt-5.5:",
+    "    reasoning_effort: xhigh",
+    "    context_window: 1000000",
+    "    max_output_tokens: 384000",
+    "    max_tokens: 700"
+  ), "aisdk.yaml")
+
+  expect_equal(get_model(), "yulab:gpt-5.5")
+  opts <- get_model_options()
+  expect_equal(opts$context_window, 1000000)
+  expect_equal(opts$max_output_tokens, 384000)
+  expect_equal(opts$call_options$reasoning_effort, "xhigh")
+  expect_equal(opts$call_options$max_tokens, 700)
+
+  session <- create_chat_session("yulab:gpt-5.5")
+  expect_equal(session$get_model_options()$context_window, 1000000)
+  expect_equal(session$get_model_options()$call_options$reasoning_effort, "xhigh")
+})
+
+test_that("aisdk.yaml supports top-level model_provider and model", {
+  local_restore_model_defaults()
+  old_wd <- getwd()
+  tmp <- tempfile("aisdk-config-")
+  dir.create(tmp)
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(tmp)
+  set_model(NULL, reset_options = TRUE)
+  options(aisdk.default_model = NULL)
+
+  writeLines(c(
+    "model_provider: yulab",
+    "model: gpt-5.5",
+    "model_context_window: 1000000",
+    "model_reasoning_effort: xhigh",
+    "model_providers:",
+    "  yulab:",
+    "    type: custom",
+    "    base_url: https://api.yulab.example/v1",
+    "    wire_api: responses"
+  ), "aisdk.yaml")
+
+  expect_equal(get_model(), "yulab:gpt-5.5")
+  opts <- get_model_options()
+  expect_equal(opts$context_window, 1000000)
+  expect_equal(opts$call_options$reasoning_effort, "xhigh")
+})
+
+test_that("project aisdk.yaml overrides global config values", {
+  project_cfg <- tempfile(fileext = ".yaml")
+  global_cfg <- tempfile(fileext = ".yaml")
+
+  writeLines(c(
+    "default_model: global:model",
+    "models:",
+    "  shared:model:",
+    "    reasoning_effort: low"
+  ), global_cfg)
+  writeLines(c(
+    "default_model: project:model",
+    "models:",
+    "  shared:model:",
+    "    reasoning_effort: high"
+  ), project_cfg)
+
+  cfg <- aisdk:::load_model_config(paths = c(global_cfg, project_cfg))
+  expect_equal(aisdk:::model_config_default_model(cfg), "project:model")
+  expect_equal(aisdk:::model_config_runtime_options("shared:model", cfg)$call_options$reasoning_effort, "high")
+})
+
+test_that("AISDK_CONFIG_FILE overrides default global aisdk config", {
+  config_home <- tempfile("aisdk-config-home-")
+  dir.create(file.path(config_home, "aisdk"), recursive = TRUE)
+  explicit_cfg <- tempfile(fileext = ".yaml")
+  project_dir <- tempfile("aisdk-config-project-")
+  dir.create(project_dir)
+
+  writeLines("default_model: default-global:model", file.path(config_home, "aisdk", "config.yaml"))
+  writeLines("default_model: explicit-global:model", explicit_cfg)
+
+  withr::with_envvar(c(
+    XDG_CONFIG_HOME = config_home,
+    AISDK_CONFIG_FILE = explicit_cfg
+  ), {
+    cfg <- aisdk:::load_model_config(project_dir = project_dir)
+    expect_equal(aisdk:::default_global_model_config_path(), explicit_cfg)
+    expect_equal(aisdk:::model_config_default_model(cfg), "explicit-global:model")
+  })
+})
+
 test_that("generate_text uses the package default model when model is NULL", {
-  old <- get_model()
-  on.exit(set_model(old, reset_options = TRUE), add = TRUE)
+  local_restore_model_defaults()
 
   mock_model <- structure(
     list(
@@ -105,8 +230,7 @@ test_that("generate_text uses the package default model when model is NULL", {
 })
 
 test_that("ChatSession uses the package default model when no model is provided", {
-  old <- get_model()
-  on.exit(set_model(old, reset_options = TRUE), add = TRUE)
+  local_restore_model_defaults()
 
   registry <- ProviderRegistry$new()
   registry$register("mock", function(model_id) {

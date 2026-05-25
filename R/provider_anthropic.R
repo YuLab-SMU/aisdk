@@ -144,7 +144,7 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @param params A list of call options including messages, temperature, etc.
     #' @return A GenerateResult object.
     do_generate = function(params) {
-      url <- paste0(private$config$base_url, "/messages")
+      url <- api_endpoint_urls(private$config, "/messages")
       headers <- private$get_headers()
 
       # Format messages for Anthropic API
@@ -264,7 +264,7 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @param callback A function called for each chunk: callback(text, done).
     #' @return A GenerateResult object.
     do_stream = function(params, callback) {
-      url <- paste0(private$config$base_url, "/messages")
+      url <- api_endpoint_urls(private$config, "/messages")
       headers <- private$get_headers()
 
       # Format messages for Anthropic API
@@ -369,6 +369,10 @@ is_empty_args <- function(args) {
 #' @param headers A named list of HTTP headers.
 #' @param body The request body (will be converted to JSON).
 #' @param callback A function called for each text delta.
+#' @param max_retries Maximum number of connection/first-event retries
+#'   before any stream chunk has been delivered.
+#' @param initial_delay_ms Initial delay in milliseconds.
+#' @param backoff_factor Multiplier for delay on each retry.
 #' @param timeout_seconds Legacy alias for `total_timeout_seconds`.
 #' @param total_timeout_seconds Optional total stream timeout in seconds.
 #' @param first_byte_timeout_seconds Optional time-to-first-byte timeout in seconds.
@@ -377,11 +381,40 @@ is_empty_args <- function(args) {
 #' @return A GenerateResult object.
 #' @keywords internal
 stream_anthropic <- function(url, headers, body, callback,
+                             max_retries = 5,
+                             initial_delay_ms = 2000,
+                             backoff_factor = 2,
                              timeout_seconds = NULL,
                              total_timeout_seconds = NULL,
                              first_byte_timeout_seconds = NULL,
                              connect_timeout_seconds = NULL,
                              idle_timeout_seconds = NULL) {
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+  if (length(urls) > 1) {
+    return(stream_anthropic_failover(
+      urls = urls,
+      headers = headers,
+      body = body,
+      callback = callback,
+      max_retries = max_retries,
+      initial_delay_ms = initial_delay_ms,
+      backoff_factor = backoff_factor,
+      timeout_seconds = timeout_seconds,
+      total_timeout_seconds = total_timeout_seconds,
+      first_byte_timeout_seconds = first_byte_timeout_seconds,
+      connect_timeout_seconds = connect_timeout_seconds,
+      idle_timeout_seconds = idle_timeout_seconds
+    ))
+  }
+  url <- urls[[1]]
+
+  if (!preflight_internet(url)) {
+    return(GenerateResult$new())
+  }
+
   timeout_config <- resolve_request_timeout_config(
     timeout_seconds = timeout_seconds,
     total_timeout_seconds = total_timeout_seconds,
@@ -396,96 +429,227 @@ stream_anthropic <- function(url, headers, body, callback,
   req <- apply_request_timeout_config(req, timeout_config)
   req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
-  # Establish connection
-  resp <- httr2::req_perform_connection(req)
+  attempt <- 0L
+  delay_ms <- initial_delay_ms
 
-  # Ensure connection is closed when function exits
-  on.exit(close(resp), add = TRUE)
+  run_stream_attempt <- function() {
+    resp <- NULL
+    stream_state <- new.env(parent = emptyenv())
+    stream_state$delivered_events <- FALSE
 
-  # Check status code immediately
-  status <- httr2::resp_status(resp)
-  if (status >= 400) {
-    # If error, try to read the body to give a helpful message
-    error_text <- tryCatch(
-      httr2::resp_body_string(resp),
-      error = function(e) "Unknown error (could not read body)"
-    )
+    on.exit(stream_response_close(resp), add = TRUE)
 
-    rlang::abort(c(
-      paste0("API request failed with status ", status),
-      "i" = paste0("URL: ", url),
-      "x" = error_text
-    ), class = "aisdk_api_error")
-  }
+    resp <- stream_perform_connection(req)
 
-  # Create aggregator for unified state management
-  agg <- SSEAggregator$new(callback)
+    status <- stream_response_status(resp)
+    if (status >= 400) {
+      error_text <- tryCatch(
+        stream_response_body_string(resp),
+        error = function(e) "Unknown error (could not read body)"
+      )
+      abort_http_api_error(status = status, url = url, error_body = error_text)
+    }
 
-  # Track whether we're seeing OpenAI-proxy format
-  openai_seen <- FALSE
-
-  debug_opt <- getOption("aisdk.debug", FALSE)
-  debug_enabled <- isTRUE(debug_opt) || (is.character(debug_opt) && tolower(debug_opt) %in% c("1", "true", "yes", "on"))
-  debug_env <- Sys.getenv("AISDK_DEBUG", "")
-  if (nzchar(debug_env) && tolower(debug_env) %in% c("1", "true", "yes", "on")) {
-    debug_enabled <- TRUE
-  }
-
-  # Process stream
-  while (!httr2::resp_stream_is_complete(resp)) {
-    event <- httr2::resp_stream_sse(resp)
-
-    if (is.null(event)) next
-
-    event_type <- event$type
-    data_str <- event$data
-
-    # Parse JSON data
-    event_data <- NULL
-    if (!is.null(data_str) && nzchar(data_str)) {
-      if (data_str == "[DONE]") {
-        break
+    abort_stream_transport_error <- function(e) {
+      stream_class <- if (isTRUE(stream_state$delivered_events)) {
+        "aisdk_stream_partial_error"
+      } else {
+        "aisdk_stream_start_error"
       }
-      tryCatch(
-        {
-          event_data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
-        },
+      header <- if (isTRUE(stream_state$delivered_events)) {
+        "API stream interrupted after data was received"
+      } else {
+        "API stream failed before the first event"
+      }
+      rlang::abort(
+        c(
+          header,
+          "i" = paste0("URL: ", url),
+          "x" = conditionMessage(e)
+        ),
+        class = c(stream_class, request_error_classes(e)),
+        parent = e
+      )
+    }
+
+    agg <- SSEAggregator$new(function(text, done) {
+      stream_state$delivered_events <- TRUE
+      callback(text, done)
+    })
+
+    openai_seen <- FALSE
+
+    debug_opt <- getOption("aisdk.debug", FALSE)
+    debug_enabled <- isTRUE(debug_opt) || (is.character(debug_opt) && tolower(debug_opt) %in% c("1", "true", "yes", "on"))
+    debug_env <- Sys.getenv("AISDK_DEBUG", "")
+    if (nzchar(debug_env) && tolower(debug_env) %in% c("1", "true", "yes", "on")) {
+      debug_enabled <- TRUE
+    }
+
+    repeat {
+      stream_complete <- tryCatch(
+        stream_response_is_complete(resp),
         error = function(e) {
-          # Skip malformed JSON
+          if (is_stream_transport_error(e)) {
+            abort_stream_transport_error(e)
+          }
+          rlang::cnd_signal(e)
         }
       )
-    }
+      if (isTRUE(stream_complete)) {
+        break
+      }
 
-    if (isTRUE(debug_enabled)) {
-      debug_evt <- list(
-        event_type = event_type,
-        data_names = names(event_data),
-        has_choices = !is.null(event_data$choices)
+      event <- tryCatch(
+        stream_response_sse(resp),
+        error = function(e) {
+          if (is_stream_transport_error(e)) {
+            abort_stream_transport_error(e)
+          }
+          rlang::cnd_signal(e)
+        }
       )
-      message("aisdk debug: sse_event=", jsonlite::toJSON(debug_evt, auto_unbox = TRUE))
-    }
 
-    # Handle Standard Anthropic Events vs OpenAI Proxy Events
-    if (!is.null(event_data)) {
-      if (!is.null(event_data$choices)) {
-        # --- OpenAI-compatible format (Proxy) ---
-        openai_seen <- TRUE
-        map_openai_chunk(event_data, done = FALSE, agg)
-      } else {
-        # --- Native Anthropic format ---
-        should_break <- map_anthropic_chunk(event_type, event_data, agg)
-        if (isTRUE(should_break)) break
+      if (is.null(event)) {
+        next
+      }
+
+      event_type <- event$type
+      data_str <- event$data
+
+      event_data <- NULL
+      if (!is.null(data_str) && nzchar(data_str)) {
+        if (data_str == "[DONE]") {
+          break
+        }
+        tryCatch(
+          {
+            event_data <- jsonlite::fromJSON(data_str, simplifyVector = FALSE)
+          },
+          error = function(e) {
+            # Skip malformed JSON.
+          }
+        )
+      }
+
+      if (isTRUE(debug_enabled)) {
+        debug_evt <- list(
+          event_type = event_type,
+          data_names = names(event_data),
+          has_choices = !is.null(event_data$choices)
+        )
+        message("aisdk debug: sse_event=", jsonlite::toJSON(debug_evt, auto_unbox = TRUE))
+      }
+
+      if (!is.null(event_data)) {
+        if (!is.null(event_data$choices)) {
+          openai_seen <- TRUE
+          map_openai_chunk(event_data, done = FALSE, agg)
+        } else {
+          should_break <- map_anthropic_chunk(event_type, event_data, agg)
+          if (isTRUE(should_break)) {
+            break
+          }
+        }
       }
     }
+
+    if (openai_seen) {
+      agg$on_done()
+    }
+
+    agg$build_result()
   }
 
-  # --- Finalize and Return Result ---
-  if (openai_seen) {
-    # Close any open reasoning block for OpenAI proxy path
-    agg$on_done()
+  repeat {
+    attempt <- attempt + 1L
+
+    attempt_result <- tryCatch(
+      run_stream_attempt(),
+      error = function(e) e
+    )
+
+    if (!inherits(attempt_result, "error")) {
+      return(attempt_result)
+    }
+
+    retryable_start_failure <- inherits(attempt_result, "aisdk_stream_start_error") ||
+      (!inherits(attempt_result, "aisdk_api_error") && is_stream_transport_error(attempt_result))
+
+    if (retryable_start_failure && attempt <= max_retries) {
+      message(sprintf("Network error, retrying stream in %d ms...", delay_ms))
+      Sys.sleep(delay_ms / 1000)
+      delay_ms <- delay_ms * backoff_factor
+      next
+    }
+
+    if (retryable_start_failure) {
+      abort_retry_api_error(url = url, error = attempt_result)
+    }
+
+    rlang::cnd_signal(attempt_result)
+  }
+}
+
+#' @keywords internal
+stream_anthropic_failover <- function(urls, headers, body, callback,
+                                      max_retries = 5,
+                                      initial_delay_ms = 2000,
+                                      backoff_factor = 2,
+                                      timeout_seconds = NULL,
+                                      total_timeout_seconds = NULL,
+                                      first_byte_timeout_seconds = NULL,
+                                      connect_timeout_seconds = NULL,
+                                      idle_timeout_seconds = NULL) {
+  urls <- order_api_url_candidates(urls)
+  last_error <- NULL
+
+  for (candidate in urls) {
+    result <- tryCatch(
+      stream_anthropic(
+        url = candidate,
+        headers = headers,
+        body = body,
+        callback = callback,
+        max_retries = max_retries,
+        initial_delay_ms = initial_delay_ms,
+        backoff_factor = backoff_factor,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
+      ),
+      error = function(e) e
+    )
+
+    if (!inherits(result, "error")) {
+      mark_api_route_success(candidate)
+      return(result)
+    }
+
+    last_error <- result
+    if (inherits(result, "aisdk_stream_partial_error")) {
+      rlang::cnd_signal(result)
+    }
+
+    retryable <- inherits(result, "aisdk_stream_start_error") ||
+      is_retryable_api_error(result)
+
+    if (!retryable) {
+      rlang::cnd_signal(result)
+    }
+
+    mark_api_route_failure(candidate, conditionMessage(result))
+    if (length(urls) > 1) {
+      message("aisdk: API stream route failed before data was received; trying next configured endpoint.")
+    }
   }
 
-  agg$build_result()
+  if (!is.null(last_error)) {
+    abort_retry_api_error(url = paste(urls, collapse = ", "), error = last_error)
+  }
+  rlang::abort("API stream failed: no API endpoints were attempted.", class = "aisdk_api_error")
 }
 
 #' @title Anthropic Provider Class
@@ -519,9 +683,18 @@ AnthropicProvider <- R6::R6Class(
                           first_byte_timeout_seconds = NULL,
                           connect_timeout_seconds = NULL,
                           idle_timeout_seconds = NULL) {
+      raw_base_url <- base_url %||% paste(
+        c(
+          Sys.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1"),
+          Sys.getenv("ANTHROPIC_BASE_URLS", unset = "")
+        ),
+        collapse = ","
+      )
+      base_urls <- normalize_base_urls(raw_base_url)
       private$config <- list(
         api_key = api_key %||% Sys.getenv("ANTHROPIC_API_KEY"),
-        base_url = sub("/$", "", base_url %||% Sys.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")),
+        base_url = base_urls[[1]],
+        base_urls = base_urls,
         api_version = api_version %||% "2023-06-01",
         headers = headers,
         enable_caching = FALSE, # Default false

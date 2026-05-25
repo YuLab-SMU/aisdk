@@ -15,6 +15,7 @@ console_provider_specs <- function() {
       label = "OpenAI",
       api_key_env = "OPENAI_API_KEY",
       base_url_env = "OPENAI_BASE_URL",
+      backup_base_urls_env = "OPENAI_BASE_URLS",
       model_env = "OPENAI_MODEL",
       default_base_url = "https://api.openai.com/v1",
       default_model = "gpt-4o"
@@ -24,6 +25,7 @@ console_provider_specs <- function() {
       label = "Anthropic",
       api_key_env = "ANTHROPIC_API_KEY",
       base_url_env = "ANTHROPIC_BASE_URL",
+      backup_base_urls_env = "ANTHROPIC_BASE_URLS",
       model_env = "ANTHROPIC_MODEL",
       default_base_url = "https://api.anthropic.com/v1",
       default_model = "claude-sonnet-4-20250514"
@@ -33,6 +35,7 @@ console_provider_specs <- function() {
       label = "Gemini",
       api_key_env = "GEMINI_API_KEY",
       base_url_env = "GEMINI_BASE_URL",
+      backup_base_urls_env = "GEMINI_BASE_URLS",
       model_env = "GEMINI_MODEL",
       default_base_url = "https://generativelanguage.googleapis.com/v1beta/models",
       default_model = "gemini-2.5-flash"
@@ -42,6 +45,7 @@ console_provider_specs <- function() {
       label = "DeepSeek",
       api_key_env = "DEEPSEEK_API_KEY",
       base_url_env = "DEEPSEEK_BASE_URL",
+      backup_base_urls_env = "DEEPSEEK_BASE_URLS",
       model_env = "DEEPSEEK_MODEL",
       default_base_url = "https://api.deepseek.com",
       default_model = "deepseek-v4"
@@ -51,6 +55,7 @@ console_provider_specs <- function() {
       label = "OpenRouter",
       api_key_env = "OPENROUTER_API_KEY",
       base_url_env = "OPENROUTER_BASE_URL",
+      backup_base_urls_env = "OPENROUTER_BASE_URLS",
       model_env = "OPENROUTER_MODEL",
       default_base_url = "https://openrouter.ai/api/v1",
       default_model = "openai/gpt-4o-mini"
@@ -60,6 +65,7 @@ console_provider_specs <- function() {
       label = "xAI",
       api_key_env = "XAI_API_KEY",
       base_url_env = "XAI_BASE_URL",
+      backup_base_urls_env = "XAI_BASE_URLS",
       model_env = "XAI_MODEL",
       default_base_url = "https://api.x.ai/v1",
       default_model = "grok-beta"
@@ -69,6 +75,7 @@ console_provider_specs <- function() {
       label = "NVIDIA",
       api_key_env = "NVIDIA_API_KEY",
       base_url_env = "NVIDIA_BASE_URL",
+      backup_base_urls_env = "NVIDIA_BASE_URLS",
       model_env = "NVIDIA_MODEL",
       default_base_url = "https://integrate.api.nvidia.com/v1",
       default_model = ""
@@ -78,6 +85,7 @@ console_provider_specs <- function() {
       label = "Volcengine",
       api_key_env = "ARK_API_KEY",
       base_url_env = "ARK_BASE_URL",
+      backup_base_urls_env = "ARK_BASE_URLS",
       model_env = "ARK_MODEL",
       default_base_url = "https://ark.cn-beijing.volces.com/api/v3",
       default_model = ""
@@ -87,6 +95,7 @@ console_provider_specs <- function() {
       label = "Bailian",
       api_key_env = "DASHSCOPE_API_KEY",
       base_url_env = "DASHSCOPE_BASE_URL",
+      backup_base_urls_env = "DASHSCOPE_BASE_URLS",
       model_env = "DASHSCOPE_MODEL",
       default_base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1",
       default_model = "qwen-plus"
@@ -96,13 +105,48 @@ console_provider_specs <- function() {
       label = "Custom API",
       api_key_env = "AISDK_CUSTOM_API_KEY",
       base_url_env = "AISDK_CUSTOM_BASE_URL",
+      backup_base_urls_env = "AISDK_CUSTOM_BASE_URLS",
       model_env = "AISDK_CUSTOM_MODEL",
       api_format_env = "AISDK_CUSTOM_API_FORMAT",
       use_max_completion_tokens_env = "AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS",
+      enable_stream_options_env = "AISDK_CUSTOM_ENABLE_STREAM_OPTIONS",
+      supports_native_tools_env = "AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS",
       allow_empty_api_key = TRUE,
       default_base_url = "",
       default_model = "",
-      default_api_format = "chat_completions"
+      default_api_format = "chat_completions",
+      default_enable_stream_options = FALSE,
+      default_supports_native_tools = FALSE
+    ),
+    aihubmix = list(
+      id = "aihubmix",
+      label = "AiHubMix",
+      api_key_env = "AIHUBMIX_API_KEY",
+      base_url_env = "AIHUBMIX_BASE_URL",
+      backup_base_urls_env = "AIHUBMIX_BASE_URLS",
+      model_env = "AIHUBMIX_MODEL",
+      default_base_url = "https://aihubmix.com/v1",
+      default_model = "claude-3-5-sonnet-20241022"
+    ),
+    moonshot = list(
+      id = "moonshot",
+      label = "Moonshot",
+      api_key_env = "MOONSHOT_API_KEY",
+      base_url_env = "MOONSHOT_BASE_URL",
+      backup_base_urls_env = "MOONSHOT_BASE_URLS",
+      model_env = "MOONSHOT_MODEL",
+      default_base_url = "https://api.moonshot.cn/v1",
+      default_model = "kimi-k2.6"
+    ),
+    kimi = list(
+      id = "kimi",
+      label = "Kimi Code",
+      api_key_env = "KIMI_API_KEY",
+      base_url_env = "KIMI_BASE_URL",
+      backup_base_urls_env = "KIMI_BASE_URLS",
+      model_env = "KIMI_MODEL_NAME",
+      default_base_url = "https://api.kimi.com/coding/v1",
+      default_model = "kimi-for-coding"
     )
   )
 }
@@ -157,10 +201,23 @@ read_console_env_file <- function(path) {
 build_console_model_profile <- function(source, scope, values, spec) {
   api_key <- values[[spec$api_key_env]] %||% ""
   base_url <- values[[spec$base_url_env]] %||% spec$default_base_url
+  backup_base_urls <- values[[spec$backup_base_urls_env %||% ""]] %||% ""
   model <- values[[spec$model_env]] %||% ""
   api_format <- values[[spec$api_format_env %||% ""]] %||% spec$default_api_format %||% ""
   use_max_completion_tokens <- values[[spec$use_max_completion_tokens_env %||% ""]] %||% ""
   use_max_completion_tokens <- tolower(use_max_completion_tokens) %in% c("true", "1", "yes")
+  enable_stream_options <- values[[spec$enable_stream_options_env %||% ""]] %||% ""
+  enable_stream_options <- if (nzchar(enable_stream_options)) {
+    tolower(enable_stream_options) %in% c("true", "1", "yes")
+  } else {
+    isTRUE(spec$default_enable_stream_options)
+  }
+  supports_native_tools <- values[[spec$supports_native_tools_env %||% ""]] %||% ""
+  supports_native_tools <- if (nzchar(supports_native_tools)) {
+    tolower(supports_native_tools) %in% c("true", "1", "yes")
+  } else {
+    isTRUE(spec$default_supports_native_tools)
+  }
 
   if (!nzchar(api_key) && !nzchar(model)) {
     return(NULL)
@@ -175,29 +232,42 @@ build_console_model_profile <- function(source, scope, values, spec) {
     scope = scope,
     api_key = api_key,
     base_url = base_url,
+    backup_base_urls = backup_base_urls,
     model = model,
     model_id = model_id,
     api_format = api_format,
     use_max_completion_tokens = use_max_completion_tokens,
+    enable_stream_options = enable_stream_options,
+    supports_native_tools = supports_native_tools,
     env = list(
       key = spec$api_key_env,
       base_url = spec$base_url_env,
+      backup_base_urls = spec$backup_base_urls_env %||% NULL,
       model = spec$model_env,
       api_format = spec$api_format_env %||% NULL,
-      use_max_completion_tokens = spec$use_max_completion_tokens_env %||% NULL
+      use_max_completion_tokens = spec$use_max_completion_tokens_env %||% NULL,
+      enable_stream_options = spec$enable_stream_options_env %||% NULL,
+      supports_native_tools = spec$supports_native_tools_env %||% NULL
     ),
     values = stats::setNames(
       c(
-        list(api_key, base_url, model),
+        list(api_key, base_url),
+        if (!is.null(spec$backup_base_urls_env)) list(backup_base_urls) else list(),
+        list(model),
         if (!is.null(spec$api_format_env)) list(api_format) else list(),
-        if (!is.null(spec$use_max_completion_tokens_env)) list(if (isTRUE(use_max_completion_tokens)) "true" else "false") else list()
+        if (!is.null(spec$use_max_completion_tokens_env)) list(if (isTRUE(use_max_completion_tokens)) "true" else "false") else list(),
+        if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(enable_stream_options)) "true" else "false") else list(),
+        if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list()
       ),
       c(
         spec$api_key_env,
         spec$base_url_env,
+        spec$backup_base_urls_env %||% character(0),
         spec$model_env,
         spec$api_format_env %||% character(0),
-        spec$use_max_completion_tokens_env %||% character(0)
+        spec$use_max_completion_tokens_env %||% character(0),
+        spec$enable_stream_options_env %||% character(0),
+        spec$supports_native_tools_env %||% character(0)
       )
     )
   )
@@ -205,7 +275,9 @@ build_console_model_profile <- function(source, scope, values, spec) {
 
 #' @keywords internal
 discover_console_model_profiles <- function(project_path = ".Renviron",
-                                            global_path = "~/.Renviron") {
+                                            global_path = "~/.Renviron",
+                                            project_config_path = NULL,
+                                            global_config_path = NULL) {
   sources <- list(
     project = read_console_env_file(project_path),
     global = read_console_env_file(global_path)
@@ -224,6 +296,121 @@ discover_console_model_profiles <- function(project_path = ".Renviron",
       )
       if (!is.null(profile)) {
         profiles[[length(profiles) + 1L]] <- profile
+      }
+    }
+  }
+
+  c(
+    profiles,
+    discover_console_yaml_profiles(
+      project_dir = dirname(normalizePath(project_path, winslash = "/", mustWork = FALSE)),
+      project_config_path = project_config_path,
+      global_config_path = global_config_path
+    )
+  )
+}
+
+#' @keywords internal
+build_console_yaml_profile <- function(scope, path, provider_id, provider_cfg, model_id, model_cfg = list(), default_model = NULL) {
+  urls <- normalize_base_urls(c(
+    unlist(provider_cfg$base_url %||% NULL, use.names = FALSE),
+    unlist(provider_cfg$base_urls %||% NULL, use.names = FALSE),
+    unlist(provider_cfg$backup_base_urls %||% NULL, use.names = FALSE)
+  ))
+  base_url <- if (length(urls) > 0) urls[[1]] else ""
+  backup_base_urls <- if (length(urls) > 1) paste(urls[-1], collapse = ",") else ""
+  api_key_env <- provider_cfg$api_key_env %||% ""
+  api_key <- if (nzchar(api_key_env)) Sys.getenv(api_key_env, unset = "") else provider_cfg$api_key %||% ""
+  model_name <- sub("^[^:]+:", "", model_id)
+  api_format <- normalize_wire_api(provider_cfg$wire_api %||% provider_cfg$api_format)
+
+  list(
+    provider = provider_id,
+    provider_label = provider_cfg$name %||% provider_id,
+    source = path,
+    scope = scope,
+    storage = "yaml",
+    api_key = api_key,
+    base_url = base_url,
+    backup_base_urls = backup_base_urls,
+    model = model_name,
+    model_id = model_id,
+    api_format = api_format,
+    use_max_completion_tokens = normalize_config_bool(provider_cfg$use_max_completion_tokens, default = FALSE),
+    enable_stream_options = !normalize_config_bool(provider_cfg$disable_stream_options, default = TRUE),
+    supports_native_tools = normalize_config_bool(provider_cfg$supports_native_tools, default = FALSE),
+    is_default = identical(model_id, default_model),
+    env = list(key = api_key_env, base_url = NULL, model = NULL),
+    values = list()
+  )
+}
+
+#' @keywords internal
+discover_console_yaml_profiles <- function(project_dir = getwd(),
+                                           project_config_path = NULL,
+                                           global_config_path = NULL) {
+  project_paths <- if (is.null(project_config_path)) {
+    file.path(project_dir, model_config_project_paths())
+  } else if (grepl("^(/|~|[A-Za-z]:[/\\\\])", project_config_path)) {
+    path.expand(project_config_path)
+  } else {
+    file.path(project_dir, project_config_path)
+  }
+  global_paths <- if (is.null(global_config_path)) {
+    path.expand(model_config_global_paths())
+  } else {
+    path.expand(global_config_path)
+  }
+  paths <- unique(c(project_paths[file.exists(project_paths)], global_paths[file.exists(global_paths)]))
+  profiles <- list()
+  if (length(paths) == 0) {
+    return(profiles)
+  }
+
+  project_norm <- normalizePath(project_dir, winslash = "/", mustWork = FALSE)
+  for (path in paths) {
+    cfg <- read_model_config_file(path)
+    providers <- cfg$model_providers %||% list()
+    if (!is.list(providers) || length(providers) == 0) {
+      next
+    }
+
+    path_norm <- normalizePath(path, winslash = "/", mustWork = FALSE)
+    scope <- if (startsWith(path_norm, project_norm)) "project" else "global"
+    default_model <- model_config_default_model(cfg)
+    models <- cfg$models %||% list()
+
+    for (provider_id in names(providers)) {
+      provider_cfg <- providers[[provider_id]]
+      if (!is.list(provider_cfg)) {
+        next
+      }
+      provider_type <- tolower(trimws(as.character(provider_cfg$type %||% "custom")))
+      if (!provider_type %in% c("custom", "openai_compatible", "openai-compatible")) {
+        next
+      }
+
+      matching_models <- names(models)[startsWith(names(models), paste0(provider_id, ":"))]
+      if (length(matching_models) == 0 && !is.null(default_model) && startsWith(default_model, paste0(provider_id, ":"))) {
+        matching_models <- default_model
+      }
+      if (length(matching_models) == 0) {
+        provider_model <- provider_cfg$model %||% NULL
+        if (!is.null(provider_model) && nzchar(provider_model)) {
+          matching_models <- paste0(provider_id, ":", provider_model)
+        }
+      }
+
+      for (model_id in unique(matching_models)) {
+        profiles[[length(profiles) + 1L]] <- build_console_yaml_profile(
+          scope = scope,
+          path = path,
+          provider_id = provider_id,
+          provider_cfg = provider_cfg,
+          model_id = model_id,
+          model_cfg = models[[model_id]] %||% list(),
+          default_model = default_model
+        )
       }
     }
   }
@@ -288,6 +475,16 @@ discover_console_default_model <- function(project_path = ".Rprofile",
     ))
   }
 
+  config_default <- default_model_from_config()
+  if (!is.null(config_default) && nzchar(config_default)) {
+    return(list(
+      scope = "config",
+      path = NULL,
+      model_id = config_default,
+      source = "config"
+    ))
+  }
+
   list(scope = NULL, path = NULL, model_id = "", source = NULL)
 }
 
@@ -335,6 +532,33 @@ console_rprofile_path_for_scope <- function(scope,
 }
 
 #' @keywords internal
+console_config_path_for_scope <- function(scope,
+                                          project_path = "aisdk.yaml",
+                                          global_path = default_global_model_config_path()) {
+  if (identical(scope, "global")) {
+    return(global_path)
+  }
+  project_path
+}
+
+#' @keywords internal
+console_api_key_env_for_provider <- function(provider_id) {
+  safe_id <- toupper(gsub("[^A-Za-z0-9]+", "_", provider_id))
+  paste0("AISDK_", safe_id, "_API_KEY")
+}
+
+#' @keywords internal
+console_provider_id_from_label <- function(label) {
+  id <- tolower(trimws(label %||% ""))
+  id <- gsub("[^a-z0-9]+", "_", id)
+  id <- gsub("^_+|_+$", "", id)
+  if (!nzchar(id)) {
+    return(NULL)
+  }
+  id
+}
+
+#' @keywords internal
 find_console_profile_by_model_id <- function(model_id, profiles) {
   if (is.null(model_id) || !nzchar(model_id) || length(profiles) == 0) {
     return(NULL)
@@ -358,12 +582,15 @@ console_model_id_is_usable <- function(model_id, profile = NULL) {
 
   provider <- sub(":.*$", "", model_id)
   spec <- console_provider_specs()[[provider]]
+  if (is.null(spec) && identical(profile$storage %||% "", "yaml")) {
+    return(nzchar(profile$base_url %||% ""))
+  }
   if (is.null(spec)) {
     return(FALSE)
   }
 
   if (!is.null(profile)) {
-    if (!nzchar(profile$api_key %||% "")) {
+    if (!isTRUE(spec$allow_empty_api_key) && !nzchar(profile$api_key %||% "")) {
       return(FALSE)
     }
     if (identical(spec$id, "custom") && !nzchar(profile$base_url %||% "")) {
@@ -375,7 +602,7 @@ console_model_id_is_usable <- function(model_id, profile = NULL) {
   has_key <- nzchar(Sys.getenv(spec$api_key_env, unset = ""))
   has_base <- nzchar(Sys.getenv(spec$base_url_env %||% "", unset = ""))
   if (identical(spec$id, "custom")) {
-    return(has_key && has_base)
+    return((has_key || isTRUE(spec$allow_empty_api_key)) && has_base)
   }
   has_key
 }
@@ -465,6 +692,19 @@ resolve_console_provider_spec <- function(provider_id) {
     rlang::abort(sprintf("Unknown console provider: %s", provider_id))
   }
   spec
+}
+
+#' @keywords internal
+resolve_console_profile_provider_spec <- function(profile) {
+  provider_id <- profile$provider %||% ""
+  spec <- console_provider_specs()[[provider_id]]
+  if (!is.null(spec)) {
+    return(spec)
+  }
+  if (identical(profile$storage %||% "", "yaml")) {
+    return(console_provider_specs()[["custom"]])
+  }
+  resolve_console_provider_spec(provider_id)
 }
 
 #' @keywords internal
@@ -631,10 +871,15 @@ choose_console_save_target <- function(menu_fn,
                                        project_path = ".Renviron",
                                        global_path = "~/.Renviron",
                                        project_rprofile_path = ".Rprofile",
-                                       global_rprofile_path = "~/.Rprofile") {
+                                       global_rprofile_path = "~/.Rprofile",
+                                       project_config_path = "aisdk.yaml",
+                                       global_config_path = default_global_model_config_path()) {
   if (!is.null(existing_profile)) {
     existing_scope <- existing_profile$scope %||% "project"
-    existing_path <- if (identical(existing_scope, "project")) project_path else global_path
+    existing_path <- if (identical(existing_profile$storage %||% "", "yaml")) {
+      existing_profile$source %||% console_config_path_for_scope(existing_scope, project_config_path, global_config_path)
+    } else if (identical(existing_scope, "project")) project_path else global_path
+    existing_env_path <- if (identical(existing_scope, "project")) project_path else global_path
     existing_rprofile_path <- console_rprofile_path_for_scope(
       existing_scope,
       project_path = project_rprofile_path,
@@ -644,8 +889,10 @@ choose_console_save_target <- function(menu_fn,
       "Save setup?",
       c(
         sprintf("Overwrite saved (%s)", existing_scope),
-        "Save to project",
-        "Save globally",
+        "Save to project .Renviron",
+        "Save globally .Renviron",
+        "Save project aisdk.yaml",
+        "Save global aisdk.yaml",
         "Session only"
       )
     )
@@ -654,16 +901,24 @@ choose_console_save_target <- function(menu_fn,
     }
     return(switch(
       as.character(selection),
-      "1" = list(mode = "save", path = existing_path, rprofile_path = existing_rprofile_path),
+      "1" = list(
+        mode = existing_profile$storage %||% "save",
+        path = existing_path,
+        env_path = if (identical(existing_profile$storage %||% "", "yaml")) existing_env_path else NULL,
+        scope = existing_scope,
+        rprofile_path = existing_rprofile_path
+      ),
       "2" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
       "3" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
+      "4" = list(mode = "yaml", path = project_config_path, env_path = project_path, scope = "project", rprofile_path = project_rprofile_path),
+      "5" = list(mode = "yaml", path = global_config_path, env_path = global_path, scope = "global", rprofile_path = global_rprofile_path),
       list(mode = "session", path = NULL, rprofile_path = NULL)
     ))
   }
 
   selection <- menu_fn(
     "Save setup?",
-    c("Save to project", "Save globally", "Session only")
+    c("Save to project .Renviron", "Save globally .Renviron", "Save project aisdk.yaml", "Save global aisdk.yaml", "Session only")
   )
   if (is.null(selection)) {
     return(NULL)
@@ -672,6 +927,8 @@ choose_console_save_target <- function(menu_fn,
     as.character(selection),
     "1" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
     "2" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
+    "3" = list(mode = "yaml", path = project_config_path, env_path = project_path, scope = "project", rprofile_path = project_rprofile_path),
+    "4" = list(mode = "yaml", path = global_config_path, env_path = global_path, scope = "global", rprofile_path = global_rprofile_path),
     list(mode = "session", path = NULL, rprofile_path = NULL)
   )
 }
@@ -684,22 +941,53 @@ finalize_console_profile <- function(spec,
                                      api_format = NULL,
                                      save_target,
                                      save_fn,
-                                     remember_model_fn) {
+                                     remember_model_fn,
+                                     provider_id = spec$id) {
   updates <- stats::setNames(
     c(
       list(api_key, base_url, model),
-      if (!is.null(spec$api_format_env)) list(api_format %||% spec$default_api_format %||% "") else list()
+      if (!is.null(spec$api_format_env)) list(api_format %||% spec$default_api_format %||% "") else list(),
+      if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(spec$default_enable_stream_options)) "true" else "false") else list(),
+      if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(spec$default_supports_native_tools)) "true" else "false") else list()
     ),
     c(
       spec$api_key_env,
       spec$base_url_env,
       spec$model_env,
-      spec$api_format_env %||% character(0)
+      spec$api_format_env %||% character(0),
+      spec$enable_stream_options_env %||% character(0),
+      spec$supports_native_tools_env %||% character(0)
     )
   )
 
-  model_id <- paste0(spec$id, ":", model)
-  if (!is.null(save_target) && identical(save_target$mode, "save")) {
+  provider_id <- provider_id %||% spec$id
+  model_id <- paste0(provider_id, ":", model)
+  if (!is.null(save_target) && identical(save_target$mode, "yaml")) {
+    api_key_env <- console_api_key_env_for_provider(provider_id)
+    provider_config <- list(
+      type = "custom",
+      name = if (!identical(provider_id, spec$id)) provider_id else spec$label,
+      base_url = base_url,
+      wire_api = api_format %||% spec$default_api_format %||% "chat_completions",
+      api_key_env = api_key_env,
+      requires_openai_auth = nzchar(api_key %||% ""),
+      disable_stream_options = !isTRUE(spec$default_enable_stream_options),
+      supports_native_tools = isTRUE(spec$default_supports_native_tools)
+    )
+    update_model_config_file(
+      path = save_target$path,
+      provider_id = provider_id,
+      provider_config = provider_config,
+      model_id = model_id,
+      model_config = list(),
+      default_model = model_id
+    )
+    reset_default_registry()
+    if (nzchar(api_key %||% "")) {
+      save_fn(stats::setNames(list(api_key), api_key_env), path = save_target$env_path %||% ".Renviron")
+    }
+    remember_model_fn(model_id, path = save_target$rprofile_path %||% NULL)
+  } else if (!is.null(save_target) && identical(save_target$mode, "save")) {
     save_fn(updates, path = save_target$path)
     remember_model_fn(model_id, path = save_target$rprofile_path %||% NULL)
   } else {
@@ -721,7 +1009,9 @@ run_console_profile_setup <- function(spec,
                                       project_path = ".Renviron",
                                       global_path = "~/.Renviron",
                                       project_rprofile_path = ".Rprofile",
-                                      global_rprofile_path = "~/.Rprofile") {
+                                      global_rprofile_path = "~/.Rprofile",
+                                      project_config_path = "aisdk.yaml",
+                                      global_config_path = default_global_model_config_path()) {
   api_format <- choose_console_api_format(
     spec = spec,
     menu_fn = menu_fn,
@@ -771,10 +1061,22 @@ run_console_profile_setup <- function(spec,
     project_path = project_path,
     global_path = global_path,
     project_rprofile_path = project_rprofile_path,
-    global_rprofile_path = global_rprofile_path
+    global_rprofile_path = global_rprofile_path,
+    project_config_path = project_config_path,
+    global_config_path = global_config_path
   )
   if (is.null(save_target)) {
     return(NULL)
+  }
+
+  provider_id <- spec$id
+  if (identical(spec$id, "custom") && identical(save_target$mode %||% "", "yaml")) {
+    existing_provider <- if (!identical(existing_profile$provider %||% "", "custom")) existing_profile$provider else NULL
+    provider_answer <- input_fn("Custom setup name", default = existing_provider %||% "custom")
+    provider_id <- console_provider_id_from_label(provider_answer)
+    if (is.null(provider_id)) {
+      return(NULL)
+    }
   }
 
   finalize_console_profile(
@@ -785,7 +1087,8 @@ run_console_profile_setup <- function(spec,
     api_format = api_format,
     save_target = save_target,
     save_fn = save_fn,
-    remember_model_fn = remember_model_fn
+    remember_model_fn = remember_model_fn,
+    provider_id = provider_id
   )
 }
 
@@ -845,15 +1148,22 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
                                             global_path = "~/.Renviron",
                                             project_rprofile_path = ".Rprofile",
                                             global_rprofile_path = "~/.Rprofile",
+                                            project_config_path = "aisdk.yaml",
+                                            global_config_path = default_global_model_config_path(),
                                             prompt_hooks = default_console_prompt_hooks()) {
   specs <- console_provider_specs()
-  profiles <- discover_console_model_profiles(project_path = project_path, global_path = global_path)
   menu_fn <- prompt_hooks$menu %||% console_menu
   input_fn <- prompt_hooks$input %||% console_input
   save_fn <- prompt_hooks$save %||% update_renviron
   apply_profile_fn <- prompt_hooks$apply_profile %||% apply_console_profile
   remember_model_fn <- prompt_hooks$remember_model %||% remember_console_default_model
   model_choices_fn <- prompt_hooks$model_choices %||% console_model_choices_for_provider
+  profiles <- discover_console_model_profiles(
+    project_path = project_path,
+    global_path = global_path,
+    project_config_path = project_config_path,
+    global_config_path = global_config_path
+  )
 
   if (length(profiles) > 0) {
     choices <- c(
@@ -884,7 +1194,7 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
         return(NULL)
       }
       profile <- profiles[[edit_selection]]
-      spec <- resolve_console_provider_spec(profile$provider)
+      spec <- resolve_console_profile_provider_spec(profile)
       return(
         run_console_profile_setup(
           spec = spec,
@@ -897,7 +1207,9 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
           project_path = project_path,
           global_path = global_path,
           project_rprofile_path = project_rprofile_path,
-          global_rprofile_path = global_rprofile_path
+          global_rprofile_path = global_rprofile_path,
+          project_config_path = project_config_path,
+          global_config_path = global_config_path
         )
       )
     }
@@ -921,6 +1233,8 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
     project_path = project_path,
     global_path = global_path,
     project_rprofile_path = project_rprofile_path,
-    global_rprofile_path = global_rprofile_path
+    global_rprofile_path = global_rprofile_path,
+    project_config_path = project_config_path,
+    global_config_path = global_config_path
   )
 }

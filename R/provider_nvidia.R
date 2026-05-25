@@ -59,7 +59,13 @@ NvidiaProvider <- R6::R6Class(
                           idle_timeout_seconds = NULL) {
       super$initialize(
         api_key = api_key %||% Sys.getenv("NVIDIA_API_KEY"),
-        base_url = base_url %||% Sys.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+        base_url = base_url %||% paste(
+          c(
+            Sys.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+            Sys.getenv("NVIDIA_BASE_URLS", unset = "")
+          ),
+          collapse = ","
+        ),
         headers = headers,
         name = "nvidia",
         timeout_seconds = timeout_seconds,

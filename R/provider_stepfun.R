@@ -155,7 +155,7 @@ StepfunImageModel <- R6::R6Class(
             body <- body[!sapply(body, is.null)]
 
             response <- post_to_api(
-                paste0(private$config$base_url, "/images/generations"),
+                api_endpoint_urls(private$config, "/images/generations"),
                 private$get_headers(),
                 body
             )
@@ -207,7 +207,7 @@ StepfunImageModel <- R6::R6Class(
             body <- body[!sapply(body, is.null)]
 
             response <- post_multipart_to_api(
-                paste0(private$config$base_url, "/images/edits"),
+                api_endpoint_urls(private$config, "/images/edits"),
                 private$get_headers(include_content_type = FALSE),
                 body
             )
@@ -252,7 +252,13 @@ StepfunProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("STEPFUN_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("STEPFUN_BASE_URL", "https://api.stepfun.com/v1"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("STEPFUN_BASE_URL", "https://api.stepfun.com/v1"),
+                            Sys.getenv("STEPFUN_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "stepfun",
                     timeout_seconds = timeout_seconds,

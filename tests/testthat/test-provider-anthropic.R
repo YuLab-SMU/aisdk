@@ -36,6 +36,18 @@ test_that("Anthropic provider uses custom API version", {
   expect_s3_class(provider, "AnthropicProvider")
 })
 
+test_that("Anthropic provider stores multiple base URLs for failover", {
+  provider <- suppressWarnings(create_anthropic(
+    api_key = "test-key",
+    base_url = "https://primary.example/v1, https://backup.example/v1"
+  ))
+  model <- provider$language_model(anthropic_model)
+  config <- model$get_config()
+
+  expect_equal(config$base_url, "https://primary.example/v1")
+  expect_equal(config$base_urls, c("https://primary.example/v1", "https://backup.example/v1"))
+})
+
 test_that("create_anthropic() warns when API key is missing", {
   # Temporarily unset API key
   old_key <- Sys.getenv("ANTHROPIC_API_KEY")

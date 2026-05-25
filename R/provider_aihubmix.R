@@ -115,7 +115,13 @@ AiHubMixProvider <- R6::R6Class(
             suppressWarnings(
                 super$initialize(
                     api_key = api_key %||% Sys.getenv("AIHUBMIX_API_KEY"),
-                    base_url = base_url %||% Sys.getenv("AIHUBMIX_BASE_URL", "https://aihubmix.com/v1"),
+                    base_url = base_url %||% paste(
+                        c(
+                            Sys.getenv("AIHUBMIX_BASE_URL", "https://aihubmix.com/v1"),
+                            Sys.getenv("AIHUBMIX_BASE_URLS", unset = "")
+                        ),
+                        collapse = ","
+                    ),
                     headers = headers,
                     name = "aihubmix",
                     timeout_seconds = timeout_seconds,

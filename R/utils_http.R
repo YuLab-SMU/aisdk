@@ -21,9 +21,120 @@ should_skip_internet_check <- function() {
   identical(tolower(trimws(env)), "true") || identical(trimws(env), "1")
 }
 
+#' @keywords internal
+normalize_base_urls <- function(base_url, default = NULL) {
+  base_url <- base_url %||% default
+  if (is.null(base_url)) {
+    return(character(0))
+  }
+
+  values <- unlist(strsplit(as.character(base_url), "[,;\\n]+", perl = TRUE), use.names = FALSE)
+  values <- trimws(values)
+  values <- values[nzchar(values)]
+  values <- sub("/+$", "", values)
+  unique(values)
+}
+
+#' @keywords internal
+api_endpoint_urls <- function(config, path) {
+  bases <- config$base_urls %||% config$base_url
+  paste0(normalize_base_urls(bases), path)
+}
+
 # Tracks which URLs we've already warned about so a single false-negative
 # from curl::has_internet() doesn't spam the console on every retry.
 .aisdk_preflight_warned <- new.env(parent = emptyenv())
+
+# Per-route health state used only when callers provide multiple URL candidates.
+.aisdk_api_route_state <- new.env(parent = emptyenv())
+
+#' @keywords internal
+api_route_key <- function(url) {
+  parsed <- tryCatch(httr2::url_parse(url), error = function(e) NULL)
+  if (is.null(parsed) || is.null(parsed$hostname) || !nzchar(parsed$hostname)) {
+    return(url)
+  }
+  scheme <- parsed$scheme %||% "https"
+  port <- parsed$port %||% ""
+  paste0(scheme, "://", parsed$hostname, if (nzchar(port)) paste0(":", port) else "")
+}
+
+#' @keywords internal
+read_http_failover_cooldown_seconds <- function() {
+  read_timeout_setting(
+    option_name = "aisdk.http_failover_cooldown_seconds",
+    env_name = "AISDK_HTTP_FAILOVER_COOLDOWN_SECONDS",
+    default = 60,
+    arg_name = "http_failover_cooldown_seconds"
+  )
+}
+
+#' @keywords internal
+api_route_state <- function(url) {
+  .aisdk_api_route_state[[api_route_key(url)]] %||% list(failures = 0L, cooldown_until = NULL)
+}
+
+#' @keywords internal
+api_route_is_cooling_down <- function(url, now = Sys.time()) {
+  state <- api_route_state(url)
+  until <- state$cooldown_until %||% NULL
+  !is.null(until) && now < until
+}
+
+#' @keywords internal
+order_api_url_candidates <- function(urls) {
+  urls <- unique(as.character(urls))
+  if (length(urls) <= 1) {
+    return(urls)
+  }
+  active <- urls[!vapply(urls, api_route_is_cooling_down, logical(1))]
+  cooled <- urls[!urls %in% active]
+  if (length(active) == 0) {
+    return(urls)
+  }
+  c(active, cooled)
+}
+
+#' @keywords internal
+mark_api_route_success <- function(url) {
+  key <- api_route_key(url)
+  if (exists(key, envir = .aisdk_api_route_state, inherits = FALSE)) {
+    rm(list = key, envir = .aisdk_api_route_state)
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+mark_api_route_failure <- function(url, reason = NULL) {
+  key <- api_route_key(url)
+  state <- api_route_state(url)
+  state$failures <- as.integer(state$failures %||% 0L) + 1L
+  state$last_error <- reason %||% ""
+  state$last_failure <- Sys.time()
+  state$cooldown_until <- state$last_failure + read_http_failover_cooldown_seconds()
+  .aisdk_api_route_state[[key]] <- state
+  invisible(state)
+}
+
+#' @keywords internal
+api_status_retryable <- function(status) {
+  status %in% c(408L, 409L, 425L, 429L) || status >= 500L
+}
+
+#' @keywords internal
+is_retryable_api_error <- function(error) {
+  inherits(error, "aisdk_api_retryable_error") ||
+    inherits(error, "aisdk_api_timeout_error") ||
+    inherits(error, "aisdk_api_network_error") ||
+    inherits(error, "aisdk_api_server_error")
+}
+
+#' @keywords internal
+normalize_api_url_candidates <- function(url) {
+  urls <- as.character(url)
+  urls <- trimws(urls)
+  urls[nzchar(urls)]
+}
 
 # Connectivity preflight that no longer short-circuits the request.
 #
@@ -231,6 +342,14 @@ http_error_classes <- function(status, error_body = "") {
   param_text <- tolower(payload$error$param %||% "")
   classes <- c("aisdk_api_error")
 
+  if (api_status_retryable(status)) {
+    classes <- c("aisdk_api_retryable_error", classes)
+  }
+
+  if (status == 429) {
+    classes <- c("aisdk_api_rate_limit_error", classes)
+  }
+
   if (status %in% c(408, 504) || grepl("timeout|timed out", body_lower) || grepl("timeout|timed out", message_text)) {
     classes <- c("aisdk_api_timeout_error", classes)
   }
@@ -296,6 +415,10 @@ stream_perform_connection <- function(req) {
   httr2::req_perform_connection(req)
 }
 
+perform_request <- function(req) {
+  httr2::req_perform(req)
+}
+
 stream_response_status <- function(resp) {
   httr2::resp_status(resp)
 }
@@ -332,17 +455,23 @@ abort_http_api_error <- function(status, url, error_body) {
 }
 
 abort_retry_api_error <- function(url, error) {
-  classes <- request_error_classes(error)
+  preserved_classes <- grep("^aisdk_", class(error), value = TRUE)
+  classes <- if (length(preserved_classes) > 0) {
+    unique(c(preserved_classes, "aisdk_api_error"))
+  } else {
+    request_error_classes(error)
+  }
   header <- if ("aisdk_api_timeout_error" %in% classes) {
     "API request timed out after all retries"
   } else {
     "API request failed after all retries"
   }
+  url_label <- if (length(normalize_api_url_candidates(url)) > 1 || grepl(",", url, fixed = TRUE)) "URLs: " else "URL: "
 
   rlang::abort(
     c(
       header,
-      "i" = paste0("URL: ", url),
+      "i" = paste0(url_label, url),
       "x" = conditionMessage(error)
     ),
     class = classes,
@@ -388,6 +517,27 @@ post_to_api <- function(url, headers, body,
                         first_byte_timeout_seconds = NULL,
                         connect_timeout_seconds = NULL,
                         idle_timeout_seconds = NULL) {
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+  if (length(urls) > 1) {
+    return(post_to_api_failover(
+      urls = urls,
+      headers = headers,
+      body = body,
+      max_retries = max_retries,
+      initial_delay_ms = initial_delay_ms,
+      backoff_factor = backoff_factor,
+      timeout_seconds = timeout_seconds,
+      total_timeout_seconds = total_timeout_seconds,
+      first_byte_timeout_seconds = first_byte_timeout_seconds,
+      connect_timeout_seconds = connect_timeout_seconds,
+      idle_timeout_seconds = idle_timeout_seconds
+    ))
+  }
+  url <- urls[[1]]
+
   # CRAN policy: fail gracefully when internet is unavailable. The preflight
   # is non-fatal by default; see `preflight_internet()` for the rationale.
   if (!preflight_internet(url)) {
@@ -417,7 +567,7 @@ post_to_api <- function(url, headers, body,
         req <- apply_request_timeout_config(req, timeout_config)
         req <- httr2::req_error(req, is_error = function(resp) FALSE) # Handle errors manually
 
-        resp <- httr2::req_perform(req)
+        resp <- perform_request(req)
         status <- httr2::resp_status(resp)
 
         if (status >= 200 && status < 300) {
@@ -449,7 +599,7 @@ post_to_api <- function(url, headers, body,
           ))
         } else {
           # Check if retryable (rate limit or server error)
-          is_retryable <- status == 429 || status >= 500
+          is_retryable <- api_status_retryable(status)
 
           if (!is_retryable || attempt > max_retries) {
             error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
@@ -486,6 +636,61 @@ post_to_api <- function(url, headers, body,
   }
 }
 
+#' @keywords internal
+post_to_api_failover <- function(urls, headers, body,
+                                 max_retries = 2,
+                                 initial_delay_ms = 2000,
+                                 backoff_factor = 2,
+                                 timeout_seconds = NULL,
+                                 total_timeout_seconds = NULL,
+                                 first_byte_timeout_seconds = NULL,
+                                 connect_timeout_seconds = NULL,
+                                 idle_timeout_seconds = NULL) {
+  urls <- order_api_url_candidates(urls)
+  last_error <- NULL
+
+  for (candidate in urls) {
+    result <- tryCatch(
+      post_to_api(
+        url = candidate,
+        headers = headers,
+        body = body,
+        max_retries = max_retries,
+        initial_delay_ms = initial_delay_ms,
+        backoff_factor = backoff_factor,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
+      ),
+      error = function(e) e
+    )
+
+    if (!inherits(result, "error")) {
+      mark_api_route_success(candidate)
+      return(result)
+    }
+
+    last_error <- result
+    retryable <- is_retryable_api_error(result)
+
+    if (!retryable) {
+      rlang::cnd_signal(result)
+    }
+
+    mark_api_route_failure(candidate, conditionMessage(result))
+    if (length(urls) > 1) {
+      message("aisdk: API route failed; trying next configured endpoint.")
+    }
+  }
+
+  if (!is.null(last_error)) {
+    abort_retry_api_error(url = paste(urls, collapse = ", "), error = last_error)
+  }
+  rlang::abort("API request failed: no API endpoints were attempted.", class = "aisdk_api_error")
+}
+
 #' @title Post Multipart to API with Retry
 #' @description
 #' Makes a multipart POST request to an API endpoint with automatic retry on
@@ -509,6 +714,27 @@ post_multipart_to_api <- function(url, headers, body,
                                   first_byte_timeout_seconds = NULL,
                                   connect_timeout_seconds = NULL,
                                   idle_timeout_seconds = NULL) {
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+  if (length(urls) > 1) {
+    return(post_multipart_to_api_failover(
+      urls = urls,
+      headers = headers,
+      body = body,
+      max_retries = max_retries,
+      initial_delay_ms = initial_delay_ms,
+      backoff_factor = backoff_factor,
+      timeout_seconds = timeout_seconds,
+      total_timeout_seconds = total_timeout_seconds,
+      first_byte_timeout_seconds = first_byte_timeout_seconds,
+      connect_timeout_seconds = connect_timeout_seconds,
+      idle_timeout_seconds = idle_timeout_seconds
+    ))
+  }
+  url <- urls[[1]]
+
   if (!preflight_internet(url)) {
     return(NULL)
   }
@@ -536,7 +762,7 @@ post_multipart_to_api <- function(url, headers, body,
         req <- apply_request_timeout_config(req, timeout_config)
         req <- httr2::req_error(req, is_error = function(resp) FALSE)
 
-        resp <- httr2::req_perform(req)
+        resp <- perform_request(req)
         status <- httr2::resp_status(resp)
 
         if (status >= 200 && status < 300) {
@@ -561,7 +787,7 @@ post_multipart_to_api <- function(url, headers, body,
           ))
         }
 
-        is_retryable <- status == 429 || status >= 500
+        is_retryable <- api_status_retryable(status)
 
         if (!is_retryable || attempt > max_retries) {
           error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
@@ -577,6 +803,183 @@ post_multipart_to_api <- function(url, headers, body,
           delay_ms <- as.numeric(retry_after) * 1000
         }
 
+        message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+        Sys.sleep(delay_ms / 1000)
+        delay_ms <- delay_ms * backoff_factor
+      },
+      error = function(e) {
+        if (inherits(e, "aisdk_api_error")) {
+          rlang::cnd_signal(e)
+        }
+        if (attempt > max_retries) {
+          abort_retry_api_error(url = url, error = e)
+        }
+        message(sprintf("Network error, retrying in %d ms...", delay_ms))
+        Sys.sleep(delay_ms / 1000)
+        delay_ms <- delay_ms * backoff_factor
+      }
+    )
+  }
+}
+
+#' @keywords internal
+post_multipart_to_api_failover <- function(urls, headers, body,
+                                           max_retries = 2,
+                                           initial_delay_ms = 2000,
+                                           backoff_factor = 2,
+                                           timeout_seconds = NULL,
+                                           total_timeout_seconds = NULL,
+                                           first_byte_timeout_seconds = NULL,
+                                           connect_timeout_seconds = NULL,
+                                           idle_timeout_seconds = NULL) {
+  urls <- order_api_url_candidates(urls)
+  last_error <- NULL
+
+  for (candidate in urls) {
+    result <- tryCatch(
+      post_multipart_to_api(
+        url = candidate,
+        headers = headers,
+        body = body,
+        max_retries = max_retries,
+        initial_delay_ms = initial_delay_ms,
+        backoff_factor = backoff_factor,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
+      ),
+      error = function(e) e
+    )
+
+    if (!inherits(result, "error")) {
+      mark_api_route_success(candidate)
+      return(result)
+    }
+
+    last_error <- result
+    retryable <- is_retryable_api_error(result)
+
+    if (!retryable) {
+      rlang::cnd_signal(result)
+    }
+
+    mark_api_route_failure(candidate, conditionMessage(result))
+    if (length(urls) > 1) {
+      message("aisdk: API route failed; trying next configured endpoint.")
+    }
+  }
+
+  if (!is.null(last_error)) {
+    abort_retry_api_error(url = paste(urls, collapse = ", "), error = last_error)
+  }
+  rlang::abort("Multipart API request failed: no API endpoints were attempted.", class = "aisdk_api_error")
+}
+
+#' @keywords internal
+request_json_from_api <- function(url, headers, method = "GET", body = NULL,
+                                  max_retries = 2,
+                                  initial_delay_ms = 2000,
+                                  backoff_factor = 2,
+                                  timeout_seconds = NULL,
+                                  total_timeout_seconds = NULL,
+                                  first_byte_timeout_seconds = NULL,
+                                  connect_timeout_seconds = NULL,
+                                  idle_timeout_seconds = NULL) {
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+
+  if (length(urls) > 1) {
+    urls <- order_api_url_candidates(urls)
+    last_error <- NULL
+    for (candidate in urls) {
+      result <- tryCatch(
+        request_json_from_api(
+          url = candidate,
+          headers = headers,
+          method = method,
+          body = body,
+          max_retries = max_retries,
+          initial_delay_ms = initial_delay_ms,
+          backoff_factor = backoff_factor,
+          timeout_seconds = timeout_seconds,
+          total_timeout_seconds = total_timeout_seconds,
+          first_byte_timeout_seconds = first_byte_timeout_seconds,
+          connect_timeout_seconds = connect_timeout_seconds,
+          idle_timeout_seconds = idle_timeout_seconds
+        ),
+        error = function(e) e
+      )
+      if (!inherits(result, "error")) {
+        mark_api_route_success(candidate)
+        return(result)
+      }
+      last_error <- result
+      retryable <- is_retryable_api_error(result)
+      if (!retryable) {
+        rlang::cnd_signal(result)
+      }
+      mark_api_route_failure(candidate, conditionMessage(result))
+      message("aisdk: API route failed; trying next configured endpoint.")
+    }
+    abort_retry_api_error(url = paste(urls, collapse = ", "), error = last_error)
+  }
+
+  url <- urls[[1]]
+  if (!preflight_internet(url)) {
+    return(NULL)
+  }
+
+  timeout_config <- resolve_request_timeout_config(
+    timeout_seconds = timeout_seconds,
+    total_timeout_seconds = total_timeout_seconds,
+    first_byte_timeout_seconds = first_byte_timeout_seconds,
+    connect_timeout_seconds = connect_timeout_seconds,
+    idle_timeout_seconds = idle_timeout_seconds,
+    request_type = "request"
+  )
+
+  attempt <- 0L
+  delay_ms <- initial_delay_ms
+
+  repeat {
+    attempt <- attempt + 1L
+    tryCatch(
+      {
+        req <- httr2::request(url)
+        req <- httr2::req_headers(req, !!!headers)
+        req <- httr2::req_method(req, method)
+        if (!is.null(body) && length(body) > 0) {
+          req <- httr2::req_body_json(req, body, auto_unbox = TRUE)
+        }
+        req <- apply_request_timeout_config(req, timeout_config)
+        req <- httr2::req_error(req, is_error = function(resp) FALSE)
+
+        resp <- perform_request(req)
+        status <- httr2::resp_status(resp)
+        if (status >= 200 && status < 300) {
+          resp_text <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+          if (!nzchar(trimws(resp_text %||% ""))) {
+            return(list())
+          }
+          return(jsonlite::fromJSON(resp_text, simplifyVector = FALSE))
+        }
+
+        if (!api_status_retryable(status) || attempt > max_retries) {
+          error_body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+          abort_http_api_error(status = status, url = url, error_body = error_body)
+        }
+
+        retry_after <- httr2::resp_header(resp, "retry-after")
+        retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
+        if (!is.null(retry_after_ms)) {
+          delay_ms <- as.numeric(retry_after_ms)
+        } else if (!is.null(retry_after)) {
+          delay_ms <- as.numeric(retry_after) * 1000
+        }
         message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
         Sys.sleep(delay_ms / 1000)
         delay_ms <- delay_ms * backoff_factor
@@ -635,6 +1038,28 @@ stream_from_api <- function(url, headers, body, callback,
                             first_byte_timeout_seconds = NULL,
                             connect_timeout_seconds = NULL,
                             idle_timeout_seconds = NULL) {
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+  if (length(urls) > 1) {
+    return(stream_from_api_failover(
+      urls = urls,
+      headers = headers,
+      body = body,
+      callback = callback,
+      max_retries = max_retries,
+      initial_delay_ms = initial_delay_ms,
+      backoff_factor = backoff_factor,
+      timeout_seconds = timeout_seconds,
+      total_timeout_seconds = total_timeout_seconds,
+      first_byte_timeout_seconds = first_byte_timeout_seconds,
+      connect_timeout_seconds = connect_timeout_seconds,
+      idle_timeout_seconds = idle_timeout_seconds
+    ))
+  }
+  url <- urls[[1]]
+
   # CRAN policy: fail gracefully when internet is unavailable. The preflight
   # is non-fatal by default; see `preflight_internet()` for the rationale.
   if (!preflight_internet(url)) {
@@ -815,4 +1240,65 @@ stream_from_api <- function(url, headers, body, callback,
 
     rlang::cnd_signal(attempt_result)
   }
+}
+
+#' @keywords internal
+stream_from_api_failover <- function(urls, headers, body, callback,
+                                     max_retries = 5,
+                                     initial_delay_ms = 2000,
+                                     backoff_factor = 2,
+                                     timeout_seconds = NULL,
+                                     total_timeout_seconds = NULL,
+                                     first_byte_timeout_seconds = NULL,
+                                     connect_timeout_seconds = NULL,
+                                     idle_timeout_seconds = NULL) {
+  urls <- order_api_url_candidates(urls)
+  last_error <- NULL
+
+  for (candidate in urls) {
+    result <- tryCatch(
+      stream_from_api(
+        url = candidate,
+        headers = headers,
+        body = body,
+        callback = callback,
+        max_retries = max_retries,
+        initial_delay_ms = initial_delay_ms,
+        backoff_factor = backoff_factor,
+        timeout_seconds = timeout_seconds,
+        total_timeout_seconds = total_timeout_seconds,
+        first_byte_timeout_seconds = first_byte_timeout_seconds,
+        connect_timeout_seconds = connect_timeout_seconds,
+        idle_timeout_seconds = idle_timeout_seconds
+      ),
+      error = function(e) e
+    )
+
+    if (!inherits(result, "error")) {
+      mark_api_route_success(candidate)
+      return(invisible(NULL))
+    }
+
+    last_error <- result
+    if (inherits(result, "aisdk_stream_partial_error")) {
+      rlang::cnd_signal(result)
+    }
+
+    retryable <- inherits(result, "aisdk_stream_start_error") ||
+      is_retryable_api_error(result)
+
+    if (!retryable) {
+      rlang::cnd_signal(result)
+    }
+
+    mark_api_route_failure(candidate, conditionMessage(result))
+    if (length(urls) > 1) {
+      message("aisdk: API stream route failed before data was received; trying next configured endpoint.")
+    }
+  }
+
+  if (!is.null(last_error)) {
+    abort_retry_api_error(url = paste(urls, collapse = ", "), error = last_error)
+  }
+  rlang::abort("API stream failed: no API endpoints were attempted.", class = "aisdk_api_error")
 }

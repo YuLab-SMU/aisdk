@@ -9,8 +9,18 @@ NULL
 .registry_env <- new.env(parent = emptyenv())
 
 #' @keywords internal
+reset_default_registry <- function() {
+  .registry_env$default <- NULL
+  invisible(TRUE)
+}
+
+#' @keywords internal
 create_env_custom_provider <- function() {
   base_url <- Sys.getenv("AISDK_CUSTOM_BASE_URL", unset = "")
+  backup_base_urls <- Sys.getenv("AISDK_CUSTOM_BASE_URLS", unset = "")
+  if (nzchar(backup_base_urls)) {
+    base_url <- paste(c(base_url, backup_base_urls), collapse = ",")
+  }
   if (!nzchar(base_url)) {
     rlang::abort("Custom provider is not configured. Set AISDK_CUSTOM_BASE_URL first.")
   }
@@ -25,7 +35,9 @@ create_env_custom_provider <- function() {
     base_url = base_url,
     api_key = Sys.getenv("AISDK_CUSTOM_API_KEY", unset = ""),
     api_format = api_format,
-    use_max_completion_tokens = tolower(Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "false")) %in% c("true", "1", "yes")
+    use_max_completion_tokens = tolower(Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "false")) %in% c("true", "1", "yes"),
+    disable_stream_options = !tolower(Sys.getenv("AISDK_CUSTOM_ENABLE_STREAM_OPTIONS", unset = "false")) %in% c("true", "1", "yes"),
+    supports_native_tools = tolower(Sys.getenv("AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS", unset = "false")) %in% c("true", "1", "yes")
   )
 }
 
@@ -193,6 +205,12 @@ get_default_registry <- function() {
         if (exists("create_custom_provider", mode = "function")) reg$register("custom", function() suppressWarnings(create_env_custom_provider()))
       },
       error = function(e) {}
+    )
+    tryCatch(
+      register_configured_model_providers(reg),
+      error = function(e) {
+        rlang::warn(paste0("Failed to load aisdk model config: ", conditionMessage(e)))
+      }
     )
 
     .registry_env$default <- reg

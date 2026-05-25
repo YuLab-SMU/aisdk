@@ -73,6 +73,21 @@ test_that("create_gemini() accepts custom base_url", {
     expect_s3_class(model, "GeminiLanguageModel")
 })
 
+test_that("Gemini provider stores multiple base URLs for failover", {
+    provider <- safe_create_provider(create_gemini,
+        api_key = "FAKE",
+        base_url = "https://primary.example/v1beta/models, https://backup.example/v1beta"
+    )
+    model <- provider$language_model(gemini_model)
+    config <- model$get_config()
+
+    expect_equal(config$base_url, "https://primary.example/v1beta/models")
+    expect_equal(config$base_urls, c(
+        "https://primary.example/v1beta/models",
+        "https://backup.example/v1beta"
+    ))
+})
+
 test_that("create_gemini() warns when API key is missing", {
     # Temporarily unset API key
     old_key <- Sys.getenv("GEMINI_API_KEY")
@@ -110,6 +125,23 @@ test_that("Gemini payload builder forms correctly", {
     expect_true(!is.null(body$generationConfig))
     expect_equal(body$generationConfig$temperature, 0.5)
     expect_equal(body$generationConfig$maxOutputTokens, 100)
+})
+
+test_that("Gemini payload builder emits candidate URLs for failover", {
+    provider <- safe_create_provider(create_gemini,
+        api_key = "FAKE",
+        base_url = "https://primary.example/v1beta/models, https://backup.example/v1beta"
+    )
+    model <- provider$language_model("gemini-test")
+
+    payload <- model$build_payload_internal(list(
+        messages = list(list(role = "user", content = "Hello!"))
+    ), stream = FALSE)
+
+    expect_equal(payload$url, c(
+        "https://primary.example/v1beta/models/gemini-test:generateContent?key=FAKE",
+        "https://backup.example/v1beta/models/gemini-test:generateContent?key=FAKE"
+    ))
 })
 
 test_that("Gemini payload builder translates multimodal content blocks", {

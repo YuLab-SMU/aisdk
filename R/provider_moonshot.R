@@ -9,7 +9,11 @@
 NULL
 
 moonshot_base_url_kind <- function(base_url) {
-  base <- tolower(base_url %||% "")
+  base <- base_url %||% ""
+  if (nzchar(base)) {
+    base <- strsplit(base, "[,;\\n]+", perl = TRUE)[[1]][[1]]
+  }
+  base <- tolower(trimws(base))
   if (grepl("api\\.kimi\\.com/coding", base)) {
     return("coding")
   }
@@ -38,6 +42,23 @@ moonshot_first_nonempty <- function(...) {
     }
   }
   ""
+}
+
+moonshot_append_backup_base_urls <- function(base_url, platform) {
+  backup_env <- if (identical(platform, "coding")) {
+    moonshot_first_nonempty(
+      Sys.getenv("KIMI_BASE_URLS", unset = ""),
+      Sys.getenv("KIMI_CODE_BASE_URLS", unset = "")
+    )
+  } else {
+    Sys.getenv("MOONSHOT_BASE_URLS", unset = "")
+  }
+
+  if (nzchar(backup_env)) {
+    paste(c(base_url, backup_env), collapse = ",")
+  } else {
+    base_url
+  }
 }
 
 moonshot_normalize_thinking <- function(thinking) {
@@ -227,6 +248,8 @@ MoonshotProvider <- R6::R6Class(
         base_url <- moonshot_first_nonempty(base_url, env_base_url, "https://api.moonshot.cn/v1")
         api_key <- moonshot_first_nonempty(api_key, Sys.getenv("MOONSHOT_API_KEY", unset = ""))
       }
+
+      base_url <- moonshot_append_backup_base_urls(base_url, platform)
 
       url_kind <- moonshot_base_url_kind(base_url)
       key_kind <- moonshot_key_kind(api_key)
@@ -442,6 +465,7 @@ create_kimi_code_anthropic <- function(api_key = NULL,
     Sys.getenv("KIMI_CODE_API_KEY", unset = "")
   )
   base_url <- moonshot_first_nonempty(base_url, Sys.getenv("KIMI_ANTHROPIC_BASE_URL", unset = ""), "https://api.kimi.com/coding/v1")
+  base_url <- moonshot_append_backup_base_urls(base_url, "coding")
   if (moonshot_key_kind(api_key) != "coding" && nzchar(api_key %||% "")) {
     rlang::warn("Kimi Code Anthropic endpoint requires a Kimi Code API key, not a Kimi Open Platform key.")
   }
