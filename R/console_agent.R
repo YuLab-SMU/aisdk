@@ -1302,22 +1302,31 @@ create_console_agent <- function(working_dir = tempdir(),
     # Build system prompt
     system_prompt <- build_console_system_prompt(working_dir, startup_dir, sandbox_mode, language, profile = profile)
 
-    skill_registry <- if (identical(profile, "minimal")) {
-        NULL
-    } else if (identical(skills, "auto")) {
-        create_auto_skill_registry(project_dir = startup_dir, recursive = TRUE)
-    } else {
-        skills
+    skill_registry <- NULL
+    if (!is.null(skills)) {
+        skill_registry <- if (identical(skills, "auto")) {
+            create_auto_skill_registry(project_dir = startup_dir, recursive = TRUE)
+        } else {
+            coerce_skill_registry(skills, recursive = TRUE, project_dir = startup_dir)
+        }
     }
 
     # Create agent
-    Agent$new(
+    agent <- Agent$new(
         name = "ConsoleAgent",
         description = "Intelligent terminal assistant for natural language command execution",
         system_prompt = system_prompt,
         tools = tools,
-        skills = skill_registry
+        skills = if (identical(profile, "minimal")) NULL else skill_registry
     )
+
+    if (identical(profile, "minimal") &&
+        inherits(skill_registry, "SkillRegistry") &&
+        (skill_registry$count() > 0 || nrow(skill_registry$list_roots()) > 0)) {
+        agent$skill_registry <- skill_registry
+    }
+
+    agent
 }
 
 

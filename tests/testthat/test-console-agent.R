@@ -6,6 +6,30 @@ test_that("create_console_agent creates valid agent", {
       vapply(agent$tools, function(t) t$name, character(1)),
       c("bash", "read_file", "write_file", "edit_file", "r_eval", "r_session_state")
     )
+    expect_s3_class(agent$skill_registry, "SkillRegistry")
+})
+
+test_that("minimal console agent attaches skill registry without skill tools", {
+    skill_root <- tempfile("console-agent-minimal-skills-")
+    dir.create(file.path(skill_root, "custom-skill"), recursive = TRUE)
+    on.exit(unlink(skill_root, recursive = TRUE), add = TRUE)
+
+    writeLines(c(
+        "---",
+        "name: custom-skill",
+        "description: Custom console skill",
+        "---",
+        "Custom skill body"
+    ), file.path(skill_root, "custom-skill", "SKILL.md"))
+
+    agent <- create_console_agent(skills = skill_root, profile = "minimal")
+    session <- create_chat_session(model = "mock:test", agent = agent)
+    registry <- aisdk:::console_get_skill_registry(session)
+    tool_names <- vapply(agent$tools, function(t) t$name, character(1))
+
+    expect_true(registry$has_skill("custom-skill"))
+    expect_false("load_skill" %in% tool_names)
+    expect_false("execute_skill_script" %in% tool_names)
 })
 
 test_that("create_console_agent auto-loads local skill tools when available", {
