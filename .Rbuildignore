@@ -12,6 +12,9 @@
 ^demo
 ^docs
 ^artifacts
+^outputs$
+^aisdk-group-brief\.pptx$
+^classic_ggplot_retry\.png$
 ^CLAUDE\.md$
 ^\.lintr$
 ^\.gemini$
