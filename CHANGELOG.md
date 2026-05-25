@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.5
+
+### Fixed
+- Fixed the agent runtime post-tool completion path so a model can finish by returning ordinary visible text after tool results.
+- Kept `<final_answer>...</final_answer>` as an optional compatibility wrapper instead of requiring it as the only post-tool exit shape.
+- Updated console-agent post-tool handling to stop cleanly when the agent has already produced a final answer.
+
+### Verification
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-core-api.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-console-ui.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-agent-failure-handling.R', reporter = 'summary')"`.
+
 ## 1.3.0
 
 ### Added

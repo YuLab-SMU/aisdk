@@ -209,13 +209,7 @@ text_tool_protocol_missing <- function(result, awaiting_protocol = FALSE) {
   if (isTRUE(has_tool_call) && isTRUE(has_final_answer)) {
     return(TRUE)
   }
-  if (isTRUE(has_tool_call)) {
-    return(FALSE)
-  }
-  if (isTRUE(has_final_answer)) {
-    return(FALSE)
-  }
-  TRUE
+  FALSE
 }
 
 #' @keywords internal
@@ -375,9 +369,12 @@ post_tool_protocol_final_answer_instruction <- function() {
 post_tool_protocol_system_prompt <- function(use_text_tool_fallback = FALSE) {
   paste(
     "Post-tool response protocol:",
-    "After tool results are provided, your next response must be exactly one next action and no prose outside the required structure.",
+    "After tool results are provided, choose exactly one next action:",
+    "If more tool work is needed, call a tool immediately.",
+    "If the task is complete, answer the user directly.",
+    "Do not narrate that you will continue unless you also call a tool.",
     post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
-    post_tool_protocol_final_answer_instruction(),
+    "To finish, write the final user-visible answer. You may wrap it in `<final_answer>...</final_answer>`, but plain final text is also valid.",
     sep = "\n\n"
   )
 }
@@ -386,9 +383,12 @@ post_tool_protocol_system_prompt <- function(use_text_tool_fallback = FALSE) {
 append_post_tool_protocol_message <- function(messages, use_text_tool_fallback = FALSE) {
   content <- paste(
     "Post-tool response protocol:",
-    "Return exactly one of the following shapes and no prose outside the required structure:",
+    "Return exactly one next action:",
     post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
-    post_tool_protocol_final_answer_instruction(),
+    "Or finish by writing the final answer directly. Optional compatibility form:",
+    "<final_answer>",
+    "Your final answer to the user.",
+    "</final_answer>",
     sep = "\n\n"
   )
   c(messages, list(list(role = "user", content = content)))
@@ -403,10 +403,12 @@ text_tool_protocol_correction_message <- function(result, use_text_tool_fallback
   preview <- compact_text_preview(preview_source, width = 800)
   content <- paste(
     "Your previous response after tool results did not follow the required post-tool protocol.",
-    "Do not explain the protocol. Re-emit the next action in exactly one of these forms and no prose outside the required structure:",
+    "Do not explain the protocol. Re-emit exactly one next action.",
+    "Use a tool call if more tool work is needed, or give the final answer directly if the task is complete.",
     "",
     post_tool_protocol_tool_call_instruction(use_text_tool_fallback = use_text_tool_fallback),
     "",
+    "Optional final-answer compatibility form:",
     post_tool_protocol_final_answer_instruction(),
     if (nzchar(preview)) paste0("\nPrevious non-protocol response was:\n", preview) else NULL,
     sep = "\n"
@@ -482,12 +484,13 @@ append_text_tool_result_messages <- function(messages, result, tool_results) {
     lines,
     "",
     "Post-tool response protocol:",
-    "Return exactly one of the following shapes and no prose outside the tags:",
+    "Return exactly one next action:",
     "1. Continue with another tool call:",
     "<tool_call>",
     "{\"name\":\"tool_name\",\"arguments\":{}}",
     "</tool_call>",
-    "2. Finish the task for the user:",
+    "2. Finish the task for the user by writing the final answer directly.",
+    "Optional compatibility form:",
     "<final_answer>",
     "Your final answer to the user.",
     "</final_answer>"

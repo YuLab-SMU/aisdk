@@ -196,7 +196,7 @@ test_that("generate_text falls back to text tool protocol when native tool calli
   )))
 })
 
-test_that("text tool fallback requires a structured post-tool response", {
+test_that("text tool fallback accepts plain final text after tool results", {
   tool_invocations <- list()
   echo_tool <- tool(
     name = "echo",
@@ -208,7 +208,6 @@ test_that("text tool fallback requires a structured post-tool response", {
     }
   )
 
-  correction_prompt <- NULL
   mock_model <- MockModel$new()
   mock_model$capabilities <- list(native_tool_calling = FALSE)
   mock_model$responses <- list(
@@ -223,17 +222,9 @@ test_that("text tool fallback requires a structured post-tool response", {
       usage = list(total_tokens = 10)
     ),
     function(params) {
+      expect_match(params$messages[[length(params$messages)]]$content, "Tool execution results:", fixed = TRUE)
       list(
-        text = "先看看结果，没问题就继续。",
-        tool_calls = NULL,
-        finish_reason = "stop",
-        usage = list(total_tokens = 10)
-      )
-    },
-    function(params) {
-      correction_prompt <<- params$messages[[length(params$messages)]]$content
-      list(
-        text = "<final_answer>Protocol tools worked.</final_answer>",
+        text = "Protocol tools worked.",
         tool_calls = NULL,
         finish_reason = "stop",
         usage = list(total_tokens = 10)
@@ -250,8 +241,7 @@ test_that("text tool fallback requires a structured post-tool response", {
 
   expect_equal(result$text, "Protocol tools worked.")
   expect_equal(tool_invocations, list("protocol"))
-  expect_match(correction_prompt, "did not follow the required post-tool protocol", fixed = TRUE)
-  expect_match(correction_prompt, "<final_answer>", fixed = TRUE)
+  expect_length(mock_model$responses, 0)
 })
 
 test_that("text tool fallback accepts prose around final answer tags", {
@@ -293,7 +283,7 @@ test_that("text tool fallback accepts prose around final answer tags", {
   expect_equal(result$text, "Too loose.")
 })
 
-test_that("post-tool protocol can require explicit final answers with native tool calling", {
+test_that("native post-tool protocol accepts plain final text", {
   echo_tool <- tool(
     name = "echo",
     description = "Echo a message",
@@ -301,7 +291,6 @@ test_that("post-tool protocol can require explicit final answers with native too
     execute = function(args) paste("Echo:", args$message)
   )
 
-  correction_prompt <- NULL
   mock_model <- MockModel$new()
   mock_model$capabilities <- list(native_tool_calling = TRUE)
   mock_model$responses <- list(
@@ -315,16 +304,10 @@ test_that("post-tool protocol can require explicit final answers with native too
       finish_reason = "tool_calls",
       usage = list(total_tokens = 10)
     ),
-    list(
-      text = "I checked the result. Now I will continue.",
-      tool_calls = NULL,
-      finish_reason = "stop",
-      usage = list(total_tokens = 10)
-    ),
     function(params) {
-      correction_prompt <<- params$messages[[length(params$messages)]]$content
+      expect_match(params$messages[[length(params$messages)]]$content, "Post-tool response protocol:", fixed = TRUE)
       list(
-        text = "<final_answer>Native protocol worked.</final_answer>",
+        text = "Native protocol worked.",
         tool_calls = NULL,
         finish_reason = "stop",
         usage = list(total_tokens = 10)
@@ -341,11 +324,10 @@ test_that("post-tool protocol can require explicit final answers with native too
   )
 
   expect_equal(result$text, "Native protocol worked.")
-  expect_match(correction_prompt, "provider's native/API tool-call interface", fixed = TRUE)
-  expect_match(correction_prompt, "I checked the result", fixed = TRUE)
+  expect_length(mock_model$responses, 0)
 })
 
-test_that("stream_text shows native post-tool progress text before correcting", {
+test_that("stream_text accepts native plain final text after tools", {
   echo_tool <- tool(
     name = "echo",
     description = "Echo a message",
@@ -367,13 +349,7 @@ test_that("stream_text shows native post-tool progress text before correcting", 
       usage = list(total_tokens = 10)
     ),
     list(
-      text = "Installing the missing package and rerunning.",
-      tool_calls = NULL,
-      finish_reason = "stop",
-      usage = list(total_tokens = 10)
-    ),
-    list(
-      text = "<final_answer>Native stream protocol worked.</final_answer>",
+      text = "Native stream protocol worked.",
       tool_calls = NULL,
       finish_reason = "stop",
       usage = list(total_tokens = 10)
@@ -395,8 +371,9 @@ test_that("stream_text shows native post-tool progress text before correcting", 
   )
 
   expect_equal(result$text, "Native stream protocol worked.")
-  expect_true(any(grepl("Installing the missing package", chunks, fixed = TRUE)))
+  expect_true(any(grepl("Native stream protocol worked", chunks, fixed = TRUE)))
   expect_false(any(grepl("<final_answer>", chunks, fixed = TRUE)))
+  expect_length(mock_model$responses, 0)
 })
 
 test_that("stream_text emits typed events and keeps tool-call prose out of history", {
@@ -569,7 +546,7 @@ test_that("text tool fallback does not replay prose from tool-call turns", {
   expect_match(messages[[length(messages)]]$content, "Tool execution results:", fixed = TRUE)
 })
 
-test_that("stream_text shows text-tool post-tool progress text before correcting", {
+test_that("stream_text accepts text-tool plain final text after tools", {
   echo_tool <- tool(
     name = "echo",
     description = "Echo a message",
@@ -591,13 +568,7 @@ test_that("stream_text shows text-tool post-tool progress text before correcting
       usage = list(total_tokens = 10)
     ),
     list(
-      text = "Checking the result before answering.",
-      tool_calls = NULL,
-      finish_reason = "stop",
-      usage = list(total_tokens = 10)
-    ),
-    list(
-      text = "<final_answer>Stream protocol worked.</final_answer>",
+      text = "Stream protocol worked.",
       tool_calls = NULL,
       finish_reason = "stop",
       usage = list(total_tokens = 10)
@@ -618,8 +589,9 @@ test_that("stream_text shows text-tool post-tool progress text before correcting
   )
 
   expect_equal(result$text, "Stream protocol worked.")
-  expect_true(any(grepl("Checking the result", chunks, fixed = TRUE)))
+  expect_true(any(grepl("Stream protocol worked", chunks, fixed = TRUE)))
   expect_false(any(grepl("<final_answer>", chunks, fixed = TRUE)))
+  expect_length(mock_model$responses, 0)
 })
 
 test_that("generate_text hides tools that require unavailable model capabilities", {
