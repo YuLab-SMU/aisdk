@@ -61,7 +61,10 @@ console_append_session_event <- function(session,
 
 #' @keywords internal
 console_event_jsonable <- function(x) {
-  if (inherits(x, "aisdk_run_state")) {
+  if (inherits(x, "aisdk_run_state") ||
+      inherits(x, "aisdk_task_state") ||
+      inherits(x, "aisdk_agent_decision") ||
+      inherits(x, "aisdk_run_trace")) {
     x <- unclass(x)
   }
   if (is.list(x)) {

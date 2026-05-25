@@ -537,17 +537,43 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       )
     },
 
+    responses_thinking_enabled = function(thinking, default = FALSE) {
+      if (is.null(thinking)) {
+        return(isTRUE(default))
+      }
+      if (isTRUE(thinking)) {
+        return(TRUE)
+      }
+      if (identical(thinking, FALSE)) {
+        return(FALSE)
+      }
+      if (is.character(thinking) && length(thinking) == 1) {
+        return(tolower(trimws(thinking)) %in% c("on", "true", "1", "yes", "enabled"))
+      }
+      if (is.list(thinking) && !is.null(thinking$type)) {
+        return(tolower(as.character(thinking$type)) %in% c("enabled", "on", "auto"))
+      }
+      FALSE
+    },
+
     # Build the Responses-API `reasoning` body block from flat (reasoning_effort,
-    # reasoning_summary) and/or nested (reasoning = list(...)) inputs. Returns
-    # NULL when neither was supplied — callers should skip setting body$reasoning
-    # in that case so the API can apply its own default.
+    # reasoning_summary), nested (reasoning = list(...)), and the SDK-level
+    # `thinking` switch. OpenAI only exposes visible thinking via reasoning
+    # summaries; for reasoning models, request the default summary stream
+    # unless thinking was explicitly disabled so the existing <think> renderer
+    # has content.
     build_responses_reasoning_block = function(params) {
-      nested <- params$reasoning
+      nested <- list_get_exact(params, "reasoning")
       if (!is.null(nested) && !is.list(nested)) {
         rlang::abort("`reasoning` must be a named list (e.g. list(effort = \"low\", summary = \"auto\")).")
       }
-      effort <- params$reasoning_effort %||% nested$effort
-      summary <- params$reasoning_summary %||% nested$summary
+      effort <- list_get_exact(params, "reasoning_effort") %||% nested$effort
+      summary <- list_get_exact(params, "reasoning_summary") %||% nested$summary
+      if (is.null(summary) &&
+          isTRUE(self$has_capability("is_reasoning_model")) &&
+          private$responses_thinking_enabled(list_get_exact(params, "thinking"), default = TRUE)) {
+        summary <- "auto"
+      }
       extras <- if (is.list(nested)) nested[setdiff(names(nested), c("effort", "summary"))] else list()
       if (is.null(effort) && is.null(summary) && length(extras) == 0) {
         return(NULL)
@@ -745,7 +771,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
-        "reasoning", "reasoning_effort", "reasoning_summary", "include",
+        "reasoning", "reasoning_effort", "reasoning_summary", "thinking", "thinking_budget", "include",
         "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
@@ -895,7 +921,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "stream", "model",
-        "reasoning", "reasoning_effort", "reasoning_summary", "include",
+        "reasoning", "reasoning_effort", "reasoning_summary", "thinking", "thinking_budget", "include",
         "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"

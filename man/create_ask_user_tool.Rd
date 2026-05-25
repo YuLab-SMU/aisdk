@@ -11,14 +11,13 @@ A Tool object that can be used with agents
 }
 \description{
 Creates a tool that allows an agent to pause execution and ask the user
-for help, clarification, or guidance. This is useful when the agent
-encounters repeated failures, uncertainty, or needs additional information
-that only the user can provide.
+for help, clarification, or guidance. This is reserved for real user
+decisions such as destructive actions, credentials, cost/permission gates,
+ambiguous requirements, or information only the user can provide.
 }
 \details{
-The ask_user tool enables intelligent failure handling by allowing agents
-to recognize when they're stuck and proactively seek user input rather than
-blindly retrying failed operations.
+The ask_user tool lets agents pause for genuine user decisions instead of
+guessing through risks or missing requirements.
 
 The tool accepts:
 \itemize{
@@ -41,11 +40,11 @@ agent <- Agent$new(
   tools = list(ask_tool, other_tools...)
 )
 
-# The agent can then use it when stuck:
+# The agent can then use it when user input is required:
 # ask_user(
-#   question = "Tried 3 parse approaches, all failed. How should I proceed?",
-#   context = "Attempts: 1) JSON - syntax error, 2) CSV - wrong delimiter, 3) XML - invalid",
-#   options = ["Try a different file format", "Show me the raw file content", "Skip this file"]
+#   question = "This will overwrite report.html. Should I continue?",
+#   context = "The target file already exists in the project directory.",
+#   options = ["Overwrite it", "Choose another path", "Cancel"]
 # )
 }
 

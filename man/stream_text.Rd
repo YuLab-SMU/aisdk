@@ -38,12 +38,13 @@ stream_text(
 
 \item{tools}{Optional list of Tool objects for function calling.}
 
-\item{max_steps}{Maximum number of generation steps (tool execution loops).
-Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.}
+\item{max_steps}{Number of model/tool steps in one execution window.
+Default 1. The runtime treats this as a budget checkpoint, not as a hard
+task stop.}
 
-\item{max_tool_result_errors}{Maximum number of consecutive tool result errors
-before triggering the circuit breaker. Default 2. Tool result errors are when
-tools return error messages (not exceptions). Set to Inf to disable this check.}
+\item{max_tool_result_errors}{Historical compatibility option. Tool result
+errors are recorded as task observations; runtime policy decides whether
+to continue, finalize, ask the user, or block.}
 
 \item{require_post_tool_protocol}{Logical. If TRUE, after any tool results
 are returned the model must either make another tool call or wrap its final

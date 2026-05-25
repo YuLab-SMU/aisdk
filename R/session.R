@@ -6,7 +6,7 @@
 NULL
 
 json_safe_session_state <- function(x) {
-  if (inherits(x, "aisdk_run_state")) {
+  if (inherits(x, "aisdk_run_state") || inherits(x, "aisdk_task_state") || inherits(x, "aisdk_agent_decision") || inherits(x, "aisdk_run_trace")) {
     x <- unclass(x)
   }
 
@@ -171,7 +171,7 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
-      private$store_run_state(result$run_state %||% run_state_from_result(result))
+      private$store_run_state(result$task_state %||% result$run_state %||% run_state_from_result(result))
 
       # Update stats
       private$update_stats(result)
@@ -199,8 +199,7 @@ ChatSession <- R6::R6Class(
 
       prompt_payload <- private$build_prompt_payload(turn_system_prompt = turn_system_prompt)
 
-      # Let stream_text handle the entire tool execution loop
-      # Pass max_steps to enable automatic tool execution
+      # Let stream_text handle the runtime loop and execution windows.
       result <- do.call(
         stream_text,
         c(
@@ -220,7 +219,7 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
-      private$store_run_state(result$run_state %||% run_state_from_result(result))
+      private$store_run_state(result$task_state %||% result$run_state %||% run_state_from_result(result))
 
       # Update stats
       private$update_stats(result)
@@ -229,26 +228,26 @@ ChatSession <- R6::R6Class(
       invisible(result)
     },
 
-    #' @description Continue a recoverable previous run with structured action.
+    #' @description Inject a manual continuation instruction into the current task.
     #' @param action One of "continue", "give_up", "avoid_tool", "explain", or "manual".
     #' @param guidance Optional operator guidance to include in the continuation.
     #' @param stream Whether to use streaming generation.
     #' @param callback Streaming callback when `stream = TRUE`.
     #' @param ... Additional arguments passed to send/send_stream.
-    #' @return The GenerateResult object, or an invisible needs-user result for manual action.
+    #' @return The GenerateResult object, or an invisible waiting-user result for manual action.
     continue_run = function(action = "continue",
                             guidance = NULL,
                             stream = TRUE,
                             callback = NULL,
                             ...) {
       action <- normalize_continue_action(action)
-      prior_state <- private$.last_run_state %||% new_run_state(status = "needs_user", stop_reason = "no_prior_run")
+      prior_state <- private$.last_run_state %||% new_run_state(status = "waiting_user", stop_reason = "no_prior_run")
       if (identical(action, "manual")) {
         state <- new_run_state(
-          status = "needs_user",
+          status = "waiting_user",
           stop_reason = "manual",
           recoverable = TRUE,
-          failure_summary = prior_state$failure_summary %||% NULL,
+          failure_summary = prior_state$blocker %||% prior_state$details$failure_summary %||% NULL,
           pending_action = "manual",
           last_tool_results = prior_state$last_tool_results %||% list()
         )
@@ -256,10 +255,11 @@ ChatSession <- R6::R6Class(
         result <- attach_run_state(
           GenerateResult$new(
             text = "Manual intervention selected. Waiting for the next user instruction.",
-            finish_reason = "needs_user"
+            finish_reason = "waiting_user"
           ),
           state
         )
+        result$task_state <- state
         return(invisible(result))
       }
 
@@ -586,7 +586,7 @@ ChatSession <- R6::R6Class(
         stats = private$.stats,
         max_steps = private$.max_steps,
         metadata = private$.metadata,
-        last_run_state = private$.last_run_state,
+        task_state = private$.last_run_state,
         envir_state = envir_state,
         # Note: tools and hooks are not serialized (must be re-provided on load)
         tool_names = if (length(private$.tools) > 0) {
@@ -638,7 +638,7 @@ ChatSession <- R6::R6Class(
       if (!is.null(data$metadata)) {
         private$.metadata <- data$metadata
       }
-      private$.last_run_state <- data$last_run_state %||% private$.metadata$last_run_state %||% private$.last_run_state
+      private$.last_run_state <- data$task_state %||% data$last_run_state %||% private$.metadata$task_state %||% private$.metadata$last_run_state %||% private$.last_run_state
       if (!is.null(data$envir_state$console_image_artifacts)) {
         assign(".console_image_artifacts", data$envir_state$console_image_artifacts, envir = private$.envir)
       }
@@ -912,7 +912,7 @@ ChatSession <- R6::R6Class(
         system_prompt = private$.system_prompt,
         memory        = private$.memory,
         metadata      = private$.metadata,
-        last_run_state = private$.last_run_state,
+        task_state = private$.last_run_state,
         history       = private$.history,
         stats         = private$.stats
       ), path)
@@ -926,6 +926,7 @@ ChatSession <- R6::R6Class(
       data <- readRDS(path)
       if (!is.null(data$memory))  private$.memory  <- data$memory
       if (!is.null(data$metadata)) private$.metadata <- data$metadata
+      if (!is.null(data$task_state)) private$.last_run_state <- data$task_state
       if (!is.null(data$last_run_state)) private$.last_run_state <- data$last_run_state
       if (!is.null(data$history)) private$.history <- data$history
       if (!is.null(data$stats))   private$.stats   <- data$stats
@@ -1010,6 +1011,7 @@ ChatSession <- R6::R6Class(
     store_run_state = function(run_state) {
       if (!is.null(run_state)) {
         private$.last_run_state <- run_state
+        private$.metadata$task_state <- run_state
         private$.metadata$last_run_state <- run_state
       }
       invisible(run_state)

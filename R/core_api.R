@@ -210,12 +210,139 @@ text_tool_protocol_missing <- function(result, awaiting_protocol = FALSE) {
     return(TRUE)
   }
   if (isTRUE(has_tool_call)) {
-    return(nzchar(trimws(result$text %||% "")))
+    return(FALSE)
   }
   if (isTRUE(has_final_answer)) {
-    return(nzchar(trimws(result$final_answer_extra_text %||% "")))
+    return(FALSE)
   }
   TRUE
+}
+
+#' @keywords internal
+new_tool_protocol_markup_filter <- function() {
+  tags <- c("tool_calls", "tool_call", "final_answer")
+  start_patterns <- paste0("<", tags)
+  hidden_tags <- c("tool_calls", "tool_call")
+  state <- new.env(parent = emptyenv())
+  state$buffer <- ""
+  state$current_tag <- NULL
+
+  keep_suffix <- function(text, n) {
+    len <- nchar(text, type = "chars")
+    if (len <= n) {
+      text
+    } else {
+      substr(text, len - n + 1L, len)
+    }
+  }
+
+  find_next_start <- function(buffer) {
+    positions <- vapply(start_patterns, function(pattern) {
+      regexpr(pattern, buffer, fixed = TRUE)[[1]]
+    }, integer(1))
+    valid <- which(positions > 0)
+    if (length(valid) == 0) {
+      return(NULL)
+    }
+    idx <- valid[[which.min(positions[valid])]]
+    list(pos = positions[[idx]], tag = tags[[idx]], pattern = start_patterns[[idx]])
+  }
+
+  detect_open_tag <- function(buffer, tag, pattern) {
+    gt_pos <- regexpr(">", buffer, fixed = TRUE)[[1]]
+    if (identical(gt_pos, -1L)) {
+      return(NULL)
+    }
+
+    open_text <- substr(buffer, 1L, gt_pos)
+    if (!grepl(sprintf("^<%s\\s*>$", tag), open_text, perl = TRUE)) {
+      return(FALSE)
+    }
+
+    list(after = gt_pos + 1L)
+  }
+
+  state$process <- function(text, done = FALSE) {
+    if (!is.null(text) && nzchar(text)) {
+      state$buffer <- paste0(state$buffer, text)
+    }
+
+    out <- ""
+
+    repeat {
+      if (!is.null(state$current_tag)) {
+        end_tag <- paste0("</", state$current_tag, ">")
+        end_pos <- regexpr(end_tag, state$buffer, fixed = TRUE)[[1]]
+        if (identical(end_pos, -1L)) {
+          if (state$current_tag %in% hidden_tags) {
+            state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
+          } else {
+            keep <- nchar(end_tag) - 1L
+            len <- nchar(state$buffer, type = "chars")
+            if (len > keep) {
+              safe_len <- len - keep
+              out <- paste0(out, substr(state$buffer, 1L, safe_len))
+              state$buffer <- substr(state$buffer, safe_len + 1L, len)
+            }
+          }
+          break
+        }
+
+        if (!state$current_tag %in% hidden_tags && end_pos > 1L) {
+          out <- paste0(out, substr(state$buffer, 1L, end_pos - 1L))
+        }
+        end_after <- end_pos + nchar(end_tag) - 1L
+        state$buffer <- substr(state$buffer, end_after + 1L, nchar(state$buffer))
+        state$current_tag <- NULL
+        next
+      }
+
+      start <- find_next_start(state$buffer)
+      if (!is.null(start)) {
+        if (start$pos > 1L) {
+          out <- paste0(out, substr(state$buffer, 1L, start$pos - 1L))
+        }
+        state$buffer <- substr(state$buffer, start$pos, nchar(state$buffer))
+
+        open <- detect_open_tag(state$buffer, start$tag, start$pattern)
+        if (is.null(open)) {
+          break
+        }
+        if (identical(open, FALSE)) {
+          out <- paste0(out, substr(state$buffer, 1L, nchar(start$pattern)))
+          state$buffer <- substr(state$buffer, nchar(start$pattern) + 1L, nchar(state$buffer))
+          next
+        }
+
+        state$buffer <- substr(state$buffer, open$after, nchar(state$buffer))
+        state$current_tag <- start$tag
+        next
+      }
+
+      if (isTRUE(done)) {
+        out <- paste0(out, state$buffer)
+        state$buffer <- ""
+      } else {
+        keep <- max(nchar(start_patterns)) - 1L
+        len <- nchar(state$buffer, type = "chars")
+        if (len > keep) {
+          safe_len <- len - keep
+          out <- paste0(out, substr(state$buffer, 1L, safe_len))
+          state$buffer <- substr(state$buffer, safe_len + 1L, len)
+        }
+      }
+      break
+    }
+
+    if (isTRUE(done)) {
+      state$buffer <- ""
+      state$current_tag <- NULL
+    }
+
+    out
+  }
+
+  state
 }
 
 #' @keywords internal
@@ -375,9 +502,10 @@ append_text_tool_result_messages <- function(messages, result, tool_results) {
 #' Generate text using a language model. This is the primary high-level function
 #' for non-streaming text generation.
 #'
-#' When tools are provided and max_steps > 1, the function will automatically
-#' execute tool calls and feed results back to the LLM in a ReAct-style loop
-#' until the LLM produces a final response or max_steps is reached.
+#' When tools are provided, the function automatically executes tool calls and
+#' feeds results back to the LLM in a task-state driven runtime. `max_steps`
+#' controls one execution window; the runtime may open another window or
+#' finalize from tool observations instead of silently stopping at the boundary.
 #'
 #' @param model Either a LanguageModelV1 object, or a string ID like "openai:gpt-4o".
 #' @param prompt A character string prompt, or a list of messages.
@@ -385,12 +513,12 @@ append_text_tool_result_messages <- function(messages, result, tool_results) {
 #' @param temperature Sampling temperature (0-2). Default 0.7.
 #' @param max_tokens Maximum tokens to generate.
 #' @param tools Optional list of Tool objects for function calling.
-#' @param max_steps Maximum number of generation steps (tool execution loops).
-#'   Default 1 (single generation, no automatic tool execution).
-#'   Set to higher values (e.g., 5) to enable automatic tool execution.
-#' @param max_tool_result_errors Maximum number of consecutive tool result errors
-#'   before triggering the circuit breaker. Default 2. Tool result errors are when
-#'   tools return error messages (not exceptions). Set to Inf to disable this check.
+#' @param max_steps Number of model/tool steps in one execution window.
+#'   Default 1. The runtime treats this as a budget checkpoint, not as a hard
+#'   task stop.
+#' @param max_tool_result_errors Historical compatibility option. Tool result
+#'   errors are recorded as task observations; runtime policy decides whether
+#'   to continue, finalize, ask the user, or block.
 #' @param require_post_tool_protocol Logical. If TRUE, after any tool results
 #'   are returned the model must either make another tool call or wrap its final
 #'   answer in a `<final_answer>...</final_answer>` block. This is enabled
@@ -522,286 +650,23 @@ generate_text <- function(model = NULL,
     )
   )
 
-  # Track all tool calls for debugging/logging
-  all_tool_calls <- list()
-  all_tool_results <- list()
   initial_messages_len <- length(messages)
-  step <- 0
-  result <- NULL
   run_id <- paste0("run_", generate_stable_id("generate_text", Sys.time(), stats::runif(1)))
-  awaiting_post_tool_protocol <- FALSE
 
-  # Circuit breaker state
-  breaker_state <- new.env(parent = emptyenv())
-  breaker_state$consecutive_identical_calls <- 0
-  breaker_state$consecutive_tool_errors <- 0
-  breaker_state$consecutive_result_errors <- 0  # New: track tool result errors
-  breaker_state$last_tool_signature <- NULL
-  max_identical_calls <- 3 # Threshold for repeating identical tool calls
-  max_tool_errors <- 3 # Threshold for consecutive tool execution errors
-  max_tool_result_errors <- max_tool_result_errors %||% 2  # New: threshold for tool result errors
-
-  # ReAct loop
-  tryCatch(
-    {
-      while (step < max_steps) {
-        step <- step + 1
-
-        # Build params with current messages
-        params <- c(list(messages = messages), base_params)
-
-        # Call the model
-        result <- model$do_generate(params)
-        result <- recover_text_tool_calls(result)
-        result <- recover_text_final_answer(result)
-
-        if (isTRUE(getOption("aisdk.debug", FALSE))) {
-          message("[DEBUG] generate_text step ", step, " | finish_reason: ", result$finish_reason)
-          raw_text <- result$text %||% ""
-          message("[DEBUG] response text (", nchar(raw_text), " chars): ",
-                  substr(raw_text, 1, min(500, nchar(raw_text))),
-                  if (nchar(raw_text) > 500) "... [truncated]" else "")
-          if (!is.null(result$usage)) {
-            message("[DEBUG] usage: prompt=", result$usage$prompt_tokens,
-                    " completion=", result$usage$completion_tokens,
-                    " total=", result$usage$total_tokens)
-          }
-        }
-
-        if (text_tool_protocol_missing(result, awaiting_post_tool_protocol)) {
-          if (step >= max_steps) {
-            warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
-            result$finish_reason <- "tool_failure"
-            break
-          }
-          messages <- c(messages, list(text_tool_protocol_correction_message(
-            result,
-            use_text_tool_fallback = use_text_tool_fallback
-          )))
-          next
-        }
-
-        awaiting_post_tool_protocol <- FALSE
-
-        # Check if there are tool calls to process
-        if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
-          # Store tool calls
-          all_tool_calls <- c(all_tool_calls, result$tool_calls)
-
-          # If we've reached max_steps, return without executing
-          if (step >= max_steps) {
-            warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
-            result$finish_reason <- "tool_failure"
-            break
-          }
-
-          # --- Circuit Breaker: Detect repeated identical tool calls ---
-          current_signature <- paste(
-            vapply(result$tool_calls, function(tc) {
-              paste0(tc$name, ":", safe_to_json(tc$arguments, auto_unbox = TRUE))
-            }, character(1)),
-            collapse = "|"
-          )
-          if (identical(current_signature, breaker_state$last_tool_signature)) {
-            breaker_state$consecutive_identical_calls <- breaker_state$consecutive_identical_calls + 1
-          } else {
-            breaker_state$consecutive_identical_calls <- 0
-            breaker_state$last_tool_signature <- current_signature
-          }
-          if (breaker_state$consecutive_identical_calls >= max_identical_calls) {
-            warning(
-              "Circuit breaker triggered: model repeated identical tool calls ",
-              breaker_state$consecutive_identical_calls, " times."
-            )
-            result$finish_reason <- "tool_failure"
-            break
-          }
-
-          # Execute tools (with hooks and optional session environment)
-          tool_envir <- if (!is.null(session)) session$get_envir() else NULL
-
-          # Log tool calls
-          if (interactive()) {
-            for (tc in result$tool_calls) {
-              print_tool_execution(tc$name, tc$arguments)
-            }
-          }
-
-          # --- Circuit Breaker: Detect consecutive tool execution errors ---
-          tool_results <- tryCatch(
-            {
-              res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-              breaker_state$consecutive_tool_errors <- 0 # Reset on success
-              res
-            },
-            error = function(e) {
-              breaker_state$consecutive_tool_errors <- breaker_state$consecutive_tool_errors + 1
-              if (breaker_state$consecutive_tool_errors >= max_tool_errors) {
-                warning(
-                  "Circuit breaker triggered: ", breaker_state$consecutive_tool_errors,
-                  " consecutive tool execution failures. Last error: ",
-                  conditionMessage(e)
-                )
-                NULL
-              } else {
-                # Return error message as tool result so model can self-correct
-                lapply(result$tool_calls, function(tc) {
-                  list(
-                    id = tc$id,
-                    name = tc$name,
-                    result = paste0("Error executing tool: ", conditionMessage(e)),
-                    raw_result = NULL,
-                    is_error = TRUE
-                  )
-                })
-              }
-            }
-          )
-
-          if (is.null(tool_results)) {
-            result$finish_reason <- "tool_failure"
-            break
-          }
-          all_tool_results <- c(all_tool_results, tool_results)
-
-          # --- Circuit Breaker: Detect consecutive tool result errors ---
-          # Check if any tools returned errors (not exceptions, but error results)
-          error_count <- sum(vapply(tool_results, function(tr) {
-            if (isTRUE(tr$is_validation_error)) {
-              return(FALSE)
-            }
-            tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
-          }, logical(1)))
-          tool_result_breaker_triggered <- FALSE
-
-          if (error_count > 0) {
-            breaker_state$consecutive_result_errors <- breaker_state$consecutive_result_errors + 1
-
-            if (breaker_state$consecutive_result_errors >= max_tool_result_errors) {
-              warning(
-                "Circuit breaker triggered: ", breaker_state$consecutive_result_errors,
-                " consecutive tool result errors. Consider asking user for help."
-              )
-              result$finish_reason <- "tool_result_failure"
-              tool_result_breaker_triggered <- TRUE
-            }
-          } else {
-            # Reset counter on successful tool execution
-            breaker_state$consecutive_result_errors <- 0
-          }
-
-          # Log tool results (matching one-to-one with calls usually, but execute_tool_calls returns list)
-          if (interactive()) {
-            for (tr in tool_results) {
-              print_tool_result(
-                tr$name,
-                tr$result,
-                success = !isTRUE(tr$is_error),
-                raw_result = tr$raw_result %||% tr$result
-              )
-            }
-          }
-
-          # Append assistant message with tool_calls to history
-          # Note: We need to include the tool_calls in the assistant message for context
-          assistant_message <- list(role = "assistant", content = result$text %||% "")
-
-          history_format <- model$get_history_format()
-
-          if (isTRUE(use_text_tool_fallback)) {
-            messages <- append_text_tool_result_messages(messages, result, tool_results)
-            awaiting_post_tool_protocol <- TRUE
-          } else if (history_format == "openai") {
-            # For OpenAI, we need to include tool_calls in the assistant message
-            assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
-              list(
-                id = tc$id,
-                type = "function",
-                `function` = list(
-                  name = tc$name,
-                  arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
-                )
-              )
-            })
-            if (isTRUE(model$capabilities$preserve_reasoning_content) &&
-                !is.null(result$reasoning) &&
-                nzchar(result$reasoning)) {
-              assistant_message$reasoning_content <- result$reasoning
-            }
-          } else if (history_format == "anthropic") {
-            # For Anthropic, tool_use blocks are part of the content
-            assistant_message$content <- result$raw_response$content
-          }
-
-          if (!isTRUE(use_text_tool_fallback)) {
-            messages <- c(messages, list(assistant_message))
-
-            # Append tool results to history using provider-specific formatting
-            for (tr in tool_results) {
-              tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-              messages <- c(messages, list(tool_result_msg))
-            }
-            if (isTRUE(require_post_tool_protocol)) {
-              messages <- append_post_tool_protocol_message(
-                messages,
-                use_text_tool_fallback = FALSE
-              )
-              awaiting_post_tool_protocol <- TRUE
-            }
-          }
-
-          if (isTRUE(tool_result_breaker_triggered)) {
-            break
-          }
-
-          # Continue loop
-        } else {
-          # No tool calls, we're done
-          break
-        }
-      }
-    },
-    error = function(e) {
-      if (is_network_error_condition(e)) {
-        handle_network_error(e, rethrow = FALSE)
-        result <<- blocked_network_result(e, run_id = run_id)
-      } else {
-        stop(e)
-      }
-    }
-  )
-
-  # Add step information to result for debugging
-  if (max_steps > 1) {
-    if (is.null(result)) {
-      # If result is NULL here (e.g. error in first loop), initialize it loosely so we return something
-      result <- list()
-    }
-    result$steps <- step
-    result$all_tool_calls <- all_tool_calls
-    result$all_tool_results <- all_tool_results
-    final_text <- result$text %||% NULL
-    if (!is.null(result$tool_calls) &&
-        length(result$tool_calls) > 0 &&
-        identical(result$finish_reason %||% "", "tool_result_failure")) {
-      final_text <- NULL
-    }
-    result$messages_added <- build_messages_added(
-      messages = messages,
-      initial_len = initial_messages_len,
-      final_text = final_text,
-      final_reasoning = result$reasoning %||% NULL
-    )
-  }
-  result <- attach_run_state(
-    result,
-    run_state_from_result(
-      result = result,
-      step = step,
-      max_steps = max_steps,
-      all_tool_results = all_tool_results,
-      run_id = run_id
-    )
+  result <- run_agent_runtime(
+    model = model,
+    messages = messages,
+    base_params = base_params,
+    tools = tools,
+    session = session,
+    hooks = hooks,
+    stream = FALSE,
+    run_id = run_id,
+    max_steps = max_steps,
+    max_tool_result_errors = max_tool_result_errors,
+    require_post_tool_protocol = require_post_tool_protocol,
+    use_text_tool_fallback = use_text_tool_fallback,
+    initial_messages_len = initial_messages_len
   )
 
   # Trigger on_generation_end
@@ -824,11 +689,12 @@ generate_text <- function(model = NULL,
 #' @param temperature Sampling temperature (0-2). Default 0.7.
 #' @param max_tokens Maximum tokens to generate.
 #' @param tools Optional list of Tool objects for function calling.
-#' @param max_steps Maximum number of generation steps (tool execution loops).
-#'   Default 1. Set to higher values (e.g., 5) to enable automatic tool execution.
-#' @param max_tool_result_errors Maximum number of consecutive tool result errors
-#'   before triggering the circuit breaker. Default 2. Tool result errors are when
-#'   tools return error messages (not exceptions). Set to Inf to disable this check.
+#' @param max_steps Number of model/tool steps in one execution window.
+#'   Default 1. The runtime treats this as a budget checkpoint, not as a hard
+#'   task stop.
+#' @param max_tool_result_errors Historical compatibility option. Tool result
+#'   errors are recorded as task observations; runtime policy decides whether
+#'   to continue, finalize, ask the user, or block.
 #' @param require_post_tool_protocol Logical. If TRUE, after any tool results
 #'   are returned the model must either make another tool call or wrap its final
 #'   answer in a `<final_answer>...</final_answer>` block. This is enabled
@@ -946,312 +812,27 @@ stream_text <- function(model = NULL,
     )
   )
 
-  all_tool_calls <- list()
-  all_tool_results <- list()
   initial_messages_len <- length(messages)
-  step <- 0
-  result <- NULL
   run_id <- paste0("run_", generate_stable_id("stream_text", Sys.time(), stats::runif(1)))
-  awaiting_post_tool_protocol <- FALSE
 
   renderer <- create_stream_renderer()
 
-  # Circuit breaker state
-  breaker_state <- new.env(parent = emptyenv())
-  breaker_state$consecutive_identical_calls <- 0
-  breaker_state$consecutive_tool_errors <- 0
-  breaker_state$last_tool_signature <- NULL
-  max_identical_calls <- 3
-  max_tool_errors <- 3
-
-  # ReAct loop for streaming
-  tryCatch(
-    {
-      while (step < max_steps) {
-        step <- step + 1
-
-        # Build params with current messages
-        params <- c(list(messages = messages), base_params)
-
-        # Call the model via do_stream
-        if (interactive()) renderer$start_thinking()
-
-        buffer_protocol_output <- isTRUE(require_post_tool_protocol) &&
-          isTRUE(awaiting_post_tool_protocol)
-
-        result <- model$do_stream(params, function(chunk, done) {
-          if (isTRUE(buffer_protocol_output)) {
-            return(invisible(NULL))
-          }
-
-          if (interactive()) {
-            if (!is.null(callback)) {
-              renderer$stop_thinking()
-            } else {
-              renderer$process_chunk(chunk, done)
-            }
-          }
-          if (!is.null(callback)) callback(chunk, done)
-        })
-        result <- recover_text_tool_calls(result)
-        result <- recover_text_final_answer(result)
-
-        if (text_tool_protocol_missing(result, awaiting_post_tool_protocol)) {
-          if (step >= max_steps) {
-            warning(sprintf("Maximum generation steps (%d) reached while waiting for a post-tool protocol response.", max_steps))
-            result$finish_reason <- "tool_failure"
-            break
-          }
-          messages <- c(messages, list(text_tool_protocol_correction_message(
-            result,
-            use_text_tool_fallback = use_text_tool_fallback
-          )))
-          if (interactive()) {
-            renderer$reset_for_new_step()
-          }
-          next
-        }
-
-        if (isTRUE(buffer_protocol_output) &&
-            isTRUE(result$final_answer_explicit) &&
-            length(result$tool_calls %||% list()) == 0) {
-          if (interactive()) {
-            if (!is.null(callback)) {
-              renderer$stop_thinking()
-            } else {
-              renderer$process_chunk(result$text, FALSE)
-              renderer$process_chunk(NULL, TRUE)
-            }
-          }
-          if (!is.null(callback)) {
-            callback(result$text, FALSE)
-            callback(NULL, TRUE)
-          }
-        }
-
-        awaiting_post_tool_protocol <- FALSE
-
-        # Check if there are tool calls to process
-        if (!is.null(result$tool_calls) && length(result$tool_calls) > 0 && !is.null(tools)) {
-          # Store tool calls
-          all_tool_calls <- c(all_tool_calls, result$tool_calls)
-
-          # If we've reached max_steps, return without executing
-          if (step >= max_steps) {
-            warning(sprintf("Maximum generation steps (%d) reached. Tool execution stopped.", max_steps))
-            result$finish_reason <- "tool_failure"
-            break
-          }
-
-          # --- Circuit Breaker: Detect repeated identical tool calls ---
-          current_signature <- paste(
-            vapply(result$tool_calls, function(tc) {
-              paste0(tc$name, ":", safe_to_json(tc$arguments, auto_unbox = TRUE))
-            }, character(1)),
-            collapse = "|"
-          )
-          if (identical(current_signature, breaker_state$last_tool_signature)) {
-            breaker_state$consecutive_identical_calls <- breaker_state$consecutive_identical_calls + 1
-          } else {
-            breaker_state$consecutive_identical_calls <- 0
-            breaker_state$last_tool_signature <- current_signature
-          }
-          if (breaker_state$consecutive_identical_calls >= max_identical_calls) {
-            warning(
-              "Circuit breaker triggered: model repeated identical tool calls ",
-              breaker_state$consecutive_identical_calls, " times."
-            )
-            result$finish_reason <- "tool_failure"
-            break
-          }
-
-          # Execute tools (with hooks and optional session environment)
-          tool_envir <- if (!is.null(session)) session$get_envir() else NULL
-
-          # Log tool calls
-          if (interactive()) {
-            for (tc in result$tool_calls) {
-              renderer$render_tool_start(tc$name, tc$arguments)
-            }
-          }
-
-          # --- Circuit Breaker: Detect consecutive tool execution errors ---
-          tool_results <- tryCatch(
-            {
-              res <- execute_tool_calls(result$tool_calls, tools, hooks, envir = tool_envir)
-              breaker_state$consecutive_tool_errors <- 0
-              res
-            },
-            error = function(e) {
-              breaker_state$consecutive_tool_errors <- breaker_state$consecutive_tool_errors + 1
-              if (breaker_state$consecutive_tool_errors >= max_tool_errors) {
-                warning(
-                  "Circuit breaker triggered: ", breaker_state$consecutive_tool_errors,
-                  " consecutive tool execution failures. Last error: ",
-                  conditionMessage(e)
-                )
-                NULL
-              } else {
-                lapply(result$tool_calls, function(tc) {
-                  list(
-                    id = tc$id,
-                    name = tc$name,
-                    result = paste0("Error executing tool: ", conditionMessage(e)),
-                    raw_result = NULL,
-                    is_error = TRUE
-                  )
-                })
-              }
-            }
-          )
-
-          if (is.null(tool_results)) {
-            result$finish_reason <- "tool_failure"
-            break
-          }
-          all_tool_results <- c(all_tool_results, tool_results)
-
-          # --- Circuit Breaker: Detect tool result errors ---
-          tool_result_error_count <- sum(vapply(tool_results, function(tr) {
-            if (isTRUE(tr$is_validation_error)) {
-              return(FALSE)
-            }
-            tool_result_indicates_error(tr$result, tr$raw_result %||% tr$result)
-          }, logical(1)))
-          tool_result_breaker_triggered <- FALSE
-
-          if (tool_result_error_count > 0) {
-            breaker_state$consecutive_tool_result_errors <-
-              (breaker_state$consecutive_tool_result_errors %||% 0) + 1
-
-            if (breaker_state$consecutive_tool_result_errors >= max_tool_result_errors) {
-              warning(
-                "Circuit breaker triggered: ",
-                breaker_state$consecutive_tool_result_errors,
-                " consecutive tool result errors. ",
-                "Tools returned errors but did not throw exceptions."
-              )
-              result$finish_reason <- "tool_result_failure"
-              tool_result_breaker_triggered <- TRUE
-            }
-          } else {
-            breaker_state$consecutive_tool_result_errors <- 0
-          }
-
-          # Log tool results
-          if (interactive()) {
-            for (tr in tool_results) {
-              renderer$render_tool_result(
-                tr$name,
-                tr$result,
-                success = !isTRUE(tr$is_error),
-                raw_result = tr$raw_result %||% tr$result
-              )
-            }
-          }
-
-          # Append assistant message with tool_calls to history
-          assistant_message <- list(role = "assistant", content = result$text %||% "")
-
-          history_format <- model$get_history_format()
-
-          if (isTRUE(use_text_tool_fallback)) {
-            messages <- append_text_tool_result_messages(messages, result, tool_results)
-            awaiting_post_tool_protocol <- TRUE
-          } else if (history_format == "openai") {
-            # Provider-specific tool call formatting (copied from generate_text)
-            assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
-              list(
-                id = tc$id,
-                type = "function",
-                `function` = list(
-                  name = tc$name,
-                  arguments = safe_to_json(tc$arguments, auto_unbox = TRUE)
-                )
-              )
-            })
-            if (isTRUE(model$capabilities$preserve_reasoning_content) &&
-                !is.null(result$reasoning) &&
-                nzchar(result$reasoning)) {
-              assistant_message$reasoning_content <- result$reasoning
-            }
-          } else if (history_format == "anthropic") {
-            assistant_message$content <- result$raw_response$content
-          }
-
-          if (!isTRUE(use_text_tool_fallback)) {
-            messages <- c(messages, list(assistant_message))
-
-            # Append tool results to history
-            for (tr in tool_results) {
-              tool_result_msg <- model$format_tool_result(tr$id, tr$name, tr$result)
-              messages <- c(messages, list(tool_result_msg))
-            }
-            if (isTRUE(require_post_tool_protocol)) {
-              messages <- append_post_tool_protocol_message(
-                messages,
-                use_text_tool_fallback = FALSE
-              )
-              awaiting_post_tool_protocol <- TRUE
-            }
-          }
-
-          # Reset renderer state for next step
-          if (interactive()) {
-            renderer$reset_for_new_step()
-          }
-
-          if (isTRUE(tool_result_breaker_triggered)) {
-            break
-          }
-
-          # Continue loop - next iteration will stream the response to the tool output
-        } else {
-          # No tool calls, we're done
-          break
-        }
-      }
-    },
-    error = function(e) {
-      if (is_network_error_condition(e)) {
-        handle_network_error(e, rethrow = FALSE)
-        result <<- blocked_network_result(e, run_id = run_id)
-      } else {
-        stop(e)
-      }
-    }
-  )
-
-  # Add step info
-  if (max_steps > 1) {
-    if (is.null(result)) {
-      result <- list() # fallback
-    }
-    result$steps <- step
-    result$all_tool_calls <- all_tool_calls
-    result$all_tool_results <- all_tool_results
-    final_text <- result$text %||% NULL
-    if (!is.null(result$tool_calls) &&
-        length(result$tool_calls) > 0 &&
-        identical(result$finish_reason %||% "", "tool_result_failure")) {
-      final_text <- NULL
-    }
-    result$messages_added <- build_messages_added(
-      messages = messages,
-      initial_len = initial_messages_len,
-      final_text = final_text,
-      final_reasoning = result$reasoning %||% NULL
-    )
-  }
-  result <- attach_run_state(
-    result,
-    run_state_from_result(
-      result = result,
-      step = step,
-      max_steps = max_steps,
-      all_tool_results = all_tool_results,
-      run_id = run_id
-    )
+  result <- run_agent_runtime(
+    model = model,
+    messages = messages,
+    base_params = base_params,
+    tools = tools,
+    session = session,
+    hooks = hooks,
+    stream = TRUE,
+    callback = callback,
+    renderer = renderer,
+    run_id = run_id,
+    max_steps = max_steps,
+    max_tool_result_errors = max_tool_result_errors,
+    require_post_tool_protocol = require_post_tool_protocol,
+    use_text_tool_fallback = use_text_tool_fallback,
+    initial_messages_len = initial_messages_len
   )
 
   # Trigger on_generation_end

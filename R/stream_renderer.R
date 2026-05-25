@@ -68,21 +68,23 @@ create_stream_renderer <- function() {
     if (state$is_thinking) {
       stop_thinking()
     }
-    
-    if (done) {
+
+    if (!is.null(text) && nzchar(text)) {
+      if (state$first_chunk) {
+        state$first_chunk <- FALSE
+      }
+
+      # Delegate to markdown renderer
+      mk_renderer$process_chunk(text, done = FALSE)
+      utils::flush.console()
+    }
+
+    if (isTRUE(done)) {
       mk_renderer$process_chunk(NULL, done = TRUE)
       return()
     }
-    
-    if (is.null(text) || !nzchar(text)) return()
 
-    if (state$first_chunk) {
-      state$first_chunk <- FALSE
-    }
-    
-    # Delegate to markdown renderer
-    mk_renderer$process_chunk(text, done = FALSE)
-    utils::flush.console()
+    invisible(NULL)
   }
 
   # 3. Tool Execution

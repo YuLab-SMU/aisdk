@@ -536,6 +536,125 @@ test_that("OpenAI responses model nests flat reasoning_effort/summary into body$
   expect_null(captured_body$reasoning_summary)
 })
 
+test_that("OpenAI responses model defaults reasoning model to reasoning summary auto", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5-mini")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi"))
+  ))
+
+  expect_equal(captured_body$reasoning$summary, "auto")
+  expect_null(captured_body$thinking)
+})
+
+test_that("OpenAI responses model does not request reasoning summary when thinking is off", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5-mini")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    thinking = FALSE
+  ))
+
+  expect_null(captured_body$reasoning)
+  expect_null(captured_body$thinking)
+})
+
+test_that("OpenAI responses model preserves explicit reasoning summary over thinking default", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5-mini")
+  captured_body <- NULL
+
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_body <<- body
+      list(id = "resp_x", output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+
+  model$do_generate(list(
+    messages = list(list(role = "user", content = "hi")),
+    thinking = TRUE,
+    reasoning_summary = "detailed"
+  ))
+
+  expect_equal(captured_body$reasoning$summary, "detailed")
+  expect_null(captured_body$thinking)
+})
+
+test_that("OpenAI responses streaming emits reasoning summary into thinking UI", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5-mini")
+  captured_body <- NULL
+  chunks <- character()
+
+  testthat::local_mocked_bindings(
+    stream_responses_api = function(url, headers, body, callback, ...) {
+      captured_body <<- body
+      callback("response.created", list(response = list(id = "resp_stream_reason")), done = FALSE)
+      callback(
+        "response.reasoning_summary_text.delta",
+        list(delta = "Checking the model fit."),
+        done = FALSE
+      )
+      callback(
+        "response.output_text.delta",
+        list(delta = "Done."),
+        done = FALSE
+      )
+      callback(
+        "response.completed",
+        list(response = list(
+          id = "resp_stream_reason",
+          status = "completed",
+          usage = list(input_tokens = 1, output_tokens = 2, total_tokens = 3)
+        )),
+        done = FALSE
+      )
+      callback(NULL, NULL, done = TRUE)
+    },
+    .package = "aisdk"
+  )
+
+  result <- model$do_stream(
+    list(
+      messages = list(list(role = "user", content = "hi")),
+      thinking = TRUE
+    ),
+    callback = function(text, done) {
+      if (!isTRUE(done) && nzchar(text %||% "")) {
+        chunks <<- c(chunks, text)
+      }
+    }
+  )
+
+  expect_equal(captured_body$reasoning$summary, "auto")
+  expect_equal(chunks[1], "<think>\n")
+  expect_equal(chunks[2], "Checking the model fit.")
+  expect_equal(result$reasoning, "Checking the model fit.")
+  expect_equal(result$text, "Done.")
+})
+
 test_that("OpenAI responses model accepts nested reasoning list and preserves extra keys", {
   skip_on_ci()
 

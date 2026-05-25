@@ -1,16 +1,15 @@
 #' Create an ask_user Tool
 #'
 #' Creates a tool that allows an agent to pause execution and ask the user
-#' for help, clarification, or guidance. This is useful when the agent
-#' encounters repeated failures, uncertainty, or needs additional information
-#' that only the user can provide.
+#' for help, clarification, or guidance. This is reserved for real user
+#' decisions such as destructive actions, credentials, cost/permission gates,
+#' ambiguous requirements, or information only the user can provide.
 #'
 #' @return A Tool object that can be used with agents
 #'
 #' @details
-#' The ask_user tool enables intelligent failure handling by allowing agents
-#' to recognize when they're stuck and proactively seek user input rather than
-#' blindly retrying failed operations.
+#' The ask_user tool lets agents pause for genuine user decisions instead of
+#' guessing through risks or missing requirements.
 #'
 #' The tool accepts:
 #' - `question`: The main question or explanation to show the user (required)
@@ -31,11 +30,11 @@
 #'   tools = list(ask_tool, other_tools...)
 #' )
 #'
-#' # The agent can then use it when stuck:
+#' # The agent can then use it when user input is required:
 #' # ask_user(
-#' #   question = "Tried 3 parse approaches, all failed. How should I proceed?",
-#' #   context = "Attempts: 1) JSON - syntax error, 2) CSV - wrong delimiter, 3) XML - invalid",
-#' #   options = ["Try a different file format", "Show me the raw file content", "Skip this file"]
+#' #   question = "This will overwrite report.html. Should I continue?",
+#' #   context = "The target file already exists in the project directory.",
+#' #   options = ["Overwrite it", "Choose another path", "Cancel"]
 #' # )
 #' }
 #'
@@ -45,14 +44,14 @@ create_ask_user_tool <- function() {
     name = "ask_user",
     description = paste(
       "Ask the user for help, clarification, or guidance.",
-      "Use this tool when you're stuck, uncertain, or need user input to proceed.",
+      "Use this tool only when the task needs a real user decision or missing input to proceed.",
       "The user will see your question and can provide guidance.",
       "\n\nWhen to use this tool:",
-      "- After 2+ failed attempts with the same tool or approach",
-      "- When you're uncertain about how to proceed",
-      "- When you need clarification or additional information",
-      "- When the user might have insights you don't have",
-      "\n\nDo NOT use this for routine questions - only when you genuinely need help."
+      "- Before destructive operations, overwrites, irreversible changes, paid actions, or credential use",
+      "- When requirements are ambiguous enough that guessing would likely produce the wrong result",
+      "- When a required value, path, account, permission, or preference cannot be inferred from context",
+      "- When continuing would create a safety, privacy, or policy risk",
+      "\n\nDo NOT use this just because a tool failed. Treat failures as observations and try another safe path or summarize the blocker."
     ),
     parameters = list(
       question = list(

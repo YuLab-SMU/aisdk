@@ -167,7 +167,7 @@ The GenerateResult object invisibly (output is via callback).
 \if{html}{\out{<a id="method-ChatSession-continue_run"></a>}}
 \if{latex}{\out{\hypertarget{method-ChatSession-continue_run}{}}}
 \subsection{Method \code{continue_run()}}{
-Continue a recoverable previous run with structured action.
+Inject a manual continuation instruction into the current task.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ChatSession$continue_run(
   action = "continue",
@@ -194,7 +194,7 @@ Continue a recoverable previous run with structured action.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-The GenerateResult object, or an invisible needs-user result for manual action.
+The GenerateResult object, or an invisible waiting-user result for manual action.
 }
 }
 \if{html}{\out{<hr>}}

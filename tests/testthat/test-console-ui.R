@@ -1151,7 +1151,7 @@ test_that("streaming chunks accumulate into app state assistant text", {
   expect_equal(app_state$phase, "idle")
 })
 
-test_that("console agent suppresses native post-tool prose until explicit final answer", {
+test_that("console agent shows native post-tool prose and final answer once", {
   echo_tool <- tool(
     name = "echo",
     description = "Echo a message",
@@ -1197,8 +1197,10 @@ test_that("console agent suppresses native post-tool prose until explicit final 
 
   turn <- aisdk:::console_app_get_last_turn(app_state)
   expect_true(ok)
+  expect_match(turn$assistant_text, "Installing the missing package", fixed = TRUE)
   expect_match(turn$assistant_text, "Console protocol worked", fixed = TRUE)
-  expect_false(grepl("Installing the missing package", turn$assistant_text, fixed = TRUE))
+  expect_equal(length(gregexpr("Console protocol worked", turn$assistant_text, fixed = TRUE)[[1]]), 1L)
+  expect_false(grepl("<final_answer>", turn$assistant_text, fixed = TRUE))
 })
 
 test_that("turn and tool inspector helpers expose structured details", {

@@ -343,7 +343,7 @@ console_chat <- function(session = NULL,
     # Check for commands
     if (tolower(trimws(input)) %in% c("retry", "continue")) {
       state <- session$get_run_state()
-      if (isTRUE(state$recoverable)) {
+      if ((state$status %||% "") %in% c("blocked", "waiting_user", "error")) {
         console_continue_run_action(
           session = session,
           action = "continue",
@@ -399,7 +399,7 @@ console_chat <- function(session = NULL,
     )
     console_append_session_event(
       session,
-      type = "run_state",
+      type = "task_state",
       payload = session$get_run_state(),
       startup_dir = startup_dir
     )
@@ -452,21 +452,14 @@ console_send_user_message <- function(input,
               require_post_tool_protocol = isTRUE(session$get_metadata("console_agent_enabled", default = FALSE)),
               callback = function(text, done) {
                 display_text <- tool_markup_filter$process(text, done)
+                if (!is.null(display_text) && nzchar(display_text)) {
+                  if (!is.null(app_state)) {
+                    console_app_append_assistant_text(app_state, display_text)
+                  }
+                  md_renderer$process_chunk(display_text, FALSE)
+                }
                 if (isTRUE(done)) {
-                  if (!is.null(display_text) && nzchar(display_text)) {
-                    if (!is.null(app_state)) {
-                      console_app_append_assistant_text(app_state, display_text)
-                    }
-                    md_renderer$process_chunk(display_text, FALSE)
-                  }
                   md_renderer$process_chunk(NULL, TRUE)
-                } else {
-                  if (!is.null(display_text) && nzchar(display_text)) {
-                    if (!is.null(app_state)) {
-                      console_app_append_assistant_text(app_state, display_text)
-                    }
-                    md_renderer$process_chunk(display_text, FALSE)
-                  }
                 }
               }
             )
@@ -493,57 +486,11 @@ console_send_user_message <- function(input,
       )
       if (!is.null(app_state)) {
         turn_failed <- !is.null(generation_result) &&
-          (generation_result$finish_reason %||% "") %in% c("tool_failure", "tool_result_failure")
+          (generation_result$run_state$status %||% "") %in% c("blocked", "aborted_safety", "error")
         console_app_finish_turn(app_state, failed = turn_failed)
       }
       console_record_generation_events(session, generation_result)
 
-      # Failure detection: only prompt for recovery when the turn ended in a
-      # recoverable tool failure. Earlier failed attempts can be followed by a
-      # successful retry, and should not interrupt a completed answer.
-      if (isTRUE(check_tool_failures) &&
-          isTRUE(console_should_prompt_tool_recovery(generation_result)) &&
-          !is.null(generation_result$all_tool_results)) {
-        recovery_action <- console_check_tool_failures(generation_result$all_tool_results, session)
-        if (!is.null(recovery_action) && !is.null(recovery_action$action)) {
-          console_continue_run_action(
-            session = session,
-            action = recovery_action$action,
-            guidance = recovery_action$guidance %||% recovery_action$prompt %||% NULL,
-            stream = stream,
-            verbose = verbose,
-            show_thinking = show_thinking,
-            app_state = app_state
-          )
-        }
-      }
-
-      if (isTRUE(continue_incomplete) && console_generation_looks_incomplete(generation_result)) {
-        incomplete_state <- new_run_state(
-          status = "missing_final_answer",
-          stop_reason = "missing_post_tool_response",
-          recoverable = TRUE,
-          failure_summary = generation_result$text %||% NULL,
-          pending_action = "continue",
-          last_tool_results = run_state_tool_results_tail(generation_result$all_tool_results %||% list())
-        )
-        generation_result$run_state <- incomplete_state
-        session$set_run_state(incomplete_state)
-        if (!nzchar(trimws(generation_result$text %||% ""))) {
-          cli::cli_alert_info("Assistant ran tools but did not write an answer; asking it to summarize.")
-        } else {
-          cli::cli_alert_info("Assistant did not provide a final answer after tool execution; continuing once.")
-        }
-        console_continue_run_action(
-          session = session,
-          action = "continue",
-          guidance = console_incomplete_continuation_prompt(generation_result),
-          stream = stream,
-          verbose = verbose,
-          show_thinking = show_thinking,
-          app_state = app_state
-        )
-      }
     },
     interrupt = function(e) {
       ok <<- FALSE
@@ -639,8 +586,24 @@ console_record_generation_events <- function(session, generation_result) {
   if (!is.null(generation_result$run_state)) {
     console_append_session_event(
       session,
-      type = "run_state",
+      type = "task_state",
       payload = generation_result$run_state,
+      startup_dir = startup
+    )
+  }
+  if (!is.null(generation_result$decision)) {
+    console_append_session_event(
+      session,
+      type = "agent_decision",
+      payload = generation_result$decision,
+      startup_dir = startup
+    )
+  }
+  for (event in generation_result$run_trace$events %||% list()) {
+    console_append_session_event(
+      session,
+      type = "run_trace_event",
+      payload = event,
       startup_dir = startup
     )
   }
@@ -705,13 +668,14 @@ console_continue_run_action <- function(session,
               stream = TRUE,
               require_post_tool_protocol = TRUE,
               callback = function(text, done) {
-                if (isTRUE(done)) {
-                  md_renderer$process_chunk(NULL, TRUE)
-                } else {
+                if (!is.null(text) && nzchar(text)) {
                   if (!is.null(app_state)) {
                     console_app_append_assistant_text(app_state, text)
                   }
                   md_renderer$process_chunk(text, FALSE)
+                }
+                if (isTRUE(done)) {
+                  md_renderer$process_chunk(NULL, TRUE)
                 }
               }
             )
@@ -733,21 +697,8 @@ console_continue_run_action <- function(session,
         }
       )
       if (!is.null(app_state)) {
-        failed <- (result$run_state$status %||% "") %in% c("tool_failed", "tool_result_failed", "blocked_network", "max_steps", "needs_user")
+        failed <- (result$run_state$status %||% "") %in% c("blocked", "aborted_safety", "error")
         console_app_finish_turn(app_state, failed = failed)
-      }
-      if (!is.null(result) && console_continuation_still_incomplete(result)) {
-        needs_user_state <- new_run_state(
-          status = "needs_user",
-          stop_reason = "repeated_missing_final_answer",
-          recoverable = TRUE,
-          failure_summary = result$text %||% NULL,
-          pending_action = "ask_user",
-          last_tool_results = run_state_tool_results_tail(result$all_tool_results %||% list())
-        )
-        result$run_state <- needs_user_state
-        session$set_run_state(needs_user_state)
-        cli::cli_alert_warning("Assistant still did not provide a final answer after continuation. Marked run as needing user input.")
       }
       console_record_generation_events(session, result)
       invisible(TRUE)
@@ -782,21 +733,45 @@ console_continuation_still_incomplete <- function(generation_result) {
 #' @keywords internal
 console_print_run_state <- function(run_state) {
   run_state <- run_state %||% new_run_state(status = "running", stop_reason = "not_started")
-  cli::cli_h2("Run State")
+  decision <- run_state$decision %||% list()
+  cli::cli_h2("Task State")
   cli::cli_ul(c(
     paste0("Run id: ", run_state$run_id %||% "(none)"),
     paste0("Status: ", run_state$status %||% "unknown"),
-    paste0("Stop reason: ", run_state$stop_reason %||% "unknown"),
-    paste0("Recoverable: ", if (isTRUE(run_state$recoverable)) "yes" else "no"),
-    paste0("Pending action: ", run_state$pending_action %||% "(none)")
+    paste0("Phase: ", run_state$phase %||% "unknown"),
+    paste0("Decision: ", decision$decision %||% "(none)"),
+    paste0("Decision reason: ", decision$reason %||% "(none)"),
+    paste0("Can finalize: ", if (isTRUE(run_state$can_finalize)) "yes" else "no")
   ))
-  if (nzchar(run_state$failure_summary %||% "")) {
-    cli::cli_text("Failure summary:")
-    cli::cli_text(compact_text_preview(run_state$failure_summary, width = 800))
+  if (nzchar(run_state$goal %||% "")) {
+    cli::cli_text("Goal:")
+    cli::cli_text(compact_text_preview(run_state$goal, width = 800))
+  }
+  if (nzchar(run_state$blocker %||% "")) {
+    cli::cli_text("Blocker:")
+    cli::cli_text(compact_text_preview(run_state$blocker, width = 800))
+  }
+  artifacts <- run_state$artifacts %||% list()
+  if (length(artifacts) > 0) {
+    cli::cli_text("Artifacts:")
+    cli::cli_ul(vapply(artifacts, function(artifact) {
+      compact_text_preview(agent_runtime_text(artifact, width = 300), width = 300)
+    }, character(1)))
   }
   tool_results <- run_state$last_tool_results %||% list()
-  if (length(tool_results) > 0) {
-    cli::cli_text("Last tool results:")
+  observations <- utils::tail(run_state$observations %||% list(), 5)
+  if (length(observations) > 0) {
+    cli::cli_text("Recent observations:")
+    cli::cli_ul(vapply(observations, function(obs) {
+      sprintf(
+        "%s [%s]: %s",
+        obs$name %||% "unknown",
+        obs$status %||% if (isTRUE(obs$is_error)) "error" else "ok",
+        obs$result %||% ""
+      )
+    }, character(1)))
+  } else if (length(tool_results) > 0) {
+    cli::cli_text("Recent observations:")
     cli::cli_ul(vapply(tool_results, function(tr) {
       sprintf(
         "%s [%s]: %s",
@@ -2272,8 +2247,8 @@ handle_command <- function(input,
         "{.code /skills [list|reload|roots]} - Inspect or reload live skills",
         "{.code /feishu} - Launch the Feishu setup wizard",
         "{.code /paste-image [path] [instruction]} - Send a local or supported clipboard image",
-        "{.code /run-state} - Show why the last run stopped and whether it can continue",
-        "{.code retry} or {.code /continue} - Continue a recoverable stopped run",
+        "{.code /run-state} - Show the current task state and latest runtime decision",
+        "{.code retry} or {.code /continue} - Inject a manual continue instruction into the current task",
         "{.code /tree}, {.code /fork [name]}, {.code /checkout <id>} - Manage the session branch tree",
         "{.code /summarize-branch <text>} - Store a branch summary as model-visible context",
         "{.code /resume} - Show the JSONL event store path and recent events",
@@ -3110,206 +3085,24 @@ with_console_chat_display <- function(verbose = FALSE,
 
 #' @keywords internal
 new_console_tool_call_markup_filter <- function() {
-  tags <- c("tool_calls", "tool_call", "final_answer")
-  start_patterns <- paste0("<", tags)
-  hidden_tags <- c("tool_calls", "tool_call")
-  state <- new.env(parent = emptyenv())
-  state$buffer <- ""
-  state$current_tag <- NULL
-
-  keep_suffix <- function(text, n) {
-    len <- nchar(text, type = "chars")
-    if (len <= n) {
-      text
-    } else {
-      substr(text, len - n + 1L, len)
-    }
-  }
-
-  find_next_start <- function(buffer) {
-    positions <- vapply(start_patterns, function(pattern) {
-      regexpr(pattern, buffer, fixed = TRUE)[[1]]
-    }, integer(1))
-    valid <- which(positions > 0)
-    if (length(valid) == 0) {
-      return(NULL)
-    }
-    idx <- valid[[which.min(positions[valid])]]
-    list(pos = positions[[idx]], tag = tags[[idx]], pattern = start_patterns[[idx]])
-  }
-
-  detect_open_tag <- function(buffer, tag, pattern) {
-    gt_pos <- regexpr(">", buffer, fixed = TRUE)[[1]]
-    if (identical(gt_pos, -1L)) {
-      return(NULL)
-    }
-
-    open_text <- substr(buffer, 1L, gt_pos)
-    if (!grepl(sprintf("^<%s\\s*>$", tag), open_text, perl = TRUE)) {
-      return(FALSE)
-    }
-
-    list(after = gt_pos + 1L)
-  }
-
-  state$process <- function(text, done = FALSE) {
-    if (!is.null(text) && nzchar(text)) {
-      state$buffer <- paste0(state$buffer, text)
-    }
-
-    out <- ""
-
-    repeat {
-      if (!is.null(state$current_tag)) {
-        end_tag <- paste0("</", state$current_tag, ">")
-        end_pos <- regexpr(end_tag, state$buffer, fixed = TRUE)[[1]]
-        if (identical(end_pos, -1L)) {
-          if (state$current_tag %in% hidden_tags) {
-            state$buffer <- keep_suffix(state$buffer, nchar(end_tag) - 1L)
-          } else {
-            keep <- nchar(end_tag) - 1L
-            len <- nchar(state$buffer, type = "chars")
-            if (len > keep) {
-              safe_len <- len - keep
-              out <- paste0(out, substr(state$buffer, 1L, safe_len))
-              state$buffer <- substr(state$buffer, safe_len + 1L, len)
-            }
-          }
-          break
-        }
-
-        if (!state$current_tag %in% hidden_tags && end_pos > 1L) {
-          out <- paste0(out, substr(state$buffer, 1L, end_pos - 1L))
-        }
-        end_after <- end_pos + nchar(end_tag) - 1L
-        state$buffer <- substr(state$buffer, end_after + 1L, nchar(state$buffer))
-        state$current_tag <- NULL
-        next
-      }
-
-      start <- find_next_start(state$buffer)
-      if (!is.null(start)) {
-        if (start$pos > 1L) {
-          out <- paste0(out, substr(state$buffer, 1L, start$pos - 1L))
-        }
-        state$buffer <- substr(state$buffer, start$pos, nchar(state$buffer))
-
-        open <- detect_open_tag(state$buffer, start$tag, start$pattern)
-        if (is.null(open)) {
-          break
-        }
-        if (identical(open, FALSE)) {
-          out <- paste0(out, substr(state$buffer, 1L, nchar(start$pattern)))
-          state$buffer <- substr(state$buffer, nchar(start$pattern) + 1L, nchar(state$buffer))
-          next
-        }
-
-        state$buffer <- substr(state$buffer, open$after, nchar(state$buffer))
-        state$current_tag <- start$tag
-        next
-      }
-
-      if (isTRUE(done)) {
-        out <- paste0(out, state$buffer)
-        state$buffer <- ""
-      } else {
-        keep <- max(nchar(start_patterns)) - 1L
-        len <- nchar(state$buffer, type = "chars")
-        if (len > keep) {
-          safe_len <- len - keep
-          out <- paste0(out, substr(state$buffer, 1L, safe_len))
-          state$buffer <- substr(state$buffer, safe_len + 1L, len)
-        }
-      }
-      break
-    }
-
-    if (isTRUE(done)) {
-      state$buffer <- ""
-      state$current_tag <- NULL
-    }
-
-    out
-  }
-
-  state
+  new_tool_protocol_markup_filter()
 }
 
 #' @keywords internal
 console_should_prompt_tool_recovery <- function(generation_result) {
-  if (is.null(generation_result)) {
-    return(FALSE)
-  }
-
-  (generation_result$finish_reason %||% "") %in% c("tool_failure", "tool_result_failure")
+  FALSE
 }
 
-#' Check for Tool Failures and Prompt User
+#' Disabled Console Tool Failure Prompt
 #'
-#' Analyzes tool results from a generation and prompts the user if any tool
-#' has failed multiple times.
+#' Compatibility no-op. Tool failures are now task observations handled by the
+#' agent runtime policy/finalizer instead of an interactive console menu.
 #'
 #' @param tool_results List of tool results from generation
 #' @param session ChatSession object
-#' @param threshold Minimum number of failures to trigger prompt (default: 2)
-#' @return A selected recovery action list, or NULL.
+#' @param threshold Ignored.
+#' @return NULL.
 #' @keywords internal
 console_check_tool_failures <- function(tool_results, session, threshold = 2) {
-  if (!interactive()) {
-    return(NULL)
-  }
-
-  if (is.null(tool_results) || length(tool_results) == 0) {
-    return(NULL)
-  }
-
-  # Analyze failures
-  failure_counts <- analyze_tool_failures(tool_results)
-
-  if (length(failure_counts) == 0) {
-    return(NULL)
-  }
-
-  # Check each tool that has failures
-  for (tool_name in names(failure_counts)) {
-    count <- failure_counts[[tool_name]]
-
-    if (count >= threshold) {
-      # Display warning
-      cat("\n")
-      if (requireNamespace("cli", quietly = TRUE)) {
-        cli::cli_alert_warning(
-          "Tool '{tool_name}' failed {count} time{?s} in this turn."
-        )
-      } else {
-        cat("Warning: Tool '", tool_name, "' failed ", count, " times in this turn.\n", sep = "")
-      }
-
-      # Get and display last error
-      last_error <- get_last_error_for_tool(tool_results, tool_name)
-      if (!is.null(last_error)) {
-        error_preview <- substr(last_error, 1, 200)
-        if (nchar(last_error) > 200) {
-          error_preview <- paste0(error_preview, "...")
-        }
-        cat("Last error: ", error_preview, "\n\n", sep = "")
-      }
-
-      # Prompt user for action
-      response <- readline_with_options(
-        prompt = "How would you like to proceed?",
-        options = c(
-          "1" = "Continue (let agent keep trying)",
-          "2" = "Give up (stop using this tool)",
-          "3" = "Explain (ask agent to explain the problem)",
-          "4" = "Manual (I'll fix it myself)"
-        )
-      )
-
-      # Handle user's choice
-      return(handle_user_choice(response, tool_name, session, last_error = last_error))
-    }
-  }
-
   NULL
 }

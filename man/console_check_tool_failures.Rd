@@ -2,7 +2,7 @@
 % Please edit documentation in R/console.R
 \name{console_check_tool_failures}
 \alias{console_check_tool_failures}
-\title{Check for Tool Failures and Prompt User}
+\title{Disabled Console Tool Failure Prompt}
 \usage{
 console_check_tool_failures(tool_results, session, threshold = 2)
 }
@@ -11,13 +11,13 @@ console_check_tool_failures(tool_results, session, threshold = 2)
 
 \item{session}{ChatSession object}
 
-\item{threshold}{Minimum number of failures to trigger prompt (default: 2)}
+\item{threshold}{Ignored.}
 }
 \value{
-A selected recovery action list, or NULL.
+NULL.
 }
 \description{
-Analyzes tool results from a generation and prompts the user if any tool
-has failed multiple times.
+Compatibility no-op. Tool failures are now task observations handled by the
+agent runtime policy/finalizer instead of an interactive console menu.
 }
 \keyword{internal}

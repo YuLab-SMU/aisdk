@@ -7,15 +7,14 @@ NULL
 
 aisdk_run_state_statuses <- c(
   "running",
-  "assistant_final",
-  "tool_failed",
-  "tool_result_failed",
-  "blocked_network",
-  "max_steps",
-  "needs_user",
-  "aborted",
-  "missing_final_answer",
-  "incomplete_action"
+  "continuing",
+  "finalizing",
+  "completed",
+  "waiting_user",
+  "blocked",
+  "aborted_safety",
+  "cancelled",
+  "error"
 )
 
 #' @keywords internal
@@ -31,19 +30,35 @@ new_run_state <- function(status = "running",
     rlang::abort(sprintf("Unknown run state status: %s", status))
   }
 
-  structure(
-    list(
-      run_id = run_id %||% paste0("run_", generate_stable_id("run", Sys.time(), stats::runif(1))),
-      status = status,
-      stop_reason = stop_reason %||% status,
-      recoverable = isTRUE(recoverable),
-      failure_summary = failure_summary,
-      pending_action = pending_action,
-      last_tool_results = last_tool_results %||% list(),
-      details = details %||% list(),
-      timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%OS3%z")
-    ),
-    class = "aisdk_run_state"
+  new_task_state(
+    status = status,
+    phase = stop_reason %||% status,
+    run_id = run_id,
+    blocker = failure_summary,
+    last_tool_results = last_tool_results,
+    decision = if (!is.null(pending_action)) {
+      decision <- switch(
+        pending_action,
+        retry = "continue",
+        ask_user = "ask_user",
+        manual = "ask_user",
+        continue = "continue",
+        "continue"
+      )
+      new_agent_decision(decision = decision, reason = stop_reason %||% status)
+    } else {
+      NULL
+    },
+    details = utils::modifyList(
+      details %||% list(),
+      list(
+        stop_reason = stop_reason %||% status,
+        recoverable = isTRUE(recoverable),
+        failure_summary = failure_summary,
+        pending_action = pending_action
+      ),
+      keep.null = TRUE
+    )
   )
 }
 
@@ -115,10 +130,10 @@ run_state_from_result <- function(result = NULL,
                                   max_steps = NULL,
                                   all_tool_results = list(),
                                   run_id = NULL,
-                                  default_status = "assistant_final") {
+                                  default_status = "completed") {
   if (is.null(result)) {
     return(new_run_state(
-      status = "aborted",
+      status = "error",
       stop_reason = "no_result",
       recoverable = FALSE,
       failure_summary = "Generation stopped before returning a result.",
@@ -127,66 +142,24 @@ run_state_from_result <- function(result = NULL,
     ))
   }
 
+  if (!is.null(result$task_state)) {
+    return(result$task_state)
+  }
+
   finish_reason <- result$finish_reason %||% ""
-  has_pending_tool_calls <- length(result$tool_calls %||% list()) > 0
-  reached_max_steps <- !is.null(step) &&
-    !is.null(max_steps) &&
-    is.finite(max_steps) &&
-    step >= max_steps &&
-    isTRUE(has_pending_tool_calls)
-
-  if (identical(finish_reason, "blocked_network")) {
-    return(new_run_state(
-      status = "blocked_network",
-      stop_reason = finish_reason,
-      recoverable = TRUE,
-      failure_summary = run_state_failure_summary(result),
-      pending_action = "retry",
-      last_tool_results = run_state_tool_results_tail(all_tool_results),
-      run_id = run_id
-    ))
-  }
-
-  if (identical(finish_reason, "tool_result_failure")) {
-    return(new_run_state(
-      status = "tool_result_failed",
-      stop_reason = finish_reason,
-      recoverable = TRUE,
-      failure_summary = run_state_failure_summary(result),
-      pending_action = "continue",
-      last_tool_results = run_state_tool_results_tail(all_tool_results),
-      run_id = run_id
-    ))
-  }
-
-  if (identical(finish_reason, "tool_failure")) {
-    return(new_run_state(
-      status = if (isTRUE(reached_max_steps)) "max_steps" else "tool_failed",
-      stop_reason = if (isTRUE(reached_max_steps)) "max_steps" else finish_reason,
-      recoverable = TRUE,
-      failure_summary = run_state_failure_summary(result),
-      pending_action = "continue",
-      last_tool_results = run_state_tool_results_tail(all_tool_results),
-      run_id = run_id
-    ))
-  }
-
-  if (isTRUE(reached_max_steps)) {
-    return(new_run_state(
-      status = "max_steps",
-      stop_reason = "max_steps",
-      recoverable = TRUE,
-      failure_summary = "Maximum generation steps reached before pending tool calls could run.",
-      pending_action = "continue",
-      last_tool_results = run_state_tool_results_tail(all_tool_results),
-      run_id = run_id
-    ))
-  }
-
+  status <- switch(
+    finish_reason,
+    waiting_user = "waiting_user",
+    blocked = "blocked",
+    aborted_safety = "aborted_safety",
+    error = "error",
+    default_status
+  )
   new_run_state(
-    status = default_status,
+    status = status,
     stop_reason = finish_reason %||% default_status,
-    recoverable = FALSE,
+    recoverable = identical(status, "blocked"),
+    failure_summary = if (status %in% c("blocked", "error")) run_state_failure_summary(result) else NULL,
     last_tool_results = run_state_tool_results_tail(all_tool_results),
     run_id = run_id
   )
@@ -204,7 +177,7 @@ attach_run_state <- function(result, run_state) {
 #' @keywords internal
 blocked_network_result <- function(e, run_id = NULL) {
   state <- new_run_state(
-    status = "blocked_network",
+    status = "blocked",
     stop_reason = "network_error",
     recoverable = TRUE,
     failure_summary = conditionMessage(e),
@@ -214,7 +187,7 @@ blocked_network_result <- function(e, run_id = NULL) {
   attach_run_state(
     GenerateResult$new(
       text = "",
-      finish_reason = "blocked_network",
+      finish_reason = "blocked",
       warnings = conditionMessage(e)
     ),
     state
@@ -251,10 +224,12 @@ run_state_continuation_prompt <- function(action = "continue",
                                           run_state = NULL) {
   action <- normalize_continue_action(action)
   state_summary <- if (!is.null(run_state)) {
+    decision <- run_state$decision %||% list()
     paste(c(
       paste0("Previous run status: ", run_state$status %||% "unknown"),
-      paste0("Stop reason: ", run_state$stop_reason %||% "unknown"),
-      if (nzchar(run_state$failure_summary %||% "")) paste0("Failure summary: ", run_state$failure_summary) else NULL
+      paste0("Phase: ", run_state$phase %||% run_state$details$stop_reason %||% "unknown"),
+      if (nzchar(decision$reason %||% "")) paste0("Last decision reason: ", decision$reason) else NULL,
+      if (nzchar(run_state$blocker %||% "")) paste0("Blocker: ", run_state$blocker) else NULL
     ), collapse = "\n")
   } else {
     "Previous run status: unknown"
