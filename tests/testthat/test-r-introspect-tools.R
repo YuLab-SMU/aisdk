@@ -59,6 +59,17 @@ test_that("r_eval captures stdout and warnings separately", {
   expect_match(out, "42", fixed = TRUE)
 })
 
+test_that("r_eval accepts R calls with missing arguments", {
+  skip_if_no_callr()
+  tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
+  out <- tool$run(list(
+    code = "df <- data.frame(a = 1:3, b = 4:6); df[1, ]"
+  ))
+
+  expect_match(out, "status: OK", fixed = TRUE)
+  expect_match(out, "a b", fixed = TRUE)
+})
+
 test_that("r_eval captures subprocess stderr (critical for install-failure-style debugging)", {
   skip_if_no_callr()
   testthat::skip_on_os("windows") # /bin/sh availability

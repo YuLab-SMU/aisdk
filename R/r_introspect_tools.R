@@ -63,11 +63,21 @@ r_eval_call_name <- function(expr) {
 r_eval_walk_calls <- function(expr, visit) {
   if (is.call(expr)) {
     visit(expr)
-    for (arg in as.list(expr)[-1]) {
+    args <- as.list(expr)[-1]
+    for (i in seq_along(args)) {
+      arg <- args[[i]]
+      if (rlang::is_missing(arg)) {
+        next
+      }
       r_eval_walk_calls(arg, visit)
     }
   } else if (is.pairlist(expr) || is.expression(expr)) {
-    for (arg in as.list(expr)) {
+    args <- as.list(expr)
+    for (i in seq_along(args)) {
+      arg <- args[[i]]
+      if (rlang::is_missing(arg)) {
+        next
+      }
       r_eval_walk_calls(arg, visit)
     }
   }

@@ -446,6 +446,7 @@ test_that("prompt_console_provider_profile supports custom API setup", {
   menu_answers <- c(
     10L, # provider: Custom API
     1L,  # api format: OpenAI Chat Completions
+    1L,  # compatibility: basic text fallback
     1L,  # select first fetched/static model
     1L   # save to project
   )
@@ -514,6 +515,7 @@ test_that("prompt_console_provider_profile can save custom API setup to aisdk.ya
   menu_answers <- c(
     10L, # provider: Custom API
     1L,  # api format: OpenAI Chat Completions
+    2L,  # compatibility: native tools, no stream_options
     1L,  # select first fetched/static model
     3L   # save project aisdk.yaml
   )
@@ -563,6 +565,8 @@ test_that("prompt_console_provider_profile can save custom API setup to aisdk.ya
   expect_equal(cfg$default_model, "yulab:gpt-5.5")
   expect_equal(cfg$model_providers$yulab$base_url, "https://proxy.example.com/v1")
   expect_equal(cfg$model_providers$yulab$api_key_env, "AISDK_YULAB_API_KEY")
+  expect_true(cfg$model_providers$yulab$supports_native_tools)
+  expect_true(cfg$model_providers$yulab$disable_stream_options)
   expect_equal(saved_env$updates$AISDK_YULAB_API_KEY, "sk-custom")
   expect_equal(saved_env$path, project_path)
   expect_equal(remembered$model_id, "yulab:gpt-5.5")
@@ -597,6 +601,7 @@ test_that("prompt_console_provider_profile can edit dynamic YAML custom provider
     2L, # edit saved setup
     1L, # edit first profile
     1L, # keep API format
+    1L, # keep compatibility
     1L, # keep base URL
     1L, # keep API key
     1L, # keep model
@@ -656,6 +661,7 @@ test_that("prompt_console_provider_profile supports custom API setup without API
   menu_answers <- c(
     10L, # provider: Custom API
     1L,  # api format: OpenAI Chat Completions
+    1L,  # compatibility: basic text fallback
     1L,  # select first fetched/static model
     1L   # save to project
   )

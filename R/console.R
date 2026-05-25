@@ -478,8 +478,12 @@ console_send_user_message <- function(input,
       }
       console_record_generation_events(session, generation_result)
 
-      # Failure detection: check if any tools failed repeatedly
-      if (isTRUE(check_tool_failures) && !is.null(generation_result) && !is.null(generation_result$all_tool_results)) {
+      # Failure detection: only prompt for recovery when the turn ended in a
+      # recoverable tool failure. Earlier failed attempts can be followed by a
+      # successful retry, and should not interrupt a completed answer.
+      if (isTRUE(check_tool_failures) &&
+          isTRUE(console_should_prompt_tool_recovery(generation_result)) &&
+          !is.null(generation_result$all_tool_results)) {
         recovery_action <- console_check_tool_failures(generation_result$all_tool_results, session)
         if (!is.null(recovery_action) && !is.null(recovery_action$action)) {
           console_continue_run_action(
@@ -2963,6 +2967,15 @@ with_console_chat_display <- function(verbose = FALSE,
   on.exit(options(old_opts), add = TRUE)
 
   force(code)
+}
+
+#' @keywords internal
+console_should_prompt_tool_recovery <- function(generation_result) {
+  if (is.null(generation_result)) {
+    return(FALSE)
+  }
+
+  (generation_result$finish_reason %||% "") %in% c("tool_failure", "tool_result_failure")
 }
 
 #' Check for Tool Failures and Prompt User

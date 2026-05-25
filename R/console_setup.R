@@ -796,6 +796,86 @@ choose_console_api_format <- function(spec, menu_fn, existing_api_format = NULL)
 }
 
 #' @keywords internal
+format_console_capability_mode <- function(enable_stream_options, supports_native_tools) {
+  if (isTRUE(enable_stream_options) && isTRUE(supports_native_tools)) {
+    return("full OpenAI compatibility")
+  }
+  if (isTRUE(supports_native_tools)) {
+    return("native tools, no stream_options")
+  }
+  "basic compatibility"
+}
+
+#' @keywords internal
+choose_console_capability_mode <- function(spec,
+                                           menu_fn,
+                                           api_format = NULL,
+                                           existing_profile = NULL) {
+  current <- list(
+    enable_stream_options = existing_profile$enable_stream_options %||% isTRUE(spec$default_enable_stream_options),
+    supports_native_tools = existing_profile$supports_native_tools %||% isTRUE(spec$default_supports_native_tools)
+  )
+
+  if (is.null(spec$enable_stream_options_env) && is.null(spec$supports_native_tools_env)) {
+    return(current)
+  }
+
+  if (!identical(spec$id, "custom")) {
+    return(current)
+  }
+
+  anthropic_format <- identical(api_format %||% spec$default_api_format %||% "", "anthropic_messages")
+  labels <- if (isTRUE(anthropic_format)) {
+    c(
+      "Basic compatibility (text tool fallback)",
+      "Native tool calling"
+    )
+  } else {
+    c(
+      "Basic compatibility (text tools, no stream_options)",
+      "Native tool calling (no stream_options)",
+      "Full OpenAI compatibility (native tools + stream_options)"
+    )
+  }
+  values <- if (isTRUE(anthropic_format)) {
+    list(
+      list(enable_stream_options = FALSE, supports_native_tools = FALSE),
+      list(enable_stream_options = FALSE, supports_native_tools = TRUE)
+    )
+  } else {
+    list(
+      list(enable_stream_options = FALSE, supports_native_tools = FALSE),
+      list(enable_stream_options = FALSE, supports_native_tools = TRUE),
+      list(enable_stream_options = TRUE, supports_native_tools = TRUE)
+    )
+  }
+
+  has_existing <- !is.null(existing_profile) &&
+    (!is.null(existing_profile$enable_stream_options) || !is.null(existing_profile$supports_native_tools))
+  choices <- labels
+  if (isTRUE(has_existing)) {
+    choices <- c(
+      paste("Keep current", sprintf("(%s)", format_console_capability_mode(
+        current$enable_stream_options,
+        current$supports_native_tools
+      ))),
+      choices
+    )
+  }
+
+  selection <- menu_fn("Custom API compatibility", choices)
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  if (isTRUE(has_existing) && identical(selection, 1L)) {
+    return(current)
+  }
+
+  offset <- if (isTRUE(has_existing)) 1L else 0L
+  values[[selection - offset]]
+}
+
+#' @keywords internal
 choose_console_api_key <- function(spec, menu_fn, input_fn, existing_api_key = NULL) {
   existing_api_key <- existing_api_key %||% ""
   key_prompt <- sprintf(
@@ -939,6 +1019,8 @@ finalize_console_profile <- function(spec,
                                      base_url,
                                      model,
                                      api_format = NULL,
+                                     enable_stream_options = spec$default_enable_stream_options,
+                                     supports_native_tools = spec$default_supports_native_tools,
                                      save_target,
                                      save_fn,
                                      remember_model_fn,
@@ -947,8 +1029,8 @@ finalize_console_profile <- function(spec,
     c(
       list(api_key, base_url, model),
       if (!is.null(spec$api_format_env)) list(api_format %||% spec$default_api_format %||% "") else list(),
-      if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(spec$default_enable_stream_options)) "true" else "false") else list(),
-      if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(spec$default_supports_native_tools)) "true" else "false") else list()
+      if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(enable_stream_options)) "true" else "false") else list(),
+      if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list()
     ),
     c(
       spec$api_key_env,
@@ -971,8 +1053,8 @@ finalize_console_profile <- function(spec,
       wire_api = api_format %||% spec$default_api_format %||% "chat_completions",
       api_key_env = api_key_env,
       requires_openai_auth = nzchar(api_key %||% ""),
-      disable_stream_options = !isTRUE(spec$default_enable_stream_options),
-      supports_native_tools = isTRUE(spec$default_supports_native_tools)
+      disable_stream_options = !isTRUE(enable_stream_options),
+      supports_native_tools = isTRUE(supports_native_tools)
     )
     update_model_config_file(
       path = save_target$path,
@@ -1018,6 +1100,16 @@ run_console_profile_setup <- function(spec,
     existing_api_format = existing_profile$api_format %||% NULL
   )
   if (is.null(api_format) && !is.null(spec$api_format_env)) {
+    return(NULL)
+  }
+
+  capability_mode <- choose_console_capability_mode(
+    spec = spec,
+    menu_fn = menu_fn,
+    api_format = api_format,
+    existing_profile = existing_profile
+  )
+  if (is.null(capability_mode)) {
     return(NULL)
   }
 
@@ -1085,6 +1177,8 @@ run_console_profile_setup <- function(spec,
     base_url = base_url,
     model = model,
     api_format = api_format,
+    enable_stream_options = capability_mode$enable_stream_options,
+    supports_native_tools = capability_mode$supports_native_tools,
     save_target = save_target,
     save_fn = save_fn,
     remember_model_fn = remember_model_fn,

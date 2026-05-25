@@ -148,6 +148,24 @@ test_that("handle_user_choice returns recovery prompts", {
   expect_match(explain$prompt, "Do not call the failing tool again", fixed = TRUE)
 })
 
+test_that("console only prompts tool recovery for failed turns", {
+  recovered <- list(
+    text = "Generated and opened the plot.",
+    finish_reason = "stop",
+    all_tool_results = list(
+      list(name = "bash", result = "Error: missing file", is_error = TRUE),
+      list(name = "bash", result = "Error: missing file", is_error = TRUE),
+      list(name = "bash", result = "opened", is_error = FALSE)
+    )
+  )
+
+  failed <- recovered
+  failed$finish_reason <- "tool_result_failure"
+
+  expect_false(aisdk:::console_should_prompt_tool_recovery(recovered))
+  expect_true(aisdk:::console_should_prompt_tool_recovery(failed))
+})
+
 test_that("console detects action-promising assistant text after tool use", {
   result <- list(
     text = "`ggmosaic` installed. Now installing `confuns`",
