@@ -465,7 +465,7 @@ build_text_tool_system_prompt <- function(tools) {
 #' @keywords internal
 append_text_tool_result_messages <- function(messages, result, tool_results) {
   assistant_text <- result$text %||% ""
-  if (nzchar(assistant_text)) {
+  if (nzchar(assistant_text) && length(result$tool_calls %||% list()) == 0) {
     messages <- c(messages, list(list(role = "assistant", content = assistant_text)))
   }
 
@@ -705,6 +705,7 @@ generate_text <- function(model = NULL,
 #' @param session Optional ChatSession object for shared state.
 #' @param hooks Optional HookHandler object.
 #' @param registry Optional ProviderRegistry to use.
+#' @param .stream_event_callback Internal callback for typed stream events.
 #' @param ... Additional arguments passed to the model.
 #' @return A GenerateResult object (accumulated from the stream).
 #' @export
@@ -732,6 +733,7 @@ stream_text <- function(model = NULL,
                         session = NULL,
                         hooks = NULL,
                         registry = NULL,
+                        .stream_event_callback = NULL,
                         ...) {
   requested_model_id <- if (is.character(model) && length(model) == 1) model else NULL
   effective_model_id <- requested_model_id %||% if (is.null(model) && is.null(session)) get_model() else NULL
@@ -832,7 +834,8 @@ stream_text <- function(model = NULL,
     max_tool_result_errors = max_tool_result_errors,
     require_post_tool_protocol = require_post_tool_protocol,
     use_text_tool_fallback = use_text_tool_fallback,
-    initial_messages_len = initial_messages_len
+    initial_messages_len = initial_messages_len,
+    stream_event_callback = .stream_event_callback
   )
 
   # Trigger on_generation_end

@@ -1151,6 +1151,28 @@ test_that("streaming chunks accumulate into app state assistant text", {
   expect_equal(app_state$phase, "idle")
 })
 
+test_that("console stream events render thinking without storing it as final text", {
+  session <- aisdk::create_chat_session()
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+  aisdk:::console_app_start_turn(app_state, "Think first")
+
+  aisdk:::console_handle_stream_event(
+    list(type = "thinking_text", text = "<think>\nprivate reasoning\n</think>\n\n"),
+    app_state = app_state,
+    md_renderer = NULL
+  )
+  aisdk:::console_handle_stream_event(
+    list(type = "final_text", text = "Visible answer."),
+    app_state = app_state,
+    md_renderer = NULL
+  )
+
+  turn <- aisdk:::console_app_get_current_turn(app_state)
+  expect_equal(turn$assistant_text, "Visible answer.")
+  expect_equal(turn$intermediate_text, "")
+  expect_false(grepl("private reasoning", turn$assistant_text, fixed = TRUE))
+})
+
 test_that("console agent shows native post-tool prose and final answer once", {
   echo_tool <- tool(
     name = "echo",
@@ -1197,10 +1219,73 @@ test_that("console agent shows native post-tool prose and final answer once", {
 
   turn <- aisdk:::console_app_get_last_turn(app_state)
   expect_true(ok)
-  expect_match(turn$assistant_text, "Installing the missing package", fixed = TRUE)
+  expect_match(turn$intermediate_text, "Installing the missing package", fixed = TRUE)
   expect_match(turn$assistant_text, "Console protocol worked", fixed = TRUE)
+  expect_false(grepl("Installing the missing package", turn$assistant_text, fixed = TRUE))
   expect_equal(length(gregexpr("Console protocol worked", turn$assistant_text, fixed = TRUE)[[1]]), 1L)
   expect_false(grepl("<final_answer>", turn$assistant_text, fixed = TRUE))
+})
+
+test_that("console agent dedupes repeated final-looking intermediate text", {
+  tool_seen <- character()
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) {
+      tool_seen <<- c(tool_seen, args$message)
+      paste("Echo:", args$message)
+    }
+  )
+
+  report <- "FINAL REPORT\nThe package names are available."
+  model <- MockModel$new(list(
+    list(
+      text = report,
+      tool_calls = list(list(
+        id = "call_1",
+        name = "echo",
+        arguments = list(message = "first")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = report,
+      tool_calls = list(list(
+        id = "call_2",
+        name = "echo",
+        arguments = list(message = "second")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = paste0("<final_answer>", report, "</final_answer>"),
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  ))
+  model$capabilities <- list(native_tool_calling = TRUE)
+  session <- aisdk::create_chat_session(model = model, tools = list(echo_tool))
+  session$merge_metadata(list(console_agent_enabled = TRUE))
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  ok <- aisdk:::console_send_user_message(
+    "Use the echo tool twice",
+    session = session,
+    stream = TRUE,
+    app_state = app_state
+  )
+
+  turn <- aisdk:::console_app_get_last_turn(app_state)
+  expect_true(ok)
+  expect_equal(tool_seen, c("first", "second"))
+  intermediate_matches <- gregexpr("FINAL REPORT", turn$intermediate_text, fixed = TRUE)[[1]]
+  assistant_matches <- gregexpr("FINAL REPORT", turn$assistant_text, fixed = TRUE)[[1]]
+  expect_equal(sum(intermediate_matches > 0), 1L)
+  expect_equal(sum(assistant_matches > 0), 1L)
 })
 
 test_that("turn and tool inspector helpers expose structured details", {

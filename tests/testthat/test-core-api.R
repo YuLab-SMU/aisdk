@@ -399,6 +399,176 @@ test_that("stream_text shows native post-tool progress text before correcting", 
   expect_false(any(grepl("<final_answer>", chunks, fixed = TRUE)))
 })
 
+test_that("stream_text emits typed events and keeps tool-call prose out of history", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  tool_step_text <- "FINAL REPORT\nThis should not be repeated into history."
+  second_call_messages <- NULL
+  mock_model <- MockModel$new()
+  mock_model$capabilities <- list(native_tool_calling = TRUE)
+  mock_model$responses <- list(
+    list(
+      text = tool_step_text,
+      tool_calls = list(list(
+        id = "call_1",
+        name = "echo",
+        arguments = list(message = "native stream")
+      )),
+      finish_reason = "tool_calls",
+      usage = list(total_tokens = 10)
+    ),
+    function(params) {
+      second_call_messages <<- params$messages
+      list(
+        text = tool_step_text,
+        tool_calls = NULL,
+        finish_reason = "stop",
+        usage = list(total_tokens = 10)
+      )
+    }
+  )
+
+  raw_chunks <- character()
+  events <- list()
+  result <- stream_text(
+    model = mock_model,
+    prompt = "Use the echo tool",
+    tools = list(echo_tool),
+    max_steps = 3,
+    callback = function(text, done) {
+      if (nzchar(text %||% "")) {
+        raw_chunks <<- c(raw_chunks, text)
+      }
+    },
+    .stream_event_callback = function(event) {
+      events[[length(events) + 1L]] <<- event
+    }
+  )
+
+  event_types <- vapply(events, `[[`, character(1), "type")
+  expect_equal(result$text, tool_step_text)
+  expect_true(any(event_types == "intermediate_text"))
+  expect_true(any(event_types == "final_text"))
+  expect_true(any(event_types == "done"))
+  expect_true(any(vapply(result$stream_events, `[[`, character(1), "type") == "intermediate_text"))
+  expect_length(raw_chunks, 0)
+
+  assistant_tool_messages <- Filter(function(message) {
+    identical(message$role, "assistant") &&
+      length(message$tool_calls %||% list()) > 0
+  }, second_call_messages)
+  expect_length(assistant_tool_messages, 1)
+  expect_identical(assistant_tool_messages[[1]]$content, "")
+})
+
+test_that("stream_text keeps provider thinking separate from visible answers", {
+  ThinkingStreamModel <- R6::R6Class(
+    "ThinkingStreamModelForCoreTests",
+    inherit = aisdk:::LanguageModelV1,
+    public = list(
+      provider = "mock",
+      model_id = "thinking-stream-mock",
+      call_count = 0L,
+      initialize = function() {
+        self$call_count <- 0L
+      },
+      do_generate = function(params) {
+        list(text = "Visible answer.", tool_calls = NULL, finish_reason = "stop")
+      },
+      do_stream = function(params, callback) {
+        self$call_count <- self$call_count + 1L
+        if (self$call_count == 1L) {
+          callback("<think>\n", FALSE)
+          callback("Reasoning only.", FALSE)
+          callback("\n</think>\n\n", FALSE)
+          callback(NULL, TRUE)
+          return(list(
+            text = "",
+            reasoning = "Reasoning only.",
+            tool_calls = NULL,
+            finish_reason = "stop",
+            usage = list(total_tokens = 10)
+          ))
+        }
+
+        callback("Visible answer.", FALSE)
+        callback(NULL, TRUE)
+        list(
+          text = "Visible answer.",
+          tool_calls = NULL,
+          finish_reason = "stop",
+          usage = list(total_tokens = 10)
+        )
+      },
+      format_tool_result = function(tool_call_id, tool_name, result) {
+        list(role = "tool", tool_call_id = tool_call_id, name = tool_name, content = result)
+      }
+    )
+  )
+
+  model <- ThinkingStreamModel$new()
+  events <- list()
+  result <- stream_text(
+    model = model,
+    prompt = "Think, then answer",
+    max_steps = 2,
+    callback = function(text, done) NULL,
+    .stream_event_callback = function(event) {
+      events[[length(events) + 1L]] <<- event
+    }
+  )
+
+  event_types <- vapply(events, `[[`, character(1), "type")
+  final_events <- Filter(function(event) identical(event$type, "final_text"), events)
+  expect_equal(result$text, "Visible answer.")
+  expect_equal(model$call_count, 2L)
+  expect_true(any(event_types == "thinking_text"))
+  expect_equal(final_events[[1]]$text, "Visible answer.")
+  expect_false(grepl("<think>", result$text, fixed = TRUE))
+})
+
+test_that("thinking markup filter handles split tags", {
+  filter <- aisdk:::new_agent_runtime_thinking_markup_filter()
+
+  first <- filter$process("visible <thi")
+  second <- filter$process("nk>\nprivate</thi")
+  third <- filter$process("nk>\nanswer")
+
+  expect_equal(first$visible, "visible ")
+  expect_equal(first$thinking, "")
+  expect_equal(second$visible, "")
+  expect_equal(second$thinking, "<think>\nprivate")
+  expect_equal(third$thinking, "</think>")
+  expect_equal(third$visible, "\nanswer")
+})
+
+test_that("text tool fallback does not replay prose from tool-call turns", {
+  messages <- aisdk:::append_text_tool_result_messages(
+    messages = list(list(role = "user", content = "Use a tool")),
+    result = list(
+      text = "I am checking this now.",
+      tool_calls = list(list(id = "call_1", name = "echo", arguments = list()))
+    ),
+    tool_results = list(list(
+      id = "call_1",
+      name = "echo",
+      result = "ok",
+      is_error = FALSE
+    ))
+  )
+
+  assistant_messages <- Filter(function(message) {
+    identical(message$role, "assistant")
+  }, messages)
+  expect_length(assistant_messages, 0)
+  expect_match(messages[[length(messages)]]$content, "Tool execution results:", fixed = TRUE)
+})
+
 test_that("stream_text shows text-tool post-tool progress text before correcting", {
   echo_tool <- tool(
     name = "echo",

@@ -20,6 +20,7 @@ stream_text(
   session = NULL,
   hooks = NULL,
   registry = NULL,
+  .stream_event_callback = NULL,
   ...
 )
 }
@@ -61,6 +62,8 @@ See \code{generate_text} for details. Default FALSE.}
 \item{hooks}{Optional HookHandler object.}
 
 \item{registry}{Optional ProviderRegistry to use.}
+
+\item{.stream_event_callback}{Internal callback for typed stream events.}
 
 \item{...}{Additional arguments passed to the model.}
 }

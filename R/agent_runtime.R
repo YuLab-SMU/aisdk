@@ -213,6 +213,126 @@ agent_runtime_has_tool_calls <- function(result) {
 }
 
 #' @keywords internal
+agent_runtime_emit_stream_event <- function(callback,
+                                            type,
+                                            text = NULL,
+                                            done = FALSE,
+                                            step = NULL,
+                                            metadata = list()) {
+  if (!is.function(callback)) {
+    return(invisible(NULL))
+  }
+  event <- c(
+    list(
+      type = type,
+      text = text,
+      done = isTRUE(done),
+      step = step
+    ),
+    metadata %||% list()
+  )
+  callback(event)
+  invisible(event)
+}
+
+#' @keywords internal
+agent_runtime_pending_tag_suffix <- function(text, patterns) {
+  if (!nzchar(text %||% "")) {
+    return("")
+  }
+
+  best <- ""
+  for (pattern in patterns) {
+    max_len <- min(nchar(pattern) - 1L, nchar(text))
+    if (max_len <= 0L) {
+      next
+    }
+    for (len in seq.int(max_len, 1L)) {
+      suffix <- substr(text, nchar(text) - len + 1L, nchar(text))
+      prefix <- substr(pattern, 1L, len)
+      if (identical(suffix, prefix) && len > nchar(best)) {
+        best <- suffix
+      }
+    }
+  }
+  best
+}
+
+#' @keywords internal
+new_agent_runtime_thinking_markup_filter <- function() {
+  state <- new.env(parent = emptyenv())
+  state$in_thinking <- FALSE
+  state$pending <- ""
+
+  process <- function(text, done = FALSE) {
+    text <- paste0(state$pending, text %||% "")
+    state$pending <- ""
+    if (!nzchar(text)) {
+      return(list(visible = "", thinking = ""))
+    }
+
+    if (!isTRUE(done)) {
+      patterns <- c("<think>", "</think>")
+      pending <- agent_runtime_pending_tag_suffix(text, patterns)
+      if (nzchar(pending)) {
+        state$pending <- pending
+        text <- substr(text, 1L, nchar(text) - nchar(pending))
+      }
+    }
+
+    visible <- character()
+    thinking <- character()
+    while (nzchar(text)) {
+      if (isTRUE(state$in_thinking)) {
+        close_pos <- regexpr("</think>", text, fixed = TRUE)[[1]]
+        if (close_pos > 0L) {
+          close_end <- close_pos + nchar("</think>") - 1L
+          thinking <- c(thinking, substr(text, 1L, close_end))
+          text <- substr(text, close_end + 1L, nchar(text))
+          state$in_thinking <- FALSE
+        } else {
+          thinking <- c(thinking, text)
+          text <- ""
+        }
+      } else {
+        open_pos <- regexpr("<think>", text, fixed = TRUE)[[1]]
+        if (open_pos > 0L) {
+          if (open_pos > 1L) {
+            visible <- c(visible, substr(text, 1L, open_pos - 1L))
+          }
+          text <- substr(text, open_pos, nchar(text))
+          state$in_thinking <- TRUE
+        } else {
+          visible <- c(visible, text)
+          text <- ""
+        }
+      }
+    }
+
+    list(
+      visible = paste0(visible, collapse = ""),
+      thinking = paste0(thinking, collapse = "")
+    )
+  }
+
+  list(process = process)
+}
+
+#' @keywords internal
+agent_runtime_anthropic_content_without_text <- function(content) {
+  if (!is.list(content)) {
+    return(content)
+  }
+  kept <- Filter(function(block) {
+    !identical(block$type %||% NULL, "text")
+  }, content)
+  if (length(kept) == 0) {
+    return(content)
+  }
+  kept
+}
+
+#' @keywords internal
 agent_runtime_tool_results_have_success <- function(tool_results) {
   any(vapply(tool_results %||% list(), function(tr) !isTRUE(tr$is_error), logical(1)))
 }
@@ -463,7 +583,11 @@ agent_runtime_append_provider_messages <- function(messages,
     ))
   }
 
-  assistant_message <- list(role = "assistant", content = result$text %||% "")
+  has_tool_calls <- agent_runtime_has_tool_calls(result)
+  assistant_message <- list(
+    role = "assistant",
+    content = if (isTRUE(has_tool_calls)) "" else result$text %||% ""
+  )
   history_format <- model$get_history_format()
 
   if (identical(history_format, "openai")) {
@@ -483,7 +607,11 @@ agent_runtime_append_provider_messages <- function(messages,
       assistant_message$reasoning_content <- result$reasoning
     }
   } else if (identical(history_format, "anthropic")) {
-    assistant_message$content <- result$raw_response$content
+    assistant_message$content <- if (isTRUE(has_tool_calls)) {
+      agent_runtime_anthropic_content_without_text(result$raw_response$content)
+    } else {
+      result$raw_response$content
+    }
   }
 
   messages <- c(messages, list(assistant_message))
@@ -549,6 +677,7 @@ run_agent_runtime <- function(model,
                               require_post_tool_protocol = FALSE,
                               use_text_tool_fallback = FALSE,
                               initial_messages_len = length(messages),
+                              stream_event_callback = NULL,
                               policy_config = list()) {
   run_id <- run_id %||% paste0("run_", generate_stable_id("agent_runtime", Sys.time(), stats::runif(1)))
   raw_window_size <- max_steps %||% 1L
@@ -585,6 +714,7 @@ run_agent_runtime <- function(model,
 
   all_tool_calls <- list()
   all_tool_results <- list()
+  stream_events <- list()
   result <- NULL
   step <- 0L
   window_step <- 0L
@@ -592,6 +722,31 @@ run_agent_runtime <- function(model,
   awaiting_post_tool_protocol <- FALSE
   last_tool_signature <- NULL
   repeated_identical_calls <- 0L
+
+  record_stream_event <- function(type,
+                                  text = NULL,
+                                  done = FALSE,
+                                  metadata = list()) {
+    event <- c(
+      list(
+        type = type,
+        text = text,
+        done = isTRUE(done),
+        step = step
+      ),
+      metadata %||% list()
+    )
+    stream_events[[length(stream_events) + 1L]] <<- event
+    agent_runtime_emit_stream_event(
+      stream_event_callback,
+      type = type,
+      text = text,
+      done = done,
+      step = step,
+      metadata = metadata
+    )
+    invisible(event)
+  }
 
   finalize_result <- function(final_text, reason = "finalize", blocked = FALSE) {
     if (is.null(result)) {
@@ -612,12 +767,21 @@ run_agent_runtime <- function(model,
       blocked = isTRUE(blocked),
       text = agent_runtime_text(final_text, width = 1000)
     ))
-    agent_runtime_deliver_final_text(
-      final_text,
-      stream = stream,
-      callback = callback,
-      renderer = renderer
-    )
+    if (isTRUE(stream) && is.function(stream_event_callback)) {
+      record_stream_event(
+        "final_text",
+        text = final_text,
+        metadata = list(reason = reason, blocked = isTRUE(blocked))
+      )
+      record_stream_event("done", done = TRUE)
+    } else {
+      agent_runtime_deliver_final_text(
+        final_text,
+        stream = stream,
+        callback = callback,
+        renderer = renderer
+      )
+    }
   }
 
   final_text_from_state <- function(blocked = FALSE, reason = "finalize") {
@@ -731,6 +895,12 @@ run_agent_runtime <- function(model,
 
         trace <- run_trace_add(trace, "model_call", list(step = step, window = execution_windows))
         if (isTRUE(stream)) {
+          step_stream_chunks <- character()
+          thinking_markup_filter <- if (is.function(stream_event_callback)) {
+            new_agent_runtime_thinking_markup_filter()
+          } else {
+            NULL
+          }
           if (interactive() && !is.null(renderer)) {
             renderer$start_thinking()
           }
@@ -740,17 +910,37 @@ run_agent_runtime <- function(model,
               display_chunk <- protocol_markup_filter$process(chunk, done)
             }
 
-            if (interactive() && !is.null(renderer)) {
+            if (is.function(stream_event_callback)) {
+              split_chunk <- thinking_markup_filter$process(display_chunk, done = done)
+              if (nzchar(split_chunk$thinking %||% "")) {
+                record_stream_event(
+                  "thinking_text",
+                  text = split_chunk$thinking,
+                  metadata = list(reason = "provider_reasoning")
+                )
+              }
+              if (nzchar(split_chunk$visible %||% "")) {
+                step_stream_chunks <<- c(step_stream_chunks, split_chunk$visible)
+              }
+              if (interactive() && !is.null(renderer)) {
+                renderer$stop_thinking()
+              }
+            } else if (interactive() && !is.null(renderer)) {
               if (!is.null(callback)) {
                 renderer$stop_thinking()
               } else {
                 renderer$process_chunk(display_chunk, done)
               }
             }
-            if (!is.null(callback)) {
+            if (!is.function(stream_event_callback) && !is.null(callback)) {
               callback(display_chunk, done)
             }
           })
+          if (is.function(stream_event_callback) &&
+              !nzchar(result$text %||% "") &&
+              length(step_stream_chunks) > 0) {
+            result$text <- paste(step_stream_chunks, collapse = "")
+          }
         } else {
           result <- model$do_generate(params)
         }
@@ -765,6 +955,15 @@ run_agent_runtime <- function(model,
         ))
 
         if (text_tool_protocol_missing(result, awaiting_post_tool_protocol)) {
+          if (isTRUE(stream) &&
+              is.function(stream_event_callback) &&
+              nzchar(result$text %||% "")) {
+            record_stream_event(
+              "intermediate_text",
+              text = result$text,
+              metadata = list(reason = "protocol_correction")
+            )
+          }
           messages <- c(messages, list(text_tool_protocol_correction_message(
             result,
             use_text_tool_fallback = use_text_tool_fallback
@@ -779,6 +978,15 @@ run_agent_runtime <- function(model,
         awaiting_post_tool_protocol <- FALSE
 
         if (agent_runtime_has_tool_calls(result) && length(tools %||% list()) > 0) {
+          if (isTRUE(stream) &&
+              is.function(stream_event_callback) &&
+              nzchar(result$text %||% "")) {
+            record_stream_event(
+              "intermediate_text",
+              text = result$text,
+              metadata = list(reason = "tool_call")
+            )
+          }
           all_tool_calls <- c(all_tool_calls, result$tool_calls)
           task_state <- task_state_set_status(task_state, "running", phase = "tool_execution")
           task_state$budget$tool_calls <- length(all_tool_calls)
@@ -1007,6 +1215,14 @@ run_agent_runtime <- function(model,
         task_state$can_finalize <- TRUE
         decision <- new_agent_decision("finalize", reason = "completed")
         task_state <- task_state_set_decision(task_state, decision)
+        if (isTRUE(stream) && is.function(stream_event_callback)) {
+          record_stream_event(
+            "final_text",
+            text = result$text %||% "",
+            metadata = list(reason = "completed", blocked = FALSE)
+          )
+          record_stream_event("done", done = TRUE)
+        }
         break
       }
     },
@@ -1043,6 +1259,7 @@ run_agent_runtime <- function(model,
   result$steps <- step
   result$all_tool_calls <- all_tool_calls
   result$all_tool_results <- all_tool_results
+  result$stream_events <- stream_events
   result$messages_added <- build_messages_added(
     messages = messages,
     initial_len = initial_messages_len,

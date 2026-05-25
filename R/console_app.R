@@ -399,6 +399,10 @@ console_app_start_turn <- function(state, user_input) {
     phase = "thinking",
     user_text = user_input %||% "",
     assistant_text = "",
+    intermediate_text = "",
+    displayed_text_keys = character(),
+    assistant_text_keys = character(),
+    intermediate_text_keys = character(),
     tool_calls = list(),
     warnings = character(),
     messages = character(),
@@ -431,7 +435,37 @@ console_app_update_current_turn <- function(state, turn) {
 }
 
 #' @keywords internal
-console_app_append_assistant_text <- function(state, text) {
+console_app_text_key <- function(text) {
+  normalized <- gsub("[[:space:]]+", " ", trimws(text %||% ""))
+  if (!nzchar(normalized)) {
+    return("")
+  }
+  digest::digest(normalized, algo = "md5")
+}
+
+#' @keywords internal
+console_app_register_display_text <- function(state, text) {
+  key <- console_app_text_key(text)
+  if (!nzchar(key)) {
+    return(FALSE)
+  }
+
+  turn <- console_app_get_current_turn(state)
+  if (is.null(turn)) {
+    return(FALSE)
+  }
+
+  seen <- turn$displayed_text_keys %||% character()
+  duplicate <- key %in% seen
+  if (!duplicate) {
+    turn$displayed_text_keys <- c(seen, key)
+    console_app_update_current_turn(state, turn)
+  }
+  !duplicate
+}
+
+#' @keywords internal
+console_app_append_assistant_text <- function(state, text, dedupe = FALSE) {
   if (is.null(text) || !nzchar(text)) {
     return(invisible(state))
   }
@@ -441,12 +475,53 @@ console_app_append_assistant_text <- function(state, text) {
     return(invisible(state))
   }
 
+  if (isTRUE(dedupe)) {
+    key <- console_app_text_key(text)
+    seen <- turn$assistant_text_keys %||% character()
+    if (nzchar(key) && key %in% seen) {
+      return(invisible(FALSE))
+    }
+    if (nzchar(key)) {
+      turn$assistant_text_keys <- c(seen, key)
+    }
+  }
+
   turn$assistant_text <- paste0(turn$assistant_text %||% "", text)
   if (length(turn$tool_calls) > 0) {
     state$phase <- "rendering"
   }
   turn$phase <- state$phase
   console_app_update_current_turn(state, turn)
+  invisible(TRUE)
+}
+
+#' @keywords internal
+console_app_append_intermediate_text <- function(state, text, dedupe = TRUE) {
+  if (is.null(text) || !nzchar(text)) {
+    return(invisible(state))
+  }
+
+  turn <- console_app_get_current_turn(state)
+  if (is.null(turn)) {
+    return(invisible(state))
+  }
+
+  if (isTRUE(dedupe)) {
+    key <- console_app_text_key(text)
+    seen <- turn$intermediate_text_keys %||% character()
+    if (nzchar(key) && key %in% seen) {
+      return(invisible(FALSE))
+    }
+    if (nzchar(key)) {
+      turn$intermediate_text_keys <- c(seen, key)
+    }
+  }
+
+  turn$intermediate_text <- paste0(turn$intermediate_text %||% "", text)
+  state$phase <- "rendering"
+  turn$phase <- state$phase
+  console_app_update_current_turn(state, turn)
+  invisible(TRUE)
 }
 
 #' @keywords internal

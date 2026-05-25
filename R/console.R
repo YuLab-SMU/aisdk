@@ -410,6 +410,50 @@ console_chat <- function(session = NULL,
 }
 
 #' @keywords internal
+console_handle_stream_event <- function(event,
+                                        app_state = NULL,
+                                        md_renderer = NULL,
+                                        tool_markup_filter = NULL) {
+  event <- event %||% list()
+  text <- event$text %||% NULL
+  event_type <- event$type %||% "text"
+
+  if (!is.null(text) && nzchar(text)) {
+    display_text <- text
+
+    if (!is.null(display_text) && nzchar(display_text)) {
+      if (identical(event_type, "thinking_text")) {
+        if (!is.null(md_renderer)) {
+          md_renderer$process_chunk(display_text, FALSE)
+        }
+        return(invisible(TRUE))
+      }
+
+      should_render <- TRUE
+      if (!is.null(app_state)) {
+        if (identical(event_type, "intermediate_text")) {
+          console_app_append_intermediate_text(app_state, display_text, dedupe = TRUE)
+          should_render <- console_app_register_display_text(app_state, display_text)
+        } else {
+          should_render <- console_app_register_display_text(app_state, display_text)
+          console_app_append_assistant_text(app_state, display_text, dedupe = TRUE)
+        }
+      }
+
+      if (isTRUE(should_render) && !is.null(md_renderer)) {
+        md_renderer$process_chunk(display_text, FALSE)
+      }
+    }
+  }
+
+  if ((isTRUE(event$done) || identical(event_type, "done")) && !is.null(md_renderer)) {
+    md_renderer$process_chunk(NULL, TRUE)
+  }
+
+  invisible(TRUE)
+}
+
+#' @keywords internal
 console_send_user_message <- function(input,
                                       session,
                                       stream,
@@ -450,17 +494,14 @@ console_send_user_message <- function(input,
               input,
               turn_system_prompt = turn_system_prompt,
               require_post_tool_protocol = isTRUE(session$get_metadata("console_agent_enabled", default = FALSE)),
-              callback = function(text, done) {
-                display_text <- tool_markup_filter$process(text, done)
-                if (!is.null(display_text) && nzchar(display_text)) {
-                  if (!is.null(app_state)) {
-                    console_app_append_assistant_text(app_state, display_text)
-                  }
-                  md_renderer$process_chunk(display_text, FALSE)
-                }
-                if (isTRUE(done)) {
-                  md_renderer$process_chunk(NULL, TRUE)
-                }
+              callback = function(text, done) NULL,
+              .stream_event_callback = function(event) {
+                console_handle_stream_event(
+                  event,
+                  app_state = app_state,
+                  md_renderer = md_renderer,
+                  tool_markup_filter = tool_markup_filter
+                )
               }
             )
           } else {
@@ -667,16 +708,14 @@ console_continue_run_action <- function(session,
               guidance = guidance,
               stream = TRUE,
               require_post_tool_protocol = TRUE,
-              callback = function(text, done) {
-                if (!is.null(text) && nzchar(text)) {
-                  if (!is.null(app_state)) {
-                    console_app_append_assistant_text(app_state, text)
-                  }
-                  md_renderer$process_chunk(text, FALSE)
-                }
-                if (isTRUE(done)) {
-                  md_renderer$process_chunk(NULL, TRUE)
-                }
+              callback = function(text, done) NULL,
+              .stream_event_callback = function(event) {
+                console_handle_stream_event(
+                  event,
+                  app_state = app_state,
+                  md_renderer = md_renderer,
+                  tool_markup_filter = NULL
+                )
               }
             )
           } else {
