@@ -496,6 +496,40 @@ console_app_append_assistant_text <- function(state, text, dedupe = FALSE) {
 }
 
 #' @keywords internal
+console_app_remove_assistant_text_once <- function(state, text) {
+  if (is.null(text) || !nzchar(text)) {
+    return(invisible(FALSE))
+  }
+
+  turn <- console_app_get_current_turn(state)
+  if (is.null(turn) || !nzchar(turn$assistant_text %||% "")) {
+    return(invisible(FALSE))
+  }
+
+  pos <- regexpr(text, turn$assistant_text, fixed = TRUE)[[1]]
+  if (pos < 1L) {
+    return(invisible(FALSE))
+  }
+
+  before <- if (pos > 1L) substr(turn$assistant_text, 1L, pos - 1L) else ""
+  after_start <- pos + nchar(text, type = "chars")
+  after <- if (after_start <= nchar(turn$assistant_text, type = "chars")) {
+    substr(turn$assistant_text, after_start, nchar(turn$assistant_text, type = "chars"))
+  } else {
+    ""
+  }
+  turn$assistant_text <- paste0(before, after)
+
+  key <- console_app_text_key(text)
+  if (nzchar(key)) {
+    turn$assistant_text_keys <- setdiff(turn$assistant_text_keys %||% character(), key)
+  }
+
+  console_app_update_current_turn(state, turn)
+  invisible(TRUE)
+}
+
+#' @keywords internal
 console_app_append_intermediate_text <- function(state, text, dedupe = TRUE) {
   if (is.null(text) || !nzchar(text)) {
     return(invisible(state))

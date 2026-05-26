@@ -418,6 +418,32 @@ console_handle_stream_event <- function(event,
   text <- event$text %||% NULL
   event_type <- event$type %||% "text"
 
+  render_display_text <- function(display_text) {
+    if (is.null(display_text) || !nzchar(display_text)) {
+      return(invisible(TRUE))
+    }
+
+    should_render <- TRUE
+    if (!is.null(app_state)) {
+      if (identical(event_type, "intermediate_text")) {
+        console_app_remove_assistant_text_once(app_state, display_text)
+        console_app_append_intermediate_text(app_state, display_text, dedupe = TRUE)
+        should_render <- console_app_register_display_text(app_state, display_text)
+      } else {
+        should_render <- console_app_register_display_text(app_state, display_text)
+        if (isTRUE(should_render)) {
+          console_app_append_assistant_text(app_state, display_text, dedupe = TRUE)
+        }
+      }
+    }
+
+    if (isTRUE(should_render) && !is.null(md_renderer)) {
+      md_renderer$process_chunk(display_text, FALSE)
+    }
+
+    invisible(TRUE)
+  }
+
   if (!is.null(text) && nzchar(text)) {
     display_text <- text
 
@@ -433,25 +459,20 @@ console_handle_stream_event <- function(event,
         return(invisible(TRUE))
       }
 
-      should_render <- TRUE
-      if (!is.null(app_state)) {
-        if (identical(event_type, "intermediate_text")) {
-          console_app_append_intermediate_text(app_state, display_text, dedupe = TRUE)
-          should_render <- console_app_register_display_text(app_state, display_text)
-        } else {
-          should_render <- console_app_register_display_text(app_state, display_text)
-          console_app_append_assistant_text(app_state, display_text, dedupe = TRUE)
-        }
+      if (!is.null(tool_markup_filter)) {
+        display_text <- tool_markup_filter$process(display_text, done = FALSE)
       }
-
-      if (isTRUE(should_render) && !is.null(md_renderer)) {
-        md_renderer$process_chunk(display_text, FALSE)
-      }
+      render_display_text(display_text)
     }
   }
 
-  if ((isTRUE(event$done) || identical(event_type, "done")) && !is.null(md_renderer)) {
-    md_renderer$process_chunk(NULL, TRUE)
+  if (isTRUE(event$done) || identical(event_type, "done")) {
+    if (!is.null(tool_markup_filter)) {
+      render_display_text(tool_markup_filter$process(NULL, done = TRUE))
+    }
+    if (!is.null(md_renderer)) {
+      md_renderer$process_chunk(NULL, TRUE)
+    }
   }
 
   invisible(TRUE)

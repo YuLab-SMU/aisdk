@@ -31,3 +31,17 @@ test_that("render_text handles GenerateResult objects", {
 test_that("render_text handles multiline vector", {
   expect_no_error(render_text(c("Line 1", "Line 2")))
 })
+
+test_that("markdown stream renderer keeps text after thinking close tag", {
+  old <- options(aisdk.show_thinking = FALSE)
+  on.exit(options(old), add = TRUE)
+  renderer <- aisdk:::create_markdown_stream_renderer()
+
+  output <- capture.output({
+    renderer$process_chunk("<think>\nprivate\n</think>Hi there", done = FALSE)
+    renderer$process_chunk(NULL, done = TRUE)
+  })
+
+  expect_true(any(grepl("Thinking complete", output, fixed = TRUE)))
+  expect_true(any(grepl("Hi there", output, fixed = TRUE)))
+})

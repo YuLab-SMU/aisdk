@@ -1198,6 +1198,40 @@ test_that("console stream events render thinking without storing it as final tex
   expect_false(grepl("private reasoning", turn$assistant_text, fixed = TRUE))
 })
 
+test_that("console stream events filter text tool protocol markup", {
+  session <- aisdk::create_chat_session()
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+  filter <- aisdk:::new_console_tool_call_markup_filter()
+  aisdk:::console_app_start_turn(app_state, "Use a tool")
+
+  chunks <- c(
+    "我先检查。\n<tool_",
+    "call>\n{\"name\":\"r_eval\",\"arguments\":{\"code\":\"pwd\"}}\n",
+    "</tool_call>\n",
+    "继续处理。\n"
+  )
+  for (chunk in chunks) {
+    aisdk:::console_handle_stream_event(
+      list(type = "text_delta", text = chunk),
+      app_state = app_state,
+      md_renderer = NULL,
+      tool_markup_filter = filter
+    )
+  }
+  aisdk:::console_handle_stream_event(
+    list(type = "done", done = TRUE),
+    app_state = app_state,
+    md_renderer = NULL,
+    tool_markup_filter = filter
+  )
+
+  turn <- aisdk:::console_app_get_current_turn(app_state)
+  expect_match(turn$assistant_text, "我先检查", fixed = TRUE)
+  expect_match(turn$assistant_text, "继续处理", fixed = TRUE)
+  expect_false(grepl("<tool_call>", turn$assistant_text, fixed = TRUE))
+  expect_false(grepl("r_eval", turn$assistant_text, fixed = TRUE))
+})
+
 test_that("console agent accepts native plain final text after tools", {
   echo_tool <- tool(
     name = "echo",
@@ -1242,6 +1276,52 @@ test_that("console agent accepts native plain final text after tools", {
   expect_equal(length(gregexpr("Console protocol worked", turn$assistant_text, fixed = TRUE)[[1]]), 1L)
   expect_false(grepl("<final_answer>", turn$assistant_text, fixed = TRUE))
   expect_length(model$responses, 0)
+})
+
+test_that("console agent hides text tool fallback markup while streaming", {
+  echo_tool <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message to echo")),
+    execute = function(args) paste("Echo:", args$message)
+  )
+
+  model <- MockModel$new(list(
+    list(
+      text = paste0(
+        "我先调用工具。\n",
+        "<tool_call>\n",
+        "{\"name\":\"echo\",\"arguments\":{\"message\":\"console\"}}\n",
+        "</tool_call>\n"
+      ),
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    ),
+    list(
+      text = "工具结果已经处理完。",
+      tool_calls = NULL,
+      finish_reason = "stop",
+      usage = list(total_tokens = 10)
+    )
+  ))
+  model$capabilities <- list(native_tool_calling = FALSE)
+  session <- aisdk::create_chat_session(model = model, tools = list(echo_tool))
+  session$merge_metadata(list(console_agent_enabled = TRUE))
+  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
+
+  ok <- aisdk:::console_send_user_message(
+    "Use the echo tool",
+    session = session,
+    stream = TRUE,
+    app_state = app_state
+  )
+
+  turn <- aisdk:::console_app_get_last_turn(app_state)
+  expect_true(ok)
+  expect_match(turn$assistant_text, "工具结果已经处理完", fixed = TRUE)
+  expect_false(grepl("<tool_call>", turn$assistant_text, fixed = TRUE))
+  expect_false(grepl("echo", turn$assistant_text, fixed = TRUE))
 })
 
 test_that("console agent dedupes repeated final-looking intermediate text", {

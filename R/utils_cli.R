@@ -310,7 +310,11 @@ create_markdown_stream_renderer <- function() {
       state$thinking_line_count <- 0
       state$thinking_lines_printed <- 0
       state$current_thinking_text <- ""
-      return()
+      remainder <- paste(parts[-1], collapse = "</think>")
+      if (!nzchar(remainder)) {
+        return()
+      }
+      line <- remainder
     }
 
     if (state$in_thinking_block) {

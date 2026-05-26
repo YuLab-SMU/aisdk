@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.8
+
+### Fixed
+- Fixed official DeepSeek reasoning streams in `console_chat()` so assistant body text is rendered when it arrives immediately after a closing `</think>` tag.
+- Wired the console stream tool-protocol filter into typed stream events so text fallback `<tool_call>...</tool_call>` blocks are not displayed as assistant prose.
+- Kept tool-call turn preambles in intermediate text instead of duplicating them into the final assistant answer.
+
+### Verification
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-render_text.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-core-api.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-sse-aggregator.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-console-ui.R', reporter = 'summary')"`.
+- Verified live `deepseek:deepseek-v4-pro` streaming emits `text_delta` events and replays correctly through the console renderer.
+
 ## 1.4.7
 
 ### Fixed
