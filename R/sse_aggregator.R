@@ -30,6 +30,8 @@ SSEAggregator <- R6::R6Class(
             private$full_text <- ""
             private$full_reasoning <- ""
             private$is_reasoning <- FALSE
+            private$inline_thinking_buffer <- ""
+            private$inline_thinking_active <- FALSE
             private$tool_calls_acc <- list()
             private$tool_args_acc <- list()
             private$finish_reason <- NULL
@@ -47,13 +49,7 @@ SSEAggregator <- R6::R6Class(
             if (is.null(text) || nchar(text) == 0) {
                 return(invisible())
             }
-            # Close reasoning block if transitioning
-            if (private$is_reasoning) {
-                private$callback("\n</think>\n\n", done = FALSE)
-                private$is_reasoning <- FALSE
-            }
-            private$full_text <- paste0(private$full_text, text)
-            private$callback(text, done = FALSE)
+            private$process_inline_thinking(text, done = FALSE)
         },
 
         #' @description Handle a reasoning/thinking content delta.
@@ -62,12 +58,7 @@ SSEAggregator <- R6::R6Class(
             if (is.null(text) || nchar(text) == 0) {
                 return(invisible())
             }
-            if (!private$is_reasoning) {
-                private$callback("<think>\n", done = FALSE)
-                private$is_reasoning <- TRUE
-            }
-            private$full_reasoning <- paste0(private$full_reasoning, text)
-            private$callback(text, done = FALSE)
+            private$emit_reasoning_delta(text)
         },
 
         #' @description Signal the start of a reasoning block (Anthropic thinking).
@@ -190,6 +181,7 @@ SSEAggregator <- R6::R6Class(
 
         #' @description Signal stream completion.
         on_done = function() {
+            private$process_inline_thinking("", done = TRUE)
             if (private$is_reasoning) {
                 private$callback("\n</think>\n\n", done = FALSE)
                 private$is_reasoning <- FALSE
@@ -221,11 +213,161 @@ SSEAggregator <- R6::R6Class(
         full_text = "",
         full_reasoning = "",
         is_reasoning = FALSE,
+        inline_thinking_buffer = "",
+        inline_thinking_active = FALSE,
         tool_calls_acc = list(),
         tool_args_acc = list(),
         finish_reason = NULL,
         full_usage = NULL,
         last_response = NULL,
+        emit_text_delta = function(text) {
+            if (is.null(text) || nchar(text) == 0) {
+                return(invisible())
+            }
+            # Close reasoning block if transitioning
+            if (private$is_reasoning) {
+                private$callback("\n</think>\n\n", done = FALSE)
+                private$is_reasoning <- FALSE
+            }
+            private$full_text <- paste0(private$full_text, text)
+            private$callback(text, done = FALSE)
+        },
+        emit_reasoning_delta = function(text) {
+            if (is.null(text) || nchar(text) == 0) {
+                return(invisible())
+            }
+            if (!private$is_reasoning) {
+                private$callback("<think>\n", done = FALSE)
+                private$is_reasoning <- TRUE
+            }
+            private$full_reasoning <- paste0(private$full_reasoning, text)
+            private$callback(text, done = FALSE)
+        },
+        emit_reasoning_close = function() {
+            if (private$is_reasoning) {
+                private$callback("\n</think>\n\n", done = FALSE)
+                private$is_reasoning <- FALSE
+            }
+        },
+        find_inline_thinking_tag = function(text, closing = FALSE) {
+            if (!nzchar(text %||% "")) {
+                return(NULL)
+            }
+            pattern <- if (isTRUE(closing)) {
+                "</(think|thinking|reasoning)\\s*>"
+            } else {
+                "<(think|thinking|reasoning)\\b[^>]*>"
+            }
+            match <- regexpr(pattern, text, perl = TRUE, ignore.case = TRUE)
+            pos <- as.integer(match[[1]])
+            if (pos < 0L) {
+                return(NULL)
+            }
+            list(
+                start = pos,
+                end = pos + attr(match, "match.length")[[1]] - 1L
+            )
+        },
+        pending_inline_thinking_suffix = function(text, closing = FALSE) {
+            if (!nzchar(text %||% "")) {
+                return("")
+            }
+
+            lower <- tolower(text)
+            incomplete <- if (isTRUE(closing)) {
+                regexpr("</(think|thinking|reasoning)\\b[^>]*$", lower, perl = TRUE)
+            } else {
+                regexpr("<(think|thinking|reasoning)\\b[^>]*$", lower, perl = TRUE)
+            }
+            pos <- as.integer(incomplete[[1]])
+            if (pos > 0L) {
+                return(substr(text, pos, nchar(text)))
+            }
+
+            prefixes <- if (isTRUE(closing)) {
+                c("</think>", "</thinking>", "</reasoning>")
+            } else {
+                c("<think>", "<thinking>", "<reasoning>")
+            }
+            best <- ""
+            for (pattern in prefixes) {
+                max_len <- min(nchar(pattern) - 1L, nchar(text))
+                if (max_len <= 0L) {
+                    next
+                }
+                for (len in seq.int(max_len, 1L)) {
+                    suffix <- substr(lower, nchar(lower) - len + 1L, nchar(lower))
+                    prefix <- substr(pattern, 1L, len)
+                    if (identical(suffix, prefix) && len > nchar(best)) {
+                        best <- substr(text, nchar(text) - len + 1L, nchar(text))
+                    }
+                }
+            }
+            best
+        },
+        process_inline_thinking = function(text, done = FALSE) {
+            private$inline_thinking_buffer <- paste0(private$inline_thinking_buffer, text %||% "")
+            if (!nzchar(private$inline_thinking_buffer)) {
+                return(invisible())
+            }
+
+            repeat {
+                buffer <- private$inline_thinking_buffer
+                if (!nzchar(buffer)) {
+                    break
+                }
+
+                if (isTRUE(private$inline_thinking_active)) {
+                    close_tag <- private$find_inline_thinking_tag(buffer, closing = TRUE)
+                    if (!is.null(close_tag)) {
+                        if (close_tag$start > 1L) {
+                            private$emit_reasoning_delta(substr(buffer, 1L, close_tag$start - 1L))
+                        }
+                        private$emit_reasoning_close()
+                        private$inline_thinking_active <- FALSE
+                        private$inline_thinking_buffer <- substr(buffer, close_tag$end + 1L, nchar(buffer))
+                        next
+                    }
+
+                    pending <- if (isTRUE(done)) "" else private$pending_inline_thinking_suffix(buffer, closing = TRUE)
+                    emit_len <- nchar(buffer) - nchar(pending)
+                    if (emit_len > 0L) {
+                        private$emit_reasoning_delta(substr(buffer, 1L, emit_len))
+                    }
+                    private$inline_thinking_buffer <- pending
+                    break
+                }
+
+                open_tag <- private$find_inline_thinking_tag(buffer, closing = FALSE)
+                if (!is.null(open_tag)) {
+                    if (open_tag$start > 1L) {
+                        private$emit_text_delta(substr(buffer, 1L, open_tag$start - 1L))
+                    }
+                    private$inline_thinking_active <- TRUE
+                    private$inline_thinking_buffer <- substr(buffer, open_tag$end + 1L, nchar(buffer))
+                    next
+                }
+
+                pending <- if (isTRUE(done)) "" else private$pending_inline_thinking_suffix(buffer, closing = FALSE)
+                emit_len <- nchar(buffer) - nchar(pending)
+                if (emit_len > 0L) {
+                    private$emit_text_delta(substr(buffer, 1L, emit_len))
+                }
+                private$inline_thinking_buffer <- pending
+                break
+            }
+
+            if (isTRUE(done) && nzchar(private$inline_thinking_buffer)) {
+                if (isTRUE(private$inline_thinking_active)) {
+                    private$emit_reasoning_delta(private$inline_thinking_buffer)
+                } else {
+                    private$emit_text_delta(private$inline_thinking_buffer)
+                }
+                private$inline_thinking_buffer <- ""
+            }
+
+            invisible()
+        },
         ensure_index = function(lst, idx, default) {
             if (length(lst) < idx) {
                 for (i in seq(from = length(lst) + 1, to = idx)) {

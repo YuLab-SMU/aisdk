@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.7
+
+### Fixed
+- Fixed OpenAI-compatible streaming when providers inline reasoning as `<think>...</think>` inside `delta$content`, as some self-hosted DeepSeek gateways do.
+- Kept inline reasoning out of `GenerateResult$text` while preserving it in `GenerateResult$reasoning`, so console body text is not mistaken for thinking output.
+
+### Verification
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-sse-aggregator.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-core-api.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-console-ui.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-provider-custom.R', reporter = 'summary')"`.
+- Ran `Rscript -e "pkgload::load_all('.'); testthat::test_file('tests/testthat/test-provider-deepseek.R', reporter = 'summary')"`.
+
 ## 1.4.6
 
 ### Fixed

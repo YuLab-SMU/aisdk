@@ -54,6 +54,64 @@ test_that("SSEAggregator handles reasoning transitions", {
     expect_equal(chunks[4], "answer")
 })
 
+test_that("SSEAggregator separates inline thinking tags in text deltas", {
+    chunks <- character()
+
+    agg <- SSEAggregator$new(function(text, done) {
+        if (!done) chunks <<- c(chunks, text)
+    })
+
+    agg$on_text_delta("<think>\n")
+    agg$on_text_delta("hidden work")
+    agg$on_text_delta("\n</think>\n\nVisible answer")
+    agg$on_done()
+
+    result <- agg$build_result()
+
+    expect_equal(result$reasoning, "\nhidden work\n")
+    expect_equal(result$text, "\n\nVisible answer")
+    expect_equal(chunks[1], "<think>\n")
+    expect_true("\n</think>\n\n" %in% chunks)
+    expect_false(any(grepl("Visible answer", chunks[seq_len(length(chunks) - 1L)], fixed = TRUE) &
+                         grepl("<think>|</think>", chunks[seq_len(length(chunks) - 1L)])))
+})
+
+test_that("SSEAggregator handles inline thinking tags split across chunks", {
+    chunks <- character()
+
+    agg <- SSEAggregator$new(function(text, done) {
+        if (!done) chunks <<- c(chunks, text)
+    })
+
+    agg$on_text_delta("visible <thi")
+    agg$on_text_delta("nk>private</thi")
+    agg$on_text_delta("nk> answer")
+    agg$on_done()
+
+    result <- agg$build_result()
+
+    expect_equal(result$text, "visible  answer")
+    expect_equal(result$reasoning, "private")
+    expect_equal(paste(chunks, collapse = ""), "visible <think>\nprivate\n</think>\n\n answer")
+})
+
+test_that("SSEAggregator supports alternative inline thinking tag names", {
+    chunks <- character()
+
+    agg <- SSEAggregator$new(function(text, done) {
+        if (!done) chunks <<- c(chunks, text)
+    })
+
+    agg$on_text_delta("<thinking>private</thinking>done")
+    agg$on_done()
+
+    result <- agg$build_result()
+
+    expect_equal(result$text, "done")
+    expect_equal(result$reasoning, "private")
+    expect_equal(paste(chunks, collapse = ""), "<think>\nprivate\n</think>\n\ndone")
+})
+
 test_that("SSEAggregator closes reasoning on done", {
     chunks <- character()
     done_called <- FALSE
@@ -302,6 +360,33 @@ test_that("map_openai_chunk handles reasoning content", {
 
     expect_equal(chunks[1], "<think>\n")
     expect_equal(chunks[2], "Let me think...")
+})
+
+test_that("map_openai_chunk separates self-hosted inline thinking content", {
+    chunks <- character()
+    agg <- SSEAggregator$new(function(text, done) {
+        if (!done) chunks <<- c(chunks, text)
+    })
+
+    map_openai_chunk(list(
+        choices = list(list(
+            delta = list(content = "<think>private"),
+            finish_reason = NULL
+        ))
+    ), FALSE, agg)
+    map_openai_chunk(list(
+        choices = list(list(
+            delta = list(content = "</think>Visible"),
+            finish_reason = "stop"
+        ))
+    ), FALSE, agg)
+    map_openai_chunk(NULL, TRUE, agg)
+
+    result <- agg$build_result()
+
+    expect_equal(result$text, "Visible")
+    expect_equal(result$reasoning, "private")
+    expect_equal(paste(chunks, collapse = ""), "<think>\nprivate\n</think>\n\nVisible")
 })
 
 test_that("map_openai_chunk handles done signal", {
