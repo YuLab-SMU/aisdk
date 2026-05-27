@@ -2,15 +2,23 @@
 % Please edit documentation in R/stream_renderer.R
 \name{create_stream_renderer}
 \alias{create_stream_renderer}
-\title{Create a Stream Renderer}
+\title{Create a Stream Renderer (cli / terminal backend)}
 \usage{
 create_stream_renderer()
 }
 \value{
-A list of functions for rendering.
+A list of functions implementing the \link{Renderer} contract.
 }
 \description{
-Creates an environment to manage the state of a streaming response,
-including thinking indicators and tool execution status.
+The built-in terminal backend for the agent-output \link{Renderer} contract,
+rendering a streaming response (thinking indicators, streamed text, and tool
+execution status) to the R console via the cli package. It conforms to the
+\link{Renderer} interface (\code{process_chunk}, \code{start_thinking}, \code{stop_thinking},
+\code{render_tool_start}, \code{render_tool_result}, \code{reset_for_new_step}), so it can be
+swapped for any other backend (web, capture, custom UI) via the \code{renderer}
+argument of \code{\link[=stream_text]{stream_text()}}.
+}
+\seealso{
+\link{Renderer}, \code{\link[=create_null_renderer]{create_null_renderer()}}, \code{\link[=create_capture_renderer]{create_capture_renderer()}}
 }
 \keyword{internal}

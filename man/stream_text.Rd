@@ -20,6 +20,7 @@ stream_text(
   session = NULL,
   hooks = NULL,
   registry = NULL,
+  renderer = NULL,
   .stream_event_callback = NULL,
   ...
 )
@@ -62,6 +63,11 @@ See \code{generate_text} for details. Default FALSE.}
 \item{hooks}{Optional HookHandler object.}
 
 \item{registry}{Optional ProviderRegistry to use.}
+
+\item{renderer}{Optional \link{Renderer} for agent output. Defaults to the cli
+terminal backend (\code{\link[=create_stream_renderer]{create_stream_renderer()}}); pass any Renderer-conforming
+object (e.g. from a web UI, \code{\link[=create_capture_renderer]{create_capture_renderer()}}, or
+\code{\link[=create_null_renderer]{create_null_renderer()}}) to render agent output elsewhere.}
 
 \item{.stream_event_callback}{Internal callback for typed stream events.}
 

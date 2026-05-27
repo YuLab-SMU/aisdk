@@ -708,6 +708,10 @@ generate_text <- function(model = NULL,
 #' @param session Optional ChatSession object for shared state.
 #' @param hooks Optional HookHandler object.
 #' @param registry Optional ProviderRegistry to use.
+#' @param renderer Optional [Renderer] for agent output. Defaults to the cli
+#'   terminal backend ([create_stream_renderer()]); pass any Renderer-conforming
+#'   object (e.g. from a web UI, [create_capture_renderer()], or
+#'   [create_null_renderer()]) to render agent output elsewhere.
 #' @param .stream_event_callback Internal callback for typed stream events.
 #' @param ... Additional arguments passed to the model.
 #' @return A GenerateResult object (accumulated from the stream).
@@ -736,6 +740,7 @@ stream_text <- function(model = NULL,
                         session = NULL,
                         hooks = NULL,
                         registry = NULL,
+                        renderer = NULL,
                         .stream_event_callback = NULL,
                         ...) {
   requested_model_id <- if (is.character(model) && length(model) == 1) model else NULL
@@ -820,7 +825,12 @@ stream_text <- function(model = NULL,
   initial_messages_len <- length(messages)
   run_id <- paste0("run_", generate_stable_id("stream_text", Sys.time(), stats::runif(1)))
 
-  renderer <- create_stream_renderer()
+  # Agent output is rendered through the UI-agnostic Renderer contract. Default
+  # to the built-in cli/terminal backend; callers (e.g. aisdk.shiny, a custom UI,
+  # or a capture/null renderer) can inject any Renderer-conforming object.
+  if (is.null(renderer)) {
+    renderer <- create_stream_renderer()
+  }
 
   result <- run_agent_runtime(
     model = model,
