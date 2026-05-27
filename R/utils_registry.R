@@ -227,20 +227,15 @@ get_default_registry <- function() {
     # Auto-register default providers lazily to ensure fresh environment variables
     tryCatch(
       {
+        # Built-in providers shipped with aisdk core.
         if (exists("create_openai", mode = "function")) reg$register("openai", function() suppressWarnings(create_openai()))
         if (exists("create_anthropic", mode = "function")) reg$register("anthropic", function() suppressWarnings(create_anthropic()))
         if (exists("create_gemini", mode = "function")) reg$register("gemini", function() suppressWarnings(create_gemini()))
-        if (exists("create_deepseek", mode = "function")) reg$register("deepseek", function() suppressWarnings(create_deepseek()))
-        if (exists("create_xai", mode = "function")) reg$register("xai", function() suppressWarnings(create_xai()))
-        if (exists("create_volcengine", mode = "function")) reg$register("volcengine", function() suppressWarnings(create_volcengine()))
-        if (exists("create_nvidia", mode = "function")) reg$register("nvidia", function() suppressWarnings(create_nvidia()))
-        if (exists("create_stepfun", mode = "function")) reg$register("stepfun", function() suppressWarnings(create_stepfun()))
-        if (exists("create_bailian", mode = "function")) reg$register("bailian", function() suppressWarnings(create_bailian()))
-        if (exists("create_openrouter", mode = "function")) reg$register("openrouter", function() suppressWarnings(create_openrouter()))
-        if (exists("create_aihubmix", mode = "function")) reg$register("aihubmix", function() suppressWarnings(create_aihubmix()))
-        if (exists("create_moonshot", mode = "function")) reg$register("moonshot", function() suppressWarnings(create_moonshot(platform = "platform")))
-        if (exists("create_kimi_code", mode = "function")) reg$register("kimi", function() suppressWarnings(create_kimi_code(api_format = "anthropic")))
         if (exists("create_custom_provider", mode = "function")) reg$register("custom", function() suppressWarnings(create_env_custom_provider()))
+        # Long-tail providers (deepseek, xai, volcengine, nvidia, stepfun,
+        # bailian, openrouter, aihubmix, moonshot, kimi) live in the companion
+        # package aisdk.providers and register themselves via its .onLoad hook
+        # through register_provider(); they are replayed below.
       },
       error = function(e) {}
     )

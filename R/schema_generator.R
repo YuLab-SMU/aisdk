@@ -4,7 +4,15 @@
 #' @name schema_generator
 NULL
 
+#' Look up a function's parameter documentation
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param func_name Name of the function whose parameter docs to read.
+#' @param package Optional package name containing the function.
+#' @return A named character vector of parameter descriptions.
+#' @keywords internal
 #' @importFrom tools Rd_db Rd2txt
+#' @export
 get_param_docs <- function(func_name, package = NULL) {
   if (is.null(package)) {
       # Try to find which package the function belongs to

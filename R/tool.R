@@ -743,6 +743,7 @@ tool_result_message <- function(tool_call_id, result, is_error = FALSE) {
 #' @param name The tool name to find.
 #' @return The Tool object if found, NULL otherwise.
 #' @keywords internal
+#' @export
 find_tool <- function(tools, name) {
   for (t in tools) {
     if (t$name == name) {

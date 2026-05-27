@@ -5,6 +5,9 @@
 \title{OpenAI Image Model}
 \description{
 Image model implementation for OpenAI's image generation and editing APIs.
+Exported so that OpenAI-compatible providers in companion packages
+(e.g. \pkg{aisdk.providers}) can construct image models across package
+boundaries.
 }
 \keyword{internal}
 \section{Super class}{

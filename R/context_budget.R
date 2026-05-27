@@ -353,7 +353,14 @@ create_context_state <- function(metrics = NULL,
   state
 }
 
+#' Trim text to a short preview for context display
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param text Text to trim.
+#' @param max_chars Maximum number of characters to keep.
+#' @return A trimmed preview string.
 #' @keywords internal
+#' @export
 trim_context_preview <- function(text, max_chars = 160L) {
   text <- gsub("\\s+", " ", trimws(text %||% ""))
   if (!nzchar(text)) {

@@ -607,7 +607,15 @@ console_model_id_is_usable <- function(model_id, profile = NULL) {
   has_key
 }
 
+#' Resolve the startup model from runtime defaults and .Rprofile/.Renviron
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.shiny}).
+#' @param project_path,global_path,project_rprofile_path,global_rprofile_path
+#'   Paths consulted to discover a saved default model and its profile.
+#' @param apply_profile_fn Function used to apply a discovered profile.
+#' @return A list with `model_id`, `source`, and `profile`.
 #' @keywords internal
+#' @export
 resolve_console_startup_model <- function(project_path = ".Renviron",
                                           global_path = "~/.Renviron",
                                           project_rprofile_path = ".Rprofile",

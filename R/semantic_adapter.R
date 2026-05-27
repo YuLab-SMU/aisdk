@@ -524,7 +524,14 @@ clear_semantic_action_events <- function(session = NULL, envir = NULL) {
   invisible(NULL)
 }
 
+#' Validate a semantic action against an object
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param obj,action,registry,session,envir,collector,object_name,metadata
+#'   Arguments controlling validation of a semantic action against `obj`.
+#' @return Invisibly `NULL`; raises an error if the action is invalid.
 #' @keywords internal
+#' @export
 validate_semantic_action <- function(obj,
                                      action,
                                      registry = NULL,
@@ -567,7 +574,13 @@ validate_semantic_action <- function(obj,
   event
 }
 
+#' Render a semantic summary of an object
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param obj,name,registry,envir Object to summarize and resolution context.
+#' @return A character summary.
 #' @keywords internal
+#' @export
 semantic_render_summary <- function(obj, name = NULL, registry = NULL, envir = NULL) {
   adapter <- semantic_object_adapter(obj, registry = registry, envir = envir)
   renderer <- adapter$render_summary
@@ -587,7 +600,14 @@ semantic_render_summary <- function(obj, name = NULL, registry = NULL, envir = N
   paste(lines[nzchar(lines %||% "")], collapse = "\n")
 }
 
+#' Render a detailed semantic inspection of an object
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param obj,name,registry,envir Object to inspect and resolution context.
+#' @param head_rows Number of leading rows to show for tabular objects.
+#' @return A character inspection report.
 #' @keywords internal
+#' @export
 semantic_render_inspection <- function(obj, name = NULL, registry = NULL, envir = NULL, head_rows = 6) {
   adapter <- semantic_object_adapter(obj, registry = registry, envir = envir)
   renderer <- adapter$render_inspection

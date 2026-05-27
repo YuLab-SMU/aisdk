@@ -24,6 +24,10 @@ test_that("validate_model_messages only rejects explicit non-vision models", {
 })
 
 test_that("configured non-vision model metadata is enforced for image prompts", {
+  # The deepseek provider moved to aisdk.providers; load it so the registry can
+  # resolve "deepseek:..." and reach the capability-metadata enforcement.
+  skip_if_not_installed("aisdk.providers")
+  requireNamespace("aisdk.providers", quietly = TRUE)
   expect_error(
     analyze_image(
       model = "deepseek:deepseek-v4-flash",

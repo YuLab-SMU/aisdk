@@ -61,7 +61,14 @@ default_skill_roots <- function(project_dir = getwd(), include_missing = FALSE) 
   roots
 }
 
+#' Build a skill registry by auto-discovering skills under a directory
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param project_dir Directory to scan for skills.
+#' @param recursive Whether to scan subdirectories recursively.
+#' @return A skill registry object.
 #' @keywords internal
+#' @export
 create_auto_skill_registry <- function(project_dir = getwd(), recursive = TRUE) {
   roots <- default_skill_roots(project_dir = project_dir, include_missing = FALSE)
   registry <- SkillRegistry$new()

@@ -136,6 +136,8 @@ test_that("Agent keeps reload tools for initially empty skill roots", {
 })
 
 test_that("channel_resolve_agent auto-creates a skill-aware agent", {
+  # channel_resolve_agent moved to the companion package aisdk.channels.
+  skip_if_not_installed("aisdk.channels")
   temp_root <- tempdir()
   skill_dir <- file.path(temp_root, "channel_skill_test")
   dir.create(skill_dir, recursive = TRUE, showWarnings = FALSE)
@@ -150,7 +152,7 @@ test_that("channel_resolve_agent auto-creates a skill-aware agent", {
     "Instructions"
   ), file.path(dummy_skill_path, "SKILL.md"))
 
-  agent <- channel_resolve_agent(
+  agent <- aisdk.channels:::channel_resolve_agent(
     agent = NULL,
     skills = skill_dir,
     model = "mock:test"

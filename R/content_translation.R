@@ -6,7 +6,16 @@
 #' @keywords internal
 NULL
 
+#' Translate content blocks into a provider-specific payload
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.shiny}).
+#' Translates provider-neutral content blocks into the message payload shape
+#' expected by a given provider family.
+#' @param content Provider-neutral content (a string or a list of content blocks).
+#' @param target Target provider format.
+#' @return The translated, provider-specific content.
 #' @keywords internal
+#' @export
 translate_message_content <- function(content, target = c("openai_chat", "openai_responses", "gemini", "anthropic")) {
   target <- match.arg(target)
 

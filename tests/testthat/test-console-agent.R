@@ -802,6 +802,7 @@ test_that("extract_from_image_file handles batch extraction paths", {
 })
 
 test_that("setup_feishu_channel can build webhook configuration with prompt hooks", {
+    skip_if_not_installed("aisdk.channels")
     menu_answers <- c(1L)
     input_answers <- c(
         "cli_test",
@@ -810,7 +811,7 @@ test_that("setup_feishu_channel can build webhook configuration with prompt hook
     )
     saved <- NULL
 
-    result <- setup_feishu_channel(
+    result <- aisdk.channels::setup_feishu_channel(
         prompt_hooks = list(
             menu = function(title, choices) {
                 answer <- menu_answers[[1]]
@@ -850,11 +851,13 @@ test_that("setup_feishu_channel can build webhook configuration with prompt hook
 })
 
 test_that("write_feishu_bridge_files copies packaged bridge assets", {
+    # write_feishu_bridge_files moved to the companion package aisdk.channels.
+    skip_if_not_installed("aisdk.channels")
     out_dir <- tempfile("feishu-bridge-")
     dir.create(out_dir, recursive = TRUE)
     on.exit(unlink(out_dir, recursive = TRUE), add = TRUE)
 
-    info <- write_feishu_bridge_files(out_dir)
+    info <- aisdk.channels::write_feishu_bridge_files(out_dir)
 
     expect_true(file.exists(file.path(out_dir, "feishu_longconn_bridge.mjs")))
     expect_true(file.exists(file.path(out_dir, "package.json")))
@@ -862,9 +865,10 @@ test_that("write_feishu_bridge_files copies packaged bridge assets", {
 })
 
 test_that("setup_feishu_channel can consume app credentials directly", {
+    skip_if_not_installed("aisdk.channels")
     saved <- NULL
 
-    result <- setup_feishu_channel(
+    result <- aisdk.channels::setup_feishu_channel(
         prompt_hooks = list(
             menu = function(title, choices) 1L,
             input = function(prompt, default = NULL) tempfile(".Renviron"),

@@ -6,7 +6,15 @@
 #' @name utils_capture
 NULL
 
+#' Capture the output, messages, and value of evaluating an expression
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param expr Expression to evaluate.
+#' @param envir Environment in which to evaluate `expr`.
+#' @param auto_print_value Whether to auto-print the resulting value.
+#' @return A list describing the captured execution (output, value, status).
 #' @keywords internal
+#' @export
 capture_r_execution <- function(expr, envir = parent.frame(), auto_print_value = FALSE) {
   expr <- substitute(expr)
 
@@ -64,7 +72,14 @@ capture_r_execution <- function(expr, envir = parent.frame(), auto_print_value =
   result
 }
 
+#' Format a captured execution result as text
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param captured A list produced by [capture_r_execution()].
+#' @param empty_message Message to use when there was no printed output.
+#' @return A character string describing the captured execution.
 #' @keywords internal
+#' @export
 format_captured_execution <- function(captured,
                                       empty_message = "(Code executed successfully with no printed output)") {
   if (!isTRUE(captured$ok)) {

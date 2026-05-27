@@ -239,6 +239,13 @@ z_object <- function(..., .description = NULL, .required = NULL,
   schema
 }
 
+#' Schema builder for an object with arbitrary keys
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.datatools}).
+#' @param description Optional schema description.
+#' @return A `z_schema` object that accepts arbitrary keys.
+#' @keywords internal
+#' @export
 z_any_object <- function(description = NULL) {
   schema <- list(
     type = "object",

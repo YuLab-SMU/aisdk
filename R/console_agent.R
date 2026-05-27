@@ -860,10 +860,16 @@ create_console_tools <- function(working_dir = tempdir(),
                 if (!interactive()) {
                     return("Error: setup_feishu_channel requires an interactive console session.")
                 }
+                if (!requireNamespace("aisdk.channels", quietly = TRUE)) {
+                    return(paste(
+                        "Error: Feishu setup requires the 'aisdk.channels' package.",
+                        "Install it with remotes::install_github('YuLab-SMU/aisdk.channels')."
+                    ))
+                }
 
                 current_model <- args$.envir$.session_model_id %||% ""
 
-                result <- setup_feishu_channel(
+                result <- aisdk.channels::setup_feishu_channel(
                     prompt_hooks = list(
                         menu = console_menu,
                         input = console_input,

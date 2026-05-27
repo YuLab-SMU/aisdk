@@ -156,7 +156,14 @@ coerce_legacy_content_block <- function(block) {
   rlang::abort(paste0("Unsupported content block type: ", block$type))
 }
 
+#' Normalize content into a list of content blocks
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.shiny}).
+#' Coerces assorted content inputs into a normalized list of content blocks.
+#' @param content Content to normalize (a string, a single block, or a list of blocks).
+#' @return A list of normalized content blocks.
 #' @keywords internal
+#' @export
 normalize_content_blocks <- function(content) {
   if (is.null(content)) {
     return(list())
@@ -285,7 +292,15 @@ validate_multimodal_messages <- function(messages, model) {
   invisible(messages)
 }
 
+#' Validate messages against a model's multimodal capabilities
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.shiny}).
+#' Checks that the content blocks in `messages` are supported by `model`.
+#' @param model A language model object.
+#' @param messages A list of messages to validate.
+#' @return Invisibly `TRUE` if validation passes; otherwise raises an error.
 #' @keywords internal
+#' @export
 validate_model_messages <- function(model, messages) {
   validate_multimodal_messages(messages, model)
 }

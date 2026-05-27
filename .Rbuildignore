@@ -58,3 +58,4 @@
 ^verify_context_extension\.R$
 ^tools$
 ^LICENSE\.md$
+^tests/testthat/\.aisdk$

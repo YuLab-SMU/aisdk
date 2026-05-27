@@ -1939,7 +1939,16 @@ console_get_skill_registry <- function(session) {
 #' @keywords internal
 console_extract_candidate_paths <- function(text, cwd = getwd()) {
   cwd <- console_resolve_directory(cwd, fallback = getwd())
-  candidates <- tryCatch(channel_extract_local_paths(text), error = function(e) character(0))
+  # Local-path extraction is provided by the optional companion package
+  # aisdk.channels; fall back to the regex matching below when it is absent.
+  candidates <- tryCatch(
+    if (requireNamespace("aisdk.channels", quietly = TRUE)) {
+      aisdk.channels::channel_extract_local_paths(text)
+    } else {
+      character(0)
+    },
+    error = function(e) character(0)
+  )
   relative_matches <- unique(unlist(regmatches(
     text %||% "",
     gregexpr("(?:\\./)?(?:[A-Za-z0-9._-]+/)+[A-Za-z0-9._-]+|(?:\\./)?[A-Za-z0-9._-]+\\.[A-Za-z0-9._-]+", text %||% "", perl = TRUE)
@@ -2660,8 +2669,12 @@ handle_command <- function(input,
     "/feishu" = {
       if (!interactive()) {
         cli::cli_alert_danger("Feishu setup requires an interactive console.")
+      } else if (!requireNamespace("aisdk.channels", quietly = TRUE)) {
+        cli::cli_alert_danger(
+          "Feishu setup requires the {.pkg aisdk.channels} package. Install it with {.code remotes::install_github('YuLab-SMU/aisdk.channels')}."
+        )
       } else {
-        wizard_result <- setup_feishu_channel(
+        wizard_result <- aisdk.channels::setup_feishu_channel(
           prompt_hooks = list(
             menu = console_menu,
             input = console_input,

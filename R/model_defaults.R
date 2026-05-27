@@ -12,7 +12,16 @@ NULL
 .model_env$default <- NULL
 .model_env$options <- NULL
 
+#' Exact (non-partial) list element lookup by name
+#'
+#' Part of the companion-package extension API (used by \pkg{aisdk.providers}
+#' and \pkg{aisdk.console}).
+#' @param x A list.
+#' @param name The exact element name to look up.
+#' @param default Value to return when `name` is absent.
+#' @return The element value, or `default`.
 #' @keywords internal
+#' @export
 list_get_exact <- function(x, name, default = NULL) {
   if (is.list(x) && name %in% names(x)) {
     x[[name]]
