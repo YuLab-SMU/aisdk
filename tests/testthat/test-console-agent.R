@@ -84,6 +84,10 @@ test_that("create_console_agent auto-discovers skills from startup directory", {
 })
 
 test_that("console turn routing preloads explicitly referenced persona skill", {
+    # Bundled persona skills (yshu/luxun) ship in the companion package
+    # aisdk.skills, which registers them via the aisdk.skill_roots option on load.
+    skip_if_not_installed("aisdk.skills")
+    requireNamespace("aisdk.skills", quietly = TRUE)
     agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 
@@ -99,6 +103,8 @@ test_that("console turn routing preloads explicitly referenced persona skill", {
 })
 
 test_that("console turn routing preloads luxun persona for @ mentions", {
+    skip_if_not_installed("aisdk.skills")
+    requireNamespace("aisdk.skills", quietly = TRUE)
     agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 
@@ -130,6 +136,8 @@ test_that("manual persona produces turn persona prompt without skill match", {
 })
 
 test_that("console turn routing injects English reply language when input is English", {
+    skip_if_not_installed("aisdk.skills")
+    requireNamespace("aisdk.skills", quietly = TRUE)
     agent <- create_console_agent(profile = "legacy")
     session <- create_chat_session(model = "mock:test", agent = agent)
 

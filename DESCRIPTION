@@ -19,8 +19,9 @@ Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
 Suggests: testthat (>= 3.0.0), httptest2, cli, skimr,
         evaluate, ggplot2, dplyr, readr, readxl, DBI, RSQLite, rstudioapi,
         DT, withr, devtools, fs, dotenv, pkgload, aisdk.channels,
-        aisdk.providers
-Remotes: YuLab-SMU/aisdk.channels, YuLab-SMU/aisdk.providers
+        aisdk.providers, aisdk.skills
+Remotes: YuLab-SMU/aisdk.channels, YuLab-SMU/aisdk.providers,
+        YuLab-SMU/aisdk.skills
 Config/testthat/edition: 3
 URL: https://github.com/YuLab-SMU/aisdk,
         https://yulab-smu.top/aisdk/
