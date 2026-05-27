@@ -1,0 +1,674 @@
+[
+  {
+    "id": "gpt-5.5",
+    "type": "language",
+    "family": "GPT-5.5",
+    "description": "Latest OpenAI frontier model for complex reasoning, coding, and professional workflows.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1050000,
+      "max_input_tokens": 1050000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 5,
+      "output": 30,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.5-pro",
+    "type": "language",
+    "family": "GPT-5.5",
+    "description": "Higher-compute GPT-5.5 variant for the hardest professional and reasoning tasks.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1050000,
+      "max_input_tokens": 1050000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 30,
+      "output": 180,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.5-pro",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.4",
+    "type": "language",
+    "family": "GPT-5.4",
+    "description": "Frontier model for coding and professional work with 1.05M context.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1050000,
+      "max_input_tokens": 1050000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 2.5,
+      "output": 15,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.4-pro",
+    "type": "language",
+    "family": "GPT-5.4",
+    "description": "Higher-compute GPT-5.4 variant for more precise responses on difficult tasks.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1050000,
+      "max_input_tokens": 1050000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 30,
+      "output": 180,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-pro",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.4-mini",
+    "type": "language",
+    "family": "GPT-5.4",
+    "description": "Strong mini model for coding, computer use, and subagents.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.75,
+      "output": 4.5,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.4-nano",
+    "type": "language",
+    "family": "GPT-5.4",
+    "description": "Lowest-cost GPT-5.4-class model for high-volume classification, extraction, ranking, and subagents.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.2,
+      "output": 1.25,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-nano",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5.3-codex",
+    "type": "language",
+    "family": "GPT-5.3",
+    "description": "Agentic coding model optimized for Codex-like environments.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 1.75,
+      "output": 14,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.3-codex",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5",
+    "type": "language",
+    "family": "GPT-5",
+    "description": "Reasoning model for coding and agentic tasks across domains.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 1.25,
+      "output": 10,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5-mini",
+    "type": "language",
+    "family": "GPT-5",
+    "description": "Cost-sensitive, low-latency GPT-5 model for well-defined tasks and precise prompts.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.25,
+      "output": 2,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-5-nano",
+    "type": "language",
+    "family": "GPT-5",
+    "description": "Fastest and lowest-cost GPT-5 model for summarization, classification, and routing.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 400000,
+      "max_input_tokens": 400000,
+      "max_output_tokens": 128000
+    },
+    "pricing": {
+      "input": 0.05,
+      "output": 0.4,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5-nano",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-4.1",
+    "type": "language",
+    "family": "GPT-4.1",
+    "description": "Smart non-reasoning model with strong instruction following and tool calling.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1047576,
+      "max_input_tokens": 1047576,
+      "max_output_tokens": 32768
+    },
+    "pricing": {
+      "input": 2,
+      "output": 8,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-4.1",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-4.1-mini",
+    "type": "language",
+    "family": "GPT-4.1",
+    "description": "Smaller, faster GPT-4.1 model with long-context support.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1047576,
+      "max_input_tokens": 1047576,
+      "max_output_tokens": 32768
+    },
+    "pricing": {
+      "input": 0.4,
+      "output": 1.6,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-4.1-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-4.1-nano",
+    "type": "language",
+    "family": "GPT-4.1",
+    "description": "Fastest and lowest-cost GPT-4.1 model for simple tasks.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 1047576,
+      "max_input_tokens": 1047576,
+      "max_output_tokens": 32768
+    },
+    "pricing": {
+      "input": 0.1,
+      "output": 0.4,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-4.1-nano",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-4o",
+    "type": "language",
+    "family": "GPT-4o",
+    "description": "Legacy multimodal GPT model with broad ecosystem support.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 16384
+    },
+    "pricing": {
+      "input": 2.5,
+      "output": 10,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-4o",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "gpt-4o-mini",
+    "type": "language",
+    "family": "GPT-4o",
+    "description": "Fast, affordable GPT-4o model for focused tasks.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 128000,
+      "max_input_tokens": 128000,
+      "max_output_tokens": 16384
+    },
+    "pricing": {
+      "input": 0.15,
+      "output": 0.6,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/gpt-4o-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "o3",
+    "type": "language",
+    "family": "o-Series",
+    "description": "Reasoning model for complex multi-step tasks, succeeded by GPT-5.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 100000
+    },
+    "pricing": {
+      "input": 2,
+      "output": 8,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/o3",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "o4-mini",
+    "type": "language",
+    "family": "o-Series",
+    "description": "Fast, cost-efficient reasoning model, succeeded by GPT-5 mini.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 100000
+    },
+    "pricing": {
+      "input": 1.1,
+      "output": 4.4,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/o4-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "o3-mini",
+    "type": "language",
+    "family": "o-Series",
+    "description": "Small reasoning model for moderate reasoning tasks.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 100000
+    },
+    "pricing": {
+      "input": 1.1,
+      "output": 4.4,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/o3-mini",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "o1",
+    "type": "language",
+    "family": "o-Series",
+    "description": "Premium reasoning model for research-grade problem solving.",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 200000,
+      "max_input_tokens": 200000,
+      "max_output_tokens": 100000
+    },
+    "pricing": {
+      "input": 15,
+      "output": 60,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://developers.openai.com/api/docs/models/o1",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "text-embedding-3-small",
+    "type": "embedding",
+    "family": "Embedding",
+    "description": "Efficient embedding model for similarity search and classification.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 8192,
+      "max_input_tokens": 8192,
+      "max_output_tokens": 1
+    },
+    "pricing": {
+      "input": 0.02,
+      "output": 0,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.openai.com/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  },
+  {
+    "id": "text-embedding-3-large",
+    "type": "embedding",
+    "family": "Embedding",
+    "description": "Most capable embedding model for complex semantic tasks.",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": false,
+      "structured_output": false,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 8192,
+      "max_input_tokens": 8192,
+      "max_output_tokens": 1
+    },
+    "pricing": {
+      "input": 0.13,
+      "output": 0,
+      "unit": "USD/M tokens"
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.openai.com/docs/models",
+      "last_verified": "2026-04-29"
+    }
+  }
+]

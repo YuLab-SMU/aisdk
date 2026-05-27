@@ -1,0 +1,188 @@
+[
+  {
+    "id": "kimi-k2.6",
+    "type": "language",
+    "description": "Kimi flagship multimodal model for agentic coding, long-context reasoning, and general agent tasks",
+    "family": "Kimi-K2.6",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 262144,
+      "max_input_tokens": 262144,
+      "max_output_tokens": 32768
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "kimi-k2.5",
+    "type": "language",
+    "description": "Kimi K2.5 multimodal model for agent, coding, vision, thinking, and conversation tasks",
+    "family": "Kimi-K2.5",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 262144,
+      "max_input_tokens": 262144,
+      "max_output_tokens": 32768
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "kimi-k2-0905-preview",
+    "type": "language",
+    "description": "Kimi K2 preview model with enhanced agentic coding, frontend, and context understanding capabilities",
+    "family": "Kimi-K2",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 262144,
+      "max_input_tokens": 262144,
+      "max_output_tokens": 32768
+    },
+    "status": "deprecated_2026-05-25",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "kimi-for-coding",
+    "type": "language",
+    "description": "Stable Kimi Code membership model ID for coding agents; backend maps it to the latest coding model",
+    "family": "Kimi-Code",
+    "capabilities": {
+      "reasoning": true,
+      "vision_input": true,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 262144,
+      "max_input_tokens": 262144,
+      "max_output_tokens": 32768
+    },
+    "status": "active",
+    "source": {
+      "url": "https://www.kimi.com/code/docs/en/",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "moonshot-v1-8k",
+    "type": "language",
+    "description": "Moonshot V1 text generation model with 8k context",
+    "family": "Moonshot-V1",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 8192,
+      "max_input_tokens": 8192
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "moonshot-v1-32k",
+    "type": "language",
+    "description": "Moonshot V1 text generation model with 32k context",
+    "family": "Moonshot-V1",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 32768,
+      "max_input_tokens": 32768
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  },
+  {
+    "id": "moonshot-v1-128k",
+    "type": "language",
+    "description": "Moonshot V1 text generation model with 128k context",
+    "family": "Moonshot-V1",
+    "capabilities": {
+      "reasoning": false,
+      "vision_input": false,
+      "image_output": false,
+      "image_edit": false,
+      "audio_input": false,
+      "audio_output": false,
+      "function_call": true,
+      "structured_output": true,
+      "web_search": false
+    },
+    "context": {
+      "context_window": 131072,
+      "max_input_tokens": 131072
+    },
+    "status": "active",
+    "source": {
+      "url": "https://platform.kimi.com/docs/models",
+      "last_verified": "2026-05-10"
+    }
+  }
+]

@@ -1,0 +1,276 @@
+---
+title: "Shiny Integration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Shiny Integration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+**aisdk** provides Shiny integration for AI-powered applications where the same
+stateful chat session can be exercised in the terminal and embedded in a
+browser UI. The recommended workflow is to prototype tools and model behavior
+with `console_chat()`, then pass the same `ChatSession` to `aiChatServer()`.
+
+## The AI Chat UI
+
+Use `aiChatUI()` and `aiChatServer()` to add a chat interface.
+
+```r
+library(shiny)
+library(aisdk)
+
+ui <- fluidPage(
+  aiChatUI("chat")
+)
+
+server <- function(input, output, session) {
+  aiChatServer("chat", model = "openai:gpt-4o")
+}
+
+shinyApp(ui, server)
+```
+
+## Best Practice: Share a ChatSession with `console_chat()`
+
+`aiChatServer()` is backed by `ChatSession`, the same execution path used by
+`console_chat()`. That means tools, model runtime options, streamed thinking
+blocks, and session state work the same way in both places.
+
+```r
+library(shiny)
+library(aisdk)
+
+calc_tool <- tool(
+  name = "calculate",
+  description = "Perform a mathematical calculation on two numbers",
+  parameters = z_object(
+    a = z_number("The first number"),
+    b = z_number("The second number"),
+    operation = z_enum(
+      c("add", "subtract", "multiply", "divide"),
+      "The operator"
+    )
+  ),
+  execute = function(args) {
+    switch(
+      args$operation,
+      add = args$a + args$b,
+      subtract = args$a - args$b,
+      multiply = args$a * args$b,
+      divide = if (args$b != 0) args$a / args$b else "Error: Division by zero"
+    )
+  }
+)
+
+chat <- create_chat_session(
+  model = "openai:gpt-4o",
+  tools = list(calc_tool)
+)
+
+# Optional: validate the model and tools in the terminal first.
+# console_chat(chat)
+
+ui <- fluidPage(aiChatUI("chat"))
+
+server <- function(input, output, session) {
+  aiChatServer(
+    "chat",
+    session = chat,
+    show_thinking = TRUE,
+    debug = FALSE
+  )
+}
+
+shinyApp(ui, server)
+```
+
+Use `show_thinking = TRUE` when the provider streams reasoning as `<think>`
+blocks or native reasoning deltas. Use `debug = TRUE` while developing tools to
+show tool arguments and results in the chat UI.
+
+## Optional `shinychat` UI Backend
+
+The default `backend = "aisdk"` keeps aisdk's built-in turn view. If you prefer
+Posit's `shinychat` front end, install `shinychat` and pass the backend to both
+the UI and server:
+
+```r
+library(shiny)
+library(aisdk)
+
+chat <- create_chat_session(model = "openai:gpt-4o")
+
+ui <- fluidPage(
+  aiChatUI("chat", backend = "shinychat", height = "650px")
+)
+
+server <- function(input, output, session) {
+  aiChatServer(
+    "chat",
+    session = chat,
+    backend = "shinychat"
+  )
+}
+
+shinyApp(ui, server)
+```
+
+With this backend, user messages are owned by the `shinychat` front end and
+assistant output is sent through `shinychat`'s chunk protocol. aisdk still owns
+the model call, tool execution, session history, and session environment.
+
+## AI-Controlled Apps (The Copilot Pattern)
+
+You can give the AI tools to modify `reactiveValues`, effectively letting it control your app.
+
+### 1. Define Reactive Values
+```r
+rv <- reactiveValues(
+  plot_color = "blue",
+  title = "My Plot"
+)
+```
+
+### 2. Create Reactive Tools
+Use `reactive_tool()` to define tools that can read/write these values.
+
+```r
+change_color <- reactive_tool(
+  name = "change_color",
+  description = "Change the plot color",
+  parameters = z_object(color = z_string()),
+  execute = function(rv, session, color) {
+    rv$plot_color <- color
+    paste("Changed color to", color)
+  }
+)
+```
+
+### 3. Initialize Server with Tools
+```r
+server <- function(input, output, session) {
+  # ... rv definition ...
+  
+  # Wrap tools with current session context
+  tools <- wrap_reactive_tools(list(change_color), rv, session)
+  
+  # Provide context so AI "sees" the current state
+  get_context <- reactive({
+    list(current_color = rv$plot_color)
+  })
+
+  aiChatServer(
+    "chat",
+    model = "openai:gpt-4o",
+    tools = tools,
+    context = get_context,
+    show_thinking = TRUE
+  )
+}
+```
+
+Now the user can say "Change the plot to red", and the AI will execute the tool, updating the Shiny app instantly.
+
+## RMarkdown and Quarto Integration
+
+**aisdk** also includes a custom knitr engine `{ai}` for AI-assisted code
+generation. In `.Rmd` documents you use direct `{ai}` chunks; in `.qmd`
+documents you should use `{r}` chunks with `#| engine: ai`.
+
+### 1. Register the AI Engine
+Before using `{ai}` chunks in your document, register the engine in an initial
+setup chunk.
+
+```r
+library(aisdk)
+register_ai_engine()
+```
+
+### 2. Basic Usage
+
+If you do not opt into review mode, `{ai}` keeps the simpler legacy flow:
+prompt the model, extract code, and execute immediately when `eval = TRUE`.
+
+````markdown
+```{ai}
+Create a scatter plot of mpg vs wt from the mtcars dataset, 
+colored by the number of cylinders (cyl). Make it look nice using ggplot2.
+```
+````
+
+For Quarto, the equivalent pattern is:
+
+````markdown
+```{r}
+#| engine: ai
+#| eval: true
+Create a scatter plot of mpg vs wt from the mtcars dataset,
+colored by the number of cylinders (cyl). Make it look nice using ggplot2.
+```
+````
+
+### 3. Session and Provider Options
+
+Provider/session options for `{ai}` chunks:
+
+- **`model`**: Specific model identifier. Defaults to
+  `get_model()`, which resolves the package-wide default model configured with
+  `set_model()`.
+- **`session`**: Named model conversation shared across `{ai}` chunks.
+  Defaults to `"default"`.
+- **`new_session`**: If `TRUE`, resets the named session before the chunk runs.
+- **`system`**: Additional system prompt instructions.
+- **`context`**: Controls how R objects are sent to the model. Use `FALSE` to
+  disable, or a character vector to specify exact objects.
+
+#### Context Auto-Detection
+
+If your prompt mentions variables that already exist in the knitr environment,
+the engine can automatically summarize those objects and pass the summaries to
+the model. This keeps the prompt grounded in the current document state.
+
+For example, if you load a dataset in a previous `{r}` chunk:
+
+````markdown
+```{r}
+my_data <- data.frame(category = c("A", "A", "B", "C"), value = rnorm(4))
+```
+
+```{ai}
+Calculate the mean of 'value' grouped by 'category' in my_data using dplyr.
+```
+````
+The engine sees `my_data` in the prompt, finds it in the knitr environment, and
+sends its schema to the model so it can write accurate code.
+
+You can manually control this with the `context` chunk option:
+- `context = "my_data"` explicitly includes only `my_data`
+- `context = c("data1", "data2")` includes multiple specific objects
+- `context = FALSE` disables context passing entirely
+
+### 4. Quarto Notes
+
+Quarto `.qmd` files should use `{r}` chunks with `#| engine: ai`. Direct
+` ```{ai ...}` blocks in Quarto are not being executed by Quarto here; they are
+rendered literally instead of being dispatched to the registered knitr engine.
+
+### 5. Behavior Notes
+
+The `{ai}` engine in R Markdown and Quarto is intentionally simple:
+
+- it sends the prompt to the model
+- extracts executable R code from fenced code blocks
+- executes that code immediately when `eval = TRUE`
+- returns the model text directly when `eval = FALSE`
+
+If you need human review or workflow state, that should live outside the static
+document rendering path.

@@ -1,0 +1,32 @@
+Package: aisdk
+Title: Unified Interface for AI Model Providers
+Version: 1.4.8
+Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
+Description: A production-grade AI toolkit for R featuring a layered
+    architecture (Specification, Utilities, Providers, Core), request
+    interception support, robust error handling with exponential retry
+    delays, support for multiple AI model providers ('OpenAI',
+    'Anthropic', etc.), local small language model inference,
+    distributed 'MCP' ecosystem, multi-agent orchestration, progressive
+    knowledge loading through skills, and a global skill store for
+    sharing AI capabilities.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
+        digest, parallel, stats, tools, utils, methods, base64enc, curl,
+        openssl
+Suggests: testthat (>= 3.0.0), httptest2, cli, knitr, rmarkdown, skimr,
+        evaluate, shiny, shinyjs, shinychat, bslib, commonmark, htmltools, ggplot2, dplyr, readr,
+        readxl, DBI, RSQLite, torch, onnx, rstudioapi, DT, withr, httpuv,
+        devtools, fs, dotenv, quarto, pdftools, pkgload
+Config/testthat/edition: 3
+URL: https://github.com/YuLab-SMU/aisdk,
+        https://yulab-smu.top/aisdk/
+BugReports: https://github.com/YuLab-SMU/aisdk/issues
+NeedsCompilation: no
+Packaged: 2026-01-29 08:55:09 UTC; xiayh17
+Author: Yonghe Xia [aut, cre]
+Maintainer: Yonghe Xia <xiayh17@gmail.com>
+Depends: R (>= 4.1.0)

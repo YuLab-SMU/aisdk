@@ -1,0 +1,70 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.Ruserdata
+
+# Environment files
+.Renviron
+.env
+
+# User-specific files
+.Rproj.user/
+*.Rproj
+
+# Hidden files
+.VSCode/
+.idea/
+.DS_Store
+
+# Build artifacts
+src/*.o
+src/*.so
+src/*.dll
+src/*.dylib
+src-i386/
+src-x64/
+*.rds
+
+# R Check
+*.Rcheck/
+
+# Vignettes
+vignettes/*.html
+vignettes/*.pdf
+vignettes/.quarto/
+
+# Package files
+inst/doc
+*.log
+
+# Environment files
+.env
+.Renviron
+.Rprofile
+dev_logs/
+docs/
+.claude/
+artifacts/
+demo/node_modules/
+demo/package-lock.json
+
+/intro/
+/doc/
+/Meta/
+dev_docs/
+idea/
+
+# Transient R plots and archives
+Rplots.pdf
+Rplots*.pdf
+*.zip
+*.tar.gz
+
+/.quarto/
+**/*.quarto_ipynb
+_site/
+.positai
+.aisdk/

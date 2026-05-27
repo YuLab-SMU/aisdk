@@ -1,0 +1,15 @@
+---
+title: "aisdk: The Production-Grade AI SDK for R"
+---
+
+The **aisdk** package provides a unified, production-ready interface for interacting with Large Language Models (LLMs) in R. It abstracts away provider-specific API details while offering advanced features like robust structured outputs, tool calling, memory management, and multi-agent orchestration.
+
+# Installation
+
+```r
+# Install from GitHub
+# install.packages("devtools")
+devtools::install_github("YuLab-SMU/aisdk")
+```
+
+For more details on getting started, please check out the [Get Started](vignettes/get_started.qmd) article.

@@ -1,0 +1,129 @@
+---
+title: "Multimodal Input"
+format: html
+vignette: >
+  %\VignetteIndexEntry{Multimodal Input}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`aisdk` supports multimodal image understanding through the standard language-model APIs.
+
+The key idea is simple:
+
+- use a normal language model that advertises image input support
+- build message content from provider-neutral blocks with `input_text()` and `input_image()`
+- let `aisdk` translate those blocks into the provider-specific payload
+
+## Provider-neutral content blocks
+
+For multimodal input, `aisdk` now uses a provider-neutral content representation.
+
+```r
+library(aisdk)
+
+blocks <- list(
+  input_text("Describe the key objects in this image."),
+  input_image("inst/extdata/example.png")
+)
+```
+
+These blocks can be passed as the `content` field of a message:
+
+```r
+messages <- list(
+  list(
+    role = "user",
+    content = blocks
+  )
+)
+```
+
+## Simple image analysis
+
+For most image-understanding workflows, use `analyze_image()`.
+
+```r
+library(aisdk)
+
+model <- create_gemini()$language_model("gemini-2.5-flash")
+
+result <- analyze_image(
+  model = model,
+  image = "inst/extdata/example.png",
+  prompt = "Describe this image in three concise bullet points."
+)
+
+cat(result$text)
+```
+
+This works well for:
+
+- screenshot understanding
+- chart and plot interpretation
+- OCR-style extraction prompts
+- scientific figure description
+- quick inspection of UI mockups or product photos
+
+## Structured extraction from images
+
+Use `extract_from_image()` when you want schema-constrained output.
+
+```r
+library(aisdk)
+
+invoice_schema <- z_object(
+  vendor = z_string("Vendor name"),
+  invoice_number = z_string("Invoice number"),
+  total = z_number("Total amount")
+)
+
+result <- extract_from_image(
+  model = create_openai()$language_model("gpt-4o"),
+  image = "inst/extdata/invoice.png",
+  schema = invoice_schema,
+  prompt = "Extract the invoice metadata."
+)
+
+str(result$object)
+```
+
+This is useful for receipts, tables, forms, figure legends, and other semi-structured images.
+
+## Manual message construction
+
+If you need full control, you can still call `generate_text()` directly:
+
+```r
+library(aisdk)
+
+result <- generate_text(
+  model = create_anthropic()$language_model("claude-sonnet-4-20250514"),
+  prompt = list(
+    list(
+      role = "user",
+      content = list(
+        input_text("Read the chart and summarize the trend."),
+        input_image("inst/extdata/chart.png")
+      )
+    )
+  )
+)
+```
+
+## Capability validation
+
+If a message includes image input, `aisdk` performs a capability check before calling the provider. If a model explicitly advertises that it does not support image input, the request fails early with a clear error.
+
+This is designed to avoid sending unsupported multimodal payloads to provider APIs.
+
+## Backward compatibility
+
+The older `content_text()` and `content_image()` helpers still work, but they now bridge into the provider-neutral block format internally.
+
+For new code, prefer:
+
+- `input_text()`
+- `input_image()`
+
+These helpers are the stable building blocks for future multimodal features such as audio, documents, and video frames.
