@@ -8,7 +8,10 @@ NULL
 #' @title OpenAI Language Model Class
 #' @description
 #' Language model implementation for OpenAI's chat completions API.
+#' Exported so that OpenAI-compatible providers in companion packages
+#' (e.g. \pkg{aisdk.providers}) can inherit from it across package boundaries.
 #' @keywords internal
+#' @export
 OpenAILanguageModel <- R6::R6Class(
   "OpenAILanguageModel",
   inherit = LanguageModelV1,

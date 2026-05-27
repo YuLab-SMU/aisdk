@@ -8,9 +8,47 @@ NULL
 # Private environment to store the default registry (avoids locked binding issues)
 .registry_env <- new.env(parent = emptyenv())
 
+# Extra provider factories registered by companion packages (e.g. aisdk.providers).
+# Namespace functions in aisdk cannot see `create_*` exports that live in an
+# attached companion package, so those packages push their factories here from
+# their `.onLoad` hook via `register_provider()`.
+.provider_extras <- new.env(parent = emptyenv())
+
 #' @keywords internal
 reset_default_registry <- function() {
   .registry_env$default <- NULL
+  invisible(TRUE)
+}
+
+#' @title Register a Provider Factory
+#' @description
+#' Register an additional provider factory so it can be resolved through the
+#' default registry's `provider:model` syntax. Intended for companion packages
+#' (such as \pkg{aisdk.providers}) that ship OpenAI-compatible providers and
+#' register them from their `.onLoad` hook, e.g.
+#' `aisdk::register_provider("deepseek", function() create_deepseek())`.
+#'
+#' Registration is load-order independent: the factory is replayed into the
+#' default registry whether it is registered before or after the registry is
+#' first built.
+#' @param id The provider ID (e.g. "deepseek").
+#' @param factory A zero-argument function returning a provider object, or a
+#'   function of one argument (`model_id`) returning a language model.
+#' @return Invisibly `TRUE`.
+#' @export
+register_provider <- function(id, factory) {
+  if (!is.character(id) || length(id) != 1L || !nzchar(id)) {
+    rlang::abort("Provider ID must be a non-empty string.")
+  }
+  if (!is.function(factory)) {
+    rlang::abort("Provider factory must be a function.")
+  }
+  .provider_extras[[id]] <- factory
+  # If the default registry has already been built, register immediately so the
+  # provider becomes resolvable without forcing a registry reset.
+  if (!is.null(.registry_env$default)) {
+    .registry_env$default$register(id, factory)
+  }
   invisible(TRUE)
 }
 
@@ -206,6 +244,12 @@ get_default_registry <- function() {
       },
       error = function(e) {}
     )
+    # Replay provider factories registered by companion packages (e.g.
+    # aisdk.providers) so they survive a fresh registry build regardless of
+    # whether their .onLoad ran before or after this point.
+    for (extra_id in ls(.provider_extras)) {
+      reg$register(extra_id, .provider_extras[[extra_id]])
+    }
     tryCatch(
       register_configured_model_providers(reg),
       error = function(e) {
