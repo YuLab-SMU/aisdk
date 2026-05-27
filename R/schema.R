@@ -316,18 +316,62 @@ schema_to_json <- function(schema, pretty = FALSE) {
   jsonlite::toJSON(plain, auto_unbox = TRUE, pretty = pretty, null = "null")
 }
 
+# JSON coercion registry. Companion packages (e.g. aisdk.datatools) register
+# (predicate, handler) pairs so safe_to_json() can convert object types core
+# does not natively serialize (such as ggplot objects) without core taking a
+# hard dependency on those packages. See register_json_coercion().
+.json_coercions <- new.env(parent = emptyenv())
+.json_coercions$handlers <- list()
+
+#' Register a JSON coercion handler
+#'
+#' Registers a `(predicate, handler)` pair used by [safe_to_json()]: when
+#' `predicate(x)` is `TRUE`, `x` is replaced by `handler(x)` before
+#' serialization. Intended for companion packages (e.g. \pkg{aisdk.datatools})
+#' to teach the core serializer about extra object types from their `.onLoad`
+#' hook, e.g. ggplot objects.
+#' @param predicate A function taking an object and returning a single logical.
+#' @param handler A function taking an object and returning a serializable value.
+#' @param id Optional unique id; re-registering the same id replaces the handler.
+#' @return Invisibly `TRUE`.
+#' @keywords internal
+#' @export
+register_json_coercion <- function(predicate, handler, id = NULL) {
+  if (!is.function(predicate) || !is.function(handler)) {
+    rlang::abort("register_json_coercion() requires predicate and handler functions.")
+  }
+  entry <- list(predicate = predicate, handler = handler)
+  if (is.null(id)) {
+    .json_coercions$handlers <- c(.json_coercions$handlers, list(entry))
+  } else {
+    .json_coercions$handlers[[id]] <- entry
+  }
+  invisible(TRUE)
+}
+
+# Apply the first matching registered coercion to `x` (identity if none match).
+apply_json_coercions <- function(x) {
+  for (entry in .json_coercions$handlers) {
+    matched <- tryCatch(isTRUE(entry$predicate(x)), error = function(e) FALSE)
+    if (matched) {
+      return(tryCatch(entry$handler(x), error = function(e) x))
+    }
+  }
+  x
+}
+
 #' @title Safe Serialization to JSON
 #' @description
 #' Standardized internal helper for JSON serialization with common defaults.
+#' Object types registered via [register_json_coercion()] (for example ggplot
+#' objects, via \pkg{aisdk.datatools}) are coerced before serialization.
 #' @param x Object to serialize.
 #' @param auto_unbox Whether to automatically unbox single-element vectors. Default TRUE.
 #' @param ... Additional arguments to jsonlite::toJSON.
 #' @return A JSON string.
 #' @export
 safe_to_json <- function(x, auto_unbox = TRUE, ...) {
-  if (inherits(x, "ggplot") || inherits(x, "gg")) {
-    x <- ggplot_to_z_object(x, include_data = TRUE, include_render_hints = TRUE)
-  }
+  x <- apply_json_coercions(x)
 
   tryCatch(
     jsonlite::toJSON(x, auto_unbox = auto_unbox, ..., null = "null"),

@@ -18,4 +18,6 @@ A JSON string.
 }
 \description{
 Standardized internal helper for JSON serialization with common defaults.
+Object types registered via \code{\link[=register_json_coercion]{register_json_coercion()}} (for example ggplot
+objects, via \pkg{aisdk.datatools}) are coerced before serialization.
 }
