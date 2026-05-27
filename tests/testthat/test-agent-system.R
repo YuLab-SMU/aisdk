@@ -126,10 +126,12 @@ test_that("SharedSession tracing works", {
 })
 
 test_that("Flow initializes correctly", {
+  # Flow moved to the companion package aisdk.orchestration.
+  skip_if_not_installed("aisdk.orchestration")
   session <- SharedSession$new()
   registry <- AgentRegistry$new()
 
-  flow <- Flow$new(
+  flow <- aisdk.orchestration::Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry,
@@ -142,6 +144,7 @@ test_that("Flow initializes correctly", {
 })
 
 test_that("Flow generates unified delegate tool", {
+  skip_if_not_installed("aisdk.orchestration")
   session <- SharedSession$new()
 
   # Create test agents
@@ -156,7 +159,7 @@ test_that("Flow generates unified delegate tool", {
 
   registry <- AgentRegistry$new(list(agent1, agent2))
 
-  flow <- Flow$new(
+  flow <- aisdk.orchestration::Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry
@@ -172,10 +175,11 @@ test_that("Flow generates unified delegate tool", {
 })
 
 test_that("Flow delegation history tracking works", {
+  skip_if_not_installed("aisdk.orchestration")
   session <- SharedSession$new()
   registry <- AgentRegistry$new()
 
-  flow <- Flow$new(
+  flow <- aisdk.orchestration::Flow$new(
     session = session,
     model = openai_model_id,
     registry = registry

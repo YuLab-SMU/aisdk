@@ -164,33 +164,8 @@ create_session <- function(model = NULL,
   }
 }
 
-#' @title Create Orchestration Flow (Compatibility Wrapper)
-#' @description
-#' Creates an orchestration flow using Flow. Provided for backward compatibility.
-#' @param session A session object.
-#' @param model The default model ID.
-#' @param registry Optional AgentRegistry.
-#' @param max_depth Maximum delegation depth. Default 5.
-#' @param max_steps_per_agent Maximum ReAct steps per agent. Default 10.
-#' @param ... Additional arguments.
-#' @return A Flow object.
-#' @export
-create_orchestration <- function(session,
-                                 model,
-                                 registry = NULL,
-                                 max_depth = 5,
-                                 max_steps_per_agent = 10,
-                                 ...) {
-  create_flow(
-    session = session,
-    model = model,
-    registry = registry,
-    max_depth = max_depth,
-    max_steps_per_agent = max_steps_per_agent,
-    enable_guardrails = TRUE,
-    ...
-  )
-}
+# create_orchestration() moved to the companion package aisdk.orchestration
+# (it wraps create_flow(), which now lives there together with Flow/Team/Mission).
 
 #' @title Create Standard Agent Registry
 #' @description
