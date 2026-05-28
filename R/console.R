@@ -1942,8 +1942,9 @@ console_extract_candidate_paths <- function(text, cwd = getwd()) {
   # Local-path extraction is provided by the optional companion package
   # aisdk.channels; fall back to the regex matching below when it is absent.
   candidates <- tryCatch(
-    if (requireNamespace("aisdk.channels", quietly = TRUE)) {
-      aisdk.channels::channel_extract_local_paths(text)
+    if (.companion_pkg_available("channels")) {
+      fn <- .companion_pkg_get("channels", "channel_extract_local_paths")
+      fn(text)
     } else {
       character(0)
     },
@@ -2669,12 +2670,14 @@ handle_command <- function(input,
     "/feishu" = {
       if (!interactive()) {
         cli::cli_alert_danger("Feishu setup requires an interactive console.")
-      } else if (!requireNamespace("aisdk.channels", quietly = TRUE)) {
-        cli::cli_alert_danger(
-          "Feishu setup requires the {.pkg aisdk.channels} package. Install it with {.code remotes::install_github('YuLab-SMU/aisdk.channels')}."
-        )
+      } else if (!.companion_pkg_available("channels")) {
+        cli::cli_alert_danger(paste0(
+          "Feishu setup requires the {.pkg ", .companion_pkg_name("channels"), "} package. ",
+          "Install it with {.code ", .companion_install_hint("channels"), "}."
+        ))
       } else {
-        wizard_result <- aisdk.channels::setup_feishu_channel(
+        setup_feishu_channel_fn <- .companion_pkg_get("channels", "setup_feishu_channel")
+        wizard_result <- setup_feishu_channel_fn(
           prompt_hooks = list(
             menu = console_menu,
             input = console_input,

@@ -1,6 +1,6 @@
 Package: aisdk
 Title: Unified Interface for AI Model Providers
-Version: 1.4.8
+Version: 1.4.9
 Authors@R: person("Yonghe", "Xia", , "xiayh17@gmail.com", role = c("aut", "cre"))
 Description: A production-grade AI toolkit for R featuring a layered
     architecture (Specification, Utilities, Providers, Core), request
@@ -18,9 +18,7 @@ Imports: R6, httr2, jsonlite, rlang, yaml, callr, processx, memoise,
         digest, parallel, stats, tools, utils, methods, base64enc, curl
 Suggests: testthat (>= 3.0.0), httptest2, cli, skimr,
         evaluate, ggplot2, dplyr, readr, readxl, DBI, RSQLite, rstudioapi,
-        DT, withr, devtools, fs, dotenv, pkgload, aisdk.channels,
-        aisdk.skills
-Remotes: YuLab-SMU/aisdk.channels, YuLab-SMU/aisdk.skills
+        DT, withr, devtools, fs, dotenv, pkgload
 Config/testthat/edition: 3
 URL: https://github.com/YuLab-SMU/aisdk,
         https://yulab-smu.top/aisdk/

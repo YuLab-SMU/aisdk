@@ -1,16 +1,29 @@
-Dear CRAN team,
+## Submission summary
 
-  thank you for the review and the detailed guidance.
+This is the first submission of 'aisdk' to CRAN.
 
-  I have addressed all reported issues in the resubmitted version:
+'aisdk' provides a unified, production-grade interface for interacting
+with multiple AI model providers (e.g. 'OpenAI', 'Anthropic') from R,
+together with retry handling, request interception, multi-agent
+orchestration, and a skill store for sharing AI capabilities.
 
-  - The redundant “in R” was removed from the package Title.
-  - The example for the unexported internal function `repair_tool_call()` was removed.
-  - File-writing defaults were revised so that package functions no longer write by default to the user home directory, package directory, or `getwd()`.
-  Examples and vignettes now use temporary directories where appropriate.
-  - Package code was updated to avoid modifying `.GlobalEnv`, and uses of `<<-` in package functions were removed.
+## Test environments
 
-  The package documentation was regenerated and the package was rebuilt before resubmission.
+* local macOS, R 4.4.x (R CMD check --as-cran)
+* win-builder (devel and release)
+* R-hub: ubuntu-latest (release), windows-latest (release),
+  macos-latest (release), and r-devel
 
-  Best regards,
-  Yonghe Xia
+## R CMD check results
+
+0 errors | 0 warnings | 0 notes
+
+A "New submission" NOTE may be produced because the package has not
+appeared on CRAN before; that is expected for an initial submission.
+
+## Downstream dependencies
+
+There are currently no reverse dependencies on CRAN.
+
+Best regards,
+Yonghe Xia

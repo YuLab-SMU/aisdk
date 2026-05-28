@@ -990,12 +990,15 @@ create_skill_architect_agent <- function(name = "SkillArchitect", registry = NUL
   if (!is.null(model)) {
     # Skill-forge authoring/verification tools live in the optional companion
     # package aisdk.skills; continue without them when it is not installed.
-    if (requireNamespace("aisdk.skills", quietly = TRUE)) {
-      forge_tools <- aisdk.skills::create_skill_forge_tools(registry, model)
+    if (.companion_pkg_available("skills")) {
+      forge_fn <- .companion_pkg_get("skills", "create_skill_forge_tools")
+      forge_tools <- forge_fn(registry, model)
     } else {
-      rlang::warn(paste(
-        "Skill-forge verification tools require the 'aisdk.skills' package",
-        "(remotes::install_github('YuLab-SMU/aisdk.skills')); continuing without them."
+      rlang::warn(paste0(
+        "Skill-forge verification tools require the '",
+        .companion_pkg_name("skills"),
+        "' package (", .companion_install_hint("skills"),
+        "); continuing without them."
       ))
     }
   } else {
