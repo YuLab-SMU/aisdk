@@ -1,6 +1,11 @@
-# aisdk 1.4.9
+# aisdk 1.4.10
 
-* Initial CRAN submission.
+* Skip `r_eval` process-tree-reaping test on CRAN (it polls `pgrep`
+  for `sh` + `sleep` grandchildren that the Linux kernel may reparent
+  to PID 1 before `processx::kill_tree()` can finish; the TIMEOUT
+  user-visible behaviour is exercised by a separate test).
+
+# aisdk 1.4.9 (not released on CRAN)
 * Layered architecture (Specification, Utilities, Providers, Core)
   with R6 classes for `Agent`, `Tool`, `Skill`, `Computer`, and
   `Telemetry`.

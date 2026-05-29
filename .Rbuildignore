@@ -59,3 +59,4 @@
 ^tools$
 ^LICENSE\.md$
 ^tests/testthat/\.aisdk$
+^CRAN-SUBMISSION$

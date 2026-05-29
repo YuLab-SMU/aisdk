@@ -326,12 +326,14 @@ test_that("r_eval kills the whole process tree on timeout (no orphaned grandchil
   skip_if(Sys.which("pgrep") == "", "pgrep not available")
   # Process-tree teardown semantics belong to processx/callr (kill_tree)
   # and to the kernel's reparent-to-init behavior, not to our code. On
-  # GitHub Actions Linux runners, sh+sleep grandchildren sporadically get
-  # adopted by PID 1 before kill_tree can reach them, even with multi-second
-  # polling. Skip in CI so we are not asserting on an upstream guarantee
-  # we do not own. The TIMEOUT status path -- which IS our responsibility
-  # and the actual user-visible behavior of issue #26 -- is covered by the
-  # "r_eval times out on long-running code without hanging" test above.
+  # GitHub Actions Linux runners and CRAN's Debian check farm, sh+sleep
+  # grandchildren sporadically get adopted by PID 1 before kill_tree can
+  # reach them, even with multi-second polling. Skip in CI and on CRAN
+  # so we are not asserting on an upstream guarantee we do not own. The
+  # TIMEOUT status path -- which IS our responsibility and the actual
+  # user-visible behavior of issue #26 -- is covered by the "r_eval times
+  # out on long-running code without hanging" test above.
+  testthat::skip_on_cran()
   testthat::skip_on_ci()
   tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
   # Use a unique marker that does not appear in any common command string.
