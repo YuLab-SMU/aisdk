@@ -137,10 +137,11 @@ test_that("r_eval caps the requested timeout at 120 seconds (issue #26)", {
 test_that("[A] r_eval rejects bare console_chat() at parse time (no timeout wait)", {
   skip_if_no_callr()
   tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
-  t0 <- Sys.time()
+  # Parse-time rejection returns a REJECTED status without ever launching the
+  # subprocess, so it cannot wait out the timeout. We assert on the structured
+  # output (a real timeout would surface a different message) rather than on
+  # wall-clock elapsed time, which is unreliable on loaded CRAN build machines.
   out <- tool$run(list(code = "library(aisdk); console_chat()", timeout_secs = 30L))
-  elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  expect_lt(elapsed, 2)  # must not wait the 120s timeout
   expect_match(out, "status: REJECTED", fixed = TRUE)
   expect_match(out, "rejection_kind: repl_launcher", fixed = TRUE)
   expect_match(out, "rejected_call: console_chat", fixed = TRUE)
@@ -188,13 +189,16 @@ test_that("[B] dynamic-dispatch console_chat() still aborts via subprocess marke
   skip_if_no_callr()
   skip_if(system.file(package = "aisdk") == "", "aisdk not installed")
   tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
-  t0 <- Sys.time()
+  # The refusal marker asserted below proves the subprocess aborted via the
+  # AISDK_INSIDE_R_EVAL self-check rather than blocking in the REPL until the
+  # timeout fired -- a genuine hang would surface as a timeout message, not
+  # this marker. We deliberately do not assert on wall-clock elapsed time,
+  # which is unreliable on loaded CRAN build machines (see WRE: "Note that ...
+  # you should not test the elapsed time taken").
   out <- tool$run(list(
     code = "library(aisdk); do.call(\"console_chat\", list())",
     timeout_secs = 10L
   ))
-  elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
-  expect_lt(elapsed, 5)
   expect_match(out, "refused to start inside an r_eval subprocess", fixed = TRUE)
 })
 

@@ -35,7 +35,17 @@ normalize_base_urls <- function(base_url, default = NULL) {
   unique(values)
 }
 
+#' @title Build API Endpoint URLs (extension API)
+#' @description
+#' Joins a provider configuration's base URL(s) with a request path. Exported
+#' as part of the stable extension surface used by companion provider packages
+#' such as `aisdk.providers`; not intended for general end-user use.
+#' @param config A provider configuration list carrying `base_urls` or
+#'   `base_url`.
+#' @param path The request path to append to each base URL.
+#' @return A character vector of fully-qualified endpoint URLs.
 #' @keywords internal
+#' @export
 api_endpoint_urls <- function(config, path) {
   bases <- config$base_urls %||% config$base_url
   paste0(normalize_base_urls(bases), path)
@@ -508,6 +518,7 @@ abort_retry_api_error <- function(url, error) {
 #'   then `AISDK_HTTP_IDLE_TIMEOUT_SECONDS`, then 120.
 #' @return The parsed JSON response.
 #' @keywords internal
+#' @export
 post_to_api <- function(url, headers, body,
                         max_retries = 2,
                         initial_delay_ms = 2000,
@@ -705,6 +716,7 @@ post_to_api_failover <- function(urls, headers, body,
 #' @inheritParams post_to_api
 #' @return The parsed JSON response.
 #' @keywords internal
+#' @export
 post_multipart_to_api <- function(url, headers, body,
                                   max_retries = 2,
                                   initial_delay_ms = 2000,

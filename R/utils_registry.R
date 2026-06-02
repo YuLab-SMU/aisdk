@@ -52,6 +52,86 @@ register_provider <- function(id, factory) {
   invisible(TRUE)
 }
 
+# Providers that are not shipped in aisdk core but in companion packages,
+# mapped to the package that supplies them. Used to offer an install prompt
+# (or a clear hint) when a user requests one of these providers but the
+# companion package is not installed. Keep in sync with the companion's
+# `.onLoad` registration list.
+# A named list (not a character vector) so that a lookup of an unknown provider
+# id returns NULL rather than erroring with "subscript out of bounds".
+.companion_providers <- list(
+  deepseek = "aisdk.providers",
+  xai = "aisdk.providers",
+  volcengine = "aisdk.providers",
+  nvidia = "aisdk.providers",
+  stepfun = "aisdk.providers",
+  bailian = "aisdk.providers",
+  openrouter = "aisdk.providers",
+  aihubmix = "aisdk.providers",
+  moonshot = "aisdk.providers",
+  kimi = "aisdk.providers"
+)
+
+# If `provider_id` is supplied by a companion package, make sure that package is
+# loaded so it can register itself. When the package is installed we simply load
+# it; when it is missing we offer to install it, but only in interactive
+# sessions so that scripts, `R CMD check`, and CRAN runs are never interrupted
+# or made to perform installs. Returns TRUE if the provider should now be
+# resolvable, FALSE otherwise.
+#' @keywords internal
+ensure_companion_provider <- function(provider_id) {
+  pkg <- .companion_providers[[provider_id]]
+  if (is.null(pkg)) {
+    return(FALSE)
+  }
+  if (requireNamespace(pkg, quietly = TRUE)) {
+    return(TRUE)
+  }
+  if (!interactive()) {
+    return(FALSE)
+  }
+  installed <- tryCatch(
+    {
+      rlang::check_installed(
+        pkg,
+        reason = sprintf("to use the '%s' provider", provider_id)
+      )
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+  if (!installed) {
+    return(FALSE)
+  }
+  requireNamespace(pkg, quietly = TRUE)
+}
+
+# Build the rlang::abort() message body for an unresolved provider, appending a
+# hint pointing at the companion package when the provider is known to live in
+# one.
+#' @keywords internal
+provider_not_found_message <- function(provider_id, available) {
+  msg <- c(
+    paste0("Provider not found: ", provider_id),
+    "i" = if (nchar(available) > 0) {
+      paste0("Available providers: ", available)
+    } else {
+      "No providers registered."
+    }
+  )
+  pkg <- .companion_providers[[provider_id]]
+  if (!is.null(pkg)) {
+    msg <- c(
+      msg,
+      "i" = sprintf(
+        "The '%s' provider is supplied by the '%s' package. Install it with install.packages(\"%s\").",
+        provider_id, pkg, pkg
+      )
+    )
+  }
+  msg
+}
+
 #' @keywords internal
 create_env_custom_provider <- function() {
   base_url <- Sys.getenv("AISDK_CUSTOM_BASE_URL", unset = "")
@@ -124,12 +204,12 @@ ProviderRegistry <- R6::R6Class(
       model_id <- substr(id, sep_pos + 1, nchar(id))
 
       provider <- private$providers[[provider_id]]
+      if (is.null(provider) && ensure_companion_provider(provider_id)) {
+        provider <- private$providers[[provider_id]]
+      }
       if (is.null(provider)) {
         available <- paste(names(private$providers), collapse = ", ")
-        rlang::abort(c(
-          paste0("Provider not found: ", provider_id),
-          "i" = if (nchar(available) > 0) paste0("Available providers: ", available) else "No providers registered."
-        ))
+        rlang::abort(provider_not_found_message(provider_id, available))
       }
 
       # Evaluate lazy factories
@@ -158,8 +238,12 @@ ProviderRegistry <- R6::R6Class(
       model_id <- substr(id, sep_pos + 1, nchar(id))
 
       provider <- private$providers[[provider_id]]
+      if (is.null(provider) && ensure_companion_provider(provider_id)) {
+        provider <- private$providers[[provider_id]]
+      }
       if (is.null(provider)) {
-        rlang::abort(paste0("Provider not found: ", provider_id))
+        available <- paste(names(private$providers), collapse = ", ")
+        rlang::abort(provider_not_found_message(provider_id, available))
       }
 
       # Evaluate lazy factories
@@ -189,12 +273,12 @@ ProviderRegistry <- R6::R6Class(
       model_id <- substr(id, sep_pos + 1, nchar(id))
 
       provider <- private$providers[[provider_id]]
+      if (is.null(provider) && ensure_companion_provider(provider_id)) {
+        provider <- private$providers[[provider_id]]
+      }
       if (is.null(provider)) {
         available <- paste(names(private$providers), collapse = ", ")
-        rlang::abort(c(
-          paste0("Provider not found: ", provider_id),
-          "i" = if (nchar(available) > 0) paste0("Available providers: ", available) else "No providers registered."
-        ))
+        rlang::abort(provider_not_found_message(provider_id, available))
       }
 
       if (is.function(provider) && length(formals(provider)) == 0) {

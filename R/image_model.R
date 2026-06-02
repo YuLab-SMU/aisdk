@@ -45,7 +45,18 @@ write_image_artifact <- function(bytes = NULL,
   )
 }
 
+#' @title Finalize Generated Image Artifacts (extension API)
+#' @description
+#' Writes generated image bytes to disk and returns artifact metadata. Exported
+#' as part of the stable extension surface used by companion provider packages
+#' such as `aisdk.providers`; not intended for general end-user use.
+#' @param images A list of generated image blocks.
+#' @param output_dir Directory in which to write image files. Defaults to
+#'   `tempdir()`.
+#' @param prefix Filename prefix for written artifacts. Defaults to `"image"`.
+#' @return A list of artifact descriptors (path, media type, bytes).
 #' @keywords internal
+#' @export
 finalize_image_artifacts <- function(images, output_dir = tempdir(), prefix = "image") {
   output_dir <- ensure_output_dir(output_dir)
 
@@ -70,7 +81,19 @@ finalize_image_artifacts <- function(images, output_dir = tempdir(), prefix = "i
   })
 }
 
+#' @title Materialize an Image Upload to Disk (extension API)
+#' @description
+#' Writes an inbound image block to a local file suitable for multipart upload
+#' and returns its artifact descriptor merged with the original block. Exported
+#' as part of the stable extension surface used by companion provider packages
+#' such as `aisdk.providers`; not intended for general end-user use.
+#' @param image An image input block.
+#' @param output_dir Directory in which to write the file. Defaults to
+#'   `tempdir()`.
+#' @param prefix Filename prefix for the written file. Defaults to `"upload"`.
+#' @return A list describing the materialized upload (path, media type, ...).
 #' @keywords internal
+#' @export
 materialize_image_upload <- function(image,
                                      output_dir = tempdir(),
                                      prefix = "upload") {
@@ -108,7 +131,16 @@ materialize_image_upload <- function(image,
   path
 }
 
+#' @title Normalize an Image Input for JSON Bodies (extension API)
+#' @description
+#' Converts an image input block into the representation expected inside a JSON
+#' request body. Exported as part of the stable extension surface used by
+#' companion provider packages such as `aisdk.providers`; not intended for
+#' general end-user use.
+#' @param image An image input block.
+#' @return A normalized value suitable for embedding in a JSON request body.
 #' @keywords internal
+#' @export
 normalize_image_input_for_json <- function(image) {
   block <- NULL
   if (is.list(image) && is_content_block(image)) {
@@ -138,7 +170,16 @@ normalize_image_input_for_json <- function(image) {
   sub("^data:[^;]+;base64,", "", block$value)
 }
 
+#' @title Normalize an Image Input to a URL-like Value (extension API)
+#' @description
+#' Converts an image input block into a URL or base64 payload suitable for
+#' providers that accept URL-like image references. Exported as part of the
+#' stable extension surface used by companion provider packages such as
+#' `aisdk.providers`; not intended for general end-user use.
+#' @param image An image input block.
+#' @return A character scalar: a URL or a base64-encoded payload.
 #' @keywords internal
+#' @export
 normalize_image_input_to_url_like <- function(image) {
   block <- NULL
   if (is.list(image) && is_content_block(image)) {

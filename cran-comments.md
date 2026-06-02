@@ -1,41 +1,51 @@
 ## Submission summary
 
-This is an update of 'aisdk' from the current CRAN version 1.1.0 to 1.4.10.
+This is version 1.4.12. It exports a small, stable "extension API" (seven
+helper functions for HTTP requests and image handling) so that a companion
+package, `aisdk.providers`, can build on the core machinery through the public
+interface instead of reaching into the `aisdk` namespace. It also adds an
+opt-in, interactive install prompt when a user requests a provider that is
+supplied by a companion package.
 
-### Reason for the version jump
+### Reason for this submission
 
-The package has undergone a substantial internal refactor that split
-several optional sub-systems (multi-agent orchestration, MCP client/
-server, provider plug-ins, skill ecosystem, channels/messaging) into
-separate companion packages. The CRAN-resident `aisdk` is now the
-self-contained core that exposes the unified provider interface,
-agent/tool/skill base classes, and the request/retry machinery.
+`aisdk.providers` (a separate package, submitted immediately after this one)
+supplies a number of long-tail, OpenAI-/Anthropic-compatible provider adapters
+that were split out of the core during the recent refactor. Those adapters need
+a handful of the core's request/retry and image helpers. Rather than have the
+companion access unexported internals, this release promotes exactly seven
+helpers to the exported surface, documented with `\keyword{internal}` so they
+stay out of the main help index but are available to package authors. Their
+behaviour is unchanged; this is purely additive.
 
-### Resubmission note
+A second, additive change makes the provider registry offer to install the
+companion package when a user asks for one of its providers and it is not yet
+installed. The prompt only appears in interactive sessions (via
+`rlang::check_installed()`); in non-interactive sessions, scripts, `R CMD
+check` and CRAN runs it never installs anything and instead produces a clear
+error naming the package to install. The companion package is referenced
+dynamically and is therefore not declared in `Suggests` (it is not yet on
+CRAN at the time of this submission); it will be added to `Suggests` in a
+later release once it is published.
 
-A previous attempt at 1.4.9 failed the CRAN incoming Debian pre-test
-because a process-tree teardown test in
-`tests/testthat/test-r-introspect-tools.R` polled `pgrep` for the
-reaping of `sh` + `sleep` grandchildren, which is not deterministic
-on Linux check farms (the kernel may reparent the grandchild to PID 1
-before `processx::kill_tree()` can reach it).
+### Submission timing
 
-The TIMEOUT user-visible behaviour is fully covered by a separate
-test in the same file. The race-prone polling test now also calls
-`testthat::skip_on_cran()` (it was already skipped on Windows and CI
-runners). No code outside the test was changed for this fix.
+This follows shortly after 1.4.11. The change is small and additive but is a
+prerequisite for the concurrent `aisdk.providers` submission, which cannot be
+accepted until these helpers are part of the exported interface.
 
 ## Test environments
 
-* local macOS arm64, R 4.5.2 (R CMD check --as-cran)
+* local macOS arm64, R release (R CMD check --as-cran)
 * win-builder R-devel
-* mac-builder R-release (R 4.6.0 Patched, arm64)
+* mac-builder R-release
 
 ## R CMD check results
 
 0 errors | 0 warnings | 0 notes
-(local check produces a single "unable to verify current time" NOTE
-that is environment-specific and does not appear on CRAN's servers.)
+(local checks may emit an "unable to verify current time" NOTE and a
+LaTeX/`pdflatex`-not-available NOTE that are specific to this machine and do
+not appear on CRAN's servers.)
 
 ## Downstream dependencies
 
