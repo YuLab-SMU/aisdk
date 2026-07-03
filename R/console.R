@@ -2330,6 +2330,7 @@ handle_command <- function(input,
         "{.code /history} - Show conversation history",
         "{.code /stats} - Show token usage statistics",
         "{.code /clear} - Clear conversation history",
+        "{.code /reset} - Reset model server-side state (keeps history)",
         "{.code /stream [on|off]} - Toggle streaming mode",
         "{.code /inspect [on|off]} - Toggle inspect mode",
         "{.code /inspect turn} - Open overlay for the latest turn",
@@ -2865,6 +2866,14 @@ handle_command <- function(input,
     "/clear" = {
       session$clear_history()
       cli::cli_alert_success("Conversation history cleared.")
+    },
+    "/reset" = {
+      did_reset <- session$reset_model_state()
+      if (isTRUE(did_reset)) {
+        cli::cli_alert_success("Model conversation state reset (history kept).")
+      } else {
+        cli::cli_alert_info("Active model has no server-side state to reset.")
+      }
     },
     "/stream" = {
       if (length(args) == 0) {

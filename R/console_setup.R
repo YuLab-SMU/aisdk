@@ -111,12 +111,14 @@ console_provider_specs <- function() {
       use_max_completion_tokens_env = "AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS",
       enable_stream_options_env = "AISDK_CUSTOM_ENABLE_STREAM_OPTIONS",
       supports_native_tools_env = "AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS",
+      responses_state_mode_env = "AISDK_CUSTOM_RESPONSES_STATE_MODE",
       allow_empty_api_key = TRUE,
       default_base_url = "",
       default_model = "",
       default_api_format = "chat_completions",
       default_enable_stream_options = FALSE,
-      default_supports_native_tools = FALSE
+      default_supports_native_tools = FALSE,
+      default_responses_state_mode = "stateless"
     ),
     aihubmix = list(
       id = "aihubmix",
@@ -218,6 +220,13 @@ build_console_model_profile <- function(source, scope, values, spec) {
   } else {
     isTRUE(spec$default_supports_native_tools)
   }
+  responses_state_mode <- values[[spec$responses_state_mode_env %||% ""]] %||%
+    spec$default_responses_state_mode %||% ""
+  responses_state_mode <- if (nzchar(responses_state_mode)) {
+    responses_normalize_state_mode(responses_state_mode)
+  } else {
+    ""
+  }
 
   if (!nzchar(api_key) && !nzchar(model)) {
     return(NULL)
@@ -239,6 +248,7 @@ build_console_model_profile <- function(source, scope, values, spec) {
     use_max_completion_tokens = use_max_completion_tokens,
     enable_stream_options = enable_stream_options,
     supports_native_tools = supports_native_tools,
+    responses_state_mode = responses_state_mode,
     env = list(
       key = spec$api_key_env,
       base_url = spec$base_url_env,
@@ -247,7 +257,8 @@ build_console_model_profile <- function(source, scope, values, spec) {
       api_format = spec$api_format_env %||% NULL,
       use_max_completion_tokens = spec$use_max_completion_tokens_env %||% NULL,
       enable_stream_options = spec$enable_stream_options_env %||% NULL,
-      supports_native_tools = spec$supports_native_tools_env %||% NULL
+      supports_native_tools = spec$supports_native_tools_env %||% NULL,
+      responses_state_mode = spec$responses_state_mode_env %||% NULL
     ),
     values = stats::setNames(
       c(
@@ -257,7 +268,8 @@ build_console_model_profile <- function(source, scope, values, spec) {
         if (!is.null(spec$api_format_env)) list(api_format) else list(),
         if (!is.null(spec$use_max_completion_tokens_env)) list(if (isTRUE(use_max_completion_tokens)) "true" else "false") else list(),
         if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(enable_stream_options)) "true" else "false") else list(),
-        if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list()
+        if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list(),
+        if (!is.null(spec$responses_state_mode_env)) list(responses_state_mode) else list()
       ),
       c(
         spec$api_key_env,
@@ -267,7 +279,8 @@ build_console_model_profile <- function(source, scope, values, spec) {
         spec$api_format_env %||% character(0),
         spec$use_max_completion_tokens_env %||% character(0),
         spec$enable_stream_options_env %||% character(0),
-        spec$supports_native_tools_env %||% character(0)
+        spec$supports_native_tools_env %||% character(0),
+        spec$responses_state_mode_env %||% character(0)
       )
     )
   )
@@ -339,6 +352,7 @@ build_console_yaml_profile <- function(scope, path, provider_id, provider_cfg, m
     use_max_completion_tokens = normalize_config_bool(provider_cfg$use_max_completion_tokens, default = FALSE),
     enable_stream_options = !normalize_config_bool(provider_cfg$disable_stream_options, default = TRUE),
     supports_native_tools = normalize_config_bool(provider_cfg$supports_native_tools, default = FALSE),
+    responses_state_mode = model_config_responses_state_mode(provider_cfg),
     is_default = identical(model_id, default_model),
     env = list(key = api_key_env, base_url = NULL, model = NULL),
     values = list()
@@ -884,6 +898,57 @@ choose_console_capability_mode <- function(spec,
 }
 
 #' @keywords internal
+format_console_responses_state_mode <- function(mode) {
+  mode <- responses_normalize_state_mode(mode)
+  switch(mode,
+    stateless = "stateless HTTP (resend full history)",
+    server = "server state (previous_response_id)",
+    auto = "auto server state (retry stateless on rejection)"
+  )
+}
+
+#' @keywords internal
+choose_console_responses_state_mode <- function(spec,
+                                                menu_fn,
+                                                api_format = NULL,
+                                                existing_profile = NULL) {
+  if (!identical(api_format %||% spec$default_api_format %||% "", "responses")) {
+    return(NULL)
+  }
+  if (is.null(spec$responses_state_mode_env) && !identical(existing_profile$storage %||% "", "yaml")) {
+    return(NULL)
+  }
+
+  modes <- c(
+    stateless = format_console_responses_state_mode("stateless"),
+    server = format_console_responses_state_mode("server"),
+    auto = format_console_responses_state_mode("auto")
+  )
+  current <- responses_normalize_state_mode(
+    existing_profile$responses_state_mode %||% spec$default_responses_state_mode %||% "stateless"
+  )
+  has_existing <- !is.null(existing_profile) && !is.null(existing_profile$responses_state_mode)
+  choices <- unname(modes)
+  if (isTRUE(has_existing)) {
+    choices <- c(
+      paste("Keep current", sprintf("(%s)", format_console_responses_state_mode(current))),
+      choices
+    )
+  }
+
+  selection <- menu_fn("Responses state mode", choices)
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  if (isTRUE(has_existing) && identical(selection, 1L)) {
+    return(current)
+  }
+
+  offset <- if (isTRUE(has_existing)) 1L else 0L
+  names(modes)[[selection - offset]]
+}
+
+#' @keywords internal
 choose_console_api_key <- function(spec, menu_fn, input_fn, existing_api_key = NULL) {
   existing_api_key <- existing_api_key %||% ""
   key_prompt <- sprintf(
@@ -1029,6 +1094,7 @@ finalize_console_profile <- function(spec,
                                      api_format = NULL,
                                      enable_stream_options = spec$default_enable_stream_options,
                                      supports_native_tools = spec$default_supports_native_tools,
+                                     responses_state_mode = NULL,
                                      save_target,
                                      save_fn,
                                      remember_model_fn,
@@ -1038,7 +1104,8 @@ finalize_console_profile <- function(spec,
       list(api_key, base_url, model),
       if (!is.null(spec$api_format_env)) list(api_format %||% spec$default_api_format %||% "") else list(),
       if (!is.null(spec$enable_stream_options_env)) list(if (isTRUE(enable_stream_options)) "true" else "false") else list(),
-      if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list()
+      if (!is.null(spec$supports_native_tools_env)) list(if (isTRUE(supports_native_tools)) "true" else "false") else list(),
+      if (!is.null(spec$responses_state_mode_env) && !is.null(responses_state_mode)) list(responses_state_mode) else list()
     ),
     c(
       spec$api_key_env,
@@ -1046,7 +1113,8 @@ finalize_console_profile <- function(spec,
       spec$model_env,
       spec$api_format_env %||% character(0),
       spec$enable_stream_options_env %||% character(0),
-      spec$supports_native_tools_env %||% character(0)
+      spec$supports_native_tools_env %||% character(0),
+      if (!is.null(responses_state_mode)) spec$responses_state_mode_env %||% character(0) else character(0)
     )
   )
 
@@ -1064,6 +1132,9 @@ finalize_console_profile <- function(spec,
       disable_stream_options = !isTRUE(enable_stream_options),
       supports_native_tools = isTRUE(supports_native_tools)
     )
+    if (identical(provider_config$wire_api, "responses") && !is.null(responses_state_mode)) {
+      provider_config$responses_state_mode <- responses_state_mode
+    }
     update_model_config_file(
       path = save_target$path,
       provider_id = provider_id,
@@ -1118,6 +1189,16 @@ run_console_profile_setup <- function(spec,
     existing_profile = existing_profile
   )
   if (is.null(capability_mode)) {
+    return(NULL)
+  }
+
+  responses_state_mode <- choose_console_responses_state_mode(
+    spec = spec,
+    menu_fn = menu_fn,
+    api_format = api_format,
+    existing_profile = existing_profile
+  )
+  if (identical(api_format, "responses") && is.null(responses_state_mode)) {
     return(NULL)
   }
 
@@ -1187,6 +1268,7 @@ run_console_profile_setup <- function(spec,
     api_format = api_format,
     enable_stream_options = capability_mode$enable_stream_options,
     supports_native_tools = capability_mode$supports_native_tools,
+    responses_state_mode = responses_state_mode,
     save_target = save_target,
     save_fn = save_fn,
     remember_model_fn = remember_model_fn,

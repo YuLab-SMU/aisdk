@@ -183,6 +183,22 @@ model_config_provider_api_key <- function(provider_cfg) {
 }
 
 #' @keywords internal
+# Resolve the Responses server-side state policy from a configured provider.
+# Accepts an explicit `responses_state_mode`/`state_mode` string, or a boolean
+# `responses_stateful` alias. Defaults to "stateless" so HTTP-stateless
+# Responses proxies work out of the box.
+model_config_responses_state_mode <- function(provider_cfg) {
+  raw <- provider_cfg$responses_state_mode %||% provider_cfg$state_mode
+  if (!is.null(raw) && nzchar(trimws(as.character(raw)))) {
+    return(responses_normalize_state_mode(raw))
+  }
+  if (!is.null(provider_cfg$responses_stateful)) {
+    return(if (normalize_config_bool(provider_cfg$responses_stateful, default = FALSE)) "server" else "stateless")
+  }
+  "stateless"
+}
+
+#' @keywords internal
 model_config_provider_base_url <- function(provider_cfg) {
   urls <- normalize_base_urls(c(
     unlist(provider_cfg$base_url %||% NULL, use.names = FALSE),
@@ -206,7 +222,8 @@ create_config_custom_provider <- function(provider_id, provider_cfg) {
     api_format = wire_api,
     use_max_completion_tokens = normalize_config_bool(provider_cfg$use_max_completion_tokens, default = FALSE),
     disable_stream_options = normalize_config_bool(provider_cfg$disable_stream_options, default = TRUE),
-    supports_native_tools = normalize_config_bool(provider_cfg$supports_native_tools, default = FALSE)
+    supports_native_tools = normalize_config_bool(provider_cfg$supports_native_tools, default = FALSE),
+    responses_state_mode = model_config_responses_state_mode(provider_cfg)
   )
 }
 

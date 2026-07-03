@@ -606,6 +606,19 @@ agent_runtime_append_provider_messages <- function(messages,
         nzchar(result$reasoning)) {
       assistant_message$reasoning_content <- result$reasoning
     }
+  } else if (identical(history_format, "openai_responses")) {
+    assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
+      list(
+        type = "function_call",
+        call_id = tc$id,
+        name = tc$name,
+        arguments = if (is.character(tc$arguments)) {
+          tc$arguments
+        } else {
+          safe_to_json(tc$arguments %||% list(), auto_unbox = TRUE)
+        }
+      )
+    })
   } else if (identical(history_format, "anthropic")) {
     assistant_message$content <- if (isTRUE(has_tool_calls)) {
       agent_runtime_anthropic_content_without_text(result$raw_response$content)

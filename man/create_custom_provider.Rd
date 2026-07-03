@@ -11,7 +11,8 @@ create_custom_provider(
   api_format = c("chat_completions", "responses", "anthropic_messages"),
   use_max_completion_tokens = FALSE,
   disable_stream_options = TRUE,
-  supports_native_tools = FALSE
+  supports_native_tools = FALSE,
+  responses_state_mode = c("stateless", "server", "auto")
 )
 }
 \arguments{
@@ -34,6 +35,13 @@ OpenAI-compatible gateways that only implement the basic streaming shape.}
 \item{supports_native_tools}{A boolean flag. If FALSE, do not send native
 OpenAI/Anthropic tool definitions or tool-result message formats. The SDK
 will fall back to text-embedded \verb{<tool_call>\{...\}</tool_call>} blocks.}
+
+\item{responses_state_mode}{Server-side conversation state policy for the
+\code{"responses"} api_format: \code{"stateless"} (default) always resends the full
+transcript and never sends \code{previous_response_id} — the safe choice for
+HTTP-stateless Responses proxies; \code{"server"}/\code{"auto"} chain turns via
+\code{previous_response_id} and auto-degrade to stateless if the endpoint
+rejects it. Ignored for non-Responses formats.}
 }
 \value{
 A custom provider object with a \code{language_model(model_id)} method.

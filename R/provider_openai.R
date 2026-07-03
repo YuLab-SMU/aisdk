@@ -395,6 +395,45 @@ OpenAILanguageModel <- R6::R6Class(
   )
 )
 
+# --- Responses API server-side state helpers --------------------------------
+# Shared by the Responses language model and image model. The Responses
+# protocol is a spectrum: official OpenAI keeps conversation state server-side
+# (via `previous_response_id`), some compatible proxies are HTTP-stateless and
+# require the full transcript every turn, and some reject `previous_response_id`
+# outright. These helpers gate whether server-side state is used and recognize
+# the rejection so callers can self-heal.
+#
+# `responses_state_mode` (read from config):
+#   "stateless" - never send `previous_response_id`; always resend full history.
+#   "server"    - send `previous_response_id` when available (send only the new
+#                 turn), degrading to stateless if the endpoint rejects it.
+#   "auto"      - same as "server" (kept distinct for forward-compatibility /
+#                 wizard wording). Default for first-party `create_openai()`.
+responses_normalize_state_mode <- function(mode) {
+  mode <- tolower(trimws(as.character(mode %||% "stateless")))
+  if (length(mode) != 1L || !mode %in% c("stateless", "server", "auto")) {
+    mode <- "stateless"
+  }
+  mode
+}
+
+# TRUE when an error indicates the endpoint rejected `previous_response_id`
+# (HTTP-stateless Responses proxies), so the caller can drop it and retry with
+# the full transcript.
+responses_previous_id_rejected <- function(e) {
+  msg <- tolower(conditionMessage(e) %||% "")
+  grepl("previous_response_id", msg, fixed = TRUE)
+}
+
+responses_previous_id_unsupported <- function(e) {
+  msg <- tolower(conditionMessage(e) %||% "")
+  responses_previous_id_rejected(e) &&
+    (
+      inherits(e, "aisdk_api_compatibility_error") ||
+        grepl("unsupported|not supported|only supported|unknown parameter|unknown_parameter|unrecognized", msg)
+    )
+}
+
 #' @title OpenAI Responses Language Model Class
 #' @description
 #' Language model implementation for OpenAI's Responses API.
@@ -416,6 +455,14 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
   private = list(
     config = NULL,
     last_response_id = NULL,
+    # Set once an endpoint rejects `previous_response_id`; from then on this
+    # model instance stays stateless (resends full history) for the session.
+    state_unsupported = FALSE,
+    # Whether to send `previous_response_id` this turn (mode-gated + self-heal).
+    use_server_state = function() {
+      mode <- responses_normalize_state_mode(private$config$responses_state_mode)
+      mode %in% c("server", "auto") && !isTRUE(private$state_unsupported)
+    },
     get_headers = function() {
       h <- list(`Content-Type` = "application/json")
       if (nzchar(private$config$api_key %||% "")) {
@@ -431,14 +478,55 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
     },
 
     # Convert standard messages format to Responses API input format
-    format_input = function(messages) {
+    format_input = function(messages, only_new = FALSE) {
       # Responses API accepts input in multiple formats:
       # 1. Simple string: "Hello"
       # 2. Array of input items with roles
       # We convert standard messages to the array format
 
+      # When `only_new` is TRUE the caller is sending `previous_response_id`, so
+      # the server already holds the conversation up to the last assistant turn.
+      # Send only the messages after it (keeping any system message, which sets
+      # per-call instructions) to avoid paying for the whole transcript twice.
+      if (isTRUE(only_new)) {
+        last_assistant <- 0L
+        for (i in seq_along(messages)) {
+          if (identical(messages[[i]]$role, "assistant")) {
+            last_assistant <- i
+          }
+        }
+        if (last_assistant > 0L) {
+          messages <- Filter(Negate(is.null), lapply(seq_along(messages), function(i) {
+            if (i > last_assistant || identical(messages[[i]]$role, "system")) {
+              messages[[i]]
+            } else {
+              NULL
+            }
+          }))
+        }
+      }
+
       input_items <- list()
       system_instructions <- NULL
+
+      append_responses_tool_calls <- function(tool_calls) {
+        for (tc in tool_calls %||% list()) {
+          fn <- tc$`function` %||% list()
+          name <- tc$name %||% fn$name %||% ""
+          arguments <- tc$arguments %||% fn$arguments %||% "{}"
+          if (!is.character(arguments)) {
+            arguments <- safe_to_json(arguments %||% list(), auto_unbox = TRUE)
+          } else {
+            arguments <- as.character(arguments)
+          }
+          input_items <<- c(input_items, list(list(
+            type = "function_call",
+            call_id = tc$call_id %||% tc$id,
+            name = name,
+            arguments = arguments
+          )))
+        }
+      }
 
       for (msg in messages) {
         if (msg$role == "system") {
@@ -455,11 +543,26 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
             content = translate_message_content(msg$content, target = "openai_responses")
           )))
         } else if (msg$role == "assistant") {
-          input_items <- c(input_items, list(list(
-            type = "message",
-            role = "assistant",
-            content = translate_message_content(msg$content, target = "openai_responses")
-          )))
+          # Assistant turns replayed as input must use `output_text`, not
+          # `input_text`. The Responses API rejects assistant content typed as
+          # `input_text` (HTTP-stateless proxies surface this as a 5xx), so we
+          # build the output content explicitly here rather than via
+          # translate_message_content() (which always emits `input_text`).
+          assistant_text <- if (is.character(msg$content) || is.null(msg$content)) {
+            paste(msg$content %||% "", collapse = "")
+          } else {
+            content_blocks_to_text(msg$content, arg_name = "assistant")
+          }
+          if (nzchar(assistant_text)) {
+            input_items <- c(input_items, list(list(
+              type = "message",
+              role = "assistant",
+              content = list(list(type = "output_text", text = assistant_text))
+            )))
+          }
+          if (length(msg$tool_calls %||% list()) > 0) {
+            append_responses_tool_calls(msg$tool_calls)
+          }
         } else if (msg$role == "tool") {
           # Tool results in Responses API format
           input_items <- c(input_items, list(list(
@@ -523,6 +626,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
           if (is.null(tool_calls)) tool_calls <- list()
           tool_calls <- c(tool_calls, list(list(
             id = item$call_id %||% item$id,
+            item_id = item$id %||% NULL,
+            call_id = item$call_id %||% NULL,
             name = item$name,
             arguments = if (is.character(item$arguments)) {
               parse_tool_arguments(item$arguments, tool_name = item$name)
@@ -667,8 +772,12 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/responses")
       headers <- private$get_headers()
 
+      # Decide up front whether this turn uses server-side state, since it
+      # changes how much history we serialize into `input`.
+      use_server_state <- private$use_server_state() && !is.null(private$last_response_id)
+
       # Convert messages to Responses API format
-      formatted <- private$format_input(params$messages)
+      formatted <- private$format_input(params$messages, only_new = use_server_state)
 
       body <- list(
         model = self$model_id,
@@ -680,8 +789,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         body$instructions <- formatted$instructions
       }
 
-      # Inject previous_response_id for multi-turn (stateful conversation)
-      if (!is.null(private$last_response_id)) {
+      # Inject previous_response_id only when server-side state is in effect.
+      if (use_server_state) {
         body$previous_response_id <- private$last_response_id
       }
 
@@ -791,16 +900,38 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       # Remove NULL entries
       body <- body[!sapply(body, is.null)]
 
-      response <- post_to_api(
-        url,
-        headers,
-        body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
-      )
+      do_post <- function(req_body) {
+        post_to_api(
+          url,
+          headers,
+          req_body,
+          timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+          total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+          first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+          connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+          idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+        )
+      }
+
+      response <- if (use_server_state) {
+        tryCatch(
+          do_post(body),
+          aisdk_api_error = function(e) {
+            if (!responses_previous_id_rejected(e)) stop(e)
+            # Endpoint is HTTP-stateless: drop server state, stay stateless for
+            # the rest of the session, and retry once with the full transcript.
+            private$last_response_id <- NULL
+            private$state_unsupported <- responses_previous_id_unsupported(e)
+            retry_body <- body
+            retry_body$previous_response_id <- NULL
+            retry_body$input <- private$format_input(params$messages, only_new = FALSE)$input
+            retry_body <- retry_body[!sapply(retry_body, is.null)]
+            do_post(retry_body)
+          }
+        )
+      } else {
+        do_post(body)
+      }
 
       # Update internal state with new response ID
       private$last_response_id <- response$id
@@ -841,8 +972,10 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/responses")
       headers <- private$get_headers()
 
+      use_server_state <- private$use_server_state() && !is.null(private$last_response_id)
+
       # Convert messages to Responses API format
-      formatted <- private$format_input(params$messages)
+      formatted <- private$format_input(params$messages, only_new = use_server_state)
 
       body <- list(
         model = self$model_id,
@@ -855,8 +988,8 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         body$instructions <- formatted$instructions
       }
 
-      # Inject previous_response_id for multi-turn
-      if (!is.null(private$last_response_id)) {
+      # Inject previous_response_id only when server-side state is in effect.
+      if (use_server_state) {
         body$previous_response_id <- private$last_response_id
       }
 
@@ -951,10 +1084,11 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       stream_state$response_id <- NULL
       stream_state$last_response <- NULL
 
-      stream_responses_api(
+      run_responses_stream <- function(req_body) {
+        stream_responses_api(
         url,
         headers,
-        body,
+        req_body,
         callback = function(event_type, data, done) {
           if (done) {
             if (stream_state$is_reasoning) {
@@ -1155,7 +1289,28 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
         connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
         idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
-      )
+        )
+      }
+
+      # The 400 from an HTTP-stateless endpoint is raised before any stream
+      # event fires, so we can safely retry the whole stream without history.
+      if (use_server_state) {
+        tryCatch(
+          run_responses_stream(body),
+          aisdk_api_error = function(e) {
+            if (!responses_previous_id_rejected(e)) stop(e)
+            private$last_response_id <- NULL
+            private$state_unsupported <- responses_previous_id_unsupported(e)
+            retry_body <- body
+            retry_body$previous_response_id <- NULL
+            retry_body$input <- private$format_input(params$messages, only_new = FALSE)$input
+            retry_body <- retry_body[!sapply(retry_body, is.null)]
+            run_responses_stream(retry_body)
+          }
+        )
+      } else {
+        run_responses_stream(body)
+      }
 
       # Update internal state
       if (!is.null(stream_state$response_id)) {
@@ -1360,6 +1515,13 @@ OpenAIImageModel <- R6::R6Class(
   private = list(
     config = NULL,
     last_response_id = NULL,
+    # Mirror the Responses language model: only chain image-edit turns
+    # server-side when the configured state mode allows it (default "auto"
+    # for first-party `create_openai()`, "stateless" for custom proxies).
+    use_server_state = function() {
+      mode <- responses_normalize_state_mode(private$config$responses_state_mode)
+      mode %in% c("server", "auto")
+    },
     get_headers = function(include_content_type = TRUE) {
       h <- list()
       if (nzchar(private$config$api_key %||% "")) {
@@ -1755,7 +1917,7 @@ OpenAIImageModel <- R6::R6Class(
         input = params$prompt,
         tools = list(private$build_responses_tool_config(params))
       )
-      if (!is.null(private$last_response_id)) {
+      if (private$use_server_state() && !is.null(private$last_response_id)) {
         body$previous_response_id <- private$last_response_id
       }
       response <- post_to_api(
@@ -1955,7 +2117,7 @@ OpenAIImageModel <- R6::R6Class(
         stream = TRUE,
         tools = list(tool_cfg)
       )
-      if (!is.null(private$last_response_id)) {
+      if (private$use_server_state() && !is.null(private$last_response_id)) {
         body$previous_response_id <- private$last_response_id
       }
 
@@ -2126,7 +2288,7 @@ OpenAIImageModel <- R6::R6Class(
         )),
         tools = list(private$build_responses_edit_tool_config(params, mask_data_url))
       )
-      if (!is.null(private$last_response_id)) {
+      if (private$use_server_state() && !is.null(private$last_response_id)) {
         body$previous_response_id <- private$last_response_id
       }
       response <- post_to_api(
@@ -2214,6 +2376,12 @@ OpenAIProvider <- R6::R6Class(
     #'   models like gpt-5.x via /chat/completions), or "responses" (always
     #'   Responses API). The explicit `language_model()` and `responses_model()`
     #'   methods continue to ignore this setting.
+    #' @param responses_state_mode Server-side conversation state policy for the
+    #'   Responses API: "auto"/"server" send `previous_response_id` to chain
+    #'   turns (auto-degrading to full-history resend if the endpoint rejects
+    #'   it), while "stateless" always resends the full transcript and never
+    #'   sends `previous_response_id`. First-party OpenAI defaults to "auto";
+    #'   HTTP-stateless Responses proxies should use "stateless".
     initialize = function(api_key = NULL,
                           base_url = NULL,
                           organization = NULL,
@@ -2226,8 +2394,10 @@ OpenAIProvider <- R6::R6Class(
                           connect_timeout_seconds = NULL,
                           idle_timeout_seconds = NULL,
                           disable_stream_options = FALSE,
-                          api_format = c("auto", "chat", "responses")) {
+                          api_format = c("auto", "chat", "responses"),
+                          responses_state_mode = c("auto", "stateless", "server")) {
       api_format <- match.arg(api_format)
+      responses_state_mode <- match.arg(responses_state_mode)
       env_base_url <- Sys.getenv("OPENAI_BASE_URL", unset = "")
       raw_base_url <- base_url %||% c(
         if (nzchar(trimws(env_base_url))) env_base_url else "https://api.openai.com/v1",
@@ -2251,7 +2421,8 @@ OpenAIProvider <- R6::R6Class(
         connect_timeout_seconds = connect_timeout_seconds,
         idle_timeout_seconds = idle_timeout_seconds,
         disable_stream_options = disable_stream_options,
-        api_format = api_format
+        api_format = api_format,
+        responses_state_mode = responses_state_mode
       )
 
       if (nchar(private$config$api_key) == 0) {
@@ -2445,6 +2616,7 @@ OpenAIProvider <- R6::R6Class(
 #' @param idle_timeout_seconds Optional stall timeout in seconds for API calls.
 #' @param disable_stream_options Disable stream_options parameter (for providers like Volcengine that don't support it).
 #' @param api_format Default API surface for `smart_model()` / `model()`: `"auto"` (default, picks Chat or Responses based on model), `"chat"` (always Chat Completions), or `"responses"` (always Responses API).
+#' @param responses_state_mode Server-side conversation state policy for the Responses API: `"auto"`/`"server"` send `previous_response_id` to chain turns (auto-degrading to a full-history resend if the endpoint rejects it), while `"stateless"` always resends the full transcript. First-party OpenAI defaults to `"auto"`; HTTP-stateless Responses proxies should use `"stateless"`.
 #' @return An OpenAIProvider object.
 #' @export
 #' @examples
@@ -2499,8 +2671,10 @@ create_openai <- function(api_key = NULL,
                           connect_timeout_seconds = NULL,
                           idle_timeout_seconds = NULL,
                           disable_stream_options = FALSE,
-                          api_format = c("auto", "chat", "responses")) {
+                          api_format = c("auto", "chat", "responses"),
+                          responses_state_mode = c("auto", "stateless", "server")) {
   api_format <- match.arg(api_format)
+  responses_state_mode <- match.arg(responses_state_mode)
   OpenAIProvider$new(
     api_key = api_key,
     base_url = base_url,
@@ -2514,7 +2688,8 @@ create_openai <- function(api_key = NULL,
     connect_timeout_seconds = connect_timeout_seconds,
     idle_timeout_seconds = idle_timeout_seconds,
     disable_stream_options = disable_stream_options,
-    api_format = api_format
+    api_format = api_format,
+    responses_state_mode = responses_state_mode
   )
 }
 

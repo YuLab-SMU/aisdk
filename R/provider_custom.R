@@ -27,6 +27,12 @@ NULL
 #' @param supports_native_tools A boolean flag. If FALSE, do not send native
 #'   OpenAI/Anthropic tool definitions or tool-result message formats. The SDK
 #'   will fall back to text-embedded `<tool_call>{...}</tool_call>` blocks.
+#' @param responses_state_mode Server-side conversation state policy for the
+#'   `"responses"` api_format: `"stateless"` (default) always resends the full
+#'   transcript and never sends `previous_response_id` — the safe choice for
+#'   HTTP-stateless Responses proxies; `"server"`/`"auto"` chain turns via
+#'   `previous_response_id` and auto-degrade to stateless if the endpoint
+#'   rejects it. Ignored for non-Responses formats.
 #'
 #' @return A custom provider object with a `language_model(model_id)` method.
 #' @export
@@ -37,9 +43,11 @@ create_custom_provider <- function(
   api_format = c("chat_completions", "responses", "anthropic_messages"),
   use_max_completion_tokens = FALSE,
   disable_stream_options = TRUE,
-  supports_native_tools = FALSE
+  supports_native_tools = FALSE,
+  responses_state_mode = c("stateless", "server", "auto")
 ) {
     api_format <- match.arg(api_format)
+    responses_state_mode <- match.arg(responses_state_mode)
 
     if (is.null(provider_name) || trimws(provider_name) == "") {
         rlang::abort("`provider_name` must be a non-empty string.")
@@ -56,7 +64,8 @@ create_custom_provider <- function(
         base_url = base_urls[[1]],
         base_urls = base_urls,
         provider_name = provider_name,
-        disable_stream_options = isTRUE(disable_stream_options)
+        disable_stream_options = isTRUE(disable_stream_options),
+        responses_state_mode = responses_state_mode
     )
 
     # Inject capabilities

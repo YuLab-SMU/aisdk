@@ -17,7 +17,8 @@ create_openai(
   connect_timeout_seconds = NULL,
   idle_timeout_seconds = NULL,
   disable_stream_options = FALSE,
-  api_format = c("auto", "chat", "responses")
+  api_format = c("auto", "chat", "responses"),
+  responses_state_mode = c("auto", "stateless", "server")
 )
 }
 \arguments{
@@ -46,6 +47,8 @@ create_openai(
 \item{disable_stream_options}{Disable stream_options parameter (for providers like Volcengine that don't support it).}
 
 \item{api_format}{Default API surface for \code{smart_model()} / \code{model()}: \code{"auto"} (default, picks Chat or Responses based on model), \code{"chat"} (always Chat Completions), or \code{"responses"} (always Responses API).}
+
+\item{responses_state_mode}{Server-side conversation state policy for the Responses API: \code{"auto"}/\code{"server"} send \code{previous_response_id} to chain turns (auto-degrading to a full-history resend if the endpoint rejects it), while \code{"stateless"} always resends the full transcript. First-party OpenAI defaults to \code{"auto"}; HTTP-stateless Responses proxies should use \code{"stateless"}.}
 }
 \value{
 An OpenAIProvider object.

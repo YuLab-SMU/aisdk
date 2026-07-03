@@ -48,7 +48,8 @@ Initialize the OpenAI provider.
   connect_timeout_seconds = NULL,
   idle_timeout_seconds = NULL,
   disable_stream_options = FALSE,
-  api_format = c("auto", "chat", "responses")
+  api_format = c("auto", "chat", "responses"),
+  responses_state_mode = c("auto", "stateless", "server")
 )}\if{html}{\out{</div>}}
 }
 
@@ -86,6 +87,13 @@ for proxies that don't expose /responses, or that surface reasoning
 models like gpt-5.x via /chat/completions), or "responses" (always
 Responses API). The explicit \code{language_model()} and \code{responses_model()}
 methods continue to ignore this setting.}
+
+\item{\code{responses_state_mode}}{Server-side conversation state policy for the
+Responses API: "auto"/"server" send \code{previous_response_id} to chain
+turns (auto-degrading to full-history resend if the endpoint rejects
+it), while "stateless" always resends the full transcript and never
+sends \code{previous_response_id}. First-party OpenAI defaults to "auto";
+HTTP-stateless Responses proxies should use "stateless".}
 }
 \if{html}{\out{</div>}}
 }

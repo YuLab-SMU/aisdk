@@ -1728,3 +1728,229 @@ test_that("create_openai(api_format=) routes provider$model() to the right surfa
   expect_s3_class(prov_chat$model("gpt-5"),        "OpenAILanguageModel")
   expect_s3_class(prov_resp$model("gpt-4o"),       "OpenAIResponsesLanguageModel")
 })
+
+# --- Responses API server-side state mode -----------------------------------
+# Regression coverage for the "implicit statefulness" defect: the Responses
+# adapter used to always resend the full history AND inject previous_response_id,
+# which 400s on HTTP-stateless proxies and double-bills tokens on OpenAI.
+
+test_that("responses_normalize_state_mode coerces unknown/empty values to stateless", {
+  expect_equal(aisdk:::responses_normalize_state_mode(NULL), "stateless")
+  expect_equal(aisdk:::responses_normalize_state_mode("server"), "server")
+  expect_equal(aisdk:::responses_normalize_state_mode("AUTO"), "auto")
+  expect_equal(aisdk:::responses_normalize_state_mode("nonsense"), "stateless")
+})
+
+test_that("previous_response_id retry detection is scoped to previous_response_id errors", {
+  unrelated <- rlang::error_cnd(
+    class = c("aisdk_api_compatibility_error", "aisdk_api_error"),
+    message = "Unknown parameter: response_format"
+  )
+  previous_id <- rlang::error_cnd(
+    class = c("aisdk_api_compatibility_error", "aisdk_api_error"),
+    message = "previous_response_id is only supported on Responses WebSocket v2"
+  )
+
+  expect_false(aisdk:::responses_previous_id_rejected(unrelated))
+  expect_true(aisdk:::responses_previous_id_rejected(previous_id))
+  expect_true(aisdk:::responses_previous_id_unsupported(previous_id))
+})
+
+test_that("custom Responses provider defaults to stateless (no previous_response_id)", {
+  provider <- create_custom_provider(
+    provider_name = "p_stateless",
+    base_url = "https://proxy.example/v1",
+    api_key = "FAKE",
+    api_format = "responses"
+  )
+  model <- provider$language_model("gpt-5.5")
+  bodies <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      bodies[[length(bodies) + 1]] <<- body
+      list(id = paste0("resp_", length(bodies)),
+           output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+  model$do_generate(list(messages = list(list(role = "user", content = "a"))))
+  model$do_generate(list(messages = list(
+    list(role = "user", content = "a"),
+    list(role = "assistant", content = "ok"),
+    list(role = "user", content = "b")
+  )))
+  # Even after a response id exists, stateless mode never injects it...
+  expect_null(bodies[[2]]$previous_response_id)
+  # ...and it resends the full transcript.
+  expect_equal(length(bodies[[2]]$input), 3L)
+  # The replayed assistant turn must use `output_text` (the Responses API
+  # rejects assistant `input_text`), while user turns keep `input_text`.
+  expect_equal(bodies[[2]]$input[[1]]$content[[1]]$type, "input_text")
+  expect_equal(bodies[[2]]$input[[2]]$role, "assistant")
+  expect_equal(bodies[[2]]$input[[2]]$content[[1]]$type, "output_text")
+  expect_equal(bodies[[2]]$input[[2]]$content[[1]]$text, "ok")
+})
+
+test_that("stateless Responses tool loop replays function_call before function_call_output", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE", responses_state_mode = "stateless")
+  model <- provider$responses_model("gpt-5")
+  echo <- tool(
+    name = "echo",
+    description = "Echo a message",
+    parameters = z_object(message = z_string("Message")),
+    execute = function(message) paste("Echo:", message)
+  )
+
+  bodies <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      bodies[[length(bodies) + 1]] <<- body
+      if (length(bodies) == 1L) {
+        return(list(
+          id = "resp_1",
+          output = list(list(
+            type = "function_call",
+            id = "fc_1",
+            call_id = "call_1",
+            name = "echo",
+            arguments = "{\"message\":\"hi\"}"
+          ))
+        ))
+      }
+      list(
+        id = "resp_2",
+        output = list(list(
+          type = "message",
+          content = list(list(text = "done"))
+        ))
+      )
+    },
+    .package = "aisdk"
+  )
+
+  result <- generate_text(
+    model = model,
+    prompt = "Use echo",
+    tools = list(echo),
+    max_steps = 2
+  )
+
+  expect_equal(result$text, "done")
+  expect_null(bodies[[2]]$previous_response_id)
+  expect_equal(vapply(bodies[[2]]$input, `[[`, character(1), "type"), c(
+    "message",
+    "function_call",
+    "function_call_output"
+  ))
+  expect_equal(bodies[[2]]$input[[2]]$call_id, "call_1")
+  expect_equal(bodies[[2]]$input[[2]]$name, "echo")
+  expect_equal(bodies[[2]]$input[[2]]$arguments, "{\"message\":\"hi\"}")
+  expect_equal(bodies[[2]]$input[[3]]$call_id, "call_1")
+  expect_match(bodies[[2]]$input[[3]]$output, "Echo: hi", fixed = TRUE)
+})
+
+test_that("first-party Responses model (auto) chains via previous_response_id and sends only the new turn", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5")
+  bodies <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      bodies[[length(bodies) + 1]] <<- body
+      list(id = paste0("resp_", length(bodies)),
+           output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+  model$do_generate(list(messages = list(list(role = "user", content = "a"))))
+  model$do_generate(list(messages = list(
+    list(role = "user", content = "a"),
+    list(role = "assistant", content = "ok"),
+    list(role = "user", content = "b")
+  )))
+  expect_equal(bodies[[2]]$previous_response_id, "resp_1")
+  # Only the trailing user turn is sent, not the whole history.
+  expect_equal(length(bodies[[2]]$input), 1L)
+  expect_equal(bodies[[2]]$input[[1]]$role, "user")
+})
+
+test_that("Responses model auto-degrades to stateless when endpoint rejects previous_response_id", {
+  provider <- safe_create_provider(create_openai, api_key = "FAKE")
+  model <- provider$responses_model("gpt-5")
+  call_n <- 0
+  captured <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      call_n <<- call_n + 1
+      if (call_n == 2) {
+        rlang::abort(
+          c("API request failed with status 400",
+            "x" = "previous_response_id is only supported on Responses WebSocket v2"),
+          class = c("aisdk_api_compatibility_error", "aisdk_api_error")
+        )
+      }
+      captured[[length(captured) + 1]] <<- body
+      list(id = paste0("resp_", call_n),
+           output = list(list(type = "message", content = list(list(text = "ok")))))
+    },
+    .package = "aisdk"
+  )
+  # Turn 1 succeeds and records a response id.
+  model$do_generate(list(messages = list(list(role = "user", content = "hi"))))
+  # Turn 2: first attempt injects previous_response_id -> 400 -> auto-retry w/o it.
+  hist2 <- list(
+    list(role = "user", content = "hi"),
+    list(role = "assistant", content = "ok"),
+    list(role = "user", content = "again")
+  )
+  res2 <- model$do_generate(list(messages = hist2))
+  expect_s3_class(res2, "GenerateResult")
+  # The successful retry resends history and carries no previous_response_id.
+  retry_body <- captured[[length(captured)]]
+  expect_null(retry_body$previous_response_id)
+  expect_equal(length(retry_body$input), 3L)
+  # Turn 3 stays stateless within the session (no second 400).
+  model$do_generate(list(messages = c(hist2, list(list(role = "user", content = "more")))))
+  expect_null(captured[[length(captured)]]$previous_response_id)
+})
+
+test_that("ChatSession$reset_model_state resets Responses models but is a no-op for chat models", {
+  resp_model <- safe_create_provider(create_openai, api_key = "FAKE")$responses_model("gpt-5")
+  s1 <- ChatSession$new(model = resp_model)
+  expect_true(s1$reset_model_state())
+
+  chat_model <- safe_create_provider(create_openai, api_key = "FAKE")$language_model("gpt-4o")
+  s2 <- ChatSession$new(model = chat_model)
+  expect_false(s2$reset_model_state())
+})
+
+test_that("image Responses path respects state mode", {
+  swallow <- function(expr) tryCatch(suppressWarnings(suppressMessages(expr)), error = function(e) NULL)
+
+  # auto (first-party) chains edits via previous_response_id
+  model_auto <- safe_create_provider(create_openai, api_key = "FAKE")$image_model("gpt-image-2")
+  cap_auto <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      cap_auto[[length(cap_auto) + 1]] <<- body
+      list(id = "img_1", output = list())
+    },
+    .package = "aisdk"
+  )
+  swallow(model_auto$do_generate_image_via_responses(list(prompt = "a cat")))
+  swallow(model_auto$do_generate_image_via_responses(list(prompt = "make it realistic")))
+  expect_equal(cap_auto[[length(cap_auto)]]$previous_response_id, "img_1")
+
+  # stateless never chains
+  model_stateless <- create_openai(api_key = "FAKE", responses_state_mode = "stateless")$image_model("gpt-image-2")
+  cap_sl <- list()
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      cap_sl[[length(cap_sl) + 1]] <<- body
+      list(id = "img_9", output = list())
+    },
+    .package = "aisdk"
+  )
+  swallow(model_stateless$do_generate_image_via_responses(list(prompt = "a cat")))
+  swallow(model_stateless$do_generate_image_via_responses(list(prompt = "again")))
+  expect_null(cap_sl[[length(cap_sl)]]$previous_response_id)
+})

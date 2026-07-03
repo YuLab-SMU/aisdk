@@ -18,6 +18,7 @@ conversation history, supports tool execution, and provides persistence.
 \item \href{#method-ChatSession-get_history}{\code{ChatSession$get_history()}}
 \item \href{#method-ChatSession-get_last_response}{\code{ChatSession$get_last_response()}}
 \item \href{#method-ChatSession-clear_history}{\code{ChatSession$clear_history()}}
+\item \href{#method-ChatSession-reset_model_state}{\code{ChatSession$reset_model_state()}}
 \item \href{#method-ChatSession-switch_model}{\code{ChatSession$switch_model()}}
 \item \href{#method-ChatSession-get_model_options}{\code{ChatSession$get_model_options()}}
 \item \href{#method-ChatSession-get_model_call_options}{\code{ChatSession$get_model_call_options()}}
@@ -259,6 +260,21 @@ Clear the conversation history.
 \item{\code{keep_system}}{If TRUE, keeps the system prompt. Default TRUE.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChatSession-reset_model_state"></a>}}
+\if{latex}{\out{\hypertarget{method-ChatSession-reset_model_state}{}}}
+\subsection{Method \code{reset_model_state()}}{
+Reset the model's cross-turn server-side state (e.g. the
+Responses API \code{previous_response_id}) without touching the conversation
+history. No-op for models that don't track such state.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChatSession$reset_model_state()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+TRUE if a model \code{reset()} was invoked, FALSE otherwise.
 }
 }
 \if{html}{\out{<hr>}}

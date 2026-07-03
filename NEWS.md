@@ -1,5 +1,35 @@
-# aisdk 1.4.12
+# aisdk 1.4.13
 
+* Fixed an "implicit statefulness" defect in the OpenAI Responses adapter
+  (`responses_model()` / `OpenAIResponsesLanguageModel`). It previously
+  resent the full conversation history every turn *and* injected
+  `previous_response_id`, which double-billed tokens against first-party
+  OpenAI and hard-failed (HTTP 400) from the second turn onward against
+  HTTP-stateless "Responses-compatible" proxies, with no way to recover
+  within a session. Server-side state is now an explicit, gated policy:
+  - New `responses_state_mode` argument on `create_openai()` and
+    `create_custom_provider()` (and a `responses_state_mode` /
+    `responses_stateful` key in `aisdk.yaml` provider configs). Values:
+    `"stateless"` (resend full history, never send `previous_response_id`),
+    `"server"`/`"auto"` (chain turns via `previous_response_id`, sending
+    only the new turn). First-party `create_openai()` defaults to `"auto"`;
+    custom/proxy providers default to `"stateless"` so they work out of the
+    box.
+  - When an endpoint rejects `previous_response_id`, the model now
+    auto-degrades to stateless (drops the id, resends full history, and
+    stays stateless for the rest of the session) instead of getting stuck.
+  - The same gating is applied to multi-turn image editing on
+    `OpenAIImageModel`.
+  - Replayed **assistant** turns are now serialized as `output_text`
+    content (the Responses API rejects assistant `input_text`, which
+    HTTP-stateless proxies surface as a 5xx upstream error from the second
+    turn on). User turns continue to use `input_text`.
+  - The Custom API setup flow now asks for the Responses state policy and
+    persists it to `.Renviron` (`AISDK_CUSTOM_RESPONSES_STATE_MODE`) or
+    `aisdk.yaml` (`responses_state_mode`).
+* `console_chat()` gained a `/reset` command (and
+  `ChatSession$reset_model_state()`) that clears a model's server-side
+  response-id state without discarding the conversation history.
 * Exported a small, stable "extension API" so that companion provider
   packages (such as `aisdk.providers`) can build on the core HTTP and
   image-handling machinery without reaching into the `aisdk` namespace:

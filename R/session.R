@@ -315,6 +315,19 @@ ChatSession <- R6::R6Class(
       invisible(self)
     },
 
+    #' @description Reset the model's cross-turn server-side state (e.g. the
+    #'   Responses API `previous_response_id`) without touching the conversation
+    #'   history. No-op for models that don't track such state.
+    #' @return TRUE if a model `reset()` was invoked, FALSE otherwise.
+    reset_model_state = function() {
+      model <- tryCatch(private$resolve_model(), error = function(e) NULL)
+      if (!is.null(model) && "reset" %in% names(model) && is.function(model$reset)) {
+        model$reset()
+        return(invisible(TRUE))
+      }
+      invisible(FALSE)
+    },
+
     #' @description Switch to a different model.
     #' @param model A LanguageModelV1 object or model string ID.
     switch_model = function(model) {

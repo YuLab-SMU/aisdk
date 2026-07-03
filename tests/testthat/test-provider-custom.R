@@ -205,6 +205,7 @@ test_that("Default registry resolves custom provider from environment", {
     old_key <- Sys.getenv("AISDK_CUSTOM_API_KEY", unset = "")
     old_format <- Sys.getenv("AISDK_CUSTOM_API_FORMAT", unset = "")
     old_reasoning <- Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "")
+    old_responses_state <- Sys.getenv("AISDK_CUSTOM_RESPONSES_STATE_MODE", unset = "")
     old_default <- registry_env$default %||% NULL
 
     on.exit({
@@ -213,6 +214,7 @@ test_that("Default registry resolves custom provider from environment", {
         if (nzchar(old_key)) Sys.setenv(AISDK_CUSTOM_API_KEY = old_key) else Sys.unsetenv("AISDK_CUSTOM_API_KEY")
         if (nzchar(old_format)) Sys.setenv(AISDK_CUSTOM_API_FORMAT = old_format) else Sys.unsetenv("AISDK_CUSTOM_API_FORMAT")
         if (nzchar(old_reasoning)) Sys.setenv(AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS = old_reasoning) else Sys.unsetenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS")
+        if (nzchar(old_responses_state)) Sys.setenv(AISDK_CUSTOM_RESPONSES_STATE_MODE = old_responses_state) else Sys.unsetenv("AISDK_CUSTOM_RESPONSES_STATE_MODE")
         registry_env$default <- old_default
     }, add = TRUE)
 
@@ -220,7 +222,8 @@ test_that("Default registry resolves custom provider from environment", {
         AISDK_CUSTOM_BASE_URL = "https://api.custom-env.example/v1",
         AISDK_CUSTOM_BASE_URLS = "https://api.custom-env-backup.example/v1",
         AISDK_CUSTOM_API_KEY = "sk-custom-env",
-        AISDK_CUSTOM_API_FORMAT = "chat_completions"
+        AISDK_CUSTOM_API_FORMAT = "responses",
+        AISDK_CUSTOM_RESPONSES_STATE_MODE = "server"
     )
     Sys.unsetenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS")
     registry_env$default <- NULL
@@ -228,11 +231,12 @@ test_that("Default registry resolves custom provider from environment", {
     registry <- get_default_registry()
     model <- registry$language_model("custom:test-model")
 
-    expect_s3_class(model, "OpenAILanguageModel")
+    expect_s3_class(model, "OpenAIResponsesLanguageModel")
     expect_equal(model$get_config()$base_urls, c(
         "https://api.custom-env.example/v1",
         "https://api.custom-env-backup.example/v1"
     ))
+    expect_equal(model$get_config()$responses_state_mode, "server")
 })
 
 test_that("Default registry resolves custom providers from aisdk.yaml", {
@@ -272,6 +276,7 @@ test_that("Default registry resolves custom providers from aisdk.yaml", {
         "https://primary.yulab.example/v1",
         "https://backup.yulab.example/v1"
     ))
+    expect_equal(model$get_config()$responses_state_mode, "stateless")
 })
 
 test_that("Configured providers accept base_urls without separate base_url", {

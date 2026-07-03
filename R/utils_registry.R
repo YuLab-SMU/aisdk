@@ -155,7 +155,8 @@ create_env_custom_provider <- function() {
     api_format = api_format,
     use_max_completion_tokens = tolower(Sys.getenv("AISDK_CUSTOM_USE_MAX_COMPLETION_TOKENS", unset = "false")) %in% c("true", "1", "yes"),
     disable_stream_options = !tolower(Sys.getenv("AISDK_CUSTOM_ENABLE_STREAM_OPTIONS", unset = "false")) %in% c("true", "1", "yes"),
-    supports_native_tools = tolower(Sys.getenv("AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS", unset = "false")) %in% c("true", "1", "yes")
+    supports_native_tools = tolower(Sys.getenv("AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS", unset = "false")) %in% c("true", "1", "yes"),
+    responses_state_mode = responses_normalize_state_mode(Sys.getenv("AISDK_CUSTOM_RESPONSES_STATE_MODE", unset = "stateless"))
   )
 }
 
