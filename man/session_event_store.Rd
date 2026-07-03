@@ -2,7 +2,16 @@
 % Please edit documentation in R/session_event_store.R
 \name{session_event_store}
 \alias{session_event_store}
-\title{Console Session Event Store}
+\title{Session Event Store}
 \description{
-JSONL-backed session event helpers for console runs.
+JSONL-backed event log and branch tree for interactive chat sessions.
+Front ends (the aisdk.console package, aisdk.shiny, or custom UIs) use
+these helpers to persist per-turn events under \verb{.aisdk/sessions/} and to
+fork/checkout conversation branches.
+}
+\details{
+Session metadata keys intentionally keep their historical \verb{console_*}
+names (\code{console_session_id}, \code{console_branch_id}, \code{console_branch_tree},
+\code{console_session_store_root}) so that session files saved by earlier
+aisdk releases keep restoring cleanly.
 }

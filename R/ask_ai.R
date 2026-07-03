@@ -1,7 +1,7 @@
 #' @title Ask aisdk About Recent R Context
 #' @description
 #' Collect recent R error context, active script context, session information,
-#' and workspace object summaries, then open `console_chat()` with that context
+#' and workspace object summaries, then open the aisdk.console chat (`aisdk.console::console_chat()`) with that context
 #' as the initial prompt.
 #' @name ask_ai
 NULL
@@ -594,7 +594,7 @@ build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
 
 #' Ask aisdk About the Current R Error Context
 #'
-#' Collects the recent R error/session context and opens `console_chat()` with
+#' Collects the recent R error/session context and opens the aisdk.console chat (`aisdk.console::console_chat()`) with
 #' that context as the first user message. In RStudio, this function also reads
 #' the active source document when available, making it suitable as an Addin
 #' binding.
@@ -602,7 +602,7 @@ build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
 #' @param prompt Optional user instruction to add above the collected context.
 #' @param model Optional model string, `LanguageModelV1`, or `ChatSession`.
 #' @param skills Skill paths, `"auto"`, or a `SkillRegistry` passed to
-#'   `console_chat()`.
+#'   the aisdk.console chat.
 #' @param skill Optional skill name to force for the initial turn.
 #' @param context Optional additional context text, or an `aisdk_ai_context`
 #'   object to reuse.
@@ -612,7 +612,7 @@ build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
 #' @param stream Whether to stream model output.
 #' @param verbose Whether to show debug console output.
 #' @param show_context If `TRUE`, print and return the initial prompt without
-#'   launching `console_chat()`.
+#'   launching the aisdk.console chat.
 #' @param max_context_chars Maximum formatted context characters. Defaults to
 #'   `Inf`, meaning no explicit truncation.
 #' @param max_error_age_secs Maximum age in seconds for errors/warnings to be
@@ -621,7 +621,7 @@ build_ask_ai_prompt <- function(context, user_prompt = NULL, skill = NULL) {
 #' @param confirm_stale_errors If `TRUE` (default), show a warning and prompt
 #'   for confirmation when errors/warnings are detected but appear stale.
 #' @param ... Additional arguments passed to `collect_ai_context()`.
-#' @return Invisibly returns the `ChatSession` from `console_chat()`, or a
+#' @return Invisibly returns the `ChatSession` from the console, or a
 #'   preview list when `show_context = TRUE`.
 #' @export
 ask_ai <- function(prompt = NULL,
@@ -733,7 +733,17 @@ ask_ai <- function(prompt = NULL,
     return(invisible(list(context = ai_context, prompt = initial_prompt)))
   }
 
-  console_chat(
+  # The interactive console lives in the aisdk.console companion package;
+  # reach it through the companion seam so core carries no hard dependency.
+  if (!ensure_companion_package("console", reason = "to open the interactive console chat")) {
+    rlang::abort(c(
+      "ask_ai() opens the interactive console, which lives in the 'aisdk.console' package.",
+      "i" = paste0("Install it with ", companion_install_hint("console"), "."),
+      "i" = "Or run ask_ai(show_context = TRUE) to print the collected context without opening the console."
+    ))
+  }
+  console_chat_fn <- companion_pkg_get("console", "console_chat")
+  console_chat_fn(
     session = model,
     skills = skills,
     working_dir = working_dir,

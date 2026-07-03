@@ -113,88 +113,12 @@ test_that("runtime continues when model streams only reasoning and no visible ac
   expect_match(model$last_params$messages[[length(model$last_params$messages)]]$content, "no visible answer", fixed = TRUE)
 })
 
-test_that("console streaming finalizes tool-result observations without failure menu", {
-  tool_call <- function(id) {
-    list(id = id, name = "always_fails", arguments = list())
-  }
+# Console-side failure-analysis tests (analyze_tool_failures,
+# console_should_prompt_tool_recovery, console_send_user_message) live in
+# the aisdk.console package: tests/testthat/test-failure-analysis.R.
 
-  failing_tool <- tool(
-    name = "always_fails",
-    description = "Returns an error string without throwing",
-    parameters = z_empty_object(),
-    execute = function() "Error: still failing"
-  )
-
-  model <- MockModel$new(list(
-    list(
-      text = "",
-      tool_calls = list(tool_call("call_1")),
-      finish_reason = "tool_calls",
-      usage = list(total_tokens = 1)
-    ),
-    list(
-      text = "",
-      tool_calls = list(tool_call("call_2")),
-      finish_reason = "tool_calls",
-      usage = list(total_tokens = 1)
-    )
-  ))
-  session <- create_chat_session(model = model, tools = list(failing_tool), max_steps = 5)
-  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
-
-  ok <- aisdk:::console_send_user_message(
-    "keep trying the failing tool",
-    session = session,
-    stream = TRUE,
-    app_state = app_state
-  )
-
-  expect_true(ok)
-  expect_equal(aisdk:::console_app_get_current_turn(app_state)$phase, "done")
-  expect_equal(session$get_run_state()$status, "completed")
-  expect_false(aisdk:::console_should_prompt_tool_recovery(session$get_run_state()))
-})
-
-test_that("console no longer prompts tool recovery for ordinary failures", {
-  recovered <- list(
-    text = "Generated and opened the plot.",
-    finish_reason = "stop",
-    all_tool_results = list(
-      list(name = "bash", result = "Error: missing file", is_error = TRUE),
-      list(name = "bash", result = "Error: missing file", is_error = TRUE),
-      list(name = "bash", result = "opened", is_error = FALSE)
-    )
-  )
-
-  failed <- recovered
-  failed$finish_reason <- "tool_result_failure"
-
-  expect_false(aisdk:::console_should_prompt_tool_recovery(recovered))
-  expect_false(aisdk:::console_should_prompt_tool_recovery(failed))
-  expect_null(aisdk:::console_check_tool_failures(failed$all_tool_results, session = NULL))
-})
-
-test_that("console failure analysis ignores tool argument validation errors", {
-  validation_results <- list(
-    list(
-      name = "r_eval",
-      result = "Error: invalid arguments for tool 'r_eval': Missing required argument `code`.",
-      is_error = TRUE,
-      is_validation_error = TRUE
-    ),
-    list(
-      name = "r_eval",
-      result = "Error: invalid arguments for tool 'r_eval': Argument `code` must contain at least 1 character.",
-      is_error = TRUE,
-      is_validation_error = TRUE
-    )
-  )
-
-  expect_equal(aisdk:::analyze_tool_failures(validation_results), integer(0))
-})
-
-test_that("console stream filter hides text tool call markup", {
-  filter <- aisdk:::new_console_tool_call_markup_filter()
+test_that("tool-protocol stream filter hides text tool call markup", {
+  filter <- new_tool_protocol_markup_filter()
   chunks <- c(
     "我先生成图片。\n<tool_",
     "call>\n{\"name\":\"r_eval\",\"arguments\":{\"code\":\"1+1\"}}\n",
@@ -211,8 +135,8 @@ test_that("console stream filter hides text tool call markup", {
   expect_false(grepl("r_eval", rendered, fixed = TRUE))
 })
 
-test_that("console stream filter hides plural text tool call markup", {
-  filter <- aisdk:::new_console_tool_call_markup_filter()
+test_that("tool-protocol stream filter hides plural text tool call markup", {
+  filter <- new_tool_protocol_markup_filter()
   chunks <- c(
     "我先检查。\n<tool_",
     "calls>\n[{\"name\":\"r_eval\",\"arguments\":{\"code\":\"1+1\"}}]\n",
@@ -230,8 +154,8 @@ test_that("console stream filter hides plural text tool call markup", {
   expect_false(grepl("r_eval", rendered, fixed = TRUE))
 })
 
-test_that("console stream filter unwraps final answer markup", {
-  filter <- aisdk:::new_console_tool_call_markup_filter()
+test_that("tool-protocol stream filter unwraps final answer markup", {
+  filter <- new_tool_protocol_markup_filter()
   chunks <- c(
     "<final_",
     "answer>\n最终答案",
@@ -407,46 +331,10 @@ test_that("generate_text converts network errors into blocked task state", {
   expect_match(result$run_state$blocker, "timeout", fixed = TRUE)
 })
 
-test_that("console does not continue normal final answers", {
-  result <- list(
-    text = "`ggmosaic` installed. Now install `confuns` with devtools::install_github().",
-    tool_calls = NULL,
-    all_tool_results = list(list(name = "bash", result = "ok", is_error = FALSE)),
-    finish_reason = "stop"
-  )
-
-  expect_false(aisdk:::console_generation_looks_incomplete(result))
-})
-
-test_that("console continuation does not infer state from action words", {
-  result <- list(
-    text = "Now checking the package",
-    tool_calls = NULL,
-    all_tool_calls = list(),
-    all_tool_results = list(),
-    finish_reason = "stop"
-  )
-
-  expect_false(aisdk:::console_continuation_still_incomplete(result))
-})
-
-test_that("console detects empty final text after tool execution", {
-  # Tools ran (e.g. r_eval) but the model produced no visible answer for the
-  # user. This is the silent-stop case from issue #26: user sees only
-  # "Thinking complete (N lines)" and is dropped back to the prompt.
-  result <- list(
-    text = "",
-    tool_calls = NULL,
-    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
-    finish_reason = "stop"
-  )
-
-  expect_true(aisdk:::console_generation_looks_incomplete(result))
-
-  prompt <- aisdk:::console_incomplete_continuation_prompt(result)
-  expect_match(prompt, "did not produce any visible answer", fixed = TRUE)
-  expect_match(prompt, "Write the final answer now", fixed = TRUE)
-})
+# The console incompleteness heuristics
+# (console_generation_looks_incomplete, console_continuation_still_incomplete,
+# console_incomplete_continuation_prompt) are tested in the aisdk.console
+# package (tests/testthat/test-failure-analysis.R).
 
 test_that("runtime finalizer answers when tools succeeded but model returned empty text", {
   noop_tool <- tool(
@@ -494,27 +382,3 @@ test_that("runtime finalizer answers when tools succeeded but model returned emp
   expect_match(result$text, "Created `plot.png`", fixed = TRUE)
 })
 
-test_that("console marks empty continuation as still incomplete", {
-  # This helper remains for callers that need to inspect a manual continuation
-  # result, but ordinary empty post-tool turns are finalized by the runtime.
-  result <- list(
-    text = "",
-    tool_calls = NULL,
-    all_tool_calls = list(),
-    all_tool_results = list(),
-    finish_reason = "stop"
-  )
-
-  expect_true(aisdk:::console_continuation_still_incomplete(result))
-})
-
-test_that("console does not flag whitespace-only text after tools as complete", {
-  result <- list(
-    text = "   \n  ",
-    tool_calls = NULL,
-    all_tool_results = list(list(name = "r_eval", result = "ok", is_error = FALSE)),
-    finish_reason = "stop"
-  )
-
-  expect_true(aisdk:::console_generation_looks_incomplete(result))
-})

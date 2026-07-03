@@ -60,3 +60,4 @@
 ^LICENSE\.md$
 ^tests/testthat/\.aisdk$
 ^CRAN-SUBMISSION$
+^aisdk\.yaml$

@@ -12,15 +12,8 @@ test_that("create_r_introspect_tools returns the two diagnostic tools", {
   expect_true(all(vapply(tools, function(t) inherits(t, "Tool"), logical(1))))
 })
 
-test_that("console minimal profile includes the new introspect tools", {
-  tools <- create_console_tools(profile = "minimal")
-  names <- vapply(tools, function(t) t$name, character(1))
-  expect_true("r_eval" %in% names)
-  expect_true("r_session_state" %in% names)
-  # original minimal tools still present
-  expect_true("bash" %in% names)
-  expect_true("read_file" %in% names)
-})
+# The console minimal-profile tool set is asserted in the aisdk.console
+# package (tests/testthat/test-console-integration.R).
 
 # ---------------------------------------------------------------------------
 # r_eval
@@ -182,25 +175,9 @@ test_that("[A] readLines on a file is NOT rejected (only readLines on stdin)", {
   expect_match(out, "status: REJECTED", fixed = TRUE)
 })
 
-test_that("[B] dynamic-dispatch console_chat() still aborts via subprocess marker", {
-  # If the agent tries do.call("console_chat", ...) or get("console_chat")()
-  # to sneak past layer A, the in-package self-check on AISDK_INSIDE_R_EVAL
-  # must still abort instead of entering the REPL.
-  skip_if_no_callr()
-  skip_if(system.file(package = "aisdk") == "", "aisdk not installed")
-  tool <- aisdk:::find_tool(create_r_introspect_tools(), "r_eval")
-  # The refusal marker asserted below proves the subprocess aborted via the
-  # AISDK_INSIDE_R_EVAL self-check rather than blocking in the REPL until the
-  # timeout fired -- a genuine hang would surface as a timeout message, not
-  # this marker. We deliberately do not assert on wall-clock elapsed time,
-  # which is unreliable on loaded CRAN build machines (see WRE: "Note that ...
-  # you should not test the elapsed time taken").
-  out <- tool$run(list(
-    code = "library(aisdk); do.call(\"console_chat\", list())",
-    timeout_secs = 10L
-  ))
-  expect_match(out, "refused to start inside an r_eval subprocess", fixed = TRUE)
-})
+# Layer-B dynamic-dispatch rejection (console_chat's AISDK_INSIDE_R_EVAL
+# self-check) is tested in the aisdk.console package, where console_chat()
+# lives (tests/testthat/test-console-integration.R).
 
 test_that("[B] subprocess sees AISDK_INSIDE_R_EVAL=1", {
   skip_if_no_callr()

@@ -179,45 +179,28 @@ session$send("Divide that by 2")
 
 ### Interactive Console Chat
 
-If you want a terminal-first workflow, `console_chat()` provides an interactive
-REPL on top of `ChatSession` with built-in agent tooling:
+The terminal-first workflow lives in the companion package
+[aisdk.console](https://github.com/YuLab-SMU/aisdk.console): an interactive
+REPL (`console_chat()`) on top of `ChatSession` with built-in agent tooling,
+streaming replies, slash commands, inspect/debug view modes, a status bar,
+per-turn tool timelines, and an inspector overlay.
 
 ```r
-# Start with the default terminal agent
-# console_chat("openai:gpt-4o")
-
-# Start in compact chat mode without tools
-# console_chat("openai:gpt-4o", agent = NULL)
+# remotes::install_github("YuLab-SMU/aisdk.console")
+# aisdk.console::console_chat("openai:gpt-4o")
 ```
 
-Current console features include:
-
-- streaming replies with slash-command session control
-- three output modes: `clean`, `inspect`, and `debug`
-- a persistent status bar showing model, sandbox, stream, and tool state
-- per-turn tool timeline summaries in inspect mode
-- an overlay-backed inspector for the latest turn or an individual tool
-- read-only inspection of session objects and RStudio `.GlobalEnv` objects
-- Seurat-like object summaries for assays, layers/slots, reductions, images,
-  metadata columns, and cell/feature scale
-- session persistence via `/save` and `/load`
-
-Useful commands:
-
-- `/inspect on`, `/inspect turn`, `/inspect tool <index>`
-- `/inspect next`, `/inspect prev`, `/inspect close`
-- `/debug [on|off]`, `/stream [on|off]`, `/local [on|off]`
-- `/model <id>`, `/history`, `/stats`, `/clear`
-
-Use `/quit` or `/exit` only while the console is waiting for input. During a
-running model request, use RStudio Stop/ESC or terminal Ctrl-C to cancel the
-current turn; the console restores history to before that request and returns to
-the prompt.
+Core keeps the pieces every front end shares: the model setup flow
+(`resolve_console_startup_model()`, the `/model` chooser), the prompt
+primitives (`console_menu()`, `console_input()`, `console_confirm()`), the
+session event store and branching API (`session_append_event()` family),
+and the run-state and tool-log rendering seams.
 
 For error-driven work, `ask_ai()` collects the recent R error context,
 traceback, warnings, active RStudio document when available, session
-information, and workspace object summaries, then opens `console_chat()` with
-that context as the first turn:
+information, and workspace object summaries, then opens the aisdk.console
+chat with that context as the first turn (offering to install the package
+when missing):
 
 ```r
 # Run after an R error, or from the RStudio Addin menu

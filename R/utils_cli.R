@@ -34,6 +34,15 @@ tool_log_is_compact <- function() {
   identical(get_tool_log_mode(), "compact")
 }
 
+#' Front-end app-state seam
+#'
+#' A terminal front end (e.g. the aisdk.console package) may publish an
+#' environment via `options(aisdk.console_app_state = <env>)` while a chat
+#' turn runs. Core tool logging (`cli_tool_start()` / `cli_tool_result()`)
+#' dispatches through the optional handler closures stored on that
+#' environment -- `record_tool_start(name, arguments)` and
+#' `record_tool_result(name, result, success, raw_result)` -- so the core
+#' package never references front-end symbols directly.
 #' @keywords internal
 get_console_app_state <- function() {
   state <- getOption("aisdk.console_app_state", NULL)
@@ -55,7 +64,17 @@ tool_spinner_frame <- local({
   }
 })
 
+#' Compact Single-Line Text Preview
+#'
+#' Collapses text to one whitespace-normalized line and truncates it with an
+#' ellipsis. Part of the package-author extension API used by front-end
+#' packages (e.g. aisdk.console) for status lines and tool labels.
+#'
+#' @param text Character vector (collapsed with spaces), or `NULL`.
+#' @param width Maximum number of characters to keep.
+#' @return A single string (possibly empty).
 #' @keywords internal
+#' @export
 compact_text_preview <- function(text, width = 60) {
   if (is.null(text) || !length(text)) {
     return("")
@@ -93,7 +112,17 @@ compact_path_preview <- function(path) {
   path
 }
 
+#' Compact Label for a Starting Tool Call
+#'
+#' Builds the short human-readable label shown when a tool call starts
+#' (e.g. `"Running shell command: ls"`). Part of the package-author
+#' extension API.
+#'
+#' @param name Tool name.
+#' @param arguments Tool arguments (a named list), or `NULL`.
+#' @return A single string.
 #' @keywords internal
+#' @export
 compact_tool_start_label <- function(name, arguments) {
   args <- if (is.null(arguments)) list() else arguments
 
@@ -137,7 +166,17 @@ compact_tool_start_label <- function(name, arguments) {
   )
 }
 
+#' Did a Tool Result Represent a Failure?
+#'
+#' Heuristically detects failed tool executions from the reported success
+#' flag or well-known error prefixes in the result text. Part of the
+#' package-author extension API.
+#'
+#' @param result The tool result (character or JSON-serializable object).
+#' @param success Logical success flag reported by the tool runner.
+#' @return `TRUE` if the result should be treated as a failure.
 #' @keywords internal
+#' @export
 tool_result_failed <- function(result, success = TRUE) {
   if (!isTRUE(success)) {
     return(TRUE)
@@ -157,7 +196,20 @@ tool_result_failed <- function(result, success = TRUE) {
   grepl("^(Error|Error executing tool:|Tool execution denied|Sandbox violation:)", text, ignore.case = TRUE)
 }
 
+#' Compact Label for a Finished Tool Call
+#'
+#' Builds the short human-readable completion/failure label for a tool
+#' result (e.g. `"Shell command completed"`). Part of the package-author
+#' extension API.
+#'
+#' @param name Tool name.
+#' @param result The tool result.
+#' @param success Logical success flag reported by the tool runner.
+#' @param display_status Optional display status override; currently
+#'   `"invalid_arguments"` selects the invalid-arguments wording.
+#' @return A single string.
 #' @keywords internal
+#' @export
 compact_tool_result_label <- function(name, result, success = TRUE, display_status = NULL) {
   failed <- tool_result_failed(result, success)
 
@@ -183,7 +235,16 @@ compact_tool_result_label <- function(name, result, success = TRUE, display_stat
   }
 }
 
+#' Create a Streaming Markdown Renderer for the Terminal
+#'
+#' Returns a small stream processor that renders incrementally received
+#' Markdown (headers, lists, code fences, `<think>` blocks) to the console
+#' with cli styling. Used by the built-in stream renderer and by front-end
+#' packages (e.g. aisdk.console). Part of the package-author extension API.
+#'
+#' @return A list with `process_chunk(text, done)` and `reset()` functions.
 #' @keywords internal
+#' @export
 create_markdown_stream_renderer <- function() {
   state <- new.env(parent = emptyenv())
   state$buffer <- ""
@@ -452,8 +513,8 @@ create_markdown_stream_renderer <- function() {
 #' @keywords internal
 cli_tool_start <- function(name, arguments) {
   app_state <- get_console_app_state()
-  if (!is.null(app_state)) {
-    console_app_record_tool_start(app_state, name, arguments)
+  if (!is.null(app_state) && is.function(app_state$record_tool_start)) {
+    app_state$record_tool_start(name, arguments)
   }
 
   if (tool_log_is_compact()) {
@@ -497,8 +558,8 @@ cli_tool_start <- function(name, arguments) {
 #' @keywords internal
 cli_tool_result <- function(name, result, success = TRUE, raw_result = result) {
   app_state <- get_console_app_state()
-  if (!is.null(app_state)) {
-    console_app_record_tool_result(app_state, name, result, success = success, raw_result = raw_result)
+  if (!is.null(app_state) && is.function(app_state$record_tool_result)) {
+    app_state$record_tool_result(name, result, success = success, raw_result = raw_result)
   }
 
   failed <- tool_result_failed(result, success)

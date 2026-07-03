@@ -78,7 +78,18 @@ create_auto_skill_registry <- function(project_dir = getwd(), recursive = TRUE) 
   registry
 }
 
+#' Coerce Skills Input to a SkillRegistry
+#'
+#' Accepts a `SkillRegistry`, the string `"auto"` (automatic discovery), or
+#' one or more skill paths, and returns a `SkillRegistry`. Part of the
+#' package-author extension API.
+#'
+#' @param skills A `SkillRegistry`, `"auto"`, or character vector of paths.
+#' @param recursive Whether path scanning descends into subdirectories.
+#' @param project_dir Project directory used for automatic discovery.
+#' @return A `SkillRegistry` object.
 #' @keywords internal
+#' @export
 coerce_skill_registry <- function(skills, recursive = TRUE, project_dir = getwd()) {
   if (inherits(skills, "SkillRegistry")) {
     return(skills)

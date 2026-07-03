@@ -84,26 +84,10 @@ ensure_companion_provider <- function(provider_id) {
   if (is.null(pkg)) {
     return(FALSE)
   }
-  if (requireNamespace(pkg, quietly = TRUE)) {
-    return(TRUE)
-  }
-  if (!interactive()) {
-    return(FALSE)
-  }
-  installed <- tryCatch(
-    {
-      rlang::check_installed(
-        pkg,
-        reason = sprintf("to use the '%s' provider", provider_id)
-      )
-      TRUE
-    },
-    error = function(e) FALSE
+  ensure_companion_package(
+    sub("^aisdk\\.", "", pkg),
+    reason = sprintf("to use the '%s' provider", provider_id)
   )
-  if (!installed) {
-    return(FALSE)
-  }
-  requireNamespace(pkg, quietly = TRUE)
 }
 
 # Build the rlang::abort() message body for an unresolved provider, appending a

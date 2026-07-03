@@ -97,7 +97,17 @@ context_text_char_count <- function(x) {
   context_text_char_count(as.character(x))
 }
 
+#' Plain-Text Rendering of Message Content
+#'
+#' Extracts a plain-text representation from message content that may be a
+#' character vector, a content-block list (text/image blocks), or an
+#' arbitrary JSON-serializable structure. Part of the package-author
+#' extension API.
+#'
+#' @param content Message content in any supported form.
+#' @return A single string (possibly empty).
 #' @keywords internal
+#' @export
 context_message_content_text <- function(content) {
   if (is.null(content)) {
     return("")

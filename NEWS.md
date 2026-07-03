@@ -1,3 +1,51 @@
+# aisdk 1.5.0
+
+* The interactive terminal console moved to the new companion package
+  `aisdk.console` (following the same extraction pattern as
+  aisdk.providers/aisdk.shiny/aisdk.orchestration). `console_chat()`,
+  `create_console_agent()`, and `create_console_tools()` are now exported
+  from `aisdk.console`; core keeps everything the console shares with other
+  front ends:
+  - the model setup flow (`resolve_console_startup_model()`, the newly
+    exported `prompt_console_provider_profile()` chooser and
+    `default_console_prompt_hooks()`) and the prompt primitives
+    `console_menu()`, `console_input()`, `console_confirm()` (relocated to
+    `R/utils_prompts.R`, unchanged API);
+  - the session event store and branching helpers, renamed from internal
+    `console_*` to an exported `session_*` API (`session_append_event()`,
+    `session_read_events()`, `session_event_visible_messages()`,
+    `session_branch_tree()`, `session_fork_branch()`,
+    `session_checkout_branch()`, `session_set_branch_summary()`,
+    `session_store_id()`, `session_event_path()`); session metadata keys
+    keep their historical `console_*` names so saved sessions restore
+    cleanly.
+* `ask_ai()` now opens the console through the companion seam: when
+  `aisdk.console` is missing it offers to install it in interactive
+  sessions and fails with a clear hint otherwise
+  (`ask_ai(show_context = TRUE)` continues to work without the console).
+* Generalized the missing-companion install prompt into an exported
+  `ensure_companion_package(suffix, reason)` (the provider-specific
+  `ensure_companion_provider()` now delegates to it), and exported the
+  companion helpers `companion_pkg_name()`, `companion_pkg_available()`,
+  `companion_pkg_get()`, `companion_install_hint()` so companion packages
+  can reach optional siblings without `:::`.
+* Extended the package-author extension API (exported, documented with
+  `\keyword{internal}`): `compact_text_preview()`,
+  `compact_tool_start_label()`, `compact_tool_result_label()`,
+  `tool_result_failed()`, `create_markdown_stream_renderer()`,
+  `new_tool_protocol_markup_filter()`, `new_run_state()`,
+  `normalize_continue_action()`, `merge_call_options()`,
+  `context_message_content_text()`, `get_console_context_metrics()`,
+  `format_console_token_compact()`, `capability_model_label()`,
+  `normalize_capability_model_routes()`,
+  `model_capability_explicitly_unavailable()`,
+  `model_ref_capability_explicitly_unavailable()`,
+  `coerce_skill_registry()`, and `agent_runtime_text()`.
+* Core tool logging no longer references console internals: it dispatches
+  through optional `record_tool_start`/`record_tool_result` handlers on the
+  environment published via the `aisdk.console_app_state` option, so any
+  front end can subscribe to tool events.
+
 # aisdk 1.4.13
 
 * Fixed an "implicit statefulness" defect in the OpenAI Responses adapter

@@ -132,7 +132,17 @@ task_state_set_decision <- function(task_state, decision) {
   task_state
 }
 
+#' Width-Limited Display Text for an Arbitrary Value
+#'
+#' Coerces any value (character, list, or JSON-serializable object) to a
+#' single compact display string, truncated to `width` characters. Part of
+#' the package-author extension API.
+#'
+#' @param value The value to render.
+#' @param width Maximum number of characters to keep.
+#' @return A single string.
 #' @keywords internal
+#' @export
 agent_runtime_text <- function(value, width = 800) {
   text <- tryCatch(
     {

@@ -165,30 +165,8 @@ test_that("ask_ai show_context returns initial prompt without launching chat", {
   expect_true(any(grepl("BiocGenerics", output, fixed = TRUE)))
 })
 
-test_that("console_send_user_message powers initial prompt turns", {
-  model <- MockModel$new(list(list(
-    text = "I can diagnose that.",
-    tool_calls = NULL,
-    finish_reason = "stop",
-    usage = list(total_tokens = 10)
-  )))
-  session <- create_chat_session(model = model)
-  app_state <- aisdk:::create_console_app_state(session, view_mode = "clean")
-
-  capture.output({
-    ok <- aisdk:::console_send_user_message(
-      input = "Diagnose this error",
-      session = session,
-      stream = FALSE,
-      app_state = app_state
-    )
-  })
-
-  expect_true(ok)
-  expect_equal(session$get_history()[[1]]$role, "user")
-  expect_equal(session$get_history()[[1]]$content, "Diagnose this error")
-  expect_equal(session$get_last_response(), "I can diagnose that.")
-})
+# The initial-prompt turn path (console_send_user_message) is tested in the
+# aisdk.console package (tests/testthat/test-console-integration.R).
 
 test_that("RStudio addin is registered", {
   addins_path <- system.file("rstudio", "addins.dcf", package = "aisdk")

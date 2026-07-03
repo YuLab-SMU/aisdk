@@ -1,6 +1,6 @@
 #' @title Console Setup Helpers
 #' @description
-#' Internal helpers for human-friendly `console_chat()` startup, including
+#' Helpers for human-friendly chat-front-end startup (aisdk.console, aisdk.shiny), including
 #' provider profile discovery, `.Renviron` persistence, and interactive model
 #' selection.
 #' @name console_setup
@@ -694,7 +694,16 @@ format_console_profile_choice <- function(profile) {
   sprintf("%s \u00b7 %s \u00b7 %s", scope_label, model_label, base_label)
 }
 
+#' Default Prompt Hooks for the Model Setup Flow
+#'
+#' Returns the default set of injectable hooks (menu, input, save,
+#' apply-profile, remember-model, model-choices) used by the interactive
+#' provider/model setup. Front ends can override individual hooks to embed
+#' the setup flow in their own UI. Part of the package-author extension API.
+#'
+#' @return A named list of hook functions.
 #' @keywords internal
+#' @export
 default_console_prompt_hooks <- function() {
   list(
     menu = console_menu,
@@ -1307,12 +1316,29 @@ infer_console_context_window <- function(provider, model_id) {
   infer_session_context_window(provider, model_id)
 }
 
+#' Context Metrics for a Chat Session
+#'
+#' Returns estimated token usage and context-window figures for a session,
+#' as used in the console status bar. Part of the package-author extension
+#' API.
+#'
+#' @param session A `ChatSession` object.
+#' @return A list of context metrics (estimated tokens, window size, usage).
 #' @keywords internal
+#' @export
 get_console_context_metrics <- function(session) {
   get_session_context_metrics(session)
 }
 
+#' Compact Human-Readable Token Count
+#'
+#' Formats a token count as a compact string (`"1.2k"`, `"3.4M"`, `"n/a"`).
+#' Part of the package-author extension API.
+#'
+#' @param tokens Numeric token count, or `NULL`/`NA`.
+#' @return A single string.
 #' @keywords internal
+#' @export
 format_console_token_compact <- function(tokens) {
   if (is.null(tokens) || is.na(tokens)) {
     return("n/a")
@@ -1327,7 +1353,25 @@ format_console_token_compact <- function(tokens) {
   }
 }
 
+#' Interactive Provider/Model Chooser
+#'
+#' Presents saved provider setups (from `.Renviron`, `aisdk.yaml`, and
+#' `.Rprofile`) and the guided new-setup flow, returning the chosen model
+#' id. This backs the console `/model` command and the first-run experience;
+#' front ends can supply their own `prompt_hooks` to reuse the flow. Part of
+#' the package-author extension API.
+#'
+#' @param project_path Project `.Renviron` path.
+#' @param global_path Global `.Renviron` path.
+#' @param project_rprofile_path Project `.Rprofile` path.
+#' @param global_rprofile_path Global `.Rprofile` path.
+#' @param project_config_path Project `aisdk.yaml` path.
+#' @param global_config_path Global model-config path.
+#' @param prompt_hooks Hook list as returned by
+#'   [default_console_prompt_hooks()].
+#' @return The selected model id (character scalar), or `NULL` if cancelled.
 #' @keywords internal
+#' @export
 prompt_console_provider_profile <- function(project_path = ".Renviron",
                                             global_path = "~/.Renviron",
                                             project_rprofile_path = ".Rprofile",

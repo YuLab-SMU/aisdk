@@ -17,7 +17,27 @@ aisdk_run_state_statuses <- c(
   "error"
 )
 
+#' Construct a Run State Record
+#'
+#' Builds the normalized run-state record (`aisdk_run_state`) that describes
+#' how a generation run stopped: status, stop reason, recoverability, and a
+#' pending follow-up action. Part of the package-author extension API used
+#' by front ends to display and act on run outcomes.
+#'
+#' @param status Run status; one of `"running"`, `"continuing"`,
+#'   `"finalizing"`, `"completed"`, `"waiting_user"`, `"blocked"`,
+#'   `"aborted_safety"`, `"cancelled"`, `"error"`.
+#' @param stop_reason Optional short stop-reason string.
+#' @param recoverable Logical; can the run be continued?
+#' @param failure_summary Optional human-readable failure summary.
+#' @param pending_action Optional pending action (`"retry"`, `"ask_user"`,
+#'   `"manual"`, `"continue"`).
+#' @param last_tool_results List of the run's trailing tool results.
+#' @param run_id Optional run identifier.
+#' @param details Optional named list of extra details.
+#' @return An `aisdk_run_state` object.
 #' @keywords internal
+#' @export
 new_run_state <- function(status = "running",
                           stop_reason = NULL,
                           recoverable = FALSE,
@@ -194,7 +214,17 @@ blocked_network_result <- function(e, run_id = NULL) {
   )
 }
 
+#' Normalize a Continue-Run Action String
+#'
+#' Maps user-facing aliases (e.g. `"retry"`, `"stop"`, `"avoid-tool"`) to
+#' the canonical continue actions understood by
+#' `ChatSession$continue_run()`. Part of the package-author extension API.
+#'
+#' @param action Action string, or `NULL` for the default `"continue"`.
+#' @return One of `"continue"`, `"give_up"`, `"avoid_tool"`, `"explain"`,
+#'   `"manual"`.
 #' @keywords internal
+#' @export
 normalize_continue_action <- function(action) {
   action <- tolower(trimws(action %||% "continue"))
   aliases <- c(

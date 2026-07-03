@@ -150,7 +150,17 @@ model_runtime_session_metadata <- function(options = list()) {
   metadata
 }
 
+#' Merge Model Call-Option Lists
+#'
+#' Merges override call options into defaults, dropping `NULL` overrides
+#' while preserving explicit `NULL` entries produced by the merge. Part of
+#' the package-author extension API.
+#'
+#' @param defaults Named list of default call options.
+#' @param overrides Named list of overriding call options.
+#' @return The merged named list.
 #' @keywords internal
+#' @export
 merge_call_options <- function(defaults = list(), overrides = list()) {
   defaults <- defaults %||% list()
   overrides <- overrides %||% list()

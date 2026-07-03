@@ -28,7 +28,7 @@ ask_ai(
 \item{model}{Optional model string, \code{LanguageModelV1}, or \code{ChatSession}.}
 
 \item{skills}{Skill paths, \code{"auto"}, or a \code{SkillRegistry} passed to
-\code{console_chat()}.}
+the aisdk.console chat.}
 
 \item{skill}{Optional skill name to force for the initial turn.}
 
@@ -46,7 +46,7 @@ object to reuse.}
 \item{verbose}{Whether to show debug console output.}
 
 \item{show_context}{If \code{TRUE}, print and return the initial prompt without
-launching \code{console_chat()}.}
+launching the aisdk.console chat.}
 
 \item{max_context_chars}{Maximum formatted context characters. Defaults to
 \code{Inf}, meaning no explicit truncation.}
@@ -61,15 +61,15 @@ for confirmation when errors/warnings are detected but appear stale.}
 \item{...}{Additional arguments passed to \code{collect_ai_context()}.}
 }
 \value{
-Invisibly returns the \code{ChatSession} from \code{console_chat()}, or a
+Invisibly returns the \code{ChatSession} from the console, or a
 preview list when \code{show_context = TRUE}.
 }
 \description{
 Collect recent R error context, active script context, session information,
-and workspace object summaries, then open \code{console_chat()} with that context
+and workspace object summaries, then open the aisdk.console chat (\code{aisdk.console::console_chat()}) with that context
 as the initial prompt.
 
-Collects the recent R error/session context and opens \code{console_chat()} with
+Collects the recent R error/session context and opens the aisdk.console chat (\code{aisdk.console::console_chat()}) with
 that context as the first user message. In RStudio, this function also reads
 the active source document when available, making it suitable as an Addin
 binding.

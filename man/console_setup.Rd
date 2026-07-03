@@ -4,7 +4,7 @@
 \alias{console_setup}
 \title{Console Setup Helpers}
 \description{
-Internal helpers for human-friendly \code{console_chat()} startup, including
+Helpers for human-friendly chat-front-end startup (aisdk.console, aisdk.shiny), including
 provider profile discovery, \code{.Renviron} persistence, and interactive model
 selection.
 }

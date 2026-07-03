@@ -119,7 +119,17 @@ normalize_capability_model_route <- function(route) {
   )
 }
 
+#' Normalize a Capability Model Routing Table
+#'
+#' Validates a named list of capability routes and normalizes each route to
+#' the canonical `capability_model_route` form. Part of the package-author
+#' extension API.
+#'
+#' @param routes A named list mapping capability names to route specs, or
+#'   `NULL` for an empty table.
+#' @return A named list of normalized routes.
 #' @keywords internal
+#' @export
 normalize_capability_model_routes <- function(routes = NULL) {
   routes <- routes %||% list()
   if (length(routes) == 0) {
@@ -152,7 +162,16 @@ store_capability_model_routes <- function(routes = list()) {
   invisible(routes)
 }
 
+#' Human-Readable Label for a Capability Route Model
+#'
+#' Returns a display label for a model reference (model id string or model
+#' object) used in capability routes. Part of the package-author extension
+#' API.
+#'
+#' @param model A model id string or model object.
+#' @return A single string.
 #' @keywords internal
+#' @export
 capability_model_label <- function(model) {
   label <- default_model_id(model)
   if (!is.null(label) && nzchar(label)) {
@@ -391,7 +410,18 @@ model_ref_capability_value <- function(model, capability) {
   caps[[capability]] %||% NULL
 }
 
+#' Does a Model Reference Explicitly Lack a Capability?
+#'
+#' Checks the model metadata registry for the referenced model and returns
+#' `TRUE` only when the capability flag is explicitly `FALSE` (unknown
+#' capabilities are not treated as unavailable). Part of the package-author
+#' extension API.
+#'
+#' @param model A model id string (`"provider:model"`) or model object.
+#' @param capability Capability flag name, e.g. `"vision_input"`.
+#' @return `TRUE` if the capability is explicitly marked unavailable.
 #' @keywords internal
+#' @export
 model_ref_capability_explicitly_unavailable <- function(model, capability) {
   identical(model_ref_capability_value(model, capability), FALSE)
 }

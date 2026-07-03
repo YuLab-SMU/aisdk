@@ -212,7 +212,17 @@ text_tool_protocol_missing <- function(result, awaiting_protocol = FALSE) {
   FALSE
 }
 
+#' Create a Text-Tool-Protocol Markup Stream Filter
+#'
+#' Returns a stateful stream filter that strips text-based tool-protocol
+#' markup (`<tool_calls>`, `<tool_call>`) from streamed model output and
+#' unwraps `<final_answer>` content, so raw protocol tags never reach the
+#' display. Part of the package-author extension API.
+#'
+#' @return An environment with a `process(text, done = FALSE)` function
+#'   returning display-safe text chunks.
 #' @keywords internal
+#' @export
 new_tool_protocol_markup_filter <- function() {
   tags <- c("tool_calls", "tool_call", "final_answer")
   start_patterns <- paste0("<", tags)
@@ -1012,7 +1022,18 @@ model_capability_value <- function(model, capability, registry = NULL) {
   caps[[capability]] %||% NULL
 }
 
+#' Does a Model Explicitly Lack a Capability?
+#'
+#' Looks up the model's metadata and returns `TRUE` only when the capability
+#' flag is explicitly `FALSE` (unknown capabilities are not treated as
+#' unavailable). Part of the package-author extension API.
+#'
+#' @param model A model id string (`"provider:model"`) or model object.
+#' @param capability Capability flag name, e.g. `"native_tools"`.
+#' @param registry Optional provider registry to resolve against.
+#' @return `TRUE` if the capability is explicitly marked unavailable.
 #' @keywords internal
+#' @export
 model_capability_explicitly_unavailable <- function(model, capability, registry = NULL) {
   identical(model_capability_value(model, capability, registry = registry), FALSE)
 }
