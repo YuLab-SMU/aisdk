@@ -1,0 +1,16 @@
+{
+  "name": "aisdk R development",
+  "image": "rocker/r-ver:release",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "postCreateCommand": "Rscript -e \"install.packages(c('devtools', 'testthat', 'rcmdcheck'), repos = 'https://cloud.r-project.org'); devtools::install_deps(dependencies = TRUE)\"",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "REditorSupport.r",
+        "RDebugger.r-debugger"
+      ]
+    }
+  }
+}
