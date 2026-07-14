@@ -632,9 +632,9 @@ generate_text <- function(model = NULL,
     tools <- list(create_r_code_tool(sandbox_mgr))
   }
 
-  # Trigger on_generation_start
+  # Trigger on_generation_start (input guardrail: may revise the prompt)
   if (!is.null(hooks)) {
-    hooks$trigger_generation_start(model, prompt, tools)
+    prompt <- hooks$trigger_generation_start(model, prompt, tools)
   }
 
   if (isTRUE(use_text_tool_fallback) && !is.null(tools) && length(tools) > 0) {
@@ -682,9 +682,9 @@ generate_text <- function(model = NULL,
     initial_messages_len = initial_messages_len
   )
 
-  # Trigger on_generation_end
+  # Trigger on_generation_end (output guardrail: may revise/replace the result)
   if (!is.null(hooks)) {
-    hooks$trigger_generation_end(result)
+    result <- hooks$trigger_generation_end(result)
   }
 
   result
@@ -802,9 +802,9 @@ stream_text <- function(model = NULL,
     tools <- list(create_r_code_tool(sandbox_mgr))
   }
 
-  # Trigger on_generation_start
+  # Trigger on_generation_start (input guardrail: may revise the prompt)
   if (!is.null(hooks)) {
-    hooks$trigger_generation_start(model, prompt, tools)
+    prompt <- hooks$trigger_generation_start(model, prompt, tools)
   }
 
   if (isTRUE(use_text_tool_fallback) && !is.null(tools) && length(tools) > 0) {
@@ -861,9 +861,9 @@ stream_text <- function(model = NULL,
     stream_event_callback = .stream_event_callback
   )
 
-  # Trigger on_generation_end
+  # Trigger on_generation_end (output guardrail: may revise/replace the result)
   if (!is.null(hooks)) {
-    hooks$trigger_generation_end(result)
+    result <- hooks$trigger_generation_end(result)
   }
 
   result

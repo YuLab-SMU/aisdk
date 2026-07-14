@@ -52,7 +52,11 @@ Initialize HookHandler
 \if{html}{\out{<a id="method-HookHandler-trigger_generation_start"></a>}}
 \if{latex}{\out{\hypertarget{method-HookHandler-trigger_generation_start}{}}}
 \subsection{Method \code{trigger_generation_start()}}{
-Trigger on_generation_start
+Trigger on_generation_start. Acts as an input guardrail: if
+the hook returns a revised prompt (a character string, or a non-empty
+list of message objects), that revision is used; any other return value
+(including \code{NULL} from an observe-only hook) leaves the prompt
+unchanged. To block a turn, the hook can \code{stop()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{HookHandler$trigger_generation_start(model, prompt, tools)}\if{html}{\out{</div>}}
 }
@@ -68,12 +72,18 @@ Trigger on_generation_start
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+The prompt to use (revised or original).
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HookHandler-trigger_generation_end"></a>}}
 \if{latex}{\out{\hypertarget{method-HookHandler-trigger_generation_end}{}}}
 \subsection{Method \code{trigger_generation_end()}}{
-Trigger on_generation_end
+Trigger on_generation_end. Acts as an output guardrail: if
+the hook returns a \code{GenerateResult} (e.g. a revised or refusal result),
+that replaces the result; any other return value (including \code{NULL} from
+an observe-only hook) leaves the result unchanged.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{HookHandler$trigger_generation_end(result)}\if{html}{\out{</div>}}
 }
@@ -84,6 +94,9 @@ Trigger on_generation_end
 \item{\code{result}}{The generation result object.}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The result to use (revised or original).
 }
 }
 \if{html}{\out{<hr>}}

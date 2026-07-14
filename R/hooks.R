@@ -28,22 +28,48 @@ HookHandler <- R6::R6Class(
       self$hooks <- hooks_list
     },
     
-    #' @description Trigger on_generation_start
+    #' @description Trigger on_generation_start. Acts as an input guardrail: if
+    #'   the hook returns a revised prompt (a character string, or a non-empty
+    #'   list of message objects), that revision is used; any other return value
+    #'   (including `NULL` from an observe-only hook) leaves the prompt
+    #'   unchanged. To block a turn, the hook can `stop()`.
     #' @param model The language model object.
     #' @param prompt The prompt being sent.
     #' @param tools The list of tools provided.
+    #' @return The prompt to use (revised or original).
     trigger_generation_start = function(model, prompt, tools) {
       if (!is.null(self$hooks$on_generation_start)) {
-        self$hooks$on_generation_start(model, prompt, tools)
+        revised <- self$hooks$on_generation_start(model, prompt, tools)
+        if (is.character(revised) && length(revised) > 0) {
+          return(revised)
+        }
+        if (is.list(revised) && length(revised) > 0 &&
+            all(vapply(revised, function(m) is.list(m) && !is.null(m$role), logical(1)))) {
+          return(revised)
+        }
       }
+      prompt
     },
-    
-    #' @description Trigger on_generation_end
+
+    #' @description Trigger on_generation_end. Acts as an output guardrail: if
+    #'   the hook returns a `GenerateResult` (e.g. a revised or refusal result),
+    #'   that replaces the result; any other return value (including `NULL` from
+    #'   an observe-only hook) leaves the result unchanged.
     #' @param result The generation result object.
+    #' @return The result to use (revised or original).
     trigger_generation_end = function(result) {
       if (!is.null(self$hooks$on_generation_end)) {
-        self$hooks$on_generation_end(result)
+        revised <- self$hooks$on_generation_end(result)
+        # Accept a GenerateResult replacement (real providers) or a result-
+        # shaped list carrying `text` (mocks / list results). Anything else
+        # (NULL from an observe-only hook) leaves the result unchanged.
+        looks_like_result <- inherits(revised, "GenerateResult") ||
+          (is.list(revised) && "text" %in% names(revised))
+        if (looks_like_result) {
+          return(revised)
+        }
       }
+      result
     },
     
     #' @description Trigger on_tool_start

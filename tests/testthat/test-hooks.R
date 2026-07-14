@@ -110,3 +110,56 @@ test_that("Permission Hook (Escalate) allows allowlisted tools", {
   expect_equal(results[[1]]$result, "safe_result")
   expect_false(results[[1]]$is_error)
 })
+
+# --- U2: generation hooks as input/output guardrails (block or revise) --------
+
+test_that("on_generation_end can revise the result (output guardrail)", {
+  source(test_path("helper-mock.R"))
+  redactor <- create_hooks(on_generation_end = function(result) {
+    result$text <- "[REDACTED]"
+    result
+  })
+  res <- generate_text(
+    model = MockModel$new(list(list(text = "secret data", finish_reason = "stop"))),
+    prompt = "hi", hooks = redactor
+  )
+  expect_equal(res$text, "[REDACTED]")
+})
+
+test_that("observe-only on_generation_end leaves the result unchanged", {
+  source(test_path("helper-mock.R"))
+  seen <- FALSE
+  observer <- create_hooks(on_generation_end = function(result) {
+    seen <<- TRUE
+    NULL # observe-only: returns nothing
+  })
+  res <- generate_text(
+    model = MockModel$new(list(list(text = "original", finish_reason = "stop"))),
+    prompt = "hi", hooks = observer
+  )
+  expect_true(seen)
+  expect_equal(res$text, "original")
+})
+
+test_that("on_generation_start can rewrite the prompt (input guardrail)", {
+  source(test_path("helper-mock.R"))
+  sanitizer <- create_hooks(
+    on_generation_start = function(model, prompt, tools) "SANITIZED PROMPT"
+  )
+  model <- MockModel$new()
+  generate_text(model = model, prompt = "raw user input", hooks = sanitizer)
+  sent <- vapply(model$last_params$messages, function(m) paste(unlist(m$content), collapse = ""), character(1))
+  expect_true(any(grepl("SANITIZED", sent)))
+  expect_false(any(grepl("raw user input", sent)))
+})
+
+test_that("on_generation_start can block a turn by stopping", {
+  source(test_path("helper-mock.R"))
+  blocker <- create_hooks(
+    on_generation_start = function(model, prompt, tools) stop("blocked by policy")
+  )
+  expect_error(
+    generate_text(model = MockModel$new(), prompt = "bad input", hooks = blocker),
+    "blocked by policy"
+  )
+})
