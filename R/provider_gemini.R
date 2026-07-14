@@ -431,11 +431,16 @@ GeminiImageModel <- R6::R6Class(
             headers <- private$get_headers()
 
             parts <- list()
-            if (!is.null(params$prompt) && nzchar(params$prompt)) {
-                parts <- c(parts, list(list(text = params$prompt)))
+            prompt <- list_get_exact(params, "prompt")
+            if (!is.null(prompt) && nzchar(prompt)) {
+                parts <- c(parts, list(list(text = prompt)))
             }
-            if (!is.null(params$image)) {
-                images <- params$image
+            # Exact access: `params$image` would partial-match the documented
+            # `image_config` option on text-to-image calls (which have no
+            # `image` key), misrouting the config into input_image().
+            image_input <- list_get_exact(params, "image")
+            if (!is.null(image_input)) {
+                images <- image_input
                 if (!is.list(images)) {
                     images <- as.list(images)
                 }

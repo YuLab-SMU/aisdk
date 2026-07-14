@@ -182,6 +182,38 @@ test_that("project aisdk.yaml overrides global config values", {
   expect_equal(aisdk:::model_config_runtime_options("shared:model", cfg)$call_options$reasoning_effort, "high")
 })
 
+# --- W2: `$` partial-matching hazards in config resolution ---
+
+test_that("model_config_default_model ignores model_providers via exact access", {
+  # A config with ONLY model_providers (no default_model/model). `config$model`
+  # used to partial-match `model_providers`, producing a garbage id; with two
+  # providers the length-2 `nzchar` even threw in `&&`.
+  cfg1 <- list(model_providers = list(prov = list(base_url = "https://x/v1")))
+  expect_null(aisdk:::model_config_default_model(cfg1))
+
+  cfg2 <- list(model_providers = list(
+    a = list(base_url = "https://a/v1"),
+    b = list(base_url = "https://b/v1")
+  ))
+  expect_null(aisdk:::model_config_default_model(cfg2)) # no length-2 && error
+
+  # A real default_model still resolves.
+  cfg3 <- list(default_model = "openai:gpt-4o", model_providers = list(x = list()))
+  expect_equal(aisdk:::model_config_default_model(cfg3), "openai:gpt-4o")
+})
+
+test_that("model_config_runtime_options does not let thinking_budget leak into thinking", {
+  # `model_cfg$thinking` used to partial-match `thinking_budget`, copying the
+  # numeric budget into `thinking` and aborting normalization on every call.
+  cfg <- list(models = list(`p:m` = list(thinking_budget = 4096)), default_model = "p:m")
+  opts <- expect_no_error(aisdk:::model_config_runtime_options("p:m", cfg))
+  call_options <- opts$call_options
+  expect_equal(aisdk:::list_get_exact(call_options, "thinking_budget"), 4096)
+  # `thinking` was NOT populated from the budget — exact-access check, since a
+  # `$thinking` here would itself partial-match `thinking_budget`.
+  expect_false("thinking" %in% names(call_options))
+})
+
 test_that("AISDK_CONFIG_FILE overrides default global aisdk config", {
   config_home <- tempfile("aisdk-config-home-")
   dir.create(file.path(config_home, "aisdk"), recursive = TRUE)

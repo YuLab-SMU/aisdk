@@ -62,6 +62,26 @@ test_that("Gemini provider creates image model correctly", {
     expect_equal(model$provider, "gemini")
 })
 
+test_that("Gemini text-to-image does not misroute image_config as a source image", {
+    # W2 regression: `params$image` used to partial-match the documented
+    # `image_config` option (no `image` key on text-to-image), pushing the
+    # config list into input_image() and aborting the call.
+    provider <- safe_create_provider(create_gemini, api_key = "FAKE")
+    model <- provider$image_model("gemini-2.5-flash-image")
+
+    payload <- model$.__enclos_env__$private$build_payload(list(
+        prompt = "a cat",
+        output_dir = tempdir(),
+        image_config = list(aspectRatio = "16:9")
+    ))
+
+    parts <- payload$body$contents[[1]]$parts
+    # Only the text prompt part — no inlineData part fabricated from the config.
+    expect_equal(length(parts), 1L)
+    expect_equal(parts[[1]]$text, "a cat")
+    expect_false(any(vapply(parts, function(p) !is.null(p$inlineData), logical(1))))
+})
+
 test_that("create_gemini() accepts custom base_url", {
     provider <- safe_create_provider(create_gemini,
         api_key = "FAKE",

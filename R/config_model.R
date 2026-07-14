@@ -256,12 +256,17 @@ register_configured_model_providers <- function(registry, config = load_model_co
 
 #' @keywords internal
 model_config_default_model <- function(config = load_model_config()) {
-  value <- config$default_model %||% NULL
-  if ((is.null(value) || !nzchar(value %||% "")) && !is.null(config$model)) {
-    if (!is.null(config$model_provider) && nzchar(config$model_provider %||% "")) {
-      value <- paste0(config$model_provider, ":", config$model)
+  # Exact access: `config$model` would partial-match the `model_providers`
+  # section when no literal `model`/`default_model` key exists, yielding a
+  # garbage id (or a length>1 `&&` error with multiple providers).
+  value <- list_get_exact(config, "default_model")
+  cfg_model <- list_get_exact(config, "model")
+  if ((is.null(value) || !nzchar(value %||% "")) && !is.null(cfg_model)) {
+    cfg_provider <- list_get_exact(config, "model_provider")
+    if (!is.null(cfg_provider) && nzchar(cfg_provider %||% "")) {
+      value <- paste0(cfg_provider, ":", cfg_model)
     } else {
-      value <- config$model
+      value <- cfg_model
     }
   }
   if (is.null(value) || !is.character(value) || !nzchar(value)) {
@@ -285,13 +290,19 @@ model_config_runtime_options <- function(model_id = NULL, config = load_model_co
     model_cfg <- list()
   }
 
+  # Exact access throughout: `model_cfg$thinking` would partial-match
+  # `thinking_budget` when only the budget is set, copying a number into
+  # `thinking` and aborting normalize_model_runtime_options().
+  cfg_opt <- function(name, legacy) {
+    list_get_exact(model_cfg, name) %||% list_get_exact(model_cfg, legacy) %||% NULL
+  }
   runtime <- Filter(Negate(is.null), list(
-    context_window = model_cfg$context_window %||% model_cfg$model_context_window %||% NULL,
-    max_output_tokens = model_cfg$max_output_tokens %||% model_cfg$model_max_output_tokens %||% NULL,
-    max_tokens = model_cfg$max_tokens %||% model_cfg$model_max_tokens %||% NULL,
-    thinking = model_cfg$thinking %||% model_cfg$model_thinking %||% NULL,
-    thinking_budget = model_cfg$thinking_budget %||% model_cfg$model_thinking_budget %||% NULL,
-    reasoning_effort = model_cfg$reasoning_effort %||% model_cfg$model_reasoning_effort %||% NULL
+    context_window = cfg_opt("context_window", "model_context_window"),
+    max_output_tokens = cfg_opt("max_output_tokens", "model_max_output_tokens"),
+    max_tokens = cfg_opt("max_tokens", "model_max_tokens"),
+    thinking = cfg_opt("thinking", "model_thinking"),
+    thinking_budget = cfg_opt("thinking_budget", "model_thinking_budget"),
+    reasoning_effort = cfg_opt("reasoning_effort", "model_reasoning_effort")
   ))
 
   if (length(runtime) == 0) {
