@@ -18,6 +18,10 @@
 #' @param max_tokens Maximum tokens to generate.
 #' @param mode Output mode: "json" (prompt-based) or "tool" (function calling).
 #'   Currently, only "json" mode is implemented.
+#' @param max_retries Number of times to re-ask the model when its output is
+#'   unparseable or missing required schema fields (default 1). The reask
+#'   includes the specific validation error. The returned result carries
+#'   `valid` and `attempts`.
 #' @param registry Optional ProviderRegistry to use (defaults to global registry).
 #' @param ... Additional arguments passed to the model.
 #' @return A GenerateObjectResult with:
@@ -57,9 +61,11 @@ generate_object <- function(model = NULL,
                              temperature = 0.3,
                              max_tokens = NULL,
                              mode = c("json", "tool"),
+                             max_retries = 1L,
                              registry = NULL,
                              ...) {
   mode <- match.arg(mode)
+  max_retries <- max(0L, as.integer(max_retries))
 
   # Resolve model from string ID if needed
   model <- resolve_model(model, registry, type = "language")
@@ -77,33 +83,51 @@ generate_object <- function(model = NULL,
     paste0(system, "\n\n", instruction)
   }
 
-  # Call generate_text with the enhanced prompt
-  result <- generate_text(
-    model = model,
-    prompt = prompt,
-    system = combined_system,
-    temperature = temperature,
-    max_tokens = max_tokens,
-    ...
-  )
+  debug <- isTRUE(getOption("aisdk.debug", FALSE))
+  attempt <- 0L
+  reask <- NULL
+  result <- NULL
+  parsed_object <- NULL
+  problem <- NULL
 
-  # Parse the result using the strategy
-  if (isTRUE(getOption("aisdk.debug", FALSE))) {
-    raw_text <- result$text %||% ""
-    message("[DEBUG] generate_object raw_text (", nchar(raw_text), " chars):\n",
-            substr(raw_text, 1, min(1000, nchar(raw_text))),
-            if (nchar(raw_text) > 1000) "\n... [truncated]" else "")
-  }
+  # Validation + reasking: parse the output, check it against the schema, and
+  # on a parse failure or missing required fields re-ask the model once more
+  # with the specific error (the "reask" pattern). Native constrained decoding
+  # usually gets it right first try; this recovers the rest without failing.
+  repeat {
+    attempt <- attempt + 1L
+    turn_prompt <- if (is.null(reask)) prompt else paste0(prompt, "\n\n", reask)
 
-  parsed_object <- strategy$validate(result$text, is_final = TRUE)
+    result <- generate_text(
+      model = model,
+      prompt = turn_prompt,
+      system = combined_system,
+      temperature = temperature,
+      max_tokens = max_tokens,
+      ...
+    )
 
-  if (isTRUE(getOption("aisdk.debug", FALSE))) {
-    if (is.null(parsed_object)) {
-      message("[DEBUG] generate_object: JSON parsing returned NULL. ",
-              "The model output could not be parsed as valid JSON matching the schema.")
-    } else {
-      message("[DEBUG] generate_object: successfully parsed ", length(parsed_object), " top-level fields")
+    if (debug) {
+      raw_text <- result$text %||% ""
+      message("[DEBUG] generate_object attempt ", attempt, " raw_text (", nchar(raw_text), " chars):\n",
+              substr(raw_text, 1, min(1000, nchar(raw_text))),
+              if (nchar(raw_text) > 1000) "\n... [truncated]" else "")
     }
+
+    parsed_object <- strategy$validate(result$text, is_final = TRUE)
+    problem <- object_schema_problem(parsed_object, schema)
+
+    if (is.null(problem) || attempt > max_retries) {
+      break
+    }
+    if (debug) {
+      message("[DEBUG] generate_object: attempt ", attempt, " failed validation (", problem,
+              "); reasking.")
+    }
+    reask <- paste0(
+      "Your previous response was not valid: ", problem,
+      ". Respond again with ONLY a JSON object that matches the schema exactly."
+    )
   }
 
   # Return structured result
@@ -112,10 +136,35 @@ generate_object <- function(model = NULL,
       object = parsed_object,
       usage = result$usage,
       raw_text = result$text,
-      finish_reason = result$finish_reason
+      finish_reason = result$finish_reason,
+      valid = is.null(problem),
+      attempts = attempt
     ),
     class = "GenerateObjectResult"
   )
+}
+
+#' @keywords internal
+# Minimal structural check used to trigger a reask: returns NULL when the parsed
+# object looks schema-conformant, or a short human-readable problem string. It
+# is intentionally lightweight (unparseable, not an object, or missing a
+# required top-level field) — native constrained decoding does the heavy
+# lifting; this only catches the common failure modes worth a retry.
+object_schema_problem <- function(object, schema) {
+  if (is.null(object)) {
+    return("the response was not parseable JSON")
+  }
+  if (!is.list(object) || is.null(names(object))) {
+    return("the response was not a JSON object")
+  }
+  required <- tryCatch(schema_to_list(schema)$required, error = function(e) NULL)
+  if (length(required) > 0) {
+    missing <- setdiff(unlist(required), names(object))
+    if (length(missing) > 0) {
+      return(paste0("missing required field(s): ", paste(missing, collapse = ", ")))
+    }
+  }
+  NULL
 }
 
 #' @title Print GenerateObjectResult

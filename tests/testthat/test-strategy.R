@@ -60,9 +60,11 @@ test_that("ObjectStrategy validate handles truncated JSON", {
   
   # Truncated JSON - should be repaired
   result <- strategy$validate('{"items": ["a", "b"', is_final = TRUE)
-  
+
   expect_type(result, "list")
-  expect_equal(result$items, c("a", "b"))
+  # Structure-preserving parse (simplify = FALSE): a JSON array is a list, so
+  # arrays of objects don't collapse to data.frames. Scalar arrays are lists too.
+  expect_equal(result$items, list("a", "b"))
 })
 
 test_that("ObjectStrategy validate returns NULL for empty input", {
@@ -72,4 +74,43 @@ test_that("ObjectStrategy validate returns NULL for empty input", {
   expect_null(strategy$validate(NULL))
   expect_null(strategy$validate(""))
   expect_null(strategy$validate("   "))
+})
+
+# --- X2: generate_object structure-preserving parse + reask retry -------------
+
+test_that("ObjectStrategy keeps arrays of objects as lists (not data.frames)", {
+  strategy <- ObjectStrategy$new(z_object(items = z_array(z_object(a = z_string("a")))), "r")
+  obj <- strategy$validate('{"items":[{"a":"first"},{"a":"second"}]}')
+  expect_true(is.list(obj$items))
+  expect_null(dim(obj$items)) # not simplified to a data.frame
+  expect_equal(obj$items[[1]]$a, "first") # indexing yields the item, not a column
+})
+
+test_that("generate_object reasks when a required field is missing, then recovers", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  model <- MockModel$new(list(
+    list(text = '{"name":"Bob"}', finish_reason = "stop"),        # missing age
+    list(text = '{"name":"Bob","age":42}', finish_reason = "stop") # corrected
+  ))
+  res <- generate_object(model = model, prompt = "who", schema = schema, max_retries = 1)
+  expect_true(res$valid)
+  expect_equal(res$attempts, 2)
+  expect_equal(res$object$age, 42)
+})
+
+test_that("generate_object returns invalid without retries and reports it", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  model <- MockModel$new(list(list(text = '{"name":"X"}', finish_reason = "stop")))
+  res <- generate_object(model = model, prompt = "who", schema = schema, max_retries = 0)
+  expect_false(res$valid)
+  expect_equal(res$attempts, 1)
+})
+
+test_that("object_schema_problem detects the common failure modes", {
+  schema <- z_object(name = z_string("n"), age = z_number("a"))
+  expect_match(aisdk:::object_schema_problem(NULL, schema), "not parseable")
+  expect_match(aisdk:::object_schema_problem(list(name = "x"), schema), "missing required")
+  expect_null(aisdk:::object_schema_problem(list(name = "x", age = 1), schema))
 })

@@ -98,7 +98,11 @@ ObjectStrategy <- R6::R6Class(
         message("[DEBUG] ObjectStrategy$validate: cleaned text (", nchar(clean_text), " chars)")
       }
 
-      obj <- safe_parse_json(clean_text)
+      # Structure-preserving parse: with the jsonlite default (simplifyVector =
+      # TRUE) a JSON array of objects collapses to a data.frame and nested
+      # arrays to vectors, so `object$items[[1]]` would return a column, not the
+      # first item. generate_object documents a list, so keep everything a list.
+      obj <- safe_parse_json(clean_text, simplify = FALSE)
 
       if (debug && is.null(obj)) {
         message("[DEBUG] ObjectStrategy$validate: safe_parse_json returned NULL. First 300 chars of cleaned text:\n",

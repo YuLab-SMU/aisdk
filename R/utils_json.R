@@ -80,15 +80,15 @@ fix_json <- function(json_str) {
 #' @examples
 #' safe_parse_json('{"a": 1}')
 #' safe_parse_json('{"a": 1,')
-safe_parse_json <- function(text) {
+safe_parse_json <- function(text, simplify = TRUE) {
   if (is.null(text) || nchar(trimws(text)) == 0) {
     return(NULL)
   }
-  
+
   debug <- isTRUE(getOption("aisdk.debug", FALSE))
-  
+
   tryCatch({
-    jsonlite::fromJSON(text, simplifyVector = TRUE)
+    jsonlite::fromJSON(text, simplifyVector = simplify)
   }, error = function(e) {
     if (debug) {
       message("[DEBUG] safe_parse_json: initial parse failed: ", e$message)
@@ -96,7 +96,7 @@ safe_parse_json <- function(text) {
     }
     fixed_text <- fix_json(text)
     tryCatch({
-      jsonlite::fromJSON(fixed_text, simplifyVector = TRUE)
+      jsonlite::fromJSON(fixed_text, simplifyVector = simplify)
     }, error = function(e2) {
       if (debug) {
         message("[DEBUG] safe_parse_json: repair also failed: ", e2$message)
