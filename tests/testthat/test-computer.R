@@ -353,3 +353,106 @@ test_that("create_computer_tools accepts custom Computer instance", {
   result <- tools[[1]]$run(list(command = "rm -rf /"))
   expect_true(grepl("Sandbox violation", result) || grepl("Error", result))
 })
+
+# --- W1: strict-mode path confinement (regression for the review findings) ---
+
+test_that("strict write_file blocks '..' escape and sibling-prefix paths", {
+  skip_on_cran()
+  base <- file.path(tempfile("w1-escape-"), "wd")
+  dir.create(base, recursive = TRUE)
+  on.exit(unlink(dirname(base), recursive = TRUE), add = TRUE)
+  comp <- Computer$new(working_dir = base, sandbox_mode = "strict")
+
+  # ".." escape: normalizePath(mustWork=FALSE) does not collapse this, so the
+  # old textual startsWith check let the write land outside working_dir.
+  esc <- comp$write_file("../wd_OUTSIDE/pwned.txt", "x")
+  expect_true(esc$error)
+  expect_match(esc$message, "Sandbox violation")
+  expect_false(file.exists(file.path(dirname(base), "wd_OUTSIDE", "pwned.txt")))
+
+  # Sibling directory sharing the working_dir as a string prefix.
+  sib <- comp$write_file(paste0(base, "_secrets/y.txt"), "x")
+  expect_true(sib$error)
+  expect_match(sib$message, "Sandbox violation")
+
+  # In-directory writes still succeed.
+  ok <- comp$write_file("ok.txt", "x")
+  expect_false(ok$error)
+})
+
+test_that("strict read_file is confined symmetrically with writes", {
+  skip_on_cran()
+  base <- file.path(tempfile("w1-read-"), "wd")
+  dir.create(base, recursive = TRUE)
+  on.exit(unlink(dirname(base), recursive = TRUE), add = TRUE)
+  writeLines("inside", file.path(base, "in.txt"))
+
+  strict <- Computer$new(working_dir = base, sandbox_mode = "strict")
+  outside <- strict$read_file("/etc/hosts")
+  expect_true(outside$error)
+  expect_match(outside$message, "Sandbox violation")
+  expect_false(strict$read_file("in.txt")$error)
+
+  # permissive keeps unrestricted reads.
+  permissive <- Computer$new(working_dir = base, sandbox_mode = "permissive")
+  expect_false(permissive$read_file("/etc/hosts")$error)
+})
+
+test_that("strict bash/execute_r_code require approval, permissive does not", {
+  skip_on_cran()
+  base <- tempfile("w1-approval-")
+  dir.create(base, recursive = TRUE)
+  on.exit(unlink(base, recursive = TRUE), add = TRUE)
+
+  # No approver: strict denies arbitrary code (secure default).
+  denied <- Computer$new(working_dir = base, sandbox_mode = "strict")
+  b <- denied$bash("echo hi")
+  expect_true(b$error)
+  expect_match(b$stderr, "approval required")
+  e <- denied$execute_r_code("1 + 1")
+  expect_true(e$error)
+  expect_match(e$message, "approval required")
+
+  # Approver returning TRUE lets them through; the hard blocklist still wins.
+  seen <- list()
+  allow <- Computer$new(
+    working_dir = base, sandbox_mode = "strict",
+    approval_fn = function(action, detail, wd) {
+      seen[[length(seen) + 1L]] <<- action
+      TRUE
+    }
+  )
+  expect_false(allow$bash("echo hi")$error)
+  expect_equal(allow$execute_r_code("1 + 1")$result, 2)
+  expect_true(allow$bash("rm -rf /")$error) # blocklist beats approval
+  expect_true("bash" %in% unlist(seen))
+
+  # permissive never gates.
+  expect_false(Computer$new(working_dir = base, sandbox_mode = "permissive")$bash("echo hi")$error)
+})
+
+test_that("execute_r_code subprocess does not inherit credentials by default", {
+  skip_on_cran()
+  base <- tempfile("w1-creds-")
+  dir.create(base, recursive = TRUE)
+  on.exit(unlink(base, recursive = TRUE), add = TRUE)
+  withr::local_envvar(ANTHROPIC_API_KEY = "sk-secret-should-not-leak")
+
+  comp <- Computer$new(
+    working_dir = base, sandbox_mode = "strict",
+    approval_fn = function(action, detail, wd) TRUE
+  )
+  res <- comp$execute_r_code('Sys.getenv("ANTHROPIC_API_KEY")')
+  expect_false(res$error)
+  expect_identical(res$result, "")
+
+  shared <- Computer$new(
+    working_dir = base, sandbox_mode = "strict",
+    approval_fn = function(action, detail, wd) TRUE,
+    share_credentials = TRUE
+  )
+  expect_identical(
+    shared$execute_r_code('Sys.getenv("ANTHROPIC_API_KEY")')$result,
+    "sk-secret-should-not-leak"
+  )
+})

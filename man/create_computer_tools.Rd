@@ -7,7 +7,9 @@
 create_computer_tools(
   computer = NULL,
   working_dir = tempdir(),
-  sandbox_mode = "permissive"
+  sandbox_mode = "permissive",
+  approval_fn = NULL,
+  share_credentials = FALSE
 )
 }
 \arguments{
@@ -16,6 +18,12 @@ create_computer_tools(
 \item{working_dir}{Working directory. Defaults to \code{tempdir()}.}
 
 \item{sandbox_mode}{Sandbox mode: "strict", "permissive", or "none"}
+
+\item{approval_fn}{Optional approval callback for \code{bash}/\code{execute_r_code}
+under strict mode; see \link{Computer}'s \code{approval_fn} field.}
+
+\item{share_credentials}{Pass parent credentials to the R subprocess (default
+\code{FALSE}); see \link{Computer}'s \code{share_credentials} field.}
 }
 \value{
 List of Tool objects

@@ -33,13 +33,32 @@ Computer <- R6::R6Class("Computer",
     #' @field execution_log Log of executed commands
     execution_log = NULL,
 
+    #' @field approval_fn Optional approval callback for arbitrary-code actions
+    #'   (`bash`, `execute_r_code`) under strict mode. Called as
+    #'   `approval_fn(action, detail, working_dir)` and must return `TRUE` to
+    #'   allow. When `NULL`, strict mode denies these actions (secure default);
+    #'   `permissive`/`none` modes never call it.
+    approval_fn = NULL,
+
+    #' @field share_credentials When `FALSE` (default), the `execute_r_code`
+    #'   subprocess has the parent's sensitive env vars (API keys, tokens)
+    #'   scrubbed and reads no `.Renviron`. Set `TRUE` only when the executed
+    #'   code legitimately needs them.
+    share_credentials = FALSE,
+
     #' @description
     #' Initialize computer abstraction
     #' @param working_dir Working directory. Defaults to `tempdir()`.
     #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
-    initialize = function(working_dir = tempdir(), sandbox_mode = "permissive") {
+    #' @param approval_fn Optional approval callback (see the `approval_fn` field).
+    #' @param share_credentials Pass the parent's credentials to the R subprocess
+    #'   (see the `share_credentials` field). Default `FALSE`.
+    initialize = function(working_dir = tempdir(), sandbox_mode = "permissive",
+                          approval_fn = NULL, share_credentials = FALSE) {
       self$working_dir <- normalizePath(working_dir, mustWork = FALSE)
       self$sandbox_mode <- sandbox_mode
+      self$approval_fn <- approval_fn
+      self$share_credentials <- isTRUE(share_credentials)
       self$execution_log <- list()
 
       # Create working directory if it doesn't exist
@@ -59,13 +78,28 @@ Computer <- R6::R6Class("Computer",
       private$log_execution("bash", list(command = command))
       before_files <- private$list_files_snapshot()
 
-      # Check sandbox restrictions
+      # Check sandbox restrictions: layer 1 is the hard blocklist (catastrophic
+      # patterns are always refused), layer 2 is the approval gate (arbitrary
+      # bash can read/write anywhere, so strict mode requires explicit approval
+      # — a bare blocklist cannot confine a general shell).
       if (self$sandbox_mode == "strict") {
         violation <- private$check_bash_violation(command)
         if (!is.null(violation)) {
           return(list(
             stdout = "",
             stderr = paste("Sandbox violation:", violation),
+            exit_code = 1,
+            error = TRUE
+          ))
+        }
+        if (!private$request_approval("bash", command)) {
+          return(list(
+            stdout = "",
+            stderr = paste(
+              "Sandbox approval required: bash is disabled under strict mode",
+              "unless an approval callback allows it. Provide `approval_fn` or",
+              "use sandbox_mode = \"permissive\"."
+            ),
             exit_code = 1,
             error = TRUE
           ))
@@ -118,6 +152,16 @@ Computer <- R6::R6Class("Computer",
 
       # Resolve path
       full_path <- private$resolve_path(path)
+
+      # Strict mode confines reads to working_dir, symmetrically with writes
+      # (an unconfined read is an exfiltration path, e.g. ~/.ssh/id_rsa).
+      if (self$sandbox_mode == "strict" && !private$within_working_dir(full_path)) {
+        return(list(
+          content = NULL,
+          error = TRUE,
+          message = "Sandbox violation: Read outside working directory not allowed"
+        ))
+      }
 
       # Check if file exists
       if (!file.exists(full_path)) {
@@ -299,7 +343,9 @@ Computer <- R6::R6Class("Computer",
       private$log_execution("execute_r_code", list(code_length = nchar(code)))
       before_files <- private$list_files_snapshot()
 
-      # Check sandbox restrictions
+      # Check sandbox restrictions: hard blocklist first, then the approval gate
+      # (the subprocess can still touch the filesystem and network, so strict
+      # mode requires explicit approval for arbitrary R just like bash).
       if (self$sandbox_mode == "strict") {
         violation <- private$check_code_violation(code)
         if (!is.null(violation)) {
@@ -311,6 +357,29 @@ Computer <- R6::R6Class("Computer",
             execution_mode = "sandbox_exec"
           ))
         }
+        if (!private$request_approval("execute_r_code", code)) {
+          return(list(
+            result = NULL,
+            output = "",
+            error = TRUE,
+            message = paste(
+              "Sandbox approval required: execute_r_code is disabled under strict",
+              "mode unless an approval callback allows it. Provide `approval_fn`",
+              "or use sandbox_mode = \"permissive\"."
+            ),
+            execution_mode = "sandbox_exec"
+          ))
+        }
+      }
+
+      # The subprocess must not inherit the parent's credentials unless opted in
+      # (mirrors r_eval's issue #26 hardening): scrub sensitive env vars and pass
+      # --no-environ so a scrubbed key can't be re-read from .Renviron.
+      subprocess_env <- r_eval_build_env(share_credentials = self$share_credentials)
+      subprocess_cmdargs <- if (isTRUE(self$share_credentials)) {
+        c("--slave", "--no-save", "--no-restore")
+      } else {
+        c("--slave", "--no-save", "--no-restore", "--no-environ")
       }
 
       # Execute in isolated process
@@ -369,7 +438,9 @@ Computer <- R6::R6Class("Computer",
             ),
             timeout = timeout_ms / 1000,
             show = FALSE,
-            error = "stack"
+            error = "stack",
+            env = subprocess_env,
+            cmdargs = subprocess_cmdargs
           )
         },
         error = function(e) {
@@ -525,25 +596,81 @@ Computer <- R6::R6Class("Computer",
       self$execution_log <- c(self$execution_log, list(entry))
     },
 
-    #' Resolve path (relative to working_dir or absolute)
-    resolve_path = function(path) {
-      if (grepl("^/|^[A-Za-z]:", path)) {
-        # Absolute path
-        normalizePath(path, mustWork = FALSE)
-      } else {
-        # Relative path
-        normalizePath(file.path(self$working_dir, path), mustWork = FALSE)
+    # Lexically resolve "." and ".." WITHOUT touching the filesystem, so a
+    # non-existent target like "wd/../escape" collapses to "escape".
+    # normalizePath(mustWork = FALSE) does NOT collapse ".." for paths whose
+    # leaf does not exist, which is what let strict-mode writes escape.
+    normalize_within = function(path) {
+      path <- gsub("\\\\", "/", path %||% "")
+      drive <- ""
+      if (grepl("^[A-Za-z]:", path)) {
+        drive <- substr(path, 1L, 2L)
+        path <- substr(path, 3L, nchar(path))
       }
+      is_abs <- startsWith(path, "/")
+      parts <- Filter(
+        function(p) nzchar(p) && !identical(p, "."),
+        strsplit(path, "/", fixed = TRUE)[[1]]
+      )
+      out <- character(0)
+      for (p in parts) {
+        if (identical(p, "..")) {
+          if (length(out) && !identical(out[[length(out)]], "..")) {
+            out <- out[-length(out)]
+          } else if (!is_abs) {
+            out <- c(out, "..")
+          }
+          # ".." above an absolute root is simply dropped
+        } else {
+          out <- c(out, p)
+        }
+      }
+      paste0(drive, if (is_abs) "/" else "", paste(out, collapse = "/"))
+    },
+
+    #' Resolve path (relative to working_dir or absolute), collapsing "." / ".."
+    #' lexically so the returned path can be safely boundary-checked.
+    resolve_path = function(path) {
+      joined <- if (grepl("^/|^[A-Za-z]:", path)) {
+        path
+      } else {
+        file.path(self$working_dir, path)
+      }
+      private$normalize_within(joined)
+    },
+
+    # TRUE when `path` is inside (or equal to) `root`. Uses a trailing-separator
+    # boundary so a sibling like "/wd_secrets" does not match root "/wd".
+    within_working_dir = function(path, root = self$working_dir) {
+      p <- private$normalize_within(path)
+      r <- private$normalize_within(root)
+      identical(p, r) || startsWith(p, paste0(r, "/"))
     },
 
     #' Check write path for sandbox violations
     check_write_violation = function(path) {
-      # Strict mode: only allow writes within working_dir
-      if (!startsWith(path, self$working_dir)) {
+      # Strict mode: only allow writes within working_dir (boundary-checked).
+      if (!private$within_working_dir(path)) {
         return("Write outside working directory not allowed")
       }
 
       NULL
+    },
+
+    # Approval gate for arbitrary-code actions (bash, execute_r_code) under
+    # strict mode. permissive/none never gate. In strict, an injected
+    # approval_fn decides; with no approver, deny (secure default).
+    request_approval = function(action, detail) {
+      if (!identical(self$sandbox_mode, "strict")) {
+        return(TRUE)
+      }
+      if (is.function(self$approval_fn)) {
+        return(isTRUE(tryCatch(
+          self$approval_fn(action, detail, self$working_dir),
+          error = function(e) FALSE
+        )))
+      }
+      FALSE
     },
 
     #' Check R code for sandbox violations
@@ -576,11 +703,19 @@ Computer <- R6::R6Class("Computer",
 #' @param computer Computer instance (default: create new)
 #' @param working_dir Working directory. Defaults to `tempdir()`.
 #' @param sandbox_mode Sandbox mode: "strict", "permissive", or "none"
+#' @param approval_fn Optional approval callback for `bash`/`execute_r_code`
+#'   under strict mode; see [Computer]'s `approval_fn` field.
+#' @param share_credentials Pass parent credentials to the R subprocess (default
+#'   `FALSE`); see [Computer]'s `share_credentials` field.
 #' @return List of Tool objects
 #' @export
-create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sandbox_mode = "permissive") {
+create_computer_tools <- function(computer = NULL, working_dir = tempdir(), sandbox_mode = "permissive",
+                                   approval_fn = NULL, share_credentials = FALSE) {
   if (is.null(computer)) {
-    computer <- Computer$new(working_dir = working_dir, sandbox_mode = sandbox_mode)
+    computer <- Computer$new(
+      working_dir = working_dir, sandbox_mode = sandbox_mode,
+      approval_fn = approval_fn, share_credentials = share_credentials
+    )
   }
 
   annotate_artifacts <- function(text, paths = character(0)) {

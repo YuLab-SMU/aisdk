@@ -15,6 +15,17 @@ bash execution, and R code execution.
 \item{\code{sandbox_mode}}{Sandbox mode: "strict", "permissive", or "none"}
 
 \item{\code{execution_log}}{Log of executed commands}
+
+\item{\code{approval_fn}}{Optional approval callback for arbitrary-code actions
+(\code{bash}, \code{execute_r_code}) under strict mode. Called as
+\code{approval_fn(action, detail, working_dir)} and must return \code{TRUE} to
+allow. When \code{NULL}, strict mode denies these actions (secure default);
+\code{permissive}/\code{none} modes never call it.}
+
+\item{\code{share_credentials}}{When \code{FALSE} (default), the \code{execute_r_code}
+subprocess has the parent's sensitive env vars (API keys, tokens)
+scrubbed and reads no \code{.Renviron}. Set \code{TRUE} only when the executed
+code legitimately needs them.}
 }
 \if{html}{\out{</div>}}
 }
@@ -38,7 +49,12 @@ bash execution, and R code execution.
 \subsection{Method \code{new()}}{
 Initialize computer abstraction
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Computer$new(working_dir = tempdir(), sandbox_mode = "permissive")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Computer$new(
+  working_dir = tempdir(),
+  sandbox_mode = "permissive",
+  approval_fn = NULL,
+  share_credentials = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -47,6 +63,11 @@ Initialize computer abstraction
 \item{\code{working_dir}}{Working directory. Defaults to \code{tempdir()}.}
 
 \item{\code{sandbox_mode}}{Sandbox mode: "strict", "permissive", or "none"}
+
+\item{\code{approval_fn}}{Optional approval callback (see the \code{approval_fn} field).}
+
+\item{\code{share_credentials}}{Pass the parent's credentials to the R subprocess
+(see the \code{share_credentials} field). Default \code{FALSE}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -195,7 +216,8 @@ List of logged executions
 Clear execution log
 Check bash command for sandbox violations
 Log execution
-Resolve path (relative to working_dir or absolute)
+Resolve path (relative to working_dir or absolute), collapsing "." / ".."
+lexically so the returned path can be safely boundary-checked.
 Check write path for sandbox violations
 Check R code for sandbox violations
 \subsection{Usage}{
