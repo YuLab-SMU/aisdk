@@ -34,6 +34,9 @@ console_menu <- function(title, choices) {
   }
   cli::cli_text("")
   repeat {
+    # Flush before blocking: RStudio Server can hold buffered output while
+    # readline() waits, which makes the prompt look frozen.
+    utils::flush.console()
     response <- readline("Selection: ")
     response <- trimws(response)
     if (!nzchar(response) || tolower(response) == "q") return(NULL)
@@ -90,6 +93,7 @@ console_input <- function(prompt, default = NULL) {
   if (!interactive()) return(default)
   hint <- if (!is.null(default)) paste0(" [", default, "]") else ""
   cli::cli_text("")
+  utils::flush.console()
   response <- readline(paste0("  ", prompt, hint, ": "))
   response <- trimws(response)
   if (!nzchar(response) && !is.null(default)) return(default)
