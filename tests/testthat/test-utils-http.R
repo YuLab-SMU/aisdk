@@ -345,6 +345,90 @@ test_that("stream_from_api retries connection failures before any event is deliv
   expect_true(done_seen)
 })
 
+test_that("stream_from_api signals done=TRUE when the stream ends without [DONE]", {
+  # Gemini and some OpenAI-compatible servers close the connection without a
+  # "[DONE]" sentinel; done=TRUE must still fire exactly once.
+  done_count <- 0L
+  chunks <- list()
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(list(data = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"hi\"}]}}]}"))
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    # Complete once the single event has been consumed — no [DONE] is ever sent.
+    stream_response_is_complete = function(resp) length(resp$events) == 0L,
+    stream_response_sse = function(resp) {
+      if (length(resp$events) == 0L) return(NULL)
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      event
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(
+    aisdk:::stream_from_api(
+      url = "https://example.test/v1beta/models/gemini:streamGenerateContent",
+      headers = list(),
+      body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) {
+        if (isTRUE(done)) done_count <<- done_count + 1L else chunks <<- c(chunks, list(data))
+      },
+      initial_delay_ms = 0
+    )
+  )
+
+  expect_length(chunks, 1)
+  expect_equal(done_count, 1L) # exactly once — not zero (bug), not twice
+})
+
+test_that("stream_from_api emits done exactly once when [DONE] IS sent", {
+  done_count <- 0L
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    stream_perform_connection = function(req) {
+      resp <- new.env(parent = emptyenv())
+      resp$events <- list(
+        list(data = "{\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}"),
+        list(data = "[DONE]")
+      )
+      resp
+    },
+    stream_response_status = function(resp) 200L,
+    stream_response_is_complete = function(resp) length(resp$events) == 0L,
+    stream_response_sse = function(resp) {
+      if (length(resp$events) == 0L) return(NULL)
+      event <- resp$events[[1]]
+      resp$events <- resp$events[-1]
+      event
+    },
+    .package = "aisdk"
+  )
+
+  suppressMessages(
+    aisdk:::stream_from_api(
+      url = "https://example.test/chat/completions",
+      headers = list(), body = list(model = "mock", stream = TRUE),
+      callback = function(data, done) if (isTRUE(done)) done_count <<- done_count + 1L,
+      initial_delay_ms = 0
+    )
+  )
+  expect_equal(done_count, 1L)
+})
+
+test_that("http_error_classes keeps a permanent 4xx with a timeout-ish body non-retryable", {
+  cls <- aisdk:::http_error_classes(
+    400, '{"error":{"message":"Invalid value for \'timeout\'; the request timed out"}}'
+  )
+  expect_false("aisdk_api_timeout_error" %in% cls)
+  # A real gateway timeout is still classified.
+  expect_true("aisdk_api_timeout_error" %in% aisdk:::http_error_classes(504, "gateway timeout"))
+})
+
 test_that("stream_from_api fails over before the first event", {
   rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
      envir = aisdk:::.aisdk_api_route_state)

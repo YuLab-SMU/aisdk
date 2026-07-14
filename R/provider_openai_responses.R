@@ -882,6 +882,16 @@ stream_responses_api <- function(url, headers, body, callback,
     idle_timeout_seconds = idle_timeout_seconds,
     request_type = "stream"
   )
+  # `url` may arrive as a multi-candidate failover vector (api_endpoint_urls
+  # returns one per base_url); httr2::request() requires a single string, so a
+  # comma-separated base_url used to crash Responses streaming outright. This
+  # path does not implement cross-endpoint failover yet, so use the first
+  # candidate (matching the non-streaming call's primary endpoint).
+  urls <- normalize_api_url_candidates(url)
+  if (length(urls) == 0) {
+    rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
+  }
+  url <- urls[[1]]
   req <- httr2::request(url)
   req <- httr2::req_headers(req, !!!headers)
   req <- prepare_json_post_request(req, body)
@@ -904,13 +914,32 @@ stream_responses_api <- function(url, headers, body, callback,
     ), class = "aisdk_api_error")
   }
 
+  # Cap consecutive read failures so a mid-stream transport error (connection
+  # reset, idle timeout) can't spin this loop at 100% CPU forever: once the
+  # transfer is aborted every resp_stream_sse() throws but resp_stream_is_
+  # complete() may never turn TRUE. Mirrors stream_from_api's guard.
+  consecutive_errors <- 0L
+  max_consecutive_errors <- 10L
+  done_emitted <- FALSE
+
   while (!httr2::resp_stream_is_complete(resp)) {
     event <- tryCatch(
       httr2::resp_stream_sse(resp),
-      error = function(e) NULL
+      error = function(e) e
     )
-
+    if (inherits(event, "condition")) {
+      consecutive_errors <- consecutive_errors + 1L
+      if (consecutive_errors >= max_consecutive_errors) {
+        rlang::abort(
+          c("Too many consecutive SSE read errors on the Responses stream",
+            "x" = conditionMessage(event)),
+          class = c("aisdk_stream_error", "aisdk_api_error")
+        )
+      }
+      next
+    }
     if (is.null(event)) next
+    consecutive_errors <- 0L
 
     event_type <- event$type
     data_str <- event$data
@@ -918,6 +947,7 @@ stream_responses_api <- function(url, headers, body, callback,
     if (!is.null(data_str) && nzchar(data_str)) {
       if (data_str == "[DONE]") {
         callback(NULL, NULL, done = TRUE)
+        done_emitted <- TRUE
         break
       }
 
@@ -935,5 +965,10 @@ stream_responses_api <- function(url, headers, body, callback,
     }
   }
 
-  callback(NULL, NULL, done = TRUE)
+  # Signal completion once — not twice when the stream ended via "[DONE]"
+  # (a double done fires a caller's finalizer twice, and a second call that
+  # throws on double-close loses the completed result).
+  if (!isTRUE(done_emitted)) {
+    callback(NULL, NULL, done = TRUE)
+  }
 }

@@ -360,7 +360,14 @@ http_error_classes <- function(status, error_body = "") {
     classes <- c("aisdk_api_rate_limit_error", classes)
   }
 
-  if (status %in% c(408, 504) || grepl("timeout|timed out", body_lower) || grepl("timeout|timed out", message_text)) {
+  # Timeout classification is status-code-first. A definitive client error
+  # (400/401/403/404/405/409/422) is permanent even if its body happens to
+  # mention "timeout" (e.g. an upstream quoting `Invalid value for 'timeout'`);
+  # classing it as a retryable timeout would re-POST the doomed request to
+  # every failover endpoint and cooldown healthy routes.
+  permanent_client_error <- status %in% c(400, 401, 403, 404, 405, 409, 422)
+  timeout_in_text <- grepl("timeout|timed out", body_lower) || grepl("timeout|timed out", message_text)
+  if (status %in% c(408, 504) || (timeout_in_text && !permanent_client_error)) {
     classes <- c("aisdk_api_timeout_error", classes)
   }
 
@@ -1101,6 +1108,7 @@ stream_from_api <- function(url, headers, body, callback,
     stream_state <- new.env(parent = emptyenv())
     stream_state$consecutive_errors <- 0
     stream_state$delivered_events <- FALSE
+    stream_state$done_emitted <- FALSE
     max_consecutive_errors <- 10
 
     on.exit(stream_response_close(resp), add = TRUE)
@@ -1184,6 +1192,7 @@ stream_from_api <- function(url, headers, body, callback,
         if (!is.null(event$data) && nzchar(event$data)) {
           if (event$data == "[DONE]") {
             callback(NULL, done = TRUE)
+            stream_state$done_emitted <- TRUE
             break
           }
 
@@ -1219,6 +1228,16 @@ stream_from_api <- function(url, headers, body, callback,
           )
         }
       }
+    }
+
+    # Signal completion exactly once. Streams that end by connection close
+    # (Gemini always; some OpenAI-compatible servers) never send a "[DONE]"
+    # sentinel, so without this the callback's done=TRUE branch never fires:
+    # finalizers don't run, an open <think> block never closes, and any
+    # held-back tail buffer is dropped.
+    if (!isTRUE(stream_state$done_emitted)) {
+      callback(NULL, done = TRUE)
+      stream_state$done_emitted <- TRUE
     }
 
     TRUE
