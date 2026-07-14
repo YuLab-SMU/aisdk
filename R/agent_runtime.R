@@ -80,13 +80,52 @@ new_run_trace <- function(run_id = NULL) {
 #' @keywords internal
 run_trace_add <- function(trace, type, payload = list()) {
   trace <- trace %||% new_run_trace()
-  trace$events[[length(trace$events) + 1L]] <- list(
+  event <- list(
     event_id = paste0("evt_", generate_stable_id(type, Sys.time(), stats::runif(1))),
     timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%OS3%z"),
     type = type,
     payload = payload %||% list()
   )
+  trace$events[[length(trace$events) + 1L]] <- event
+  # Fan every runtime event out to an optional external sink. This is the one
+  # chokepoint through which all per-call lifecycle events flow, so a single
+  # hook here lets an out-of-tree exporter (OpenTelemetry GenAI spans,
+  # Langfuse, a logger) consume the stream without threading a tracer through
+  # generate_text()/the provider layer. Errors in the sink never break a run.
+  emit_run_trace_event(event, run_id = trace$run_id %||% NULL)
   trace
+}
+
+#' Set a sink for aisdk agent-runtime trace events
+#'
+#' Registers a function called once for every runtime lifecycle event
+#' (`model_call`, `model_response`, `tool_results`, `policy_decision`,
+#' `network_error`, ...) as it happens. Each event is a list with `event_id`,
+#' `timestamp` (ISO-8601), `type`, and a typed `payload`; `model_response`
+#' events additionally carry `model`, `provider`, `usage`, `response_id`,
+#' `latency_ms`, and `stream`. The sink is the seam for external observability
+#' (e.g. mapping onto OpenTelemetry GenAI spans) and receives events even for
+#' individual steps of a multi-step run, which the once-per-call hooks do not.
+#'
+#' @param sink A function `function(event, run_id)`, or `NULL` to clear.
+#' @return Invisibly, the previously registered sink (or `NULL`).
+#' @export
+set_run_trace_sink <- function(sink = NULL) {
+  if (!is.null(sink) && !is.function(sink)) {
+    rlang::abort("`sink` must be a function(event, run_id) or NULL.")
+  }
+  previous <- getOption("aisdk.trace_sink")
+  options(aisdk.trace_sink = sink)
+  invisible(previous)
+}
+
+#' @keywords internal
+emit_run_trace_event <- function(event, run_id = NULL) {
+  sink <- getOption("aisdk.trace_sink")
+  if (is.function(sink)) {
+    tryCatch(sink(event, run_id), error = function(e) NULL)
+  }
+  invisible(NULL)
 }
 
 #' @keywords internal
@@ -975,7 +1014,14 @@ run_agent_runtime <- function(model,
           NULL
         }
 
-        trace <- run_trace_add(trace, "model_call", list(step = step, window = execution_windows))
+        trace <- run_trace_add(trace, "model_call", list(
+          step = step,
+          window = execution_windows,
+          model = model$model_id %||% NULL,
+          provider = model$provider %||% NULL,
+          stream = isTRUE(stream)
+        ))
+        model_call_started_at <- Sys.time()
         if (isTRUE(stream)) {
           step_stream_chunks <- character()
           step_stream_has_visible_text <- FALSE
@@ -1039,15 +1085,28 @@ run_agent_runtime <- function(model,
           result <- model$do_generate(params)
         }
 
+        model_call_latency_ms <- as.numeric(
+          difftime(Sys.time(), model_call_started_at, units = "secs")
+        ) * 1000
+
         # Accumulate this step's tokens before any `next` skips ahead; the
         # aggregate is written onto the final result below.
         accumulated_usage <- agent_runtime_sum_usage(accumulated_usage, result$usage)
 
         result <- recover_text_tool_calls(result)
         result <- recover_text_final_answer(result)
+        # Enrich the per-call trace event with the fields an OpenTelemetry
+        # GenAI exporter needs (model, provider, usage, response_id, latency) —
+        # all already in scope here, so no tracer threading through providers.
         trace <- run_trace_add(trace, "model_response", list(
           step = step,
+          model = model$model_id %||% NULL,
+          provider = model$provider %||% NULL,
+          stream = isTRUE(stream),
           finish_reason = result$finish_reason %||% NULL,
+          usage = result$usage %||% NULL,
+          response_id = result$response_id %||% NULL,
+          latency_ms = round(model_call_latency_ms, 1),
           text = agent_runtime_text(result$text %||% "", width = 800),
           tool_call_count = length(result$tool_calls %||% list())
         ))
