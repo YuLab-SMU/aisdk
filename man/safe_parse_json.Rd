@@ -4,7 +4,7 @@
 \alias{safe_parse_json}
 \title{Safe JSON Parser}
 \usage{
-safe_parse_json(text)
+safe_parse_json(text, simplify = TRUE)
 }
 \arguments{
 \item{text}{A JSON string.}

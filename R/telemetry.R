@@ -120,23 +120,17 @@ Telemetry <- R6::R6Class(
       )
     },
     
-    #' @description Calculate estimated cost for a generation result
-    #' @param result The GenerateResult object.
-    #' @param model_id Optional model ID string. if NULL, tries to guess from context (not reliable yet, passing in log_event might be better).
-    #' @return Estimated cost in USD, or NULL if unknown.
+    #' @description Calculate estimated cost for a generation result.
+    #' @param result The GenerateResult object (uses `result$usage`).
+    #' @param model_id Model ID string. Falls back to the result's own
+    #'   `raw_response$model` when not supplied.
+    #' @return Estimated cost in USD, or `NULL` if the model/usage is unknown.
     calculate_cost = function(result, model_id = NULL) {
       if (is.null(result$usage)) return(NULL)
-      
-      # TODO: We need the model ID to calculate cost. 
-      # Ideally 'result' should contain the model ID used.
-      # For now, we will return raw usage if model unknown.
-      
-      # Simple calculation if we had the rates
-      # rate <- self$pricing_table[[model_id]]
-      # if (is.null(rate)) return(NULL)
-      # (result$usage$prompt_tokens / 1e6 * rate$input) + (result$usage$completion_tokens / 1e6 * rate$output)
-      
-      NULL
+      model_id <- model_id %||% result$raw_response$model %||% NULL
+      if (is.null(model_id)) return(NULL)
+      cost <- estimate_cost(result$usage, model_id)
+      if (is.na(cost)) NULL else cost
     }
   )
 )

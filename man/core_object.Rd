@@ -14,6 +14,7 @@ generate_object(
   temperature = 0.3,
   max_tokens = NULL,
   mode = c("json", "tool"),
+  max_retries = 1L,
   registry = NULL,
   ...
 )
@@ -35,6 +36,11 @@ generate_object(
 
 \item{mode}{Output mode: "json" (prompt-based) or "tool" (function calling).
 Currently, only "json" mode is implemented.}
+
+\item{max_retries}{Number of times to re-ask the model when its output is
+unparseable or missing required schema fields (default 1). The reask
+includes the specific validation error. The returned result carries
+\code{valid} and \code{attempts}.}
 
 \item{registry}{Optional ProviderRegistry to use (defaults to global registry).}
 

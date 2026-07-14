@@ -112,7 +112,7 @@ A HookHandler object pre-configured with telemetry logs.
 \if{html}{\out{<a id="method-Telemetry-calculate_cost"></a>}}
 \if{latex}{\out{\hypertarget{method-Telemetry-calculate_cost}{}}}
 \subsection{Method \code{calculate_cost()}}{
-Calculate estimated cost for a generation result
+Calculate estimated cost for a generation result.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Telemetry$calculate_cost(result, model_id = NULL)}\if{html}{\out{</div>}}
 }
@@ -120,14 +120,15 @@ Calculate estimated cost for a generation result
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{result}}{The GenerateResult object.}
+\item{\code{result}}{The GenerateResult object (uses \code{result$usage}).}
 
-\item{\code{model_id}}{Optional model ID string. if NULL, tries to guess from context (not reliable yet, passing in log_event might be better).}
+\item{\code{model_id}}{Model ID string. Falls back to the result's own
+\code{raw_response$model} when not supplied.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Estimated cost in USD, or NULL if unknown.
+Estimated cost in USD, or \code{NULL} if the model/usage is unknown.
 }
 }
 \if{html}{\out{<hr>}}
