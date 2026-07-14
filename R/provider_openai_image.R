@@ -35,6 +35,37 @@ OpenAIImageModel <- R6::R6Class(
       }
       h
     },
+    # Headers for the /v1/responses fallback routes. Forces identity
+    # transfer-encoding: some OpenAI-compatible proxies advertise gzip but
+    # send a malformed Content-Encoding header on that route; with
+    # `Accept-Encoding: identity` the proxy streams uncompressed and httr2
+    # parses cleanly.
+    responses_headers = function() {
+      c(
+        private$get_headers(include_content_type = TRUE),
+        list(`Accept-Encoding` = "identity")
+      )
+    },
+    # Per-call timeout overrides fall back to the provider config. Spliced
+    # into the post_to_api()/post_multipart_to_api()/stream_responses_api()
+    # calls via rlang::exec(!!!).
+    resolve_timeouts = function(params) {
+      list(
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
+    },
+    # Attach previous_response_id for multi-turn chaining on the Responses
+    # fallback paths (mode-gated, mirrors the language model).
+    attach_previous_response_id = function(body) {
+      if (private$use_server_state() && !is.null(private$last_response_id)) {
+        body$previous_response_id <- private$last_response_id
+      }
+      body
+    },
     supports_image_response_format = function() {
       provider_name <- tolower(private$config$provider_name %||% "openai")
       base_url <- tolower(private$config$base_url %||% "")
@@ -134,6 +165,15 @@ OpenAIImageModel <- R6::R6Class(
 
       invisible(TRUE)
     },
+    # Copy the given params into body verbatim, skipping NULLs.
+    copy_params = function(body, params, names) {
+      for (nm in names) {
+        if (!is.null(params[[nm]])) {
+          body[[nm]] <- params[[nm]]
+        }
+      }
+      body
+    },
     build_generation_body = function(params) {
       params <- private$normalize_aihubmix_generation_params(params)
       private$validate_image_params(params, request_type = "generate")
@@ -145,14 +185,10 @@ OpenAIImageModel <- R6::R6Class(
       if (private$supports_image_response_format()) {
         body$response_format <- params$response_format %||% "b64_json"
       }
-
-      if (!is.null(params$n)) body$n <- params$n
-      if (!is.null(params$size)) body$size <- params$size
-      if (!is.null(params$quality)) body$quality <- params$quality
-      if (!is.null(params$background)) body$background <- params$background
-      if (!is.null(params$moderation)) body$moderation <- params$moderation
-      if (!is.null(params$output_format)) body$output_format <- params$output_format
-      if (!is.null(params$output_compression)) body$output_compression <- params$output_compression
+      body <- private$copy_params(body, params, c(
+        "n", "size", "quality", "background", "moderation",
+        "output_format", "output_compression"
+      ))
 
       handled <- c(
         "prompt", "output_dir", "response_format", "n", "size", "quality",
@@ -167,49 +203,34 @@ OpenAIImageModel <- R6::R6Class(
 
       body[!sapply(body, is.null)]
     },
-    build_responses_tool_config = function(params) {
-      # Build the `image_generation` tool config block for the Responses-API
-      # fallback. Mirrors the field subset documented for the tool; keeps the
-      # same normalize + validate sequence as build_generation_body so behavior
-      # is consistent across the two paths.
-      params <- private$normalize_aihubmix_generation_params(params)
-      private$validate_image_params(params, request_type = "generate")
+    # Build the `image_generation` tool config for the Responses-API paths.
+    # For `action = "generate"` this keeps the same normalize + validate
+    # sequence as build_generation_body so behavior is consistent across the
+    # two paths. For `action = "edit"` it sets the tool action explicitly
+    # (the tool's `auto` default also works, but explicit is safer), forwards
+    # `input_fidelity` (edit-only per validate_image_params), and adds
+    # `input_image_mask` when a mask was supplied. The source image goes into
+    # the request `input` array as an input_image block — not into the tool
+    # config.
+    build_responses_tool_config = function(params,
+                                           action = c("generate", "edit"),
+                                           mask_data_url = NULL) {
+      action <- match.arg(action)
+      if (action == "generate") {
+        params <- private$normalize_aihubmix_generation_params(params)
+      }
+      private$validate_image_params(params, request_type = action)
 
-      tool <- list(
-        type = "image_generation",
-        model = params$image_model %||% self$model_id
-      )
-      if (!is.null(params$quality))            tool$quality <- params$quality
-      if (!is.null(params$size))               tool$size <- params$size
-      if (!is.null(params$output_format))      tool$output_format <- params$output_format
-      if (!is.null(params$output_compression)) tool$output_compression <- params$output_compression
-      if (!is.null(params$background))         tool$background <- params$background
-      if (!is.null(params$moderation))         tool$moderation <- params$moderation
-      if (!is.null(params$n))                  tool$n <- params$n
-
-      tool[!sapply(tool, is.null)]
-    },
-    build_responses_edit_tool_config = function(params, mask_data_url = NULL) {
-      # Edit-flavored variant of build_responses_tool_config: sets
-      # action = "edit" explicitly (the tool's `auto` default also works,
-      # but explicit is safer), forwards `input_fidelity` (only allowed for
-      # edits per validate_image_params), and adds `input_image_mask` when a
-      # mask was supplied. The source image goes into the request `input`
-      # array as an input_image block — not into the tool config.
-      private$validate_image_params(params, request_type = "edit")
-
-      tool <- list(
-        type = "image_generation",
-        action = "edit",
-        model = params$image_model %||% self$model_id
-      )
-      if (!is.null(params$quality))            tool$quality <- params$quality
-      if (!is.null(params$size))               tool$size <- params$size
-      if (!is.null(params$output_format))      tool$output_format <- params$output_format
-      if (!is.null(params$output_compression)) tool$output_compression <- params$output_compression
-      if (!is.null(params$background))         tool$background <- params$background
-      if (!is.null(params$moderation))         tool$moderation <- params$moderation
-      if (!is.null(params$input_fidelity))     tool$input_fidelity <- params$input_fidelity
+      tool <- list(type = "image_generation")
+      if (action == "edit") {
+        tool$action <- "edit"
+      }
+      tool$model <- params$image_model %||% self$model_id
+      tool <- private$copy_params(tool, params, c(
+        "quality", "size", "output_format", "output_compression",
+        "background", "moderation",
+        if (action == "generate") "n" else "input_fidelity"
+      ))
       if (!is.null(mask_data_url)) {
         tool$input_image_mask <- list(image_url = mask_data_url)
       }
@@ -250,13 +271,12 @@ OpenAIImageModel <- R6::R6Class(
         body$mask <- curl::form_file(mask_path)
       }
 
-      if (!is.null(params$n)) body$n <- as.character(params$n)
-      if (!is.null(params$size)) body$size <- params$size
-      if (!is.null(params$quality)) body$quality <- params$quality
-      if (!is.null(params$background)) body$background <- params$background
-      if (!is.null(params$output_format)) body$output_format <- params$output_format
-      if (!is.null(params$output_compression)) body$output_compression <- params$output_compression
-      if (!is.null(params$input_fidelity)) body$input_fidelity <- params$input_fidelity
+      # Multipart form fields are strings; n is the only numeric to coerce.
+      if (!is.null(params[["n"]])) body$n <- as.character(params[["n"]])
+      body <- private$copy_params(body, params, c(
+        "size", "quality", "background", "output_format",
+        "output_compression", "input_fidelity"
+      ))
 
       handled <- c(
         "image", "mask", "prompt", "output_dir", "response_format", "n",
@@ -272,6 +292,69 @@ OpenAIImageModel <- R6::R6Class(
 
       body[!sapply(body, is.null)]
     },
+    # Media type for a requested/returned output format. The Responses image
+    # payloads carry bare base64 with no content type, so it is derived from
+    # the request (default png).
+    image_media_type = function(format) {
+      switch(tolower(as.character(format %||% "png")[[1]]),
+        png = "image/png",
+        jpeg = "image/jpeg",
+        jpg = "image/jpeg",
+        webp = "image/webp",
+        "image/png"
+      )
+    },
+    # Collect base64 images from `image_generation_call` items in a Responses
+    # output array.
+    collect_image_generation_calls = function(output, media_type) {
+      images <- list()
+      for (item in output %||% list()) {
+        if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
+          images <- c(images, list(list(
+            bytes = base64enc::base64decode(item$result),
+            media_type = media_type,
+            revised_prompt = item$revised_prompt %||% NULL
+          )))
+        }
+      }
+      images
+    },
+    # normalize_image_input_to_url_like() returns a URL/data-URI or a bare
+    # file path; the Responses `input_image` / `input_image_mask` blocks
+    # always need a URL form, so wrap the bare-path case as a data URI.
+    image_input_as_data_url = function(input) {
+      url_like <- normalize_image_input_to_url_like(input)
+      if (!grepl("^(data:|https?:)", url_like)) {
+        url_like <- paste0("data:image/png;base64,", base64enc::base64encode(url_like))
+      }
+      url_like
+    },
+    # Shared tail of the Responses-API fallback methods: decode the returned
+    # images, abort with a consistent hint when none came back, and wrap
+    # everything into a GenerateImageResult.
+    responses_image_result = function(response, params, prefix, empty_message,
+                                      what = "image") {
+      media_type <- private$image_media_type(params$output_format)
+      images <- private$collect_image_generation_calls(response$output, media_type)
+      if (!length(images)) {
+        rlang::abort(c(
+          empty_message,
+          i = paste0(
+            "The proxy accepted the request but produced no ", what,
+            "; this is usually a model or prompt issue."
+          )
+        ))
+      }
+      GenerateImageResult$new(
+        images = finalize_image_artifacts(
+          images,
+          output_dir = params$output_dir %||% tempdir(),
+          prefix = prefix
+        ),
+        usage = response$usage %||% NULL,
+        raw_response = response
+      )
+    },
     parse_image_response = function(response,
                                     output_dir = tempdir(),
                                     prefix = "openai_image",
@@ -286,12 +369,8 @@ OpenAIImageModel <- R6::R6Class(
 
           if (!is.null(item$b64_json)) {
             artifact$bytes <- base64enc::base64decode(item$b64_json)
-            artifact$media_type <- switch(item$output_format %||% requested_output_format %||% "",
-              png = "image/png",
-              jpeg = "image/jpeg",
-              jpg = "image/jpeg",
-              webp = "image/webp",
-              "image/png"
+            artifact$media_type <- private$image_media_type(
+              item$output_format %||% requested_output_format
             )
           } else if (!is.null(item$url)) {
             artifact$uri <- item$url
@@ -302,6 +381,24 @@ OpenAIImageModel <- R6::R6Class(
       }
 
       finalize_image_artifacts(images, output_dir = output_dir, prefix = prefix)
+    },
+    # Try the classic endpoint first; on the "missing endpoint" 404 signal
+    # some OpenAI-compatible proxies emit, fall back to the Responses-API
+    # implementation.
+    classic_with_responses_fallback = function(params, classic_fn, fallback_fn,
+                                               label, endpoint) {
+      classic <- tryCatch(classic_fn(params), error = function(e) e)
+      if (!inherits(classic, "error")) {
+        return(classic)
+      }
+      if (self$looks_like_missing_classic_endpoint(classic)) {
+        message(
+          "OpenAI ", label, ": classic ", endpoint, " is unreachable on this endpoint. ",
+          "Falling back to /v1/responses with the `image_generation` tool."
+        )
+        return(fallback_fn(params))
+      }
+      stop(classic)
     }
   ),
   public = list(
@@ -341,24 +438,13 @@ OpenAIImageModel <- R6::R6Class(
       if (is.null(params$prompt) || !nzchar(params$prompt)) {
         rlang::abort("`prompt` must be a non-empty string.")
       }
-
-      classic <- tryCatch(
-        self$do_generate_image_classic(params),
-        error = function(e) e
+      private$classic_with_responses_fallback(
+        params,
+        classic_fn = self$do_generate_image_classic,
+        fallback_fn = self$do_generate_image_via_responses,
+        label = "image generation",
+        endpoint = "/v1/images/generations"
       )
-      if (!inherits(classic, "error")) {
-        return(classic)
-      }
-
-      if (self$looks_like_missing_classic_endpoint(classic)) {
-        message(
-          "OpenAI image generation: classic /v1/images/generations is unreachable on this endpoint. ",
-          "Falling back to /v1/responses with the `image_generation` tool."
-        )
-        return(self$do_generate_image_via_responses(params))
-      }
-
-      stop(classic)
     },
 
     #' @description Generate images via the classic `POST /v1/images/generations`
@@ -370,15 +456,9 @@ OpenAIImageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/images/generations")
       headers <- private$get_headers(include_content_type = TRUE)
       body <- private$build_generation_body(params)
-      response <- post_to_api(
-        url,
-        headers,
-        body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      response <- rlang::exec(
+        post_to_api, url, headers, body,
+        !!!private$resolve_timeouts(params)
       )
 
       GenerateImageResult$new(
@@ -401,31 +481,15 @@ OpenAIImageModel <- R6::R6Class(
     #' @return A GenerateImageResult object.
     do_generate_image_via_responses = function(params) {
       url <- api_endpoint_urls(private$config, "/responses")
-      # Force identity transfer-encoding: some OpenAI-compatible proxies
-      # advertise gzip but send a malformed Content-Encoding header on the
-      # /v1/responses route. With `Accept-Encoding: identity` the proxy
-      # streams uncompressed and httr2 parses cleanly.
-      headers <- c(
-        private$get_headers(include_content_type = TRUE),
-        list(`Accept-Encoding` = "identity")
-      )
-      body <- list(
+      headers <- private$responses_headers()
+      body <- private$attach_previous_response_id(list(
         model = self$model_id,
         input = params$prompt,
         tools = list(private$build_responses_tool_config(params))
-      )
-      if (private$use_server_state() && !is.null(private$last_response_id)) {
-        body$previous_response_id <- private$last_response_id
-      }
-      response <- post_to_api(
-        url,
-        headers,
-        body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      ))
+      response <- rlang::exec(
+        post_to_api, url, headers, body,
+        !!!private$resolve_timeouts(params)
       )
 
       # Record the conversation id even before parsing output, so a callback
@@ -435,41 +499,10 @@ OpenAIImageModel <- R6::R6Class(
         private$last_response_id <- response$id
       }
 
-      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
-      media_type <- switch(requested_format,
-        png = "image/png",
-        jpeg = "image/jpeg",
-        jpg = "image/jpeg",
-        webp = "image/webp",
-        "image/png"
-      )
-
-      images <- list()
-      for (item in response$output %||% list()) {
-        if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
-          images <- c(images, list(list(
-            bytes = base64enc::base64decode(item$result),
-            media_type = media_type,
-            revised_prompt = item$revised_prompt %||% NULL
-          )))
-        }
-      }
-
-      if (!length(images)) {
-        rlang::abort(c(
-          "Responses API returned no `image_generation_call` output.",
-          i = "The proxy accepted the request but produced no image; this is usually a model or prompt issue."
-        ))
-      }
-
-      GenerateImageResult$new(
-        images = finalize_image_artifacts(
-          images,
-          output_dir = params$output_dir %||% tempdir(),
-          prefix = "openai_image_responses"
-        ),
-        usage = response$usage %||% NULL,
-        raw_response = response
+      private$responses_image_result(
+        response, params,
+        prefix = "openai_image_responses",
+        empty_message = "Responses API returned no `image_generation_call` output."
       )
     },
 
@@ -525,24 +558,13 @@ OpenAIImageModel <- R6::R6Class(
       if (is.null(params$image)) {
         rlang::abort("`image` must be supplied for OpenAI image editing.")
       }
-
-      classic <- tryCatch(
-        self$do_edit_image_classic(params),
-        error = function(e) e
+      private$classic_with_responses_fallback(
+        params,
+        classic_fn = self$do_edit_image_classic,
+        fallback_fn = self$do_edit_image_via_responses,
+        label = "image edit",
+        endpoint = "/v1/images/edits"
       )
-      if (!inherits(classic, "error")) {
-        return(classic)
-      }
-
-      if (self$looks_like_missing_classic_endpoint(classic)) {
-        message(
-          "OpenAI image edit: classic /v1/images/edits is unreachable on this endpoint. ",
-          "Falling back to /v1/responses with the `image_generation` tool."
-        )
-        return(self$do_edit_image_via_responses(params))
-      }
-
-      stop(classic)
     },
 
     #' @description Edit images via the classic `POST /v1/images/edits`
@@ -554,15 +576,9 @@ OpenAIImageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/images/edits")
       headers <- private$get_headers(include_content_type = FALSE)
       body <- private$build_edit_body(params)
-      response <- post_multipart_to_api(
-        url,
-        headers,
-        body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      response <- rlang::exec(
+        post_multipart_to_api, url, headers, body,
+        !!!private$resolve_timeouts(params)
       )
 
       GenerateImageResult$new(
@@ -594,10 +610,7 @@ OpenAIImageModel <- R6::R6Class(
       }
 
       url <- api_endpoint_urls(private$config, "/responses")
-      headers <- c(
-        private$get_headers(include_content_type = TRUE),
-        list(`Accept-Encoding` = "identity")
-      )
+      headers <- private$responses_headers()
 
       tool_cfg <- private$build_responses_tool_config(params)
       partial_n <- as.integer(params$partial_images %||% 2)
@@ -608,24 +621,14 @@ OpenAIImageModel <- R6::R6Class(
         tool_cfg$partial_images <- partial_n
       }
 
-      body <- list(
+      body <- private$attach_previous_response_id(list(
         model = self$model_id,
         input = params$prompt,
         stream = TRUE,
         tools = list(tool_cfg)
-      )
-      if (private$use_server_state() && !is.null(private$last_response_id)) {
-        body$previous_response_id <- private$last_response_id
-      }
+      ))
 
-      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
-      media_type <- switch(requested_format,
-        png = "image/png",
-        jpeg = "image/jpeg",
-        jpg = "image/jpeg",
-        webp = "image/webp",
-        "image/png"
-      )
+      media_type <- private$image_media_type(params$output_format)
 
       state <- new.env(parent = emptyenv())
       state$partial_count <- 0L
@@ -633,15 +636,12 @@ OpenAIImageModel <- R6::R6Class(
       state$response_id <- NULL
       state$usage <- NULL
 
-      stream_responses_api(
+      rlang::exec(
+        stream_responses_api,
         url = url,
         headers = headers,
         body = body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds,
+        !!!private$resolve_timeouts(params),
         callback = function(event_type, data, done) {
           if (isTRUE(done)) return(invisible(NULL))
           if (is.null(event_type) || is.null(data)) return(invisible(NULL))
@@ -691,16 +691,9 @@ OpenAIImageModel <- R6::R6Class(
             if (is.null(state$response_id)) state$response_id <- data$response$id
             state$usage <- data$response$usage %||% NULL
             if (!length(state$final_images)) {
-              for (item in data$response$output %||% list()) {
-                if (identical(item$type %||% "", "image_generation_call") &&
-                    !is.null(item$result)) {
-                  state$final_images <- c(state$final_images, list(list(
-                    bytes = base64enc::base64decode(item$result),
-                    media_type = media_type,
-                    revised_prompt = item$revised_prompt %||% NULL
-                  )))
-                }
-              }
+              state$final_images <- private$collect_image_generation_calls(
+                data$response$output, media_type
+              )
             }
           }
 
@@ -745,36 +738,23 @@ OpenAIImageModel <- R6::R6Class(
     #' @return A GenerateImageResult object.
     do_edit_image_via_responses = function(params) {
       url <- api_endpoint_urls(private$config, "/responses")
-      headers <- c(
-        private$get_headers(include_content_type = TRUE),
-        list(`Accept-Encoding` = "identity")
-      )
+      headers <- private$responses_headers()
 
-      upload_dir <- params$output_dir %||% tempdir()
       image_inputs <- coerce_image_inputs(params$image)
       if (length(image_inputs) > 1) {
         rlang::warn(
           "Responses-API image edit accepts a single source image per turn; using only the first. Use the classic endpoint for multi-reference edits."
         )
       }
-      src_data_url <- normalize_image_input_to_url_like(image_inputs[[1]])
-      if (!grepl("^(data:|https?:)", src_data_url)) {
-        # normalize_image_input_to_url_like returns either a URL/data-URI or
-        # a bare base64 string — but for the Responses input_image block we
-        # always want a data URI. Wrap the bare path case.
-        src_data_url <- paste0("data:image/png;base64,", base64enc::base64encode(src_data_url))
-      }
+      src_data_url <- private$image_input_as_data_url(image_inputs[[1]])
 
       mask_data_url <- NULL
       if (!is.null(params$mask)) {
         mask_inputs <- coerce_image_inputs(params$mask, arg = "`mask`")
-        mask_data_url <- normalize_image_input_to_url_like(mask_inputs[[1]])
-        if (!grepl("^(data:|https?:)", mask_data_url)) {
-          mask_data_url <- paste0("data:image/png;base64,", base64enc::base64encode(mask_data_url))
-        }
+        mask_data_url <- private$image_input_as_data_url(mask_inputs[[1]])
       }
 
-      body <- list(
+      body <- private$attach_previous_response_id(list(
         model = self$model_id,
         input = list(list(
           role = "user",
@@ -783,61 +763,24 @@ OpenAIImageModel <- R6::R6Class(
             list(type = "input_image", image_url = src_data_url)
           )
         )),
-        tools = list(private$build_responses_edit_tool_config(params, mask_data_url))
-      )
-      if (private$use_server_state() && !is.null(private$last_response_id)) {
-        body$previous_response_id <- private$last_response_id
-      }
-      response <- post_to_api(
-        url,
-        headers,
-        body,
-        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
-        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
-        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
-        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
-        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+        tools = list(private$build_responses_tool_config(
+          params, action = "edit", mask_data_url = mask_data_url
+        ))
+      ))
+      response <- rlang::exec(
+        post_to_api, url, headers, body,
+        !!!private$resolve_timeouts(params)
       )
 
       if (!is.null(response$id)) {
         private$last_response_id <- response$id
       }
 
-      requested_format <- tolower(as.character(params$output_format %||% "png")[[1]])
-      media_type <- switch(requested_format,
-        png = "image/png",
-        jpeg = "image/jpeg",
-        jpg = "image/jpeg",
-        webp = "image/webp",
-        "image/png"
-      )
-
-      images <- list()
-      for (item in response$output %||% list()) {
-        if (identical(item$type %||% "", "image_generation_call") && !is.null(item$result)) {
-          images <- c(images, list(list(
-            bytes = base64enc::base64decode(item$result),
-            media_type = media_type,
-            revised_prompt = item$revised_prompt %||% NULL
-          )))
-        }
-      }
-
-      if (!length(images)) {
-        rlang::abort(c(
-          "Responses API returned no `image_generation_call` output for the edit request.",
-          i = "The proxy accepted the request but produced no edited image; this is usually a model or prompt issue."
-        ))
-      }
-
-      GenerateImageResult$new(
-        images = finalize_image_artifacts(
-          images,
-          output_dir = upload_dir,
-          prefix = "openai_edit_responses"
-        ),
-        usage = response$usage %||% NULL,
-        raw_response = response
+      private$responses_image_result(
+        response, params,
+        prefix = "openai_edit_responses",
+        empty_message = "Responses API returned no `image_generation_call` output for the edit request.",
+        what = "edited image"
       )
     }
   )
