@@ -202,6 +202,14 @@ AnthropicLanguageModel <- R6::R6Class(
         body$context_management <- context_management
       }
 
+      # Structured outputs. Anthropic's native JSON-schema constrained decoding
+      # lives in `output_config.format` (GA). A z_schema response_format used
+      # to fall through the extra-params passthrough into the body verbatim and
+      # 400 the request; convert it here, or inject the schema into the system
+      # prompt when the endpoint can't do native structured output.
+      structured <- private$apply_structured_output(body, params)
+      body <- structured$body
+
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- lapply(params$tools, function(t) {
           if (inherits(t, "Tool")) {
@@ -236,6 +244,7 @@ AnthropicLanguageModel <- R6::R6Class(
       handled_params <- c(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
         "system", "top_p", "stop_sequences", "context_management",
+        "response_format", "response_format_name",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -245,6 +254,40 @@ AnthropicLanguageModel <- R6::R6Class(
       }
 
       body[!sapply(body, is.null)]
+    },
+
+    # Translate a z_schema `response_format` into Anthropic structured output.
+    # Native path: body$output_config = {format: {type:"json_schema", schema}}
+    # (constrained decoding, GA). Fallback (config$disable_json_schema, for
+    # proxies without it): inject the schema into the system prompt and ask for
+    # JSON. Mirrors the OpenAI provider's process_response_format. Returns the
+    # updated body (system may be modified on the fallback path).
+    apply_structured_output = function(body, params) {
+      fmt <- params$response_format
+      if (is.null(fmt) || !inherits(fmt, "z_schema")) {
+        return(list(body = body))
+      }
+      schema_list <- schema_to_list(fmt)
+      if (!isTRUE(private$config$disable_json_schema)) {
+        body$output_config <- list(
+          format = list(type = "json_schema", schema = schema_list)
+        )
+      } else {
+        instruction <- paste(
+          "Return your output strictly as a JSON object adhering to this schema:\n",
+          schema_to_json(fmt)
+        )
+        body$system <- if (is.null(body$system)) {
+          instruction
+        } else if (is.character(body$system)) {
+          paste(body$system, "\n\n", instruction)
+        } else {
+          # System is already a content-block list (e.g. cache_control block):
+          # append an instruction block rather than corrupt it.
+          c(body$system, list(list(type = "text", text = instruction)))
+        }
+      }
+      list(body = body)
     }
   ),
   public = list(

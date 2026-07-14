@@ -439,3 +439,50 @@ test_that("Anthropic usage surfaces cache tokens for observability", {
   expect_null(u2$cache_read_input_tokens)
   expect_equal(u2$total_tokens, 120)
 })
+
+# --- X1: Anthropic structured outputs (z_schema response_format) --------------
+
+test_that("Anthropic converts a z_schema response_format to output_config.format", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  priv <- provider$language_model("claude-sonnet-5")$.__enclos_env__$private
+  schema <- z_object(name = z_string("the name"), age = z_number("the age"))
+
+  body <- priv$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), response_format = schema),
+    stream = FALSE
+  )
+  expect_equal(body$output_config$format$type, "json_schema")
+  expect_false(is.null(body$output_config$format$schema$properties$name))
+  # response_format must not leak into the body verbatim (used to 400).
+  expect_null(body$response_format)
+})
+
+test_that("Anthropic structured-output fallback injects the schema into the system prompt", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-5")
+  model$.__enclos_env__$private$config$disable_json_schema <- TRUE
+  schema <- z_object(city = z_string("city"))
+
+  body <- model$.__enclos_env__$private$build_messages_body(
+    list(
+      messages = list(
+        list(role = "system", content = "You help."),
+        list(role = "user", content = "hi")
+      ),
+      response_format = schema
+    ),
+    stream = FALSE
+  )
+  expect_null(body$output_config)
+  expect_match(body$system, "adhering to this schema")
+  expect_match(body$system, "You help.")
+})
+
+test_that("Anthropic leaves the body untouched when no response_format is given", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  priv <- provider$language_model("claude-sonnet-5")$.__enclos_env__$private
+  body <- priv$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi"))), stream = FALSE
+  )
+  expect_null(body$output_config)
+})
