@@ -271,3 +271,79 @@ test_that("Anthropic payload translates provider-neutral multimodal blocks", {
   expect_equal(captured_body$messages[[1]]$content[[2]]$source$type, "base64")
   expect_equal(captured_body$messages[[1]]$content[[2]]$source$media_type, "image/png")
 })
+
+# --- W3: shared Messages-API builder, stream/non-stream parity ---------------
+
+test_that("Anthropic stream and non-stream bodies agree modulo stream field", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-4-20250514")
+  params <- list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.3,
+    top_p = 0.9,
+    max_tokens = 128,
+    stop_sequences = c("END"),
+    seed = 42,
+    timeout_seconds = 5
+  )
+
+  gen <- model$.__enclos_env__$private$build_messages_body(params, stream = FALSE)
+  strm <- model$.__enclos_env__$private$build_messages_body(params, stream = TRUE)
+
+  expect_null(gen$stream)
+  expect_true(isTRUE(strm$stream))
+  drop_stream <- function(b) b[setdiff(names(b), "stream")]
+  expect_equal(drop_stream(gen), drop_stream(strm))
+
+  # Fields the stream path used to silently drop are now present.
+  expect_equal(strm$top_p, 0.9)
+  expect_equal(strm$stop_sequences, "END")
+  expect_equal(strm$seed, 42) # extra-params passthrough
+  expect_null(strm$timeout_seconds) # per-call timeouts stay out of the body
+})
+
+test_that("Anthropic thinking forces temperature 1.0 and passes through in both paths", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-4-20250514")
+  params <- list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.3,
+    thinking = list(type = "enabled", budget_tokens = 2048)
+  )
+
+  for (stream in c(FALSE, TRUE)) {
+    body <- model$.__enclos_env__$private$build_messages_body(params, stream = stream)
+    expect_equal(body$temperature, 1.0)
+    expect_equal(body$thinking$budget_tokens, 2048)
+  }
+})
+
+test_that("Anthropic streaming usage reports prompt tokens from message_start", {
+  agg <- SSEAggregator$new(function(text, done) invisible())
+  aisdk:::map_anthropic_chunk(
+    "message_start", list(message = list(usage = list(input_tokens = 850))), agg
+  )
+  aisdk:::map_anthropic_chunk(
+    "content_block_delta", list(delta = list(type = "text_delta", text = "hi")), agg
+  )
+  aisdk:::map_anthropic_chunk(
+    "message_delta",
+    list(delta = list(stop_reason = "end_turn"), usage = list(output_tokens = 200)), agg
+  )
+  res <- agg$build_result()
+  expect_equal(res$usage$prompt_tokens, 850)
+  expect_equal(res$usage$completion_tokens, 200)
+  expect_equal(res$usage$total_tokens, 1050)
+})
+
+test_that("agent runtime rebuilds Anthropic tool_use blocks from a streamed result", {
+  model <- safe_create_provider(create_anthropic, api_key = "FAKE")$language_model("claude-sonnet-4")
+  tcs <- list(list(id = "c1", name = "get_weather", arguments = list(city = "SF")))
+  # Stream result: raw_response is the last SSE event, not a content array.
+  res <- list(text = "", tool_calls = tcs, raw_response = list(type = "message_stop"))
+  msgs <- aisdk:::agent_runtime_append_provider_messages(list(), model, res, list())$messages
+  assistant <- msgs[[1]]
+  expect_equal(assistant$content[[1]]$type, "tool_use")
+  expect_equal(assistant$content[[1]]$id, "c1")
+  expect_equal(assistant$content[[1]]$name, "get_weather")
+})

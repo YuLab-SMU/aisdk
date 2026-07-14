@@ -512,3 +512,36 @@ test_that("Gemini provider can make real API calls", {
     expect_true(!is.null(result$text))
     expect_true(nchar(result$text) > 0)
 })
+
+# --- W3: Gemini streaming parallel tool calls + history round-trip -----------
+
+test_that("Gemini streaming keeps parallel tool calls in distinct slots", {
+  # Regression: the mock index used length(candidates)-1 (always 0), so two
+  # functionCall parts merged into one call with a concatenated name.
+  agg <- SSEAggregator$new(function(text, done) invisible())
+  mk <- function(name, args, idx) list(list(
+    index = idx,
+    id = sprintf("call_%s_%d", name, idx),
+    `function` = list(name = name, arguments = jsonlite::toJSON(args, auto_unbox = TRUE))
+  ))
+  agg$on_tool_call_delta(mk("get_weather", list(city = "SF"), 0L))
+  agg$on_tool_call_delta(mk("get_time", list(tz = "UTC"), 1L))
+  res <- agg$build_result()
+
+  expect_length(res$tool_calls, 2)
+  expect_setequal(vapply(res$tool_calls, function(t) t$name, character(1)),
+                  c("get_weather", "get_time"))
+})
+
+test_that("agent runtime attaches tool_calls for a Gemini assistant turn", {
+  # Regression: history_format "gemini" had no runtime branch, so the model's
+  # functionCall turn was dropped and the next turn 400'd.
+  model <- safe_create_provider(create_gemini, api_key = "FAKE")$language_model("gemini-2.5-flash")
+  tcs <- list(list(id = "c1", name = "get_weather", arguments = list(city = "SF")))
+  res <- list(text = "", tool_calls = tcs, raw_response = NULL)
+  msgs <- aisdk:::agent_runtime_append_provider_messages(list(), model, res, list())$messages
+  assistant <- msgs[[1]]
+  expect_length(assistant$tool_calls, 1)
+  expect_equal(assistant$tool_calls[[1]]$name, "get_weather")
+  expect_null(assistant$content) # pure tool-call turn: no empty text part
+})

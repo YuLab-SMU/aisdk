@@ -183,7 +183,12 @@ Store finish reason.
 \if{html}{\out{<a id="method-SSEAggregator-on_usage"></a>}}
 \if{latex}{\out{\hypertarget{method-SSEAggregator-on_usage}{}}}
 \subsection{Method \code{on_usage()}}{
-Store usage information.
+Merge usage information across events.
+Providers report usage in pieces (Anthropic sends \code{input_tokens} in
+\code{message_start} and \code{output_tokens} in \code{message_delta}), so a plain
+last-write-wins would let a later \code{prompt_tokens = 0} clobber the real
+prompt count. Per numeric field keep the larger value (token counts
+only grow), then recompute the total from prompt + completion.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$on_usage(usage)}\if{html}{\out{</div>}}
 }

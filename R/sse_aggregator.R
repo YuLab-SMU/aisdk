@@ -165,12 +165,34 @@ SSEAggregator <- R6::R6Class(
             }
         },
 
-        #' @description Store usage information.
+        #' @description Merge usage information across events.
+        #' Providers report usage in pieces (Anthropic sends `input_tokens` in
+        #' `message_start` and `output_tokens` in `message_delta`), so a plain
+        #' last-write-wins would let a later `prompt_tokens = 0` clobber the real
+        #' prompt count. Per numeric field keep the larger value (token counts
+        #' only grow), then recompute the total from prompt + completion.
         #' @param usage Usage list.
         on_usage = function(usage) {
-            if (!is.null(usage)) {
-                private$full_usage <- usage
+            if (is.null(usage)) {
+                return(invisible())
             }
+            prev <- private$full_usage %||% list()
+            merged <- prev
+            for (nm in union(names(prev), names(usage))) {
+                incoming <- usage[[nm]]
+                existing <- prev[[nm]]
+                merged[[nm]] <- if (is.null(incoming)) {
+                    existing
+                } else if (is.numeric(incoming) && is.numeric(existing)) {
+                    max(incoming, existing)
+                } else {
+                    incoming
+                }
+            }
+            if (!is.null(merged$prompt_tokens) && !is.null(merged$completion_tokens)) {
+                merged$total_tokens <- merged$prompt_tokens + merged$completion_tokens
+            }
+            private$full_usage <- merged
         },
 
         #' @description Store last raw response for diagnostics.
@@ -515,7 +537,13 @@ map_openai_chunk <- function(data, done, agg) {
 map_anthropic_chunk <- function(event_type, event_data, agg) {
     agg$on_raw_response(event_data)
 
-    if (event_type == "content_block_delta") {
+    if (event_type == "message_start") {
+        # Prompt tokens are reported here (input_tokens), not in message_delta.
+        usage <- event_data$message$usage
+        if (!is.null(usage$input_tokens)) {
+            agg$on_usage(list(prompt_tokens = usage$input_tokens))
+        }
+    } else if (event_type == "content_block_delta") {
         delta <- event_data$delta
         if (!is.null(delta)) {
             if (delta$type == "text_delta" && !is.null(delta$text)) {
@@ -546,11 +574,14 @@ map_anthropic_chunk <- function(event_type, event_data, agg) {
             agg$on_finish_reason(event_data$delta$stop_reason)
         }
         if (!is.null(event_data$usage)) {
-            agg$on_usage(list(
-                prompt_tokens = 0,
-                completion_tokens = event_data$usage$output_tokens,
-                total_tokens = event_data$usage$output_tokens
-            ))
+            # Report only what this event carries; the prompt count from
+            # message_start is preserved by on_usage's field merge. Newer APIs
+            # also echo input_tokens here — forward it when present.
+            delta_usage <- list(completion_tokens = event_data$usage$output_tokens)
+            if (!is.null(event_data$usage$input_tokens)) {
+                delta_usage$prompt_tokens <- event_data$usage$input_tokens
+            }
+            agg$on_usage(delta_usage)
         }
     } else if (event_type == "message_stop") {
         agg$on_done()

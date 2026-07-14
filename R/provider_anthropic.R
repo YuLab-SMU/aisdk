@@ -118,6 +118,75 @@ AnthropicLanguageModel <- R6::R6Class(
         system = system_prompt,
         messages = formatted
       )
+    },
+
+    # Shared Messages-API body builder for the streaming and non-streaming
+    # paths (mirrors the OpenAI provider's build_chat_body). Previously the two
+    # paths were hand-maintained and had drifted: the stream path silently
+    # dropped top_p, stop_sequences, and the extra-params passthrough (which is
+    # how `thinking`, `tool_choice`, etc. reach the body).
+    build_messages_body = function(params, stream = FALSE) {
+      formatted <- private$format_messages(params$messages)
+
+      body <- list(
+        model = self$model_id,
+        max_tokens = params$max_tokens %||% 4096 # Anthropic requires max_tokens
+      )
+      if (isTRUE(stream)) {
+        body$stream <- TRUE
+      }
+      if (!is.null(formatted$system)) {
+        body$system <- formatted$system
+      }
+      body$messages <- formatted$messages
+
+      # Thinking models require temperature = 1.0. Thinking is enabled via the
+      # explicit param or by a "-think" model name (for proxies).
+      is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
+      if (is_thinking) {
+        if (!isTRUE(stream) && !is.null(params$temperature) && params$temperature != 1.0 && interactive()) {
+          cli::cli_alert_info("Anthropic thinking models require temperature = 1.0. Overriding {params$temperature}.")
+        }
+        body$temperature <- 1.0
+      } else if (!is.null(params$temperature)) {
+        body$temperature <- params$temperature
+      }
+
+      if (!is.null(params$top_p)) {
+        body$top_p <- params$top_p
+      }
+      if (!is.null(params$stop_sequences)) {
+        body$stop_sequences <- params$stop_sequences
+      }
+
+      if (!is.null(params$tools) && length(params$tools) > 0) {
+        body$tools <- lapply(params$tools, function(t) {
+          if (inherits(t, "Tool")) {
+            tool_api_fmt <- t$to_api_format("anthropic")
+            if (!is.null(t$meta) && !is.null(t$meta$cache_control)) {
+              tool_api_fmt$cache_control <- t$meta$cache_control
+            }
+            tool_api_fmt
+          } else {
+            t # Assume already in correct format
+          }
+        })
+      }
+
+      # Pass through extra params (thinking, tool_choice, ...). Sampling params
+      # never appear here: they are in handled_params.
+      handled_params <- c(
+        "messages", "temperature", "max_tokens", "tools", "stream", "model",
+        "system", "top_p", "stop_sequences",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
+      extra_params <- params[setdiff(names(params), handled_params)]
+      if (length(extra_params) > 0) {
+        body <- utils::modifyList(body, extra_params)
+      }
+
+      body[!sapply(body, is.null)]
     }
   ),
   public = list(
@@ -147,72 +216,7 @@ AnthropicLanguageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/messages")
       headers <- private$get_headers()
 
-      # Format messages for Anthropic API
-      formatted <- private$format_messages(params$messages)
-
-      body <- list(
-        model = self$model_id,
-        max_tokens = params$max_tokens %||% 4096 # Anthropic requires max_tokens
-      )
-
-      # Add system prompt if present
-      if (!is.null(formatted$system)) {
-        body$system <- formatted$system
-      }
-
-      body$messages <- formatted$messages
-
-      # Force temperature = 1.0 for thinking models (Anthropic requirement)
-      # Thinking can be enabled via explicit parameter or detected by model name (for proxies)
-      is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
-
-      if (is_thinking) {
-        if (!is.null(params$temperature) && params$temperature != 1.0) {
-          if (interactive()) {
-            cli::cli_alert_info("Anthropic thinking models require temperature = 1.0. Overriding {params$temperature}.")
-          }
-        }
-        body$temperature <- 1.0
-      } else if (!is.null(params$temperature)) {
-        body$temperature <- params$temperature
-      }
-
-      if (!is.null(params$top_p)) {
-        body$top_p <- params$top_p
-      }
-      if (!is.null(params$stop_sequences)) {
-        body$stop_sequences <- params$stop_sequences
-      }
-
-      # Add tools if provided (Anthropic format)
-      if (!is.null(params$tools) && length(params$tools) > 0) {
-        body$tools <- lapply(params$tools, function(t) {
-          if (inherits(t, "Tool")) {
-            tool_api_fmt <- t$to_api_format("anthropic")
-            if (!is.null(t$meta) && !is.null(t$meta$cache_control)) {
-              tool_api_fmt$cache_control <- t$meta$cache_control
-            }
-            tool_api_fmt
-          } else {
-            t # Assume already in correct format
-          }
-        })
-      }
-
-      # NEW: Pass through any extra parameters
-      handled_params <- c(
-        "messages", "temperature", "max_tokens", "tools", "stream", "model",
-        "system", "top_p", "stop_sequences",
-        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
-        "connect_timeout_seconds", "idle_timeout_seconds"
-      )
-      extra_params <- params[setdiff(names(params), handled_params)]
-      if (length(extra_params) > 0) {
-        body <- utils::modifyList(body, extra_params)
-      }
-
-      # Remove NULL entries
-      body <- body[!sapply(body, is.null)]
+      body <- private$build_messages_body(params, stream = FALSE)
 
       response <- post_to_api(
         url,
@@ -267,46 +271,7 @@ AnthropicLanguageModel <- R6::R6Class(
       url <- api_endpoint_urls(private$config, "/messages")
       headers <- private$get_headers()
 
-      # Format messages for Anthropic API
-      formatted <- private$format_messages(params$messages)
-
-      body <- list(
-        model = self$model_id,
-        max_tokens = params$max_tokens %||% 4096,
-        stream = TRUE
-      )
-
-      # Add system prompt if present
-      if (!is.null(formatted$system)) {
-        body$system <- formatted$system
-      }
-
-      body$messages <- formatted$messages
-
-      # Optional parameters
-      is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
-      if (is_thinking) {
-        body$temperature <- 1.0
-      } else if (!is.null(params$temperature)) {
-        body$temperature <- params$temperature
-      }
-
-      # Add tools if provided (Anthropic format)
-      if (!is.null(params$tools) && length(params$tools) > 0) {
-        body$tools <- lapply(params$tools, function(t) {
-          if (inherits(t, "Tool")) {
-            tool_api_fmt <- t$to_api_format("anthropic")
-            if (!is.null(t$meta) && !is.null(t$meta$cache_control)) {
-              tool_api_fmt$cache_control <- t$meta$cache_control
-            }
-            tool_api_fmt
-          } else {
-            t # Assume already in correct format
-          }
-        })
-      }
-
-      body <- body[!sapply(body, is.null)]
+      body <- private$build_messages_body(params, stream = TRUE)
 
       # Anthropic uses different SSE event format
       stream_anthropic(

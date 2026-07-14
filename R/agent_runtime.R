@@ -630,10 +630,48 @@ agent_runtime_append_provider_messages <- function(messages,
       )
     })
   } else if (identical(history_format, "anthropic")) {
-    assistant_message$content <- if (isTRUE(has_tool_calls)) {
-      agent_runtime_anthropic_content_without_text(result$raw_response$content)
+    raw_content <- result$raw_response$content
+    if (is.list(raw_content) && length(raw_content) > 0) {
+      # Non-streaming: the full response object carries content blocks.
+      assistant_message$content <- if (isTRUE(has_tool_calls)) {
+        agent_runtime_anthropic_content_without_text(raw_content)
+      } else {
+        raw_content
+      }
     } else {
-      result$raw_response$content
+      # Streaming: raw_response is the last SSE event (message_stop) with no
+      # content, so the tool_use blocks were dropped and the next turn's
+      # tool_result had no matching tool_use (Anthropic 400). Rebuild the
+      # content blocks from the aggregated text + tool calls.
+      blocks <- list()
+      if (!isTRUE(has_tool_calls) && nzchar(result$text %||% "")) {
+        blocks <- c(blocks, list(list(type = "text", text = result$text)))
+      }
+      for (tc in result$tool_calls %||% list()) {
+        blocks <- c(blocks, list(list(
+          type = "tool_use",
+          id = tc$id,
+          name = tc$name,
+          input = if (is.character(tc$arguments)) {
+            parse_tool_arguments(tc$arguments, tool_name = tc$name)
+          } else {
+            tc$arguments
+          }
+        )))
+      }
+      assistant_message$content <- blocks
+    }
+  } else if (identical(history_format, "gemini")) {
+    # Gemini's format_messages rebuilds functionCall parts from
+    # `msg$tool_calls` (name + arguments); without this branch the model's
+    # tool-call turn was dropped, so the next turn sent a functionResponse
+    # with no preceding functionCall and Gemini 400s. Use NULL content for a
+    # pure tool-call turn so no empty text part is emitted alongside it.
+    assistant_message$tool_calls <- lapply(result$tool_calls, function(tc) {
+      list(name = tc$name, arguments = tc$arguments)
+    })
+    if (isTRUE(has_tool_calls)) {
+      assistant_message$content <- NULL
     }
   }
 

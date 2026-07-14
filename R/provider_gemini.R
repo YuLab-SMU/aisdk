@@ -309,6 +309,13 @@ GeminiLanguageModel <- R6::R6Class(
             payload <- self$build_payload_internal(params, stream = TRUE)
             agg <- SSEAggregator$new(callback)
 
+            # Stream-scoped counter for distinct tool-call slots. Gemini sends
+            # each functionCall whole (not chunked), possibly several in one
+            # response (parallel calls); each must land in its own aggregator
+            # index. Using length(candidates)-1 (always 0) merged them into one.
+            tool_state <- new.env(parent = emptyenv())
+            tool_state$next_index <- 0L
+
             # Gemini returns SSE events where `data` contains the JSON representation of GenerateContentResponse
             stream_from_api(
                 payload$url,
@@ -333,9 +340,11 @@ GeminiLanguageModel <- R6::R6Class(
                                 } else if (!is.null(part$functionCall)) {
                                     # Gemini doesn't chunk function calls the same way, it just sends the whole call
                                     # Mock an OpenAI tool call format to reuse SSEAggregator's tool tracking
+                                    idx <- tool_state$next_index
+                                    tool_state$next_index <- idx + 1L
                                     tc_mock <- list(list(
-                                        index = length(data$candidates) - 1,
-                                        id = paste0("call_", part$functionCall$name, "_", sample(10000:99999, 1)),
+                                        index = idx,
+                                        id = sprintf("call_%s_%d", part$functionCall$name, idx),
                                         `function` = list(
                                             name = part$functionCall$name,
                                             arguments = jsonlite::toJSON(part$functionCall$args, auto_unbox = TRUE)
