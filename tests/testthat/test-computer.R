@@ -382,20 +382,26 @@ test_that("strict write_file blocks '..' escape and sibling-prefix paths", {
 
 test_that("strict read_file is confined symmetrically with writes", {
   skip_on_cran()
-  base <- file.path(tempfile("w1-read-"), "wd")
+  root <- tempfile("w1-read-")
+  base <- file.path(root, "wd")
   dir.create(base, recursive = TRUE)
-  on.exit(unlink(dirname(base), recursive = TRUE), add = TRUE)
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
   writeLines("inside", file.path(base, "in.txt"))
+  # A real file OUTSIDE the working dir (portable; avoids OS-specific /etc paths).
+  outside_file <- file.path(root, "outside.txt")
+  writeLines("secret", outside_file)
 
   strict <- Computer$new(working_dir = base, sandbox_mode = "strict")
-  outside <- strict$read_file("/etc/hosts")
-  expect_true(outside$error)
-  expect_match(outside$message, "Sandbox violation")
+  blocked <- strict$read_file(outside_file)
+  expect_true(blocked$error)
+  expect_match(blocked$message, "Sandbox violation")
   expect_false(strict$read_file("in.txt")$error)
 
-  # permissive keeps unrestricted reads.
+  # permissive keeps unrestricted reads of the same outside file.
   permissive <- Computer$new(working_dir = base, sandbox_mode = "permissive")
-  expect_false(permissive$read_file("/etc/hosts")$error)
+  allowed <- permissive$read_file(outside_file)
+  expect_false(allowed$error)
+  expect_equal(allowed$content, "secret")
 })
 
 test_that("strict bash/execute_r_code require approval, permissive does not", {
@@ -422,10 +428,12 @@ test_that("strict bash/execute_r_code require approval, permissive does not", {
       TRUE
     }
   )
-  expect_false(allow$bash("echo hi")$error)
+  # Positive proof the gate opens uses execute_r_code (portable; no shell dep).
   expect_equal(allow$execute_r_code("1 + 1")$result, 2)
+  allow$bash("echo hi") # records "bash" approval; shell output not asserted
   expect_true(allow$bash("rm -rf /")$error) # blocklist beats approval
   expect_true("bash" %in% unlist(seen))
+  expect_true("execute_r_code" %in% unlist(seen))
 
   # permissive never gates.
   expect_false(Computer$new(working_dir = base, sandbox_mode = "permissive")$bash("echo hi")$error)
