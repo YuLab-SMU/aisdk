@@ -1708,6 +1708,108 @@ test_that("Chat Completions keeps sampling params for non-reasoning models", {
   expect_equal(payload$body$top_p, 0.5)
 })
 
+# --- Shared chat body builder: stream/non-stream parity ---------------------
+# build_payload() and build_stream_payload() delegate to one private
+# build_chat_body(); these tests lock in that the two surfaces only differ
+# in the stream-specific fields.
+
+test_that("chat stream and non-stream payload bodies agree modulo stream fields", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  model <- provider$language_model("gpt-4o")
+
+  get_time <- tool(
+    name = "get_time",
+    description = "Get the current time",
+    execute = function(timezone = "UTC") timezone
+  )
+  params <- list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.2,
+    top_p = 0.9,
+    max_tokens = 128,
+    seed = 42,
+    tools = list(get_time),
+    timeout_seconds = 5
+  )
+
+  body <- model$build_payload(params)$body
+  stream_body <- model$build_stream_payload(params)$body
+
+  expect_false(isTRUE(body$stream))
+  expect_true(isTRUE(stream_body$stream))
+  expect_null(body$stream_options)
+  expect_equal(stream_body$stream_options$include_usage, TRUE)
+
+  drop_stream_fields <- function(b) b[setdiff(names(b), c("stream", "stream_options"))]
+  expect_equal(drop_stream_fields(body), drop_stream_fields(stream_body))
+
+  # Extra params pass through; per-call timeouts stay out of the body.
+  expect_equal(body$seed, 42)
+  expect_null(body$timeout_seconds)
+  expect_equal(body$tools[[1]][["function"]]$name, "get_time")
+})
+
+test_that("chat payload maps max_tokens by reasoning capability", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  msgs <- list(list(role = "user", content = "hi"))
+
+  chat <- provider$language_model("gpt-4o")
+  body <- chat$build_payload(list(messages = msgs, max_tokens = 100))$body
+  expect_equal(body$max_tokens, 100)
+  expect_null(body$max_completion_tokens)
+
+  reasoning <- provider$language_model("gpt-5")
+  body <- reasoning$build_payload(list(messages = msgs, max_tokens = 100))$body
+  expect_null(body$max_tokens)
+  expect_equal(body$max_completion_tokens, 100)
+
+  # An explicit max_completion_tokens wins over max_tokens on any model.
+  body <- chat$build_payload(list(
+    messages = msgs, max_tokens = 100, max_completion_tokens = 50
+  ))$body
+  expect_null(body$max_tokens)
+  expect_equal(body$max_completion_tokens, 50)
+})
+
+test_that("chat stream payload drops sampling params for reasoning models too", {
+  provider <- safe_create_provider(create_openai, api_key = "sk-test")
+  model <- provider$language_model("gpt-5")
+
+  body <- model$build_stream_payload(list(
+    messages = list(list(role = "user", content = "hi")),
+    temperature = 0.7,
+    top_p = 0.9,
+    presence_penalty = 0.1,
+    frequency_penalty = 0.1
+  ))$body
+
+  expect_null(body$temperature)
+  expect_null(body$top_p)
+  expect_null(body$presence_penalty)
+  expect_null(body$frequency_penalty)
+})
+
+test_that("stream_options respects disable_stream_options and caller overrides", {
+  msgs <- list(list(role = "user", content = "hi"))
+
+  provider <- safe_create_provider(
+    create_openai,
+    api_key = "sk-test",
+    disable_stream_options = TRUE
+  )
+  body <- provider$language_model("gpt-4o")$build_stream_payload(
+    list(messages = msgs)
+  )$body
+  expect_null(body$stream_options)
+
+  provider2 <- safe_create_provider(create_openai, api_key = "sk-test")
+  body2 <- provider2$language_model("gpt-4o")$build_stream_payload(list(
+    messages = msgs,
+    stream_options = list(include_usage = FALSE)
+  ))$body
+  expect_equal(body2$stream_options$include_usage, FALSE)
+})
+
 test_that("Responses API auto-detects reasoning and drops temperature", {
   provider <- safe_create_provider(create_openai, api_key = "sk-test")
   m_reason <- provider$responses_model("gpt-5.4-mini")

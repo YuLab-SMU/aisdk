@@ -88,6 +88,89 @@ OpenAILanguageModel <- R6::R6Class(
         }
         translated
       })
+    },
+
+    # Reasoning models (o-series, gpt-5) reject sampling params with HTTP 400
+    # ("Unsupported value: 'temperature' does not support X with this model"),
+    # so they are silently skipped for those models.
+    # See: https://platform.openai.com/docs/guides/reasoning
+    add_chat_sampling_params = function(body, params, is_reasoning) {
+      for (nm in c("temperature", "top_p", "presence_penalty", "frequency_penalty")) {
+        if (!is.null(params[[nm]]) && !is_reasoning) {
+          body[[nm]] <- params[[nm]]
+        }
+      }
+      body
+    },
+
+    # Smart token limit mapping (capability-driven): an explicit
+    # `max_completion_tokens` always wins; the unified `max_tokens` becomes
+    # `max_completion_tokens` for reasoning models (which reject `max_tokens`)
+    # and stays `max_tokens` otherwise.
+    add_chat_token_limit = function(body, params, is_reasoning) {
+      if (!is.null(params[["max_completion_tokens"]])) {
+        body$max_completion_tokens <- params[["max_completion_tokens"]]
+      } else if (!is.null(params[["max_tokens"]])) {
+        if (is_reasoning) {
+          body$max_completion_tokens <- params[["max_tokens"]]
+        } else {
+          body$max_tokens <- params[["max_tokens"]]
+        }
+      }
+      body
+    },
+
+    format_chat_tools = function(tools) {
+      lapply(unname(tools), function(t) {
+        if (inherits(t, "Tool")) {
+          t$to_api_format("openai")
+        } else {
+          t
+        }
+      })
+    },
+
+    # Pass through params not consumed above (e.g. seed, logprobs, the
+    # normalized response_format) so provider-specific options reach the API
+    # unchanged. Sampling params never appear here: they are in handled_params.
+    merge_chat_extra_params = function(body, params) {
+      handled_params <- c(
+        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
+        "max_tokens", "max_completion_tokens",
+        "tools", "stream", "model",
+        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
+        "connect_timeout_seconds", "idle_timeout_seconds"
+      )
+      extra_params <- params[setdiff(names(params), handled_params)]
+      if (length(extra_params) > 0) {
+        body <- utils::modifyList(body, extra_params)
+      }
+      body
+    },
+
+    # Shared body builder for the streaming and non-streaming chat payloads.
+    build_chat_body = function(params, stream = FALSE) {
+      body <- list(
+        model = self$model_id,
+        messages = private$translate_chat_messages(params$messages),
+        stream = stream
+      )
+      is_reasoning <- self$has_capability("is_reasoning_model")
+      body <- private$add_chat_sampling_params(body, params, is_reasoning)
+      body <- private$add_chat_token_limit(body, params, is_reasoning)
+      if (!is.null(params$tools) && length(params$tools) > 0) {
+        body$tools <- private$format_chat_tools(params$tools)
+      }
+      body <- private$merge_chat_extra_params(body, params)
+      # Added after the extra-params merge so a caller-supplied stream_options
+      # wins over the default; some providers reject stream_options entirely
+      # (config$disable_stream_options).
+      if (isTRUE(stream) &&
+          is.null(body[["stream_options"]]) &&
+          !isTRUE(private$config$disable_stream_options)) {
+        body$stream_options <- list(include_usage = TRUE)
+      }
+      body[!sapply(body, is.null)]
     }
   ),
   public = list(
@@ -120,79 +203,11 @@ OpenAILanguageModel <- R6::R6Class(
     #' @return A list with url, headers, and body.
     build_payload = function(params) {
       params <- private$process_response_format(params)
-      url <- api_endpoint_urls(private$config, "/chat/completions")
-      headers <- private$get_headers()
-
-      body <- list(
-        model = self$model_id,
-        messages = private$translate_chat_messages(params$messages),
-        stream = FALSE
+      list(
+        url = api_endpoint_urls(private$config, "/chat/completions"),
+        headers = private$get_headers(),
+        body = private$build_chat_body(params, stream = FALSE)
       )
-
-      # Reasoning models (o-series, gpt-5) reject sampling params with HTTP 400
-      # ("Unsupported value: 'temperature' does not support X with this model").
-      # See: https://platform.openai.com/docs/guides/reasoning
-      is_reasoning <- self$has_capability("is_reasoning_model")
-      if (!is.null(params$temperature) && !is_reasoning) {
-        body$temperature <- params$temperature
-      }
-      if (!is.null(params$top_p) && !is_reasoning) {
-        body$top_p <- params$top_p
-      }
-      if (!is.null(params$presence_penalty) && !is_reasoning) {
-        body$presence_penalty <- params$presence_penalty
-      }
-      if (!is.null(params$frequency_penalty) && !is_reasoning) {
-        body$frequency_penalty <- params$frequency_penalty
-      }
-
-      # ==========================================================
-      # Smart Token Limit Mapping (capability-driven)
-      # ==========================================================
-      explicit_completion_tokens <- params$max_completion_tokens
-
-      if (!is.null(explicit_completion_tokens)) {
-        body$max_completion_tokens <- explicit_completion_tokens
-      } else if (!is.null(params$max_tokens)) {
-        if (is_reasoning) {
-          body$max_completion_tokens <- params$max_tokens
-        } else {
-          body$max_tokens <- params$max_tokens
-        }
-      }
-
-      # Add tools if provided
-      if (!is.null(params$tools) && length(params$tools) > 0) {
-        tools_list <- unname(params$tools)
-        body$tools <- lapply(tools_list, function(t) {
-          if (inherits(t, "Tool")) {
-            t$to_api_format("openai")
-          } else {
-            t
-          }
-        })
-      }
-
-      # Pass through any extra parameters
-      handled_params <- c(
-        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
-        "max_tokens", "max_completion_tokens",
-        "tools", "stream", "model",
-        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
-        "connect_timeout_seconds", "idle_timeout_seconds"
-      )
-      extra_params <- params[setdiff(names(params), handled_params)]
-      if (length(extra_params) > 0) {
-        if (is_reasoning) {
-          extra_params <- extra_params[setdiff(names(extra_params),
-            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
-        }
-        body <- utils::modifyList(body, extra_params)
-      }
-
-      body <- body[!sapply(body, is.null)]
-
-      list(url = url, headers = headers, body = body)
     },
 
     #' @description Execute the API request.
@@ -275,79 +290,11 @@ OpenAILanguageModel <- R6::R6Class(
     #' @return A list with url, headers, and body.
     build_stream_payload = function(params) {
       params <- private$process_response_format(params)
-      url <- api_endpoint_urls(private$config, "/chat/completions")
-      headers <- private$get_headers()
-
-      body <- list(
-        model = self$model_id,
-        messages = private$translate_chat_messages(params$messages),
-        stream = TRUE
+      list(
+        url = api_endpoint_urls(private$config, "/chat/completions"),
+        headers = private$get_headers(),
+        body = private$build_chat_body(params, stream = TRUE)
       )
-
-      # Reasoning models (o-series, gpt-5) reject sampling params — silently skip.
-      is_reasoning <- self$has_capability("is_reasoning_model")
-      if (!is.null(params$temperature) && !is_reasoning) {
-        body$temperature <- params$temperature
-      }
-      if (!is.null(params$top_p) && !is_reasoning) {
-        body$top_p <- params$top_p
-      }
-      if (!is.null(params$presence_penalty) && !is_reasoning) {
-        body$presence_penalty <- params$presence_penalty
-      }
-      if (!is.null(params$frequency_penalty) && !is_reasoning) {
-        body$frequency_penalty <- params$frequency_penalty
-      }
-
-      # Smart Token Limit Mapping (capability-driven)
-      explicit_completion_tokens <- params$max_completion_tokens
-      if (!is.null(explicit_completion_tokens)) {
-        body$max_completion_tokens <- explicit_completion_tokens
-      } else if (!is.null(params$max_tokens)) {
-        if (is_reasoning) {
-          body$max_completion_tokens <- params$max_tokens
-        } else {
-          body$max_tokens <- params$max_tokens
-        }
-      }
-
-      # Pass through any extra parameters
-      handled_params <- c(
-        "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
-        "max_tokens", "max_completion_tokens",
-        "tools", "stream", "model",
-        "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
-        "connect_timeout_seconds", "idle_timeout_seconds"
-      )
-      extra_params <- params[setdiff(names(params), handled_params)]
-      if (length(extra_params) > 0) {
-        if (is_reasoning) {
-          extra_params <- extra_params[setdiff(names(extra_params),
-            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
-        }
-        body <- utils::modifyList(body, extra_params)
-      }
-
-      # Add tools if provided
-      if (!is.null(params$tools) && length(params$tools) > 0) {
-        tools_list <- unname(params$tools)
-        body$tools <- lapply(tools_list, function(t) {
-          if (inherits(t, "Tool")) {
-            t$to_api_format("openai")
-          } else {
-            t
-          }
-        })
-      }
-
-      # Add stream_options only if not disabled
-      if (is.null(body$stream_options) && !isTRUE(private$config$disable_stream_options)) {
-        body$stream_options <- list(include_usage = TRUE)
-      }
-
-      body <- body[!sapply(body, is.null)]
-
-      list(url = url, headers = headers, body = body)
     },
 
     #' @description Generate text (streaming).
