@@ -36,8 +36,11 @@ The selected model id (character scalar), or \code{NULL} if cancelled.
 \description{
 Presents saved provider setups (from \code{.Renviron}, \code{aisdk.yaml}, and
 \code{.Rprofile}) and the guided new-setup flow, returning the chosen model
-id. This backs the console \verb{/model} command and the first-run experience;
-front ends can supply their own \code{prompt_hooks} to reuse the flow. Part of
-the package-author extension API.
+id. The guided flow only asks for the base URL, API key, model, and where
+to save; for custom endpoints the wire format and capability flags are
+detected automatically with tiny probe requests (see the \code{detect_endpoint}
+hook). This backs the console \verb{/model} command and the first-run
+experience; front ends can supply their own \code{prompt_hooks} to reuse the
+flow. Part of the package-author extension API.
 }
 \keyword{internal}

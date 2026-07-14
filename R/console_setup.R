@@ -697,9 +697,11 @@ format_console_profile_choice <- function(profile) {
 #' Default Prompt Hooks for the Model Setup Flow
 #'
 #' Returns the default set of injectable hooks (menu, input, save,
-#' apply-profile, remember-model, model-choices) used by the interactive
-#' provider/model setup. Front ends can override individual hooks to embed
-#' the setup flow in their own UI. Part of the package-author extension API.
+#' apply-profile, remember-model, model-choices, detect-endpoint) used by the
+#' interactive provider/model setup. Front ends can override individual hooks
+#' to embed the setup flow in their own UI; `detect_endpoint` backs the
+#' automatic wire-format/capability detection for custom endpoints and can be
+#' replaced to avoid network probes. Part of the package-author extension API.
 #'
 #' @return A named list of hook functions.
 #' @keywords internal
@@ -711,7 +713,8 @@ default_console_prompt_hooks <- function() {
     save = update_renviron,
     apply_profile = apply_console_profile,
     remember_model = remember_console_default_model,
-    model_choices = console_model_choices_for_provider
+    model_choices = console_model_choices_for_provider,
+    detect_endpoint = detect_console_endpoint_profile
   )
 }
 
@@ -739,222 +742,321 @@ resolve_console_profile_provider_spec <- function(profile) {
 }
 
 #' @keywords internal
-choose_console_base_url <- function(spec, menu_fn, input_fn, existing_base_url = NULL) {
+choose_console_base_url <- function(spec, input_fn, existing_base_url = NULL) {
   existing_base_url <- existing_base_url %||% ""
-  has_default <- nzchar(spec$default_base_url %||% "")
+  default_url <- if (nzchar(existing_base_url)) existing_base_url else spec$default_base_url %||% ""
 
-  if (!has_default && !nzchar(existing_base_url)) {
-    base_url <- input_fn("Base URL")
-    if (is.null(base_url) || !nzchar(base_url)) {
-      return(NULL)
-    }
-    return(base_url)
+  if (nzchar(default_url)) {
+    return(input_fn("Base URL", default = default_url) %||% default_url)
   }
 
-  if (nzchar(existing_base_url)) {
-    selection <- menu_fn(
-      sprintf("%s base URL", spec$label),
-      c(
-        "Keep current",
-        "Use default",
-        "Custom URL"
-      )
-    )
-    if (is.null(selection)) {
-      return(NULL)
-    }
-    if (identical(selection, 1L)) {
-      return(existing_base_url)
-    }
-    if (identical(selection, 2L)) {
-      return(spec$default_base_url)
-    }
-    return(input_fn("Base URL", default = existing_base_url) %||% existing_base_url)
-  }
-
-  selection <- menu_fn(
-    sprintf("%s base URL", spec$label),
-    c(
-      "Use default",
-      "Custom URL"
-    )
-  )
-  if (is.null(selection)) {
+  base_url <- input_fn("Base URL")
+  if (is.null(base_url) || !nzchar(base_url)) {
     return(NULL)
   }
-  if (identical(selection, 1L)) {
-    return(spec$default_base_url)
+  base_url
+}
+
+# --- Automatic endpoint detection --------------------------------------------
+# The setup wizard used to ask users to pick the API wire format, tool-calling
+# compatibility, stream_options support, and the Responses state mode. Those
+# are facts about the endpoint, not preferences, so the custom-provider flow
+# now sends a few tiny probe requests and decides automatically, falling back
+# to the previous safe defaults when the endpoint cannot be reached.
+
+#' @keywords internal
+console_setup_note <- function(text) {
+  if (requireNamespace("cli", quietly = TRUE)) {
+    cli::cli_alert_info(text)
+  } else {
+    message(text)
   }
-  input_fn("Base URL", default = spec$default_base_url) %||% spec$default_base_url
+  invisible(NULL)
 }
 
 #' @keywords internal
-choose_console_api_format <- function(spec, menu_fn, existing_api_format = NULL) {
-  if (is.null(spec$api_format_env)) {
-    return(spec$default_api_format %||% NULL)
+console_setup_success <- function(text) {
+  if (requireNamespace("cli", quietly = TRUE)) {
+    cli::cli_alert_success(text)
+  } else {
+    message(text)
   }
+  invisible(NULL)
+}
 
-  api_formats <- c(
+#' @keywords internal
+console_api_format_label <- function(api_format) {
+  switch(api_format %||% "",
     chat_completions = "OpenAI Chat Completions",
     responses = "OpenAI Responses",
-    anthropic_messages = "Anthropic Messages"
+    anthropic_messages = "Anthropic Messages",
+    api_format %||% ""
   )
-  current <- existing_api_format %||% spec$default_api_format %||% "chat_completions"
-  current_label <- api_formats[[current]] %||% current
+}
 
-  if (!is.null(existing_api_format) && nzchar(existing_api_format)) {
-    selection <- menu_fn(
-      sprintf("%s API format", spec$label),
-      c(
-        paste("Keep current", sprintf("(%s)", current_label)),
-        unname(api_formats)
+#' @keywords internal
+console_probe_request <- function(url, headers, body, timeout_seconds = 8) {
+  req <- httr2::request(url)
+  req <- httr2::req_headers(req, !!!headers)
+  req <- prepare_json_post_request(req, body)
+  req <- httr2::req_timeout(req, timeout_seconds)
+  req <- httr2::req_error(req, is_error = function(resp) FALSE)
+  resp <- httr2::req_perform(req)
+  list(
+    status = httr2::resp_status(resp),
+    text = tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+  )
+}
+
+#' @keywords internal
+console_probe_headers <- function(api_key, api_format = "chat_completions") {
+  h <- list(`Content-Type` = "application/json")
+  if (identical(api_format, "anthropic_messages")) {
+    h$`anthropic-version` <- "2023-06-01"
+    if (nzchar(api_key %||% "")) {
+      h$`x-api-key` <- api_key
+    }
+  } else if (nzchar(api_key %||% "")) {
+    h$Authorization <- paste("Bearer", api_key)
+  }
+  h
+}
+
+#' @keywords internal
+console_probe_chat_body <- function(model = "aisdk-setup-probe") {
+  list(
+    model = model,
+    messages = list(list(role = "user", content = "ping")),
+    max_tokens = 1
+  )
+}
+
+#' @keywords internal
+console_probe_tool <- function(flavor = "openai") {
+  params <- list(type = "object", properties = structure(list(), names = character(0)))
+  if (identical(flavor, "anthropic")) {
+    list(name = "aisdk_probe", description = "Connectivity probe tool", input_schema = params)
+  } else if (identical(flavor, "responses")) {
+    list(type = "function", name = "aisdk_probe", description = "Connectivity probe tool", parameters = params)
+  } else {
+    list(
+      type = "function",
+      `function` = list(name = "aisdk_probe", description = "Connectivity probe tool", parameters = params)
+    )
+  }
+}
+
+#' @keywords internal
+# TRUE when the route is served at all. A 404/405/501 usually means "this
+# path does not exist on the proxy" -- except when the endpoint exists and
+# rejects the probe model (OpenAI reports unknown models as 404
+# model_not_found), which we recognize from the body text.
+console_probe_route_exists <- function(result) {
+  status <- result$status %||% 0L
+  if (!status %in% c(404L, 405L, 501L)) {
+    return(TRUE)
+  }
+  text <- result$text %||% ""
+  grepl("model", text, ignore.case = TRUE) &&
+    !grepl("path|route|endpoint", text, ignore.case = TRUE)
+}
+
+#' @keywords internal
+console_probe_rejects <- function(result, what) {
+  (result$status %||% 0L) >= 400L && grepl(what, result$text %||% "", ignore.case = TRUE)
+}
+
+#' @keywords internal
+detect_console_chat_capabilities <- function(base_url, api_key, model, probe_fn = console_probe_request) {
+  url <- paste0(sub("/+$", "", base_url), "/chat/completions")
+  headers <- console_probe_headers(api_key)
+  probe <- function(body) tryCatch(probe_fn(url, headers, body), error = function(e) NULL)
+
+  first <- probe(c(console_probe_chat_body(model), list(
+    stream = TRUE,
+    stream_options = list(include_usage = TRUE),
+    tools = list(console_probe_tool())
+  )))
+  if (is.null(first)) {
+    return(list(enable_stream_options = FALSE, supports_native_tools = FALSE, detected = FALSE))
+  }
+  if ((first$status %||% 0L) < 400L) {
+    return(list(enable_stream_options = TRUE, supports_native_tools = TRUE, detected = TRUE))
+  }
+
+  rejects_stream_options <- console_probe_rejects(first, "stream_options")
+  rejects_tools <- console_probe_rejects(first, "tool")
+  if (!rejects_stream_options && !rejects_tools) {
+    # Rejected for an unrelated reason (auth, quota, model): inconclusive.
+    return(list(enable_stream_options = FALSE, supports_native_tools = FALSE, detected = FALSE))
+  }
+
+  enable_stream_options <- !rejects_stream_options
+  supports_native_tools <- !rejects_tools
+
+  # Confirm the surviving flags work together before recording them.
+  retry_body <- console_probe_chat_body(model)
+  if (enable_stream_options) {
+    retry_body$stream <- TRUE
+    retry_body$stream_options <- list(include_usage = TRUE)
+  }
+  if (supports_native_tools) {
+    retry_body$tools <- list(console_probe_tool())
+  }
+  second <- probe(retry_body)
+  if (!is.null(second) && (second$status %||% 0L) >= 400L) {
+    if (console_probe_rejects(second, "stream_options")) enable_stream_options <- FALSE
+    if (console_probe_rejects(second, "tool")) supports_native_tools <- FALSE
+  }
+
+  list(
+    enable_stream_options = enable_stream_options,
+    supports_native_tools = supports_native_tools,
+    detected = TRUE
+  )
+}
+
+#' Detect the Wire Format and Capabilities of an OpenAI-Compatible Endpoint
+#'
+#' Sends a few tiny probe requests to decide which API surface the endpoint
+#' serves (`chat_completions`, `responses`, or `anthropic_messages`) and,
+#' once a model id is known, whether it accepts `stream_options` and native
+#' tool definitions. Used by the custom-provider setup flow so users are not
+#' asked wire-protocol questions; overridable via the `detect_endpoint`
+#' prompt hook. Returns the previous safe defaults with `detected = FALSE`
+#' when the endpoint cannot be reached.
+#'
+#' @param base_url Endpoint base URL.
+#' @param api_key API key, if any.
+#' @param model Optional model id; enables the capability probes.
+#' @param api_format Optional known wire format; skips format detection.
+#' @param probe_fn Probe transport, injectable for tests.
+#' @return A list with `api_format`, `enable_stream_options`,
+#'   `supports_native_tools`, `responses_state_mode`, and `detected`.
+#' @noRd
+detect_console_endpoint_profile <- function(base_url,
+                                            api_key = NULL,
+                                            model = NULL,
+                                            api_format = NULL,
+                                            probe_fn = console_probe_request) {
+  fallback <- list(
+    api_format = api_format %||% "chat_completions",
+    enable_stream_options = FALSE,
+    supports_native_tools = FALSE,
+    responses_state_mode = "auto",
+    detected = FALSE
+  )
+  base_url <- sub("/+$", "", base_url %||% "")
+  if (!nzchar(base_url)) {
+    return(fallback)
+  }
+
+  probe <- function(url, headers, body) {
+    tryCatch(probe_fn(url, headers, body), error = function(e) NULL)
+  }
+
+  if (is.null(api_format)) {
+    if (grepl("anthropic", base_url, ignore.case = TRUE)) {
+      api_format <- "anthropic_messages"
+    } else {
+      chat <- probe(
+        paste0(base_url, "/chat/completions"),
+        console_probe_headers(api_key),
+        console_probe_chat_body()
+      )
+      if (!is.null(chat) && console_probe_route_exists(chat)) {
+        api_format <- "chat_completions"
+      } else {
+        responses <- probe(
+          paste0(base_url, "/responses"),
+          console_probe_headers(api_key),
+          list(model = "aisdk-setup-probe", input = "ping", max_output_tokens = 16)
+        )
+        if (!is.null(responses) && console_probe_route_exists(responses)) {
+          api_format <- "responses"
+        } else {
+          messages <- probe(
+            paste0(base_url, "/messages"),
+            console_probe_headers(api_key, "anthropic_messages"),
+            console_probe_chat_body()
+          )
+          if (!is.null(messages) && console_probe_route_exists(messages)) {
+            api_format <- "anthropic_messages"
+          } else if (is.null(chat) && is.null(responses) && is.null(messages)) {
+            # Endpoint unreachable: keep the safe defaults.
+            return(fallback)
+          } else {
+            api_format <- "chat_completions"
+          }
+        }
+      }
+    }
+  }
+
+  out <- list(
+    api_format = api_format,
+    enable_stream_options = FALSE,
+    supports_native_tools = FALSE,
+    # Responses proxies vary in server-side state support; "auto" chains
+    # turns when possible and self-heals to stateless on rejection.
+    responses_state_mode = "auto",
+    detected = TRUE
+  )
+  if (is.null(model) || !nzchar(model %||% "")) {
+    return(out)
+  }
+
+  if (identical(api_format, "chat_completions")) {
+    caps <- detect_console_chat_capabilities(base_url, api_key, model, probe_fn = probe_fn)
+    out$enable_stream_options <- isTRUE(caps$enable_stream_options)
+    out$supports_native_tools <- isTRUE(caps$supports_native_tools)
+    out$detected <- isTRUE(caps$detected)
+  } else if (identical(api_format, "anthropic_messages")) {
+    result <- probe(
+      paste0(base_url, "/messages"),
+      console_probe_headers(api_key, "anthropic_messages"),
+      c(console_probe_chat_body(model), list(tools = list(console_probe_tool("anthropic"))))
+    )
+    out$supports_native_tools <- !is.null(result) && !console_probe_rejects(result, "tool")
+    out$detected <- !is.null(result)
+  } else if (identical(api_format, "responses")) {
+    result <- probe(
+      paste0(base_url, "/responses"),
+      console_probe_headers(api_key),
+      list(
+        model = model,
+        input = "ping",
+        max_output_tokens = 16,
+        tools = list(console_probe_tool("responses"))
       )
     )
-    if (is.null(selection)) {
-      return(NULL)
-    }
-    if (identical(selection, 1L)) {
-      return(current)
-    }
-    return(names(api_formats)[[selection - 1L]])
+    out$supports_native_tools <- !is.null(result) && !console_probe_rejects(result, "tool")
+    out$detected <- !is.null(result)
   }
-
-  selection <- menu_fn(sprintf("%s API format", spec$label), unname(api_formats))
-  if (is.null(selection)) {
-    return(NULL)
-  }
-  names(api_formats)[[selection]]
+  out
 }
 
 #' @keywords internal
-format_console_capability_mode <- function(enable_stream_options, supports_native_tools) {
-  if (isTRUE(enable_stream_options) && isTRUE(supports_native_tools)) {
-    return("full OpenAI compatibility")
+# Suggest a provider id for a custom endpoint from its host name, e.g.
+# "https://api.moonshot.cn/v1" -> "moonshot". Falls back to "custom" and
+# avoids colliding with built-in provider ids.
+console_suggest_custom_provider_id <- function(base_url) {
+  host <- sub("^[a-z]+://", "", tolower(base_url %||% ""))
+  host <- sub("[/:].*$", "", host)
+  host <- sub("^(api|www|open|openapi)\\.", "", host)
+  label <- strsplit(host, ".", fixed = TRUE)[[1]][1] %||% ""
+  if (is.na(label)) {
+    label <- ""
   }
-  if (isTRUE(supports_native_tools)) {
-    return("native tools, no stream_options")
+  label <- gsub("[^a-z0-9-]", "-", label)
+  label <- gsub("^-+|-+$", "", label)
+  if (!nzchar(label) || grepl("^[0-9-]+$", label)) {
+    return("custom")
   }
-  "basic compatibility"
-}
-
-#' @keywords internal
-choose_console_capability_mode <- function(spec,
-                                           menu_fn,
-                                           api_format = NULL,
-                                           existing_profile = NULL) {
-  current <- list(
-    enable_stream_options = existing_profile$enable_stream_options %||% isTRUE(spec$default_enable_stream_options),
-    supports_native_tools = existing_profile$supports_native_tools %||% isTRUE(spec$default_supports_native_tools)
-  )
-
-  if (is.null(spec$enable_stream_options_env) && is.null(spec$supports_native_tools_env)) {
-    return(current)
+  if (label %in% names(console_provider_specs())) {
+    return(paste0(label, "-api"))
   }
-
-  if (!identical(spec$id, "custom")) {
-    return(current)
-  }
-
-  anthropic_format <- identical(api_format %||% spec$default_api_format %||% "", "anthropic_messages")
-  labels <- if (isTRUE(anthropic_format)) {
-    c(
-      "Basic compatibility (text tool fallback)",
-      "Native tool calling"
-    )
-  } else {
-    c(
-      "Basic compatibility (text tools, no stream_options)",
-      "Native tool calling (no stream_options)",
-      "Full OpenAI compatibility (native tools + stream_options)"
-    )
-  }
-  values <- if (isTRUE(anthropic_format)) {
-    list(
-      list(enable_stream_options = FALSE, supports_native_tools = FALSE),
-      list(enable_stream_options = FALSE, supports_native_tools = TRUE)
-    )
-  } else {
-    list(
-      list(enable_stream_options = FALSE, supports_native_tools = FALSE),
-      list(enable_stream_options = FALSE, supports_native_tools = TRUE),
-      list(enable_stream_options = TRUE, supports_native_tools = TRUE)
-    )
-  }
-
-  has_existing <- !is.null(existing_profile) &&
-    (!is.null(existing_profile$enable_stream_options) || !is.null(existing_profile$supports_native_tools))
-  choices <- labels
-  if (isTRUE(has_existing)) {
-    choices <- c(
-      paste("Keep current", sprintf("(%s)", format_console_capability_mode(
-        current$enable_stream_options,
-        current$supports_native_tools
-      ))),
-      choices
-    )
-  }
-
-  selection <- menu_fn("Custom API compatibility", choices)
-  if (is.null(selection)) {
-    return(NULL)
-  }
-  if (isTRUE(has_existing) && identical(selection, 1L)) {
-    return(current)
-  }
-
-  offset <- if (isTRUE(has_existing)) 1L else 0L
-  values[[selection - offset]]
-}
-
-#' @keywords internal
-format_console_responses_state_mode <- function(mode) {
-  mode <- responses_normalize_state_mode(mode)
-  switch(mode,
-    stateless = "stateless HTTP (resend full history)",
-    server = "server state (previous_response_id)",
-    auto = "auto server state (retry stateless on rejection)"
-  )
-}
-
-#' @keywords internal
-choose_console_responses_state_mode <- function(spec,
-                                                menu_fn,
-                                                api_format = NULL,
-                                                existing_profile = NULL) {
-  if (!identical(api_format %||% spec$default_api_format %||% "", "responses")) {
-    return(NULL)
-  }
-  if (is.null(spec$responses_state_mode_env) && !identical(existing_profile$storage %||% "", "yaml")) {
-    return(NULL)
-  }
-
-  modes <- c(
-    stateless = format_console_responses_state_mode("stateless"),
-    server = format_console_responses_state_mode("server"),
-    auto = format_console_responses_state_mode("auto")
-  )
-  current <- responses_normalize_state_mode(
-    existing_profile$responses_state_mode %||% spec$default_responses_state_mode %||% "stateless"
-  )
-  has_existing <- !is.null(existing_profile) && !is.null(existing_profile$responses_state_mode)
-  choices <- unname(modes)
-  if (isTRUE(has_existing)) {
-    choices <- c(
-      paste("Keep current", sprintf("(%s)", format_console_responses_state_mode(current))),
-      choices
-    )
-  }
-
-  selection <- menu_fn("Responses state mode", choices)
-  if (is.null(selection)) {
-    return(NULL)
-  }
-  if (isTRUE(has_existing) && identical(selection, 1L)) {
-    return(current)
-  }
-
-  offset <- if (isTRUE(has_existing)) 1L else 0L
-  names(modes)[[selection - offset]]
+  label
 }
 
 #' @keywords internal
@@ -1028,7 +1130,13 @@ choose_console_model_id <- function(spec,
 }
 
 #' @keywords internal
-choose_console_save_target <- function(menu_fn,
+# Ask only WHERE to save (globally, this project, or session only). The
+# storage format is decided automatically: named providers persist to
+# .Renviron (their standard env vars), custom providers persist to aisdk.yaml
+# (which carries wire format and capability flags) with the API key kept in
+# .Renviron. Editing an existing profile offers to update it in place.
+choose_console_save_target <- function(spec,
+                                       menu_fn,
                                        existing_profile = NULL,
                                        project_path = ".Renviron",
                                        global_path = "~/.Renviron",
@@ -1036,25 +1144,61 @@ choose_console_save_target <- function(menu_fn,
                                        global_rprofile_path = "~/.Rprofile",
                                        project_config_path = "aisdk.yaml",
                                        global_config_path = default_global_model_config_path()) {
+  use_yaml <- identical(spec$id, "custom")
+  env_target <- function(scope) {
+    list(
+      mode = "save",
+      path = if (identical(scope, "project")) project_path else global_path,
+      scope = scope,
+      rprofile_path = console_rprofile_path_for_scope(
+        scope,
+        project_path = project_rprofile_path,
+        global_path = global_rprofile_path
+      )
+    )
+  }
+  target_for_scope <- function(scope) {
+    if (!use_yaml) {
+      return(env_target(scope))
+    }
+    list(
+      mode = "yaml",
+      path = console_config_path_for_scope(scope, project_config_path, global_config_path),
+      env_path = if (identical(scope, "project")) project_path else global_path,
+      scope = scope,
+      rprofile_path = console_rprofile_path_for_scope(
+        scope,
+        project_path = project_rprofile_path,
+        global_path = global_rprofile_path
+      )
+    )
+  }
+  session_target <- list(mode = "session", path = NULL, rprofile_path = NULL)
+
   if (!is.null(existing_profile)) {
     existing_scope <- existing_profile$scope %||% "project"
-    existing_path <- if (identical(existing_profile$storage %||% "", "yaml")) {
-      existing_profile$source %||% console_config_path_for_scope(existing_scope, project_config_path, global_config_path)
-    } else if (identical(existing_scope, "project")) project_path else global_path
-    existing_env_path <- if (identical(existing_scope, "project")) project_path else global_path
-    existing_rprofile_path <- console_rprofile_path_for_scope(
-      existing_scope,
-      project_path = project_rprofile_path,
-      global_path = global_rprofile_path
-    )
+    update_target <- if (identical(existing_profile$storage %||% "", "yaml")) {
+      list(
+        mode = "yaml",
+        path = existing_profile$source %||% console_config_path_for_scope(existing_scope, project_config_path, global_config_path),
+        env_path = if (identical(existing_scope, "project")) project_path else global_path,
+        scope = existing_scope,
+        rprofile_path = console_rprofile_path_for_scope(
+          existing_scope,
+          project_path = project_rprofile_path,
+          global_path = global_rprofile_path
+        )
+      )
+    } else {
+      env_target(existing_scope)
+    }
+
     selection <- menu_fn(
       "Save setup?",
       c(
-        sprintf("Overwrite saved (%s)", existing_scope),
-        "Save to project .Renviron",
-        "Save globally .Renviron",
-        "Save project aisdk.yaml",
-        "Save global aisdk.yaml",
+        sprintf("Update saved setup (%s)", existing_scope),
+        "Save globally",
+        "Save to this project",
         "Session only"
       )
     )
@@ -1063,35 +1207,25 @@ choose_console_save_target <- function(menu_fn,
     }
     return(switch(
       as.character(selection),
-      "1" = list(
-        mode = existing_profile$storage %||% "save",
-        path = existing_path,
-        env_path = if (identical(existing_profile$storage %||% "", "yaml")) existing_env_path else NULL,
-        scope = existing_scope,
-        rprofile_path = existing_rprofile_path
-      ),
-      "2" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
-      "3" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
-      "4" = list(mode = "yaml", path = project_config_path, env_path = project_path, scope = "project", rprofile_path = project_rprofile_path),
-      "5" = list(mode = "yaml", path = global_config_path, env_path = global_path, scope = "global", rprofile_path = global_rprofile_path),
-      list(mode = "session", path = NULL, rprofile_path = NULL)
+      "1" = update_target,
+      "2" = target_for_scope("global"),
+      "3" = target_for_scope("project"),
+      session_target
     ))
   }
 
   selection <- menu_fn(
     "Save setup?",
-    c("Save to project .Renviron", "Save globally .Renviron", "Save project aisdk.yaml", "Save global aisdk.yaml", "Session only")
+    c("Save globally (recommended)", "Save to this project", "Session only")
   )
   if (is.null(selection)) {
     return(NULL)
   }
   switch(
     as.character(selection),
-    "1" = list(mode = "save", path = project_path, rprofile_path = project_rprofile_path),
-    "2" = list(mode = "save", path = global_path, rprofile_path = global_rprofile_path),
-    "3" = list(mode = "yaml", path = project_config_path, env_path = project_path, scope = "project", rprofile_path = project_rprofile_path),
-    "4" = list(mode = "yaml", path = global_config_path, env_path = global_path, scope = "global", rprofile_path = global_rprofile_path),
-    list(mode = "session", path = NULL, rprofile_path = NULL)
+    "1" = target_for_scope("global"),
+    "2" = target_for_scope("project"),
+    session_target
   )
 }
 
@@ -1169,12 +1303,17 @@ finalize_console_profile <- function(spec,
 }
 
 #' @keywords internal
+# Interactive setup for one provider. Users are asked only for the base URL
+# (Enter keeps the default), the API key, the model, and where to save;
+# wire format, tool compatibility, stream_options, and the Responses state
+# mode are detected automatically for custom endpoints.
 run_console_profile_setup <- function(spec,
                                       menu_fn,
                                       input_fn,
                                       save_fn,
                                       remember_model_fn,
                                       model_choices_fn,
+                                      detect_endpoint_fn = detect_console_endpoint_profile,
                                       existing_profile = NULL,
                                       project_path = ".Renviron",
                                       global_path = "~/.Renviron",
@@ -1182,38 +1321,8 @@ run_console_profile_setup <- function(spec,
                                       global_rprofile_path = "~/.Rprofile",
                                       project_config_path = "aisdk.yaml",
                                       global_config_path = default_global_model_config_path()) {
-  api_format <- choose_console_api_format(
-    spec = spec,
-    menu_fn = menu_fn,
-    existing_api_format = existing_profile$api_format %||% NULL
-  )
-  if (is.null(api_format) && !is.null(spec$api_format_env)) {
-    return(NULL)
-  }
-
-  capability_mode <- choose_console_capability_mode(
-    spec = spec,
-    menu_fn = menu_fn,
-    api_format = api_format,
-    existing_profile = existing_profile
-  )
-  if (is.null(capability_mode)) {
-    return(NULL)
-  }
-
-  responses_state_mode <- choose_console_responses_state_mode(
-    spec = spec,
-    menu_fn = menu_fn,
-    api_format = api_format,
-    existing_profile = existing_profile
-  )
-  if (identical(api_format, "responses") && is.null(responses_state_mode)) {
-    return(NULL)
-  }
-
   base_url <- choose_console_base_url(
     spec = spec,
-    menu_fn = menu_fn,
     input_fn = input_fn,
     existing_base_url = existing_profile$base_url %||% NULL
   )
@@ -1231,6 +1340,28 @@ run_console_profile_setup <- function(spec,
     return(NULL)
   }
 
+  needs_detection <- identical(spec$id, "custom")
+  api_format <- if (is.null(spec$api_format_env)) {
+    spec$default_api_format %||% NULL
+  } else {
+    existing_profile$api_format %||% NULL
+  }
+  if (!is.null(api_format) && !nzchar(api_format)) {
+    api_format <- NULL
+  }
+  if (needs_detection && is.null(api_format)) {
+    console_setup_note("Detecting the endpoint API format...")
+    detection <- detect_endpoint_fn(base_url = base_url, api_key = api_key)
+    api_format <- detection$api_format %||% spec$default_api_format %||% "chat_completions"
+    if (isTRUE(detection$detected)) {
+      console_setup_success(paste0("Detected API format: ", console_api_format_label(api_format)))
+    } else {
+      console_setup_note(paste0(
+        "Could not reach the endpoint; assuming ", console_api_format_label(api_format), "."
+      ))
+    }
+  }
+
   model <- choose_console_model_id(
     spec = spec,
     menu_fn = menu_fn,
@@ -1245,7 +1376,43 @@ run_console_profile_setup <- function(spec,
     return(NULL)
   }
 
+  capability_mode <- list(
+    enable_stream_options = existing_profile$enable_stream_options %||% isTRUE(spec$default_enable_stream_options),
+    supports_native_tools = existing_profile$supports_native_tools %||% isTRUE(spec$default_supports_native_tools)
+  )
+  responses_state_mode <- NULL
+  if (needs_detection) {
+    console_setup_note("Checking endpoint capabilities (tiny test requests)...")
+    detection <- detect_endpoint_fn(
+      base_url = base_url,
+      api_key = api_key,
+      model = model,
+      api_format = api_format
+    )
+    if (isTRUE(detection$detected)) {
+      capability_mode$enable_stream_options <- isTRUE(detection$enable_stream_options)
+      capability_mode$supports_native_tools <- isTRUE(detection$supports_native_tools)
+      console_setup_success(paste0(
+        "Detected: ",
+        if (capability_mode$supports_native_tools) "native tool calling" else "text tool fallback",
+        if (identical(api_format, "chat_completions")) {
+          paste0(", stream options ", if (capability_mode$enable_stream_options) "supported" else "unsupported")
+        } else {
+          ""
+        }
+      ))
+    } else {
+      console_setup_note("Could not verify capabilities; keeping safe defaults.")
+    }
+    if (identical(api_format, "responses")) {
+      responses_state_mode <- responses_normalize_state_mode(
+        existing_profile$responses_state_mode %||% detection$responses_state_mode %||% "auto"
+      )
+    }
+  }
+
   save_target <- choose_console_save_target(
+    spec = spec,
     menu_fn = menu_fn,
     existing_profile = existing_profile,
     project_path = project_path,
@@ -1262,8 +1429,9 @@ run_console_profile_setup <- function(spec,
   provider_id <- spec$id
   if (identical(spec$id, "custom") && identical(save_target$mode %||% "", "yaml")) {
     existing_provider <- if (!identical(existing_profile$provider %||% "", "custom")) existing_profile$provider else NULL
-    provider_answer <- input_fn("Custom setup name", default = existing_provider %||% "custom")
-    provider_id <- console_provider_id_from_label(provider_answer)
+    suggested <- existing_provider %||% console_suggest_custom_provider_id(base_url)
+    provider_answer <- input_fn("Setup name", default = suggested)
+    provider_id <- console_provider_id_from_label(provider_answer %||% suggested)
     if (is.null(provider_id)) {
       return(NULL)
     }
@@ -1357,9 +1525,12 @@ format_console_token_compact <- function(tokens) {
 #'
 #' Presents saved provider setups (from `.Renviron`, `aisdk.yaml`, and
 #' `.Rprofile`) and the guided new-setup flow, returning the chosen model
-#' id. This backs the console `/model` command and the first-run experience;
-#' front ends can supply their own `prompt_hooks` to reuse the flow. Part of
-#' the package-author extension API.
+#' id. The guided flow only asks for the base URL, API key, model, and where
+#' to save; for custom endpoints the wire format and capability flags are
+#' detected automatically with tiny probe requests (see the `detect_endpoint`
+#' hook). This backs the console `/model` command and the first-run
+#' experience; front ends can supply their own `prompt_hooks` to reuse the
+#' flow. Part of the package-author extension API.
 #'
 #' @param project_path Project `.Renviron` path.
 #' @param global_path Global `.Renviron` path.
@@ -1386,6 +1557,7 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
   apply_profile_fn <- prompt_hooks$apply_profile %||% apply_console_profile
   remember_model_fn <- prompt_hooks$remember_model %||% remember_console_default_model
   model_choices_fn <- prompt_hooks$model_choices %||% console_model_choices_for_provider
+  detect_endpoint_fn <- prompt_hooks$detect_endpoint %||% detect_console_endpoint_profile
   profiles <- discover_console_model_profiles(
     project_path = project_path,
     global_path = global_path,
@@ -1431,6 +1603,7 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
           save_fn = save_fn,
           remember_model_fn = remember_model_fn,
           model_choices_fn = model_choices_fn,
+          detect_endpoint_fn = detect_endpoint_fn,
           existing_profile = profile,
           project_path = project_path,
           global_path = global_path,
@@ -1457,6 +1630,7 @@ prompt_console_provider_profile <- function(project_path = ".Renviron",
     save_fn = save_fn,
     remember_model_fn = remember_model_fn,
     model_choices_fn = model_choices_fn,
+    detect_endpoint_fn = detect_endpoint_fn,
     existing_profile = NULL,
     project_path = project_path,
     global_path = global_path,

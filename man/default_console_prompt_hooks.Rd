@@ -11,8 +11,10 @@ A named list of hook functions.
 }
 \description{
 Returns the default set of injectable hooks (menu, input, save,
-apply-profile, remember-model, model-choices) used by the interactive
-provider/model setup. Front ends can override individual hooks to embed
-the setup flow in their own UI. Part of the package-author extension API.
+apply-profile, remember-model, model-choices, detect-endpoint) used by the
+interactive provider/model setup. Front ends can override individual hooks
+to embed the setup flow in their own UI; \code{detect_endpoint} backs the
+automatic wire-format/capability detection for custom endpoints and can be
+replaced to avoid network probes. Part of the package-author extension API.
 }
 \keyword{internal}

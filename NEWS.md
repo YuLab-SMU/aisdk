@@ -1,5 +1,20 @@
 # aisdk 1.5.0
 
+* The interactive model setup flow is much simpler and mostly automatic.
+  The guided setup now only asks for the base URL (Enter keeps the
+  default), the API key, the model, and where to save. For custom
+  endpoints, the wire format (Chat Completions / Responses / Anthropic
+  Messages), native tool-calling support, and `stream_options` support are
+  detected automatically with tiny probe requests instead of being asked
+  as questions (safe defaults apply when the endpoint is unreachable); the
+  Responses state mode defaults to the self-healing `"auto"`. The save
+  step shrank to global / project / session-only, with the storage format
+  chosen automatically (named providers persist to `.Renviron`, custom
+  endpoints to `aisdk.yaml` with the key in `.Renviron`), and custom
+  setups get a name suggested from the endpoint host. Front ends can
+  override detection via the new `detect_endpoint` hook in
+  `default_console_prompt_hooks()`.
+
 * The interactive terminal console moved to the new companion package
   `aisdk.console` (following the same extraction pattern as
   aisdk.providers/aisdk.shiny/aisdk.orchestration). `console_chat()`,

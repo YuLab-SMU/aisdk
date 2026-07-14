@@ -308,11 +308,13 @@ test_that("prompt_console_provider_profile supports manual setup and persistence
 
   menu_answers <- c(
     1L, # provider: OpenAI
-    1L, # use default base url
     1L, # select first fetched/static model
-    1L  # save to project
+    2L  # save to this project
   )
-  input_answers <- c("sk-manual")
+  input_answers <- c(
+    "https://api.openai.com/v1", # base URL (Enter keeps default)
+    "sk-manual"
+  )
   saved <- list()
   remembered <- list()
 
@@ -367,15 +369,14 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
   ), project_path)
 
   menu_answers <- c(
-    2L, # choose "Edit saved profile"
+    2L, # choose "Edit saved setup"
     1L, # edit the first saved profile
-    3L, # enter custom base url
     2L, # enter new API key
     2L, # choose second model option
-    1L  # overwrite existing profile
+    1L  # update saved setup
   )
   input_answers <- c(
-    "https://proxy.example.com/v1",
+    "https://proxy.example.com/v1", # base URL replaces the saved one
     "sk-new"
   )
   saved <- list()
@@ -422,124 +423,7 @@ test_that("prompt_console_provider_profile can edit and overwrite an existing pr
   expect_equal(remembered$path, "project-edit.Rprofile")
 })
 
-test_that("prompt_console_provider_profile supports custom API setup", {
-  project_path <- tempfile(fileext = ".Renviron")
-  global_path <- tempfile(fileext = ".Renviron")
-
-  menu_answers <- c(
-    10L, # provider: Custom API
-    1L,  # api format: OpenAI Chat Completions
-    1L,  # compatibility: basic text fallback
-    1L,  # select first fetched/static model
-    1L   # save to project
-  )
-  input_answers <- c(
-    "https://proxy.example.com/v1",
-    "sk-custom"
-  )
-  saved <- list()
-  remembered <- list()
-
-  hooks <- list(
-    menu = function(title, choices) {
-      answer <- menu_answers[[1]]
-      menu_answers <<- menu_answers[-1]
-      answer
-    },
-    input = function(prompt, default = NULL) {
-      answer <- input_answers[[1]]
-      input_answers <<- input_answers[-1]
-      answer %||% default
-    },
-    model_choices = function(provider, api_key = NULL, base_url = NULL) {
-      c("proxy-model", "backup-model")
-    },
-    save = function(updates, path) {
-      saved <<- list(updates = updates, path = path)
-      TRUE
-    },
-    remember_model = function(model_id, path = NULL) {
-      remembered <<- list(model_id = model_id, path = path)
-      model_id
-    }
-  )
-
-  model_id <- aisdk:::prompt_console_provider_profile(
-    project_path = project_path,
-    global_path = global_path,
-    project_rprofile_path = "project-custom.Rprofile",
-    global_rprofile_path = "global-custom.Rprofile",
-    prompt_hooks = hooks
-  )
-
-  expect_equal(model_id, "custom:proxy-model")
-  expect_equal(saved$path, project_path)
-  expect_equal(saved$updates$AISDK_CUSTOM_API_KEY, "sk-custom")
-  expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "https://proxy.example.com/v1")
-  expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "proxy-model")
-  expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
-  expect_equal(saved$updates$AISDK_CUSTOM_ENABLE_STREAM_OPTIONS, "false")
-  expect_equal(saved$updates$AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS, "false")
-  expect_null(saved$updates$AISDK_CUSTOM_RESPONSES_STATE_MODE)
-  expect_equal(remembered$model_id, "custom:proxy-model")
-  expect_equal(remembered$path, "project-custom.Rprofile")
-})
-
-test_that("prompt_console_provider_profile saves Responses state mode for custom API setup", {
-  project_path <- tempfile(fileext = ".Renviron")
-  global_path <- tempfile(fileext = ".Renviron")
-
-  menu_answers <- c(
-    10L, # provider: Custom API
-    2L,  # api format: OpenAI Responses
-    3L,  # compatibility: full OpenAI compatibility
-    1L,  # state mode: stateless
-    1L,  # select first fetched/static model
-    1L   # save to project
-  )
-  input_answers <- c(
-    "https://proxy.example.com/v1",
-    "sk-custom"
-  )
-  saved <- list()
-
-  hooks <- list(
-    menu = function(title, choices) {
-      answer <- menu_answers[[1]]
-      menu_answers <<- menu_answers[-1]
-      answer
-    },
-    input = function(prompt, default = NULL) {
-      answer <- input_answers[[1]]
-      input_answers <<- input_answers[-1]
-      answer %||% default
-    },
-    model_choices = function(provider, api_key = NULL, base_url = NULL) {
-      c("gpt-5.5")
-    },
-    save = function(updates, path) {
-      saved <<- list(updates = updates, path = path)
-      TRUE
-    },
-    remember_model = function(model_id, path = NULL) model_id
-  )
-
-  model_id <- aisdk:::prompt_console_provider_profile(
-    project_path = project_path,
-    global_path = global_path,
-    project_rprofile_path = "project-custom-responses.Rprofile",
-    global_rprofile_path = "global-custom-responses.Rprofile",
-    prompt_hooks = hooks
-  )
-
-  expect_equal(model_id, "custom:gpt-5.5")
-  expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "responses")
-  expect_equal(saved$updates$AISDK_CUSTOM_ENABLE_STREAM_OPTIONS, "true")
-  expect_equal(saved$updates$AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS, "true")
-  expect_equal(saved$updates$AISDK_CUSTOM_RESPONSES_STATE_MODE, "stateless")
-})
-
-test_that("prompt_console_provider_profile can save custom API setup to aisdk.yaml", {
+test_that("prompt_console_provider_profile auto-detects custom endpoints and saves to yaml", {
   project_path <- tempfile(fileext = ".Renviron")
   global_path <- tempfile(fileext = ".Renviron")
   project_config_path <- tempfile(fileext = ".yaml")
@@ -552,17 +436,15 @@ test_that("prompt_console_provider_profile can save custom API setup to aisdk.ya
 
   menu_answers <- c(
     10L, # provider: Custom API
-    2L,  # api format: OpenAI Responses
-    2L,  # compatibility: native tools, no stream_options
-    1L,  # state mode: stateless
     1L,  # select first fetched/static model
-    3L   # save project aisdk.yaml
+    2L   # save to this project
   )
   input_answers <- c(
     "https://proxy.example.com/v1",
     "sk-custom",
-    "yulab"
+    "proxycorp" # setup name (suggested from the host)
   )
+  detect_calls <- list()
   saved_env <- list()
   remembered <- list()
 
@@ -578,7 +460,18 @@ test_that("prompt_console_provider_profile can save custom API setup to aisdk.ya
       answer %||% default
     },
     model_choices = function(provider, api_key = NULL, base_url = NULL) {
-      c("gpt-5.5")
+      expect_equal(provider, "openai")
+      c("proxy-model", "backup-model")
+    },
+    detect_endpoint = function(base_url, api_key = NULL, model = NULL, api_format = NULL) {
+      detect_calls[[length(detect_calls) + 1L]] <<- list(model = model, api_format = api_format)
+      list(
+        api_format = api_format %||% "chat_completions",
+        enable_stream_options = FALSE,
+        supports_native_tools = FALSE,
+        responses_state_mode = "auto",
+        detected = TRUE
+      )
     },
     save = function(updates, path) {
       saved_env <<- list(updates = updates, path = path)
@@ -594,24 +487,96 @@ test_that("prompt_console_provider_profile can save custom API setup to aisdk.ya
     project_path = project_path,
     global_path = global_path,
     project_config_path = project_config_path,
-    project_rprofile_path = "project-yaml.Rprofile",
-    global_rprofile_path = "global-yaml.Rprofile",
+    project_rprofile_path = "project-custom.Rprofile",
+    global_rprofile_path = "global-custom.Rprofile",
+    prompt_hooks = hooks
+  )
+
+  cfg <- yaml::read_yaml(project_config_path)
+  expect_equal(model_id, "proxycorp:proxy-model")
+  # Two detection phases: format first (no model), then capabilities.
+  expect_length(detect_calls, 2)
+  expect_null(detect_calls[[1]]$model)
+  expect_equal(detect_calls[[2]]$model, "proxy-model")
+  expect_equal(detect_calls[[2]]$api_format, "chat_completions")
+  expect_equal(cfg$default_model, "proxycorp:proxy-model")
+  expect_equal(cfg$model_providers$proxycorp$wire_api, "chat_completions")
+  expect_true(cfg$model_providers$proxycorp$disable_stream_options)
+  expect_false(cfg$model_providers$proxycorp$supports_native_tools)
+  expect_equal(cfg$model_providers$proxycorp$api_key_env, "AISDK_PROXYCORP_API_KEY")
+  expect_equal(saved_env$updates$AISDK_PROXYCORP_API_KEY, "sk-custom")
+  expect_equal(saved_env$path, project_path)
+  expect_equal(remembered$model_id, "proxycorp:proxy-model")
+})
+
+test_that("prompt_console_provider_profile records detected Responses format with auto state", {
+  project_path <- tempfile(fileext = ".Renviron")
+  global_path <- tempfile(fileext = ".Renviron")
+  project_config_path <- tempfile(fileext = ".yaml")
+  registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+  old_registry <- registry_env$default %||% NULL
+  registry_env$default <- ProviderRegistry$new()
+  on.exit({
+    registry_env$default <- old_registry
+  }, add = TRUE)
+
+  menu_answers <- c(
+    10L, # provider: Custom API
+    1L,  # select first fetched/static model
+    2L   # save to this project
+  )
+  input_answers <- c(
+    "https://proxy.example.com/v1",
+    "sk-custom",
+    "yulab"
+  )
+  saved_env <- list()
+
+  hooks <- list(
+    menu = function(title, choices) {
+      answer <- menu_answers[[1]]
+      menu_answers <<- menu_answers[-1]
+      answer
+    },
+    input = function(prompt, default = NULL) {
+      answer <- input_answers[[1]]
+      input_answers <<- input_answers[-1]
+      answer %||% default
+    },
+    model_choices = function(provider, api_key = NULL, base_url = NULL) {
+      c("gpt-5.5")
+    },
+    detect_endpoint = function(base_url, api_key = NULL, model = NULL, api_format = NULL) {
+      list(
+        api_format = "responses",
+        enable_stream_options = FALSE,
+        supports_native_tools = TRUE,
+        responses_state_mode = "auto",
+        detected = TRUE
+      )
+    },
+    save = function(updates, path) {
+      saved_env <<- list(updates = updates, path = path)
+      TRUE
+    },
+    remember_model = function(model_id, path = NULL) model_id
+  )
+
+  model_id <- aisdk:::prompt_console_provider_profile(
+    project_path = project_path,
+    global_path = global_path,
+    project_config_path = project_config_path,
+    project_rprofile_path = "project-custom-responses.Rprofile",
+    global_rprofile_path = "global-custom-responses.Rprofile",
     prompt_hooks = hooks
   )
 
   cfg <- yaml::read_yaml(project_config_path)
   expect_equal(model_id, "yulab:gpt-5.5")
-  expect_equal(cfg$default_model, "yulab:gpt-5.5")
-  expect_equal(cfg$model_providers$yulab$base_url, "https://proxy.example.com/v1")
   expect_equal(cfg$model_providers$yulab$wire_api, "responses")
-  expect_equal(cfg$model_providers$yulab$responses_state_mode, "stateless")
-  expect_equal(cfg$model_providers$yulab$api_key_env, "AISDK_YULAB_API_KEY")
+  expect_equal(cfg$model_providers$yulab$responses_state_mode, "auto")
   expect_true(cfg$model_providers$yulab$supports_native_tools)
-  expect_true(cfg$model_providers$yulab$disable_stream_options)
   expect_equal(saved_env$updates$AISDK_YULAB_API_KEY, "sk-custom")
-  expect_equal(saved_env$path, project_path)
-  expect_equal(remembered$model_id, "yulab:gpt-5.5")
-  expect_null(registry_env$default)
 })
 
 test_that("prompt_console_provider_profile can edit dynamic YAML custom providers", {
@@ -642,15 +607,14 @@ test_that("prompt_console_provider_profile can edit dynamic YAML custom provider
   menu_answers <- c(
     2L, # edit saved setup
     1L, # edit first profile
-    1L, # keep API format
-    1L, # keep compatibility
-    1L, # keep Responses state mode
-    1L, # keep base URL
     1L, # keep API key
     1L, # keep model
-    1L  # overwrite saved YAML
+    1L  # update saved setup
   )
-  input_answers <- list(NULL)
+  input_answers <- list(
+    NULL, # base URL: Enter keeps the saved one
+    NULL  # setup name: Enter keeps "yulab"
+  )
   saved_env <- list()
   remembered <- list()
 
@@ -667,6 +631,17 @@ test_that("prompt_console_provider_profile can edit dynamic YAML custom provider
     },
     model_choices = function(provider, api_key = NULL, base_url = NULL) {
       c("gpt-5.5")
+    },
+    detect_endpoint = function(base_url, api_key = NULL, model = NULL, api_format = NULL) {
+      # Saved wire format is passed through, so only capabilities run.
+      expect_equal(api_format, "responses")
+      list(
+        api_format = "responses",
+        enable_stream_options = FALSE,
+        supports_native_tools = FALSE,
+        responses_state_mode = "auto",
+        detected = TRUE
+      )
     },
     save = function(updates, path) {
       saved_env <<- list(updates = updates, path = path)
@@ -692,6 +667,7 @@ test_that("prompt_console_provider_profile can edit dynamic YAML custom provider
   expect_equal(model_id, "yulab:gpt-5.5")
   expect_equal(cfg$default_model, "yulab:gpt-5.5")
   expect_equal(cfg$model_providers$yulab$base_url, "https://proxy.example.com/v1")
+  # The saved state mode wins over the detected default.
   expect_equal(cfg$model_providers$yulab$responses_state_mode, "server")
   expect_equal(saved_env$updates$AISDK_YULAB_API_KEY, "sk-existing")
   expect_equal(saved_env$path, project_path)
@@ -701,19 +677,25 @@ test_that("prompt_console_provider_profile can edit dynamic YAML custom provider
 test_that("prompt_console_provider_profile supports custom API setup without API key", {
   project_path <- tempfile(fileext = ".Renviron")
   global_path <- tempfile(fileext = ".Renviron")
+  project_config_path <- tempfile(fileext = ".yaml")
+  registry_env <- get(".registry_env", envir = asNamespace("aisdk"))
+  old_registry <- registry_env$default %||% NULL
+  registry_env$default <- ProviderRegistry$new()
+  on.exit({
+    registry_env$default <- old_registry
+  }, add = TRUE)
 
   menu_answers <- c(
     10L, # provider: Custom API
-    1L,  # api format: OpenAI Chat Completions
-    1L,  # compatibility: basic text fallback
     1L,  # select first fetched/static model
-    1L   # save to project
+    2L   # save to this project
   )
   input_answers <- list(
     "http://172.16.153.230:8010/v1",
-    NULL
+    NULL,   # no API key
+    "lanlab" # setup name (IP hosts fall back to "custom" suggestion)
   )
-  saved <- list()
+  saved_env <- list()
   remembered <- list()
 
   hooks <- list(
@@ -733,8 +715,17 @@ test_that("prompt_console_provider_profile supports custom API setup without API
       expect_equal(base_url, "http://172.16.153.230:8010/v1")
       c("qwen3-8b-dflash")
     },
+    detect_endpoint = function(base_url, api_key = NULL, model = NULL, api_format = NULL) {
+      list(
+        api_format = "chat_completions",
+        enable_stream_options = TRUE,
+        supports_native_tools = TRUE,
+        responses_state_mode = "auto",
+        detected = TRUE
+      )
+    },
     save = function(updates, path) {
-      saved <<- list(updates = updates, path = path)
+      saved_env <<- list(updates = updates, path = path)
       TRUE
     },
     remember_model = function(model_id, path = NULL) {
@@ -746,20 +737,124 @@ test_that("prompt_console_provider_profile supports custom API setup without API
   model_id <- aisdk:::prompt_console_provider_profile(
     project_path = project_path,
     global_path = global_path,
+    project_config_path = project_config_path,
     project_rprofile_path = "project-custom-no-key.Rprofile",
     global_rprofile_path = "global-custom-no-key.Rprofile",
     prompt_hooks = hooks
   )
 
-  expect_equal(model_id, "custom:qwen3-8b-dflash")
-  expect_equal(saved$path, project_path)
-  expect_equal(saved$updates$AISDK_CUSTOM_API_KEY, "")
-  expect_equal(saved$updates$AISDK_CUSTOM_BASE_URL, "http://172.16.153.230:8010/v1")
-  expect_equal(saved$updates$AISDK_CUSTOM_MODEL, "qwen3-8b-dflash")
-  expect_equal(saved$updates$AISDK_CUSTOM_API_FORMAT, "chat_completions")
-  expect_equal(saved$updates$AISDK_CUSTOM_ENABLE_STREAM_OPTIONS, "false")
-  expect_equal(saved$updates$AISDK_CUSTOM_SUPPORTS_NATIVE_TOOLS, "false")
-  expect_null(saved$updates$AISDK_CUSTOM_RESPONSES_STATE_MODE)
-  expect_equal(remembered$model_id, "custom:qwen3-8b-dflash")
-  expect_equal(remembered$path, "project-custom-no-key.Rprofile")
+  cfg <- yaml::read_yaml(project_config_path)
+  expect_equal(model_id, "lanlab:qwen3-8b-dflash")
+  expect_equal(cfg$model_providers$lanlab$base_url, "http://172.16.153.230:8010/v1")
+  expect_equal(cfg$model_providers$lanlab$wire_api, "chat_completions")
+  expect_false(cfg$model_providers$lanlab$disable_stream_options)
+  expect_true(cfg$model_providers$lanlab$supports_native_tools)
+  expect_false(cfg$model_providers$lanlab$requires_openai_auth)
+  # No API key: nothing to persist into .Renviron.
+  expect_length(saved_env, 0)
+  expect_equal(remembered$model_id, "lanlab:qwen3-8b-dflash")
+})
+
+# --- Automatic endpoint detection --------------------------------------------
+
+test_that("detect_console_endpoint_profile detects the wire format by probing routes", {
+  calls <- list()
+  fake_probe <- function(url, headers, body) {
+    calls[[length(calls) + 1L]] <<- url
+    if (grepl("/chat/completions$", url)) {
+      return(list(status = 404L, text = "invalid_api_path: no such route"))
+    }
+    if (grepl("/responses$", url)) {
+      return(list(status = 400L, text = "model not found"))
+    }
+    list(status = 404L, text = "no such path")
+  }
+
+  detected <- aisdk:::detect_console_endpoint_profile(
+    "https://proxy.example.com/v1",
+    api_key = "sk-x",
+    probe_fn = fake_probe
+  )
+
+  expect_equal(detected$api_format, "responses")
+  expect_true(detected$detected)
+  expect_equal(detected$responses_state_mode, "auto")
+  expect_length(calls, 2)
+})
+
+test_that("detect_console_endpoint_profile assumes Anthropic format from the URL", {
+  detected <- aisdk:::detect_console_endpoint_profile(
+    "https://api.anthropic.com/v1",
+    api_key = "sk-x",
+    probe_fn = function(url, headers, body) stop("no probe expected for format")
+  )
+  expect_equal(detected$api_format, "anthropic_messages")
+  expect_true(detected$detected)
+})
+
+test_that("detect_console_endpoint_profile falls back safely when unreachable", {
+  detected <- aisdk:::detect_console_endpoint_profile(
+    "https://unreachable.example/v1",
+    api_key = "sk-x",
+    probe_fn = function(url, headers, body) stop("connection refused")
+  )
+  expect_equal(detected$api_format, "chat_completions")
+  expect_false(detected$detected)
+  expect_false(detected$enable_stream_options)
+  expect_false(detected$supports_native_tools)
+})
+
+test_that("detect_console_chat_capabilities narrows flags from error messages", {
+  bodies <- list()
+  fake_probe <- function(url, headers, body) {
+    bodies[[length(bodies) + 1L]] <<- body
+    if (!is.null(body$stream_options)) {
+      return(list(status = 400L, text = "stream_options is not supported"))
+    }
+    list(status = 200L, text = "{}")
+  }
+
+  caps <- aisdk:::detect_console_chat_capabilities(
+    "https://proxy.example.com/v1", "sk-x", "proxy-model",
+    probe_fn = fake_probe
+  )
+
+  expect_false(caps$enable_stream_options)
+  expect_true(caps$supports_native_tools)
+  expect_true(caps$detected)
+  expect_length(bodies, 2)
+  expect_null(bodies[[2]]$stream_options)
+  expect_false(is.null(bodies[[2]]$tools))
+})
+
+test_that("detect_console_chat_capabilities is inconclusive on unrelated errors", {
+  caps <- aisdk:::detect_console_chat_capabilities(
+    "https://proxy.example.com/v1", "bad-key", "proxy-model",
+    probe_fn = function(url, headers, body) list(status = 401L, text = "invalid api key")
+  )
+  expect_false(caps$enable_stream_options)
+  expect_false(caps$supports_native_tools)
+  expect_false(caps$detected)
+})
+
+test_that("console_probe_route_exists distinguishes missing routes from unknown models", {
+  expect_true(aisdk:::console_probe_route_exists(list(status = 401L, text = "unauthorized")))
+  expect_true(aisdk:::console_probe_route_exists(list(status = 400L, text = "bad request")))
+  expect_true(aisdk:::console_probe_route_exists(
+    list(status = 404L, text = "The model `aisdk-setup-probe` does not exist (model_not_found)")
+  ))
+  expect_false(aisdk:::console_probe_route_exists(
+    list(status = 404L, text = "invalid_api_path: unknown route /v1/chat/completions")
+  ))
+  expect_false(aisdk:::console_probe_route_exists(list(status = 405L, text = "method not allowed")))
+})
+
+test_that("console_suggest_custom_provider_id derives ids from hosts", {
+  # "moonshot" is a built-in provider id, so the suggestion gets suffixed.
+  expect_equal(aisdk:::console_suggest_custom_provider_id("https://api.moonshot.cn/v1"), "moonshot-api")
+  expect_equal(aisdk:::console_suggest_custom_provider_id("https://proxy.example.com/v1"), "proxy")
+  expect_equal(aisdk:::console_suggest_custom_provider_id("http://172.16.153.230:8010/v1"), "custom")
+  # Collides with a built-in provider id -> suffixed.
+  expect_equal(aisdk:::console_suggest_custom_provider_id("https://api.openai.internal/v1"), "openai-api")
+  expect_equal(aisdk:::console_suggest_custom_provider_id(""), "custom")
 })
