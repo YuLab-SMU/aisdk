@@ -135,20 +135,11 @@ expect_tool_selection <- function(result,
                                   expected_tools,
                                   exact = FALSE,
                                   info = NULL) {
-  # Extract tool calls from result
-  tool_calls <- if (!is.null(result$tool_calls)) {
-    sapply(result$tool_calls, function(tc) tc$name)
-  } else if (!is.null(result$steps)) {
-    unlist(lapply(result$steps, function(step) {
-      if (!is.null(step$tool_calls)) {
-        sapply(step$tool_calls, function(tc) tc$name)
-      }
-    }))
-  } else {
-    character(0)
-  }
-
-  tool_calls <- unique(tool_calls)
+  # Names of every tool called across the whole trajectory. The multi-step
+  # runtime accumulates calls in result$all_tool_calls and leaves
+  # result$tool_calls NULL on a final text turn, so reading tool_calls alone
+  # missed the trajectory; use the accumulated list first.
+  tool_calls <- unique(eval_result_tool_call_names(result))
 
   if (exact) {
     passed <- setequal(tool_calls, expected_tools)
@@ -271,6 +262,150 @@ Where hallucination_score is:
   }
 
   invisible(result)
+}
+
+#' @keywords internal
+# The full trajectory of tool calls a (possibly multi-step) run made, as a
+# list of {id, name, arguments}. Prefers the runtime's accumulated
+# all_tool_calls; falls back to a single-turn result$tool_calls.
+eval_result_tool_calls <- function(result) {
+  calls <- result$all_tool_calls
+  if (is.null(calls) || length(calls) == 0) {
+    calls <- result$tool_calls
+  }
+  calls %||% list()
+}
+
+#' @keywords internal
+eval_result_tool_call_names <- function(result) {
+  calls <- eval_result_tool_calls(result)
+  if (length(calls) == 0) {
+    return(character(0))
+  }
+  vapply(calls, function(tc) tc$name %||% "", character(1))
+}
+
+#' @keywords internal
+eval_expect <- function(passed, message) {
+  if (requireNamespace("testthat", quietly = TRUE)) {
+    testthat::expect(isTRUE(passed), message)
+  } else if (!isTRUE(passed)) {
+    stop(message)
+  }
+  invisible(isTRUE(passed))
+}
+
+#' @title Expect a Tool-Call Trajectory
+#' @description
+#' Assert on the sequence of tool calls a (possibly multi-step) agent made —
+#' the trajectory, not just the final text. Reads the runtime's accumulated
+#' `result$all_tool_calls`, so it works for multi-step agent runs.
+#' @param result A generation result from `generate_text()`.
+#' @param names Character vector of expected tool names.
+#' @param exact If TRUE, the called tool-name set must equal `names` exactly.
+#' @param ordered If TRUE, `names` must appear as an ordered subsequence of the
+#'   actual call order (checks the agent called tools in the right order).
+#' @param info Optional context for the failure message.
+#' @return Invisibly, a list with `passed` and the `actual` call names.
+#' @export
+expect_tool_trajectory <- function(result, names, exact = FALSE, ordered = FALSE, info = NULL) {
+  actual <- eval_result_tool_call_names(result)
+  passed <- if (isTRUE(ordered)) {
+    # `names` is an ordered subsequence of `actual`.
+    i <- 1L
+    for (nm in actual) {
+      if (i <= length(names) && identical(nm, names[[i]])) i <- i + 1L
+    }
+    i > length(names)
+  } else if (isTRUE(exact)) {
+    setequal(unique(actual), names)
+  } else {
+    all(names %in% actual)
+  }
+  message <- sprintf(
+    "Tool trajectory mismatch (%s).\nExpected: %s\nActual: %s%s",
+    if (ordered) "ordered" else if (exact) "exact set" else "subset",
+    paste(names, collapse = ", "),
+    paste(actual, collapse = ", "),
+    if (!is.null(info)) paste0("\nInfo: ", info) else ""
+  )
+  eval_expect(passed, message)
+  invisible(list(passed = passed, actual = actual))
+}
+
+#' @title Expect Tool-Call Arguments
+#' @description
+#' Assert that at least one call to `tool` in the trajectory was made with
+#' arguments matching `args` (a named subset — each named value must equal the
+#' corresponding argument in some call to that tool).
+#' @param result A generation result from `generate_text()`.
+#' @param tool The tool name to check.
+#' @param args A named list of argument key/values that must all match in one call.
+#' @param info Optional context for the failure message.
+#' @return Invisibly, a list with `passed` and the matched call (or NULL).
+#' @export
+expect_tool_args <- function(result, tool, args, info = NULL) {
+  calls <- Filter(function(tc) identical(tc$name %||% "", tool), eval_result_tool_calls(result))
+  matched <- NULL
+  for (tc in calls) {
+    call_args <- tc$arguments %||% list()
+    if (all(vapply(names(args), function(k) {
+      !is.null(call_args[[k]]) && isTRUE(all.equal(call_args[[k]], args[[k]]))
+    }, logical(1)))) {
+      matched <- tc
+      break
+    }
+  }
+  passed <- !is.null(matched)
+  message <- sprintf(
+    "No call to '%s' matched the expected arguments.\nExpected args: %s\nCalls seen: %d%s",
+    tool,
+    paste(names(args), unlist(lapply(args, as.character)), sep = "=", collapse = ", "),
+    length(calls),
+    if (!is.null(info)) paste0("\nInfo: ", info) else ""
+  )
+  eval_expect(passed, message)
+  invisible(list(passed = passed, matched = matched))
+}
+
+#' @title Expect a Run Within Resource Budgets
+#' @description
+#' Regression assertion on a run's aggregated cost signals — token usage, step
+#' count, and tool-call count — using the fields the runtime already sums onto
+#' the result. Use it to catch regressions (e.g. an agent that suddenly takes
+#' twice as many steps or tokens) on a static task.
+#' @param result A generation result from `generate_text()`.
+#' @param max_tokens Optional cap on `result$usage$total_tokens`.
+#' @param max_steps Optional cap on `result$steps`.
+#' @param max_tool_calls Optional cap on the number of tool calls made.
+#' @param info Optional context for the failure message.
+#' @return Invisibly, a list of the observed metrics.
+#' @export
+expect_run_within <- function(result, max_tokens = NULL, max_steps = NULL,
+                              max_tool_calls = NULL, info = NULL) {
+  observed <- list(
+    total_tokens = result$usage$total_tokens %||% NA_real_,
+    steps = result$steps %||% NA_real_,
+    tool_calls = length(eval_result_tool_calls(result))
+  )
+  failures <- character(0)
+  if (!is.null(max_tokens) && !is.na(observed$total_tokens) && observed$total_tokens > max_tokens) {
+    failures <- c(failures, sprintf("total_tokens %g > %g", observed$total_tokens, max_tokens))
+  }
+  if (!is.null(max_steps) && !is.na(observed$steps) && observed$steps > max_steps) {
+    failures <- c(failures, sprintf("steps %g > %g", observed$steps, max_steps))
+  }
+  if (!is.null(max_tool_calls) && observed$tool_calls > max_tool_calls) {
+    failures <- c(failures, sprintf("tool_calls %d > %d", observed$tool_calls, max_tool_calls))
+  }
+  passed <- length(failures) == 0
+  message <- sprintf(
+    "Run exceeded its budget: %s%s",
+    paste(failures, collapse = "; "),
+    if (!is.null(info)) paste0("\nInfo: ", info) else ""
+  )
+  eval_expect(passed, message)
+  invisible(observed)
 }
 
 # Null-coalescing operator
