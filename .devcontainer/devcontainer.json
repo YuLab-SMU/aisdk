@@ -4,7 +4,11 @@
   "features": {
     "ghcr.io/devcontainers/features/git:1": {}
   },
-  "postCreateCommand": "Rscript -e \"install.packages(c('devtools', 'testthat', 'rcmdcheck'), repos = 'https://cloud.r-project.org'); devtools::install_deps(dependencies = TRUE)\"",
+  // pak resolves and apt-installs system requirements (libcurl, libxml2, ...)
+  // automatically, which plain install.packages() does not on the minimal
+  // r-ver image. Dev deps come from DESCRIPTION (Imports + Suggests);
+  // languageserver powers the REditorSupport.r extension.
+  "postCreateCommand": "Rscript -e 'install.packages(\"pak\", repos = sprintf(\"https://r-lib.github.io/p/pak/stable/%s/%s/%s\", .Platform$pkgType, R.Version()$os, R.Version()$arch))' -e 'pak::local_install_dev_deps()' -e 'pak::pak(c(\"any::rcmdcheck\", \"any::languageserver\"))'",
   "customizations": {
     "vscode": {
       "extensions": [

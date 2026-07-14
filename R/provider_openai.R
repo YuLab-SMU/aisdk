@@ -90,6 +90,10 @@ OpenAILanguageModel <- R6::R6Class(
       })
     },
 
+    # Reasoning models (o-series, gpt-5) reject sampling params with HTTP 400
+    # ("Unsupported value: 'temperature' does not support X with this model"),
+    # so they are silently skipped for those models.
+    # See: https://platform.openai.com/docs/guides/reasoning
     add_chat_sampling_params = function(body, params, is_reasoning) {
       for (nm in c("temperature", "top_p", "presence_penalty", "frequency_penalty")) {
         if (!is.null(params[[nm]]) && !is_reasoning) {
@@ -99,14 +103,18 @@ OpenAILanguageModel <- R6::R6Class(
       body
     },
 
+    # Smart token limit mapping (capability-driven): an explicit
+    # `max_completion_tokens` always wins; the unified `max_tokens` becomes
+    # `max_completion_tokens` for reasoning models (which reject `max_tokens`)
+    # and stays `max_tokens` otherwise.
     add_chat_token_limit = function(body, params, is_reasoning) {
-      if (!is.null(params$max_completion_tokens)) {
-        body$max_completion_tokens <- params$max_completion_tokens
-      } else if (!is.null(params$max_tokens)) {
+      if (!is.null(params[["max_completion_tokens"]])) {
+        body$max_completion_tokens <- params[["max_completion_tokens"]]
+      } else if (!is.null(params[["max_tokens"]])) {
         if (is_reasoning) {
-          body$max_completion_tokens <- params$max_tokens
+          body$max_completion_tokens <- params[["max_tokens"]]
         } else {
-          body$max_tokens <- params$max_tokens
+          body$max_tokens <- params[["max_tokens"]]
         }
       }
       body
@@ -122,7 +130,10 @@ OpenAILanguageModel <- R6::R6Class(
       })
     },
 
-    merge_chat_extra_params = function(body, params, is_reasoning) {
+    # Pass through params not consumed above (e.g. seed, logprobs, the
+    # normalized response_format) so provider-specific options reach the API
+    # unchanged. Sampling params never appear here: they are in handled_params.
+    merge_chat_extra_params = function(body, params) {
       handled_params <- c(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_completion_tokens",
@@ -132,15 +143,12 @@ OpenAILanguageModel <- R6::R6Class(
       )
       extra_params <- params[setdiff(names(params), handled_params)]
       if (length(extra_params) > 0) {
-        if (is_reasoning) {
-          extra_params <- extra_params[setdiff(names(extra_params),
-            c("temperature", "top_p", "presence_penalty", "frequency_penalty"))]
-        }
         body <- utils::modifyList(body, extra_params)
       }
       body
     },
 
+    # Shared body builder for the streaming and non-streaming chat payloads.
     build_chat_body = function(params, stream = FALSE) {
       body <- list(
         model = self$model_id,
@@ -153,9 +161,12 @@ OpenAILanguageModel <- R6::R6Class(
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- private$format_chat_tools(params$tools)
       }
-      body <- private$merge_chat_extra_params(body, params, is_reasoning)
+      body <- private$merge_chat_extra_params(body, params)
+      # Added after the extra-params merge so a caller-supplied stream_options
+      # wins over the default; some providers reject stream_options entirely
+      # (config$disable_stream_options).
       if (isTRUE(stream) &&
-          is.null(body$stream_options) &&
+          is.null(body[["stream_options"]]) &&
           !isTRUE(private$config$disable_stream_options)) {
         body$stream_options <- list(include_usage = TRUE)
       }
@@ -198,7 +209,6 @@ OpenAILanguageModel <- R6::R6Class(
         body = private$build_chat_body(params, stream = FALSE)
       )
     },
-
 
     #' @description Execute the API request.
     #' @param url The API endpoint URL.
@@ -286,7 +296,6 @@ OpenAILanguageModel <- R6::R6Class(
         body = private$build_chat_body(params, stream = TRUE)
       )
     },
-
 
     #' @description Generate text (streaming).
     #' @param params A list of call options.
