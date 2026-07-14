@@ -254,6 +254,37 @@ recent_context_window_size <- function(regime) {
 }
 
 #' @keywords internal
+# TRUE for a message that is a tool result, across provider shapes: OpenAI /
+# Gemini store it as role "tool"; Anthropic stores it as a user message whose
+# content carries a tool_result block.
+is_tool_result_message <- function(msg) {
+  role <- msg$role %||% ""
+  if (identical(role, "tool")) {
+    return(TRUE)
+  }
+  if (identical(role, "user") && is.list(msg$content)) {
+    return(any(vapply(
+      msg$content,
+      function(block) is.list(block) && identical(block$type %||% "", "tool_result"),
+      logical(1)
+    )))
+  }
+  FALSE
+}
+
+#' @keywords internal
+# Move a compaction trim boundary earlier so the kept window never begins with
+# a tool-result message whose assistant tool_use turn was compacted away
+# (which providers reject). Returns the adjusted count of compacted messages.
+adjust_compacted_count_for_tool_pairs <- function(messages, compacted_count) {
+  while (compacted_count > 0 &&
+         is_tool_result_message(messages[[compacted_count + 1L]])) {
+    compacted_count <- compacted_count - 1L
+  }
+  compacted_count
+}
+
+#' @keywords internal
 normalize_context_state <- function(state = NULL) {
   defaults <- list(
     version = 1L,
@@ -2665,10 +2696,23 @@ assemble_session_messages <- function(session,
     recent_n <- recent_context_window_size(metrics$regime %||% "unknown")
     if (is.finite(recent_n) && length(messages) > recent_n) {
       compacted_count <- length(messages) - recent_n
-      older_messages <- messages[seq_len(compacted_count)]
-      assembled_messages <- tail(messages, recent_n)
+      # Never let the kept window begin with a tool-result message whose
+      # assistant tool_use turn was compacted away — providers reject a
+      # tool_result with no matching tool_use (Anthropic 400). Walk the
+      # boundary back to keep each tool_use with its results.
+      compacted_count <- adjust_compacted_count_for_tool_pairs(messages, compacted_count)
+      if (compacted_count > 0) {
+        older_messages <- messages[seq_len(compacted_count)]
+        assembled_messages <- messages[(compacted_count + 1L):length(messages)]
+      } else {
+        # The whole recent span is one unbroken tool chain: keep it all rather
+        # than orphan a tool_result.
+        older_messages <- list()
+        assembled_messages <- messages
+      }
 
-      if (compacted_count != state$compacted_message_count || !nzchar(state$rolling_summary)) {
+      if (compacted_count > 0 &&
+          (compacted_count != state$compacted_message_count || !nzchar(state$rolling_summary))) {
         state$rolling_summary <- summarize_message_span(older_messages)
         state$compacted_message_count <- compacted_count
         state$transcript_segments <- list(list(
@@ -2687,7 +2731,7 @@ assemble_session_messages <- function(session,
           )
         )
       }
-      summary_block <- state$rolling_summary
+      summary_block <- state$rolling_summary %||% ""
     } else if (length(messages) == 0) {
       state$rolling_summary <- ""
       state$compacted_message_count <- 0L

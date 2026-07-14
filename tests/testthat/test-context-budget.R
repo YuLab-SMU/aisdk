@@ -876,3 +876,37 @@ test_that("refresh_context_state can write recovered tool fixes back into projec
   expect_false(is.null(retrieved))
   expect_equal(retrieved$fixed_code, "good_code()")
 })
+
+# --- U4: tool-pair-safe compaction trim boundary ------------------------------
+
+test_that("is_tool_result_message recognizes both provider shapes", {
+  expect_true(aisdk:::is_tool_result_message(list(role = "tool", content = "r")))
+  expect_true(aisdk:::is_tool_result_message(list(
+    role = "user",
+    content = list(list(type = "tool_result", tool_use_id = "x", content = "r"))
+  )))
+  expect_false(aisdk:::is_tool_result_message(list(role = "user", content = "hi")))
+  expect_false(aisdk:::is_tool_result_message(list(role = "assistant", content = "a")))
+})
+
+test_that("adjust_compacted_count_for_tool_pairs never orphans a tool result", {
+  msgs <- list(
+    list(role = "user", content = "q"),
+    list(role = "assistant", content = "a"),
+    list(role = "assistant", content = "", tool_calls = list(list(id = "c1", name = "t"))),
+    list(role = "tool", content = "tool result"),
+    list(role = "assistant", content = "done")
+  )
+  # A naive cut at 3 would keep [tool_result, assistant] with no tool_use.
+  expect_equal(aisdk:::adjust_compacted_count_for_tool_pairs(msgs, 3), 2)
+  # A safe cut is left alone.
+  expect_equal(aisdk:::adjust_compacted_count_for_tool_pairs(msgs, 2), 2)
+  # Anthropic-shaped tool result is handled the same way.
+  msgs2 <- list(
+    list(role = "user", content = "q"),
+    list(role = "assistant", content = list(list(type = "tool_use", id = "c1"))),
+    list(role = "user", content = list(list(type = "tool_result", tool_use_id = "c1"))),
+    list(role = "assistant", content = "done")
+  )
+  expect_equal(aisdk:::adjust_compacted_count_for_tool_pairs(msgs2, 2), 1)
+})
