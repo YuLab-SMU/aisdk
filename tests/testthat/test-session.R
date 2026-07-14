@@ -292,3 +292,57 @@ test_that("ChatSession stores a single multimodal content block as a block list"
   expect_length(history[[1]]$content, 1)
   expect_equal(history[[1]]$content[[1]]$type, "input_image")
 })
+
+# --- W5: transactional history, cross-step usage, switch_model override reset -
+
+test_that("send() rolls back the user message when generation throws", {
+  # Two failing responses: the first send consumes one, the retry the other.
+  failing <- MockModel$new(list(
+    function(params) stop("boom"),
+    function(params) stop("boom again")
+  ))
+  session <- create_chat_session(model = failing)
+  session$append_message("user", "earlier turn")
+  before <- length(session$get_history())
+
+  expect_error(session$send("this will fail"), "boom")
+  # No dangling user message left behind.
+  expect_equal(length(session$get_history()), before)
+  # A retry does not double-append the previous user message.
+  expect_error(session$send("still failing"), "boom")
+  expect_equal(length(session$get_history()), before)
+})
+
+test_that("send() commits both turns on success", {
+  session <- create_chat_session(model = MockModel$new())
+  session$send("hello")
+  roles <- vapply(session$get_history(), function(m) m$role, character(1))
+  expect_equal(roles, c("user", "assistant"))
+})
+
+test_that("agent runtime aggregates usage across steps", {
+  wx <- tool(name = "get_weather", description = "w", execute = function(city = "X") "sunny")
+  model <- MockModel$new(list(
+    list(text = "", tool_calls = list(list(id = "c1", name = "get_weather", arguments = list(city = "SF"))),
+         finish_reason = "tool_calls", usage = list(prompt_tokens = 80, completion_tokens = 20, total_tokens = 100)),
+    list(text = "It is sunny.", tool_calls = NULL, finish_reason = "stop",
+         usage = list(prompt_tokens = 40, completion_tokens = 10, total_tokens = 50))
+  ))
+  res <- generate_text(model = model, prompt = "weather?", tools = list(wx), max_steps = 3)
+
+  # Sum of both steps, not just the final one.
+  expect_equal(res$usage$prompt_tokens, 120)
+  expect_equal(res$usage$completion_tokens, 30)
+  expect_equal(res$usage$total_tokens, 150)
+})
+
+test_that("switch_model clears the previous model's runtime overrides", {
+  session <- create_chat_session(model = MockModel$new())
+  session$set_model_options(context_window = 200000, max_output_tokens = 8000)
+  expect_equal(session$get_model_options()$context_window, 200000)
+
+  session$switch_model("mock:smaller-model")
+  # The 200k override must not leak onto a model with a different window.
+  expect_null(session$get_model_options()$context_window)
+  expect_null(session$get_model_options()$max_output_tokens)
+})

@@ -722,6 +722,26 @@ agent_runtime_deliver_final_text <- function(text,
   invisible(NULL)
 }
 
+# Sum per-step usage across a multi-step run. The runtime overwrote `result`
+# each iteration, so ChatSession$stats saw only the final step's tokens; a
+# 6-step tool run reported ~1/6 of real spend.
+agent_runtime_sum_usage <- function(acc, usage) {
+  if (is.null(usage)) {
+    return(acc)
+  }
+  acc <- acc %||% list(prompt_tokens = 0, completion_tokens = 0, total_tokens = 0)
+  add <- function(a, b) (a %||% 0) + (b %||% 0)
+  acc$prompt_tokens <- add(acc$prompt_tokens, usage$prompt_tokens)
+  acc$completion_tokens <- add(acc$completion_tokens, usage$completion_tokens)
+  reported_total <- usage$total_tokens %||%
+    ((usage$prompt_tokens %||% 0) + (usage$completion_tokens %||% 0))
+  acc$total_tokens <- add(acc$total_tokens, reported_total)
+  if (!is.null(usage$reasoning_tokens)) {
+    acc$reasoning_tokens <- add(acc$reasoning_tokens, usage$reasoning_tokens)
+  }
+  acc
+}
+
 #' @keywords internal
 run_agent_runtime <- function(model,
                               messages,
@@ -774,6 +794,7 @@ run_agent_runtime <- function(model,
   decision <- new_agent_decision("continue", reason = "start")
 
   all_tool_calls <- list()
+  accumulated_usage <- NULL
   all_tool_results <- list()
   stream_events <- list()
   result <- NULL
@@ -1017,6 +1038,10 @@ run_agent_runtime <- function(model,
         } else {
           result <- model$do_generate(params)
         }
+
+        # Accumulate this step's tokens before any `next` skips ahead; the
+        # aggregate is written onto the final result below.
+        accumulated_usage <- agent_runtime_sum_usage(accumulated_usage, result$usage)
 
         result <- recover_text_tool_calls(result)
         result <- recover_text_final_answer(result)
@@ -1345,6 +1370,11 @@ run_agent_runtime <- function(model,
     final_text = result$text %||% NULL,
     final_reasoning = result$reasoning %||% NULL
   )
+
+  # Report tokens summed across every step, not just the last model call.
+  if (!is.null(accumulated_usage)) {
+    result$usage <- accumulated_usage
+  }
 
   task_state$budget$total_steps <- step
   task_state$budget$execution_windows <- execution_windows

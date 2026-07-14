@@ -147,6 +147,14 @@ ChatSession <- R6::R6Class(
       # Resolve model if needed
       model <- private$resolve_model()
 
+      # Transactional history: append the user message so it reaches the model,
+      # but roll back to this snapshot if generation fails or is interrupted, so
+      # a failed turn leaves no dangling user message (and a retry can't
+      # double-append it). on.exit fires on error and interrupt too.
+      history_snapshot <- private$.history
+      committed <- FALSE
+      on.exit(if (!committed) private$.history <- history_snapshot, add = TRUE)
+
       # Append user message to history
       self$append_message("user", prompt)
 
@@ -171,6 +179,7 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
+      committed <- TRUE
       private$store_run_state(result$task_state %||% result$run_state %||% run_state_from_result(result))
 
       # Update stats
@@ -193,6 +202,12 @@ ChatSession <- R6::R6Class(
       extra_args$hooks <- NULL
 
       model <- private$resolve_model()
+
+      # Transactional history (see send()): roll back a dangling user message if
+      # the streamed generation fails or is interrupted.
+      history_snapshot <- private$.history
+      committed <- FALSE
+      on.exit(if (!committed) private$.history <- history_snapshot, add = TRUE)
 
       # Append user message
       self$append_message("user", prompt)
@@ -219,6 +234,7 @@ ChatSession <- R6::R6Class(
       )
 
       private$sync_generation_messages(result)
+      committed <- TRUE
       private$store_run_state(result$task_state %||% result$run_state %||% run_state_from_result(result))
 
       # Update stats
@@ -334,6 +350,13 @@ ChatSession <- R6::R6Class(
       if (is.character(model)) {
         private$.model_id <- model
         private$.model <- NULL
+        # Clear the previous model's runtime overrides before applying the new
+        # model's config; otherwise e.g. a 200k-window model's
+        # context_window_override survives onto a 64k model and context
+        # occupancy is under-reported ~3x (compaction never triggers).
+        private$.metadata$context_window_override <- NULL
+        private$.metadata$max_output_tokens_override <- NULL
+        private$.metadata$model_call_options <- NULL
         configured_model_options <- model_config_runtime_options(private$.model_id)
         if (length(configured_model_options) > 0) {
           metadata <- model_runtime_session_metadata(configured_model_options)
