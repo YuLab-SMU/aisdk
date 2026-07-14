@@ -14,7 +14,7 @@ AnthropicLanguageModel <- R6::R6Class(
   inherit = LanguageModelV1,
   private = list(
     config = NULL,
-    get_headers = function() {
+    get_headers = function(context_management = FALSE) {
       h <- list(
         `Content-Type` = "application/json",
         `anthropic-version` = private$config$api_version
@@ -30,11 +30,23 @@ AnthropicLanguageModel <- R6::R6Class(
         }
       }
 
-      # Add beta header for prompt caching if enabled, unless already specified
-      if (!is.null(private$config$enable_caching) && private$config$enable_caching) {
-        if (is.null(h$`anthropic-beta`)) {
-          h$`anthropic-beta` <- "prompt-caching-2024-07-31"
+      # Collect required beta tokens. Anthropic accepts a comma-separated list
+      # in a single `anthropic-beta` header, so prompt caching and context
+      # editing can be enabled together (previously only one could be set).
+      betas <- character(0)
+      if (isTRUE(private$config$enable_caching)) {
+        betas <- c(betas, "prompt-caching-2024-07-31")
+      }
+      if (isTRUE(context_management)) {
+        betas <- c(betas, "context-management-2025-06-27")
+      }
+      if (length(betas) > 0) {
+        existing <- if (!is.null(h$`anthropic-beta`)) {
+          trimws(strsplit(h$`anthropic-beta`, ",", fixed = TRUE)[[1]])
+        } else {
+          character(0)
         }
+        h$`anthropic-beta` <- paste(unique(c(existing, betas)), collapse = ",")
       }
 
       h
@@ -159,6 +171,15 @@ AnthropicLanguageModel <- R6::R6Class(
         body$stop_sequences <- params$stop_sequences
       }
 
+      # Server-side context editing (tool-result / thinking clearing): a
+      # lighter-touch lever than client-side compaction. A per-call
+      # `context_management` wins over a provider-level default; when either is
+      # set, do_generate/do_stream also emit the beta header (see get_headers).
+      context_management <- params$context_management %||% private$config$context_management
+      if (!is.null(context_management)) {
+        body$context_management <- context_management
+      }
+
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- lapply(params$tools, function(t) {
           if (inherits(t, "Tool")) {
@@ -177,7 +198,7 @@ AnthropicLanguageModel <- R6::R6Class(
       # never appear here: they are in handled_params.
       handled_params <- c(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
-        "system", "top_p", "stop_sequences",
+        "system", "top_p", "stop_sequences", "context_management",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -214,9 +235,10 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @return A GenerateResult object.
     do_generate = function(params) {
       url <- api_endpoint_urls(private$config, "/messages")
-      headers <- private$get_headers()
-
       body <- private$build_messages_body(params, stream = FALSE)
+      headers <- private$get_headers(
+        context_management = !is.null(body$context_management)
+      )
 
       response <- post_to_api(
         url,
@@ -269,9 +291,10 @@ AnthropicLanguageModel <- R6::R6Class(
     #' @return A GenerateResult object.
     do_stream = function(params, callback) {
       url <- api_endpoint_urls(private$config, "/messages")
-      headers <- private$get_headers()
-
       body <- private$build_messages_body(params, stream = TRUE)
+      headers <- private$get_headers(
+        context_management = !is.null(body$context_management)
+      )
 
       # Anthropic uses different SSE event format
       stream_anthropic(

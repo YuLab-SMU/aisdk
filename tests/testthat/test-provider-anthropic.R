@@ -347,3 +347,39 @@ test_that("agent runtime rebuilds Anthropic tool_use blocks from a streamed resu
   expect_equal(assistant$content[[1]]$id, "c1")
   expect_equal(assistant$content[[1]]$name, "get_weather")
 })
+
+# --- U3: server-side context editing (tool-result clearing) passthrough -------
+
+test_that("Anthropic per-call context_management reaches the body and sets the beta", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-4-20250514")
+  priv <- model$.__enclos_env__$private
+  cm <- list(edits = list(list(
+    type = "clear_tool_uses_20250919",
+    trigger = list(type = "input_tokens", value = 30000),
+    keep = list(type = "tool_uses", value = 3)
+  )))
+
+  body <- priv$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), context_management = cm),
+    stream = FALSE
+  )
+  expect_equal(body$context_management$edits[[1]]$type, "clear_tool_uses_20250919")
+
+  # Beta header only when context management is active.
+  expect_match(priv$get_headers(context_management = TRUE)$`anthropic-beta`,
+               "context-management-2025-06-27")
+  expect_null(priv$get_headers(context_management = FALSE)$`anthropic-beta`)
+})
+
+test_that("Anthropic caching and context-editing betas coexist in one header", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  provider$enable_caching(TRUE)
+  priv <- provider$language_model("claude-sonnet-4")$.__enclos_env__$private
+  beta <- priv$get_headers(context_management = TRUE)$`anthropic-beta`
+  expect_match(beta, "prompt-caching-2024-07-31")
+  expect_match(beta, "context-management-2025-06-27")
+  # caching alone stays single-valued
+  expect_equal(priv$get_headers(context_management = FALSE)$`anthropic-beta`,
+               "prompt-caching-2024-07-31")
+})
