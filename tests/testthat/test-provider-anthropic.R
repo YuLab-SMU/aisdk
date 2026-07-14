@@ -383,3 +383,59 @@ test_that("Anthropic caching and context-editing betas coexist in one header", {
   expect_equal(priv$get_headers(context_management = FALSE)$`anthropic-beta`,
                "prompt-caching-2024-07-31")
 })
+
+# --- V1: enable_caching auto-places a breakpoint and surfaces cache tokens ----
+
+test_that("enable_caching auto-marks the last tool so the tools prefix caches", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  provider$enable_caching(TRUE)
+  priv <- provider$language_model("claude-sonnet-4")$.__enclos_env__$private
+  t1 <- tool(name = "a", description = "tool a", execute = function() "x")
+  t2 <- tool(name = "b", description = "tool b", execute = function() "y")
+
+  body <- priv$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), tools = list(t1, t2)),
+    stream = FALSE
+  )
+  n <- length(body$tools)
+  expect_equal(body$tools[[n]]$cache_control$type, "ephemeral")
+  expect_null(body$tools[[1]]$cache_control) # only the last tool marked
+})
+
+test_that("caching disabled places no auto breakpoint; caller mark is respected", {
+  # Disabled: no breakpoint.
+  off <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  t1 <- tool(name = "a", description = "a", execute = function() "x")
+  b_off <- off$language_model("claude-sonnet-4")$.__enclos_env__$private$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), tools = list(t1)), stream = FALSE
+  )
+  expect_null(b_off$tools[[1]]$cache_control)
+
+  # Enabled but the caller already marked a tool: don't add a second breakpoint.
+  on <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  on$enable_caching(TRUE)
+  t_marked <- tool(name = "a", description = "a", execute = function() "x",
+                   meta = list(cache_control = list(type = "ephemeral")))
+  t_plain <- tool(name = "b", description = "b", execute = function() "y")
+  b_on <- on$language_model("claude-sonnet-4")$.__enclos_env__$private$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), tools = list(t_marked, t_plain)),
+    stream = FALSE
+  )
+  expect_equal(b_on$tools[[1]]$cache_control$type, "ephemeral") # caller's mark
+  expect_null(b_on$tools[[2]]$cache_control) # not auto-added elsewhere
+})
+
+test_that("Anthropic usage surfaces cache tokens for observability", {
+  u <- aisdk:::anthropic_usage_with_cache(list(
+    input_tokens = 100, output_tokens = 20,
+    cache_read_input_tokens = 800, cache_creation_input_tokens = 50
+  ))
+  expect_equal(u$cache_read_input_tokens, 800)
+  expect_equal(u$cache_creation_input_tokens, 50)
+  expect_equal(u$total_tokens, 970)
+
+  # Without caching, cache fields are absent (not zero-noise).
+  u2 <- aisdk:::anthropic_usage_with_cache(list(input_tokens = 100, output_tokens = 20))
+  expect_null(u2$cache_read_input_tokens)
+  expect_equal(u2$total_tokens, 120)
+})

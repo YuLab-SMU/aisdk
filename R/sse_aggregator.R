@@ -538,10 +538,18 @@ map_anthropic_chunk <- function(event_type, event_data, agg) {
     agg$on_raw_response(event_data)
 
     if (event_type == "message_start") {
-        # Prompt tokens are reported here (input_tokens), not in message_delta.
+        # Prompt tokens are reported here (input_tokens), not in message_delta;
+        # so are the cache token counts, which make caching observable.
         usage <- event_data$message$usage
         if (!is.null(usage$input_tokens)) {
-            agg$on_usage(list(prompt_tokens = usage$input_tokens))
+            start_usage <- list(prompt_tokens = usage$input_tokens)
+            if (!is.null(usage$cache_read_input_tokens)) {
+                start_usage$cache_read_input_tokens <- usage$cache_read_input_tokens
+            }
+            if (!is.null(usage$cache_creation_input_tokens)) {
+                start_usage$cache_creation_input_tokens <- usage$cache_creation_input_tokens
+            }
+            agg$on_usage(start_usage)
         }
     } else if (event_type == "content_block_delta") {
         delta <- event_data$delta

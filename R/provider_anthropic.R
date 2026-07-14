@@ -5,6 +5,28 @@
 #' @keywords internal
 NULL
 
+#' @keywords internal
+# Build the usage list from an Anthropic `usage` object, surfacing the cache
+# token counts (cache_creation_input_tokens / cache_read_input_tokens) so
+# prompt-caching effectiveness is observable — without them a user cannot tell
+# whether caching actually hit. total_tokens counts every input token once
+# (Anthropic reports cache reads/writes separately from input_tokens).
+anthropic_usage_with_cache <- function(usage) {
+  usage <- usage %||% list()
+  input <- usage$input_tokens %||% 0
+  output <- usage$output_tokens %||% 0
+  cache_read <- usage$cache_read_input_tokens
+  cache_write <- usage$cache_creation_input_tokens
+  out <- list(
+    prompt_tokens = input,
+    completion_tokens = output,
+    total_tokens = input + output + (cache_read %||% 0) + (cache_write %||% 0)
+  )
+  if (!is.null(cache_read)) out$cache_read_input_tokens <- cache_read
+  if (!is.null(cache_write)) out$cache_creation_input_tokens <- cache_write
+  out
+}
+
 #' @title Anthropic Language Model Class
 #' @description
 #' Language model implementation for Anthropic's Messages API.
@@ -192,6 +214,21 @@ AnthropicLanguageModel <- R6::R6Class(
             t # Assume already in correct format
           }
         })
+        # When caching is enabled but the caller marked no breakpoint, cache the
+        # tools array automatically: Anthropic caches the prefix up to and
+        # including a cache_control block, and tools sit first (before system
+        # and messages), so marking the LAST tool caches the whole — typically
+        # largest and most stable — tools prefix. Without this, `enable_caching`
+        # only sends a beta header and nothing is actually cached.
+        already_marked <- any(vapply(
+          body$tools, function(x) is.list(x) && !is.null(x$cache_control), logical(1)
+        ))
+        if (isTRUE(private$config$enable_caching) && !already_marked && length(body$tools) > 0) {
+          last <- length(body$tools)
+          if (is.list(body$tools[[last]])) {
+            body$tools[[last]]$cache_control <- list(type = "ephemeral")
+          }
+        }
       }
 
       # Pass through extra params (thinking, tool_choice, ...). Sampling params
@@ -274,11 +311,7 @@ AnthropicLanguageModel <- R6::R6Class(
 
       GenerateResult$new(
         text = text,
-        usage = list(
-          prompt_tokens = response$usage$input_tokens,
-          completion_tokens = response$usage$output_tokens,
-          total_tokens = response$usage$input_tokens + response$usage$output_tokens
-        ),
+        usage = anthropic_usage_with_cache(response$usage),
         finish_reason = response$stop_reason,
         raw_response = response,
         tool_calls = tool_calls
