@@ -682,6 +682,13 @@ generate_text <- function(model = NULL,
     initial_messages_len = initial_messages_len
   )
 
+  # Attach an estimated USD cost for this generation (cache-aware, from the
+  # aggregated usage + the model's pricing). NA when pricing is unknown.
+  # Accepts a GenerateResult (real providers) or a result-shaped list (mocks).
+  if (!is.null(result) && !is.null(result$usage)) {
+    result$cost_usd <- estimate_cost(result$usage, generation_model_id(model))
+  }
+
   # Trigger on_generation_end (output guardrail: may revise/replace the result)
   if (!is.null(hooks)) {
     result <- hooks$trigger_generation_end(result)
@@ -698,6 +705,18 @@ is_fallback_worthy_error <- function(e) {
   inherits(e, "aisdk_api_error") ||
     inherits(e, c("aisdk_stream_error", "aisdk_stream_start_error", "aisdk_stream_partial_error")) ||
     isTRUE(tryCatch(is_network_error_condition(e), error = function(x) FALSE))
+}
+
+#' @keywords internal
+# Best-effort "provider:model" id from a model object or string, for cost lookup.
+generation_model_id <- function(model) {
+  if (is.character(model) && length(model) == 1L) {
+    return(model)
+  }
+  if (inherits(model, "LanguageModelV1")) {
+    return(paste0(model$provider %||% "", ":", model$model_id %||% ""))
+  }
+  ""
 }
 
 #' @title Generate Text over a Batch of Prompts
@@ -960,6 +979,13 @@ stream_text <- function(model = NULL,
     initial_messages_len = initial_messages_len,
     stream_event_callback = .stream_event_callback
   )
+
+  # Attach an estimated USD cost for this generation (cache-aware, from the
+  # aggregated usage + the model's pricing). NA when pricing is unknown.
+  # Accepts a GenerateResult (real providers) or a result-shaped list (mocks).
+  if (!is.null(result) && !is.null(result$usage)) {
+    result$cost_usd <- estimate_cost(result$usage, generation_model_id(model))
+  }
 
   # Trigger on_generation_end (output guardrail: may revise/replace the result)
   if (!is.null(hooks)) {

@@ -801,3 +801,36 @@ test_that("generate_batch handles an empty batch and composes with cost", {
   total <- sum(vapply(res, function(r) estimate_cost(r$usage, "mock:mock-model"), numeric(1)))
   expect_equal(total, 2) # 2 prompts x 1M input x $1
 })
+
+# --- Z9: per-generation cost on the result -----------------------------------
+
+test_that("generate_text attaches an estimated cost_usd to the result", {
+  withr::local_options(aisdk.model_pricing = list("mock-model" = list(input = 1, output = 2)))
+  r <- generate_text(
+    model = MockModel$new(list(list(text = "hi", finish_reason = "stop",
+                                    usage = list(prompt_tokens = 1e6, completion_tokens = 1e6, total_tokens = 2e6)))),
+    prompt = "q"
+  )
+  expect_equal(r$cost_usd, 3) # 1M in * $1 + 1M out * $2
+})
+
+test_that("result cost_usd is NA when the model's pricing is unknown", {
+  withr::local_options(aisdk.model_pricing = list())
+  r <- generate_text(
+    model = MockModel$new(list(list(text = "x", finish_reason = "stop",
+                                    usage = list(prompt_tokens = 10)))),
+    prompt = "q"
+  )
+  expect_true(is.na(r$cost_usd))
+})
+
+test_that("per-generation cost flows through generate_batch results", {
+  withr::local_options(aisdk.model_pricing = list("mock-model" = list(input = 1, output = 0)))
+  model <- MockModel$new(list(
+    list(text = "a", finish_reason = "stop", usage = list(prompt_tokens = 1e6, completion_tokens = 0)),
+    list(text = "b", finish_reason = "stop", usage = list(prompt_tokens = 1e6, completion_tokens = 0))
+  ))
+  res <- generate_batch(c("a", "b"), model = model, concurrency = 1)
+  total <- sum(vapply(res, function(r) r$cost_usd %||% NA_real_, numeric(1)))
+  expect_equal(total, 2)
+})
