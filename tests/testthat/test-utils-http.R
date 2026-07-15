@@ -724,3 +724,89 @@ test_that("failover candidates share one idempotency key", {
   expect_length(keys, 2)
   expect_equal(keys[[1]], keys[[2]])   # same key across primary + backup
 })
+
+# --- AG1: rate-limit header surfacing ----------------------------------------
+
+test_that("post_to_api captures OpenAI and Anthropic rate-limit headers", {
+  # Isolate the module state across this test.
+  withr::defer(rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state),
+                  envir = aisdk:::.aisdk_rate_limit_state))
+  rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state), envir = aisdk:::.aisdk_rate_limit_state)
+  expect_null(rate_limit_status())
+
+  mk <- function(hdrs) function(req) {
+    httr2::response(status_code = 200L, url = req$url, method = "POST",
+                    headers = hdrs, body = charToRaw('{"ok":true}'))
+  }
+
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = mk(list(
+      `x-ratelimit-remaining-requests` = "4999",
+      `x-ratelimit-remaining-tokens` = "1990000",
+      `x-ratelimit-limit-requests` = "5000",
+      `x-ratelimit-reset-tokens` = "6ms"
+    )),
+    .package = "aisdk"
+  )
+  suppressMessages(aisdk:::post_to_api("https://api.openai.test/v1/x", list(),
+                                       list(m = "x"), max_retries = 0))
+  s <- rate_limit_status()
+  expect_equal(s$remaining_requests, 4999)
+  expect_equal(s$remaining_tokens, 1990000)
+  expect_equal(s$limit_requests, 5000)
+  expect_equal(s$reset_tokens, "6ms")
+})
+
+test_that("Anthropic header family maps to the same normalized fields", {
+  withr::defer(rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state),
+                  envir = aisdk:::.aisdk_rate_limit_state))
+  rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state), envir = aisdk:::.aisdk_rate_limit_state)
+
+  mk <- function(hdrs) function(req) {
+    httr2::response(status_code = 200L, url = req$url, method = "POST",
+                    headers = hdrs, body = charToRaw('{"ok":true}'))
+  }
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = mk(list(
+      `anthropic-ratelimit-requests-remaining` = "49",
+      `anthropic-ratelimit-tokens-remaining` = "39000",
+      `anthropic-ratelimit-tokens-limit` = "40000"
+    )),
+    .package = "aisdk"
+  )
+  suppressMessages(aisdk:::post_to_api("https://api.anthropic.test/v1/x", list(),
+                                       list(m = "x"), max_retries = 0))
+  s <- rate_limit_status()
+  expect_equal(s$remaining_requests, 49)
+  expect_equal(s$remaining_tokens, 39000)
+  expect_equal(s$limit_tokens, 40000)
+})
+
+test_that("a response without rate-limit headers does not erase the last snapshot", {
+  withr::defer(rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state),
+                  envir = aisdk:::.aisdk_rate_limit_state))
+  rm(list = ls(envir = aisdk:::.aisdk_rate_limit_state), envir = aisdk:::.aisdk_rate_limit_state)
+
+  mk <- function(hdrs) function(req) {
+    httr2::response(status_code = 200L, url = req$url, method = "POST",
+                    headers = hdrs, body = charToRaw('{"ok":true}'))
+  }
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = mk(list(`x-ratelimit-remaining-tokens` = "500")),
+    .package = "aisdk"
+  )
+  suppressMessages(aisdk:::post_to_api("https://a.test/x", list(), list(m = "x"), max_retries = 0))
+  expect_equal(rate_limit_status()$remaining_tokens, 500)
+
+  # A Gemini-style header-less 200 must leave the good snapshot intact.
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = mk(list()),
+    .package = "aisdk"
+  )
+  suppressMessages(aisdk:::post_to_api("https://gemini.test/x", list(), list(m = "x"), max_retries = 0))
+  expect_equal(rate_limit_status()$remaining_tokens, 500)
+})

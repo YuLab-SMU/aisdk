@@ -92,6 +92,65 @@ resolve_retry_after_ms <- function(retry_after, retry_after_ms, fallback_ms,
 # Per-route health state used only when callers provide multiple URL candidates.
 .aisdk_api_route_state <- new.env(parent = emptyenv())
 
+# Most-recent rate-limit snapshot parsed from provider response headers. An
+# agent in a request loop needs the remaining budget to pace itself BEFORE it
+# hits a 429 (a retry-on-429 loop with no backoff is a self-inflicted DDoS); the
+# providers report it on every response but aisdk otherwise discards all headers.
+.aisdk_rate_limit_state <- new.env(parent = emptyenv())
+
+# Parse the OpenAI (x-ratelimit-*) and Anthropic (anthropic-ratelimit-*) header
+# families into one normalized snapshot and stash the latest. Non-fatal by
+# design: it must never break a request path, and it only overwrites state when
+# the response actually carried rate-limit headers (Gemini, for instance, sends
+# none) so a header-less 200 doesn't erase a good snapshot.
+#' @keywords internal
+capture_rate_limit_headers <- function(resp, url = NULL) {
+  tryCatch({
+    h <- function(name) {
+      v <- tryCatch(httr2::resp_header(resp, name), error = function(e) NULL)
+      if (is.null(v) || !nzchar(v)) NULL else v
+    }
+    num <- function(x) if (is.null(x)) NULL else suppressWarnings(as.numeric(x))
+    snap <- list(
+      remaining_requests = num(h("x-ratelimit-remaining-requests") %||% h("anthropic-ratelimit-requests-remaining")),
+      remaining_tokens   = num(h("x-ratelimit-remaining-tokens") %||% h("anthropic-ratelimit-tokens-remaining")),
+      limit_requests     = num(h("x-ratelimit-limit-requests") %||% h("anthropic-ratelimit-requests-limit")),
+      limit_tokens       = num(h("x-ratelimit-limit-tokens") %||% h("anthropic-ratelimit-tokens-limit")),
+      reset_requests     = h("x-ratelimit-reset-requests") %||% h("anthropic-ratelimit-requests-reset"),
+      reset_tokens       = h("x-ratelimit-reset-tokens") %||% h("anthropic-ratelimit-tokens-reset"),
+      retry_after        = num(h("retry-after")),
+      status             = tryCatch(httr2::resp_status(resp), error = function(e) NA_integer_),
+      url                = url,
+      timestamp          = Sys.time()
+    )
+    tracked <- c("remaining_requests", "remaining_tokens", "limit_requests",
+                 "limit_tokens", "reset_requests", "reset_tokens")
+    if (any(!vapply(snap[tracked], is.null, logical(1)))) {
+      assign("latest", snap, envir = .aisdk_rate_limit_state)
+    }
+  }, error = function(e) NULL)
+  invisible(NULL)
+}
+
+#' @title Latest API Rate-Limit Status
+#' @description
+#' Returns the most recent rate-limit snapshot parsed from a provider's response
+#' headers, or `NULL` if none has been seen this session. Use it to pace a
+#' request loop (e.g. slow down or pause when `remaining_requests` /
+#' `remaining_tokens` runs low) instead of only reacting to a 429 after the fact.
+#' OpenAI and Anthropic report these headers; Gemini does not.
+#' @return A list with `remaining_requests`, `remaining_tokens`, `limit_requests`,
+#'   `limit_tokens`, `reset_requests`, `reset_tokens`, `retry_after`, `status`,
+#'   `url`, and `timestamp`; or `NULL` when nothing has been captured.
+#' @export
+rate_limit_status <- function() {
+  if (exists("latest", envir = .aisdk_rate_limit_state, inherits = FALSE)) {
+    get("latest", envir = .aisdk_rate_limit_state)
+  } else {
+    NULL
+  }
+}
+
 #' @keywords internal
 api_route_key <- function(url) {
   parsed <- tryCatch(httr2::url_parse(url), error = function(e) NULL)
@@ -661,6 +720,7 @@ post_to_api <- function(url, headers, body,
 
         resp <- perform_request(req)
         status <- httr2::resp_status(resp)
+        capture_rate_limit_headers(resp)
 
         if (status >= 200 && status < 300) {
           # Handle empty response body (like Opencode does)
@@ -859,6 +919,7 @@ post_multipart_to_api <- function(url, headers, body,
 
         resp <- perform_request(req)
         status <- httr2::resp_status(resp)
+        capture_rate_limit_headers(resp)
 
         if (status >= 200 && status < 300) {
           resp_text <- tryCatch(
@@ -1052,6 +1113,7 @@ request_json_from_api <- function(url, headers, method = "GET", body = NULL,
 
         resp <- perform_request(req)
         status <- httr2::resp_status(resp)
+        capture_rate_limit_headers(resp)
         if (status >= 200 && status < 300) {
           resp_text <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
           if (!nzchar(trimws(resp_text %||% ""))) {
