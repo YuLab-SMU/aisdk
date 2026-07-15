@@ -31,6 +31,7 @@ Exported so that OpenAI-compatible providers in companion packages
 \if{html}{\out{
 <details open><summary>Inherited methods</summary>
 <ul>
+<li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="count_tokens"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-count_tokens'><code>aisdk::LanguageModelV1$count_tokens()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="generate"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-generate'><code>aisdk::LanguageModelV1$generate()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="has_capability"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-has_capability'><code>aisdk::LanguageModelV1$has_capability()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="aisdk" data-topic="LanguageModelV1" data-id="stream"><a href='../../aisdk/html/LanguageModelV1.html#method-LanguageModelV1-stream'><code>aisdk::LanguageModelV1$stream()</code></a></span></li>

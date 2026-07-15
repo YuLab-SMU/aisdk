@@ -346,6 +346,38 @@ AnthropicLanguageModel <- R6::R6Class(
       private$config
     },
 
+    #' @description Count input tokens exactly via Anthropic's
+    #'   `/messages/count_tokens` endpoint (free, no generation). Falls back to
+    #'   the local estimate only when the endpoint is unreachable (offline).
+    #' @param params A list of call options (`messages`, `system`, `tools`, ...).
+    #' @return An integer token count.
+    count_tokens = function(params) {
+      url <- api_endpoint_urls(private$config, "/messages/count_tokens")
+      body <- private$build_messages_body(params, stream = FALSE)
+      # The count endpoint takes the messages body minus generation-only fields.
+      body$max_tokens <- NULL
+      body$stream <- NULL
+      headers <- private$get_headers(
+        context_management = !is.null(body$context_management)
+      )
+
+      response <- post_to_api(
+        url,
+        headers,
+        body,
+        timeout_seconds = params$timeout_seconds %||% private$config$timeout_seconds,
+        total_timeout_seconds = params$total_timeout_seconds %||% private$config$total_timeout_seconds,
+        first_byte_timeout_seconds = params$first_byte_timeout_seconds %||% private$config$first_byte_timeout_seconds,
+        connect_timeout_seconds = params$connect_timeout_seconds %||% private$config$connect_timeout_seconds,
+        idle_timeout_seconds = params$idle_timeout_seconds %||% private$config$idle_timeout_seconds
+      )
+
+      if (is.null(response) || is.null(response$input_tokens)) {
+        return(estimate_prompt_tokens(params$messages, params$system))
+      }
+      as.integer(response$input_tokens)
+    },
+
     #' @description Generate text (non-streaming).
     #' @param params A list of call options including messages, temperature, etc.
     #' @return A GenerateResult object.

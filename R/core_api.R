@@ -1026,6 +1026,54 @@ create_embeddings <- function(model, value, ..., registry = NULL) {
   model$do_embed(value, ...)
 }
 
+#' @title Count Input Tokens
+#' @description
+#' Count the input tokens a prompt (or full message list) would use for a model,
+#' as a pre-flight check before sending — e.g. to verify it fits the context
+#' window or to estimate cost. Providers with a native counting endpoint
+#' (Anthropic) return an exact count; others use a local heuristic estimate.
+#'
+#' @param model Either a LanguageModelV1 object or a string ID like
+#'   "anthropic:claude-sonnet-5".
+#' @param prompt A character prompt to count. Ignored when `messages` is given.
+#' @param system Optional system prompt included in the count.
+#' @param messages Optional pre-built message list (overrides `prompt`).
+#' @param tools Optional list of Tool objects included in the count (tool
+#'   definitions consume input tokens).
+#' @param registry Optional ProviderRegistry to use.
+#' @param ... Additional model options (e.g. `thinking`).
+#' @return An integer token count.
+#' @export
+#' @examples
+#' \donttest{
+#' if (interactive()) {
+#'   n <- count_tokens("anthropic:claude-sonnet-5", "Summarize the R language.")
+#'   print(n)
+#' }
+#' }
+count_tokens <- function(model = NULL, prompt = NULL, system = NULL,
+                         messages = NULL, tools = NULL, registry = NULL, ...) {
+  model <- resolve_model(model, registry, type = "language")
+  msgs <- messages
+  if (is.null(msgs)) {
+    if (is.null(prompt)) {
+      rlang::abort("Provide either `prompt` or `messages` to count tokens.")
+    }
+    msgs <- list()
+  }
+  # System is counted as a role="system" message so every path sees it: providers
+  # (Anthropic's build_messages_body extracts system from the messages) and the
+  # local estimate (which sums message content) both count it exactly once.
+  if (!is.null(system) && nzchar(system)) {
+    msgs <- c(list(list(role = "system", content = system)), msgs)
+  }
+  if (is.null(messages) && !is.null(prompt)) {
+    msgs <- c(msgs, list(list(role = "user", content = prompt)))
+  }
+  params <- c(list(messages = msgs, tools = tools), list(...))
+  model$count_tokens(params)
+}
+
 #' @keywords internal
 cosine_similarity <- function(a, b) {
   a <- as.numeric(a)

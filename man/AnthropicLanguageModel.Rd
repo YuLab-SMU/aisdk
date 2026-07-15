@@ -15,6 +15,7 @@ Language model implementation for Anthropic's Messages API.
 \itemize{
 \item \href{#method-AnthropicLanguageModel-new}{\code{AnthropicLanguageModel$new()}}
 \item \href{#method-AnthropicLanguageModel-get_config}{\code{AnthropicLanguageModel$get_config()}}
+\item \href{#method-AnthropicLanguageModel-count_tokens}{\code{AnthropicLanguageModel$count_tokens()}}
 \item \href{#method-AnthropicLanguageModel-do_generate}{\code{AnthropicLanguageModel$do_generate()}}
 \item \href{#method-AnthropicLanguageModel-do_stream}{\code{AnthropicLanguageModel$do_stream()}}
 \item \href{#method-AnthropicLanguageModel-format_tool_result}{\code{AnthropicLanguageModel$format_tool_result()}}
@@ -63,6 +64,28 @@ Get the configuration list.
 
 \subsection{Returns}{
 A list with provider configuration.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-AnthropicLanguageModel-count_tokens"></a>}}
+\if{latex}{\out{\hypertarget{method-AnthropicLanguageModel-count_tokens}{}}}
+\subsection{Method \code{count_tokens()}}{
+Count input tokens exactly via Anthropic's
+\verb{/messages/count_tokens} endpoint (free, no generation). Falls back to
+the local estimate only when the endpoint is unreachable (offline).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{AnthropicLanguageModel$count_tokens(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (\code{messages}, \code{system}, \code{tools}, ...).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An integer token count.
 }
 }
 \if{html}{\out{<hr>}}

@@ -834,3 +834,56 @@ test_that("per-generation cost flows through generate_batch results", {
   total <- sum(vapply(res, function(r) r$cost_usd %||% NA_real_, numeric(1)))
   expect_equal(total, 2)
 })
+
+# --- AJ1: count_tokens (pre-flight token counting) ---------------------------
+
+test_that("count_tokens uses the local estimate for models without a native endpoint", {
+  source(test_path("helper-mock.R"))
+  n <- count_tokens(MockModel$new(), prompt = "Count the tokens in this sentence, please.")
+  expect_type(n, "double")
+  expect_gt(n, 0)
+  # A system prompt is counted (once), so it raises the total.
+  n_sys <- count_tokens(MockModel$new(), prompt = "hi", system = "a longer system preamble here")
+  expect_gt(n_sys, count_tokens(MockModel$new(), prompt = "hi"))
+})
+
+test_that("count_tokens errors without prompt or messages, and accepts messages=", {
+  source(test_path("helper-mock.R"))
+  expect_error(count_tokens(MockModel$new()), "prompt.*messages|messages.*prompt")
+  n <- count_tokens(MockModel$new(),
+                    messages = list(list(role = "user", content = "direct message list")))
+  expect_gt(n, 0)
+})
+
+test_that("Anthropic count_tokens hits /messages/count_tokens and returns the exact count", {
+  captured_url <- NULL
+  captured_body <- NULL
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) {
+      captured_url <<- url
+      captured_body <<- body
+      list(input_tokens = 1234)
+    },
+    .package = "aisdk"
+  )
+  m <- create_anthropic(api_key = "FAKE")$language_model("claude-sonnet-5")
+  n <- count_tokens(m, prompt = "count me", system = "Be brief")
+
+  expect_identical(n, 1234L)
+  expect_match(captured_url, "/messages/count_tokens")
+  # The count body drops generation-only fields and keeps the counted content.
+  expect_null(captured_body$max_tokens)
+  expect_null(captured_body$stream)
+  expect_equal(captured_body$system, "Be brief")
+  expect_true(any(vapply(captured_body$messages, function(x) identical(x$role, "user"), logical(1))))
+})
+
+test_that("Anthropic count_tokens falls back to the estimate when the endpoint is unavailable", {
+  testthat::local_mocked_bindings(
+    post_to_api = function(url, headers, body, ...) NULL, # offline short-circuit
+    .package = "aisdk"
+  )
+  m <- create_anthropic(api_key = "FAKE")$language_model("claude-sonnet-5")
+  n <- count_tokens(m, prompt = "estimate this when offline")
+  expect_gt(n, 0)
+})

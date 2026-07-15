@@ -214,6 +214,15 @@ LanguageModelV1 <- R6::R6Class(
     #' @return A character string such as `"openai"` or `"anthropic"`.
     get_history_format = function() {
       "openai"
+    },
+
+    #' @description Count the input tokens a request would use. The default is a
+    #'   local heuristic estimate; providers with a native token-counting
+    #'   endpoint (e.g. Anthropic) override this for an exact count.
+    #' @param params A list of call options (`messages`, `system`, ...).
+    #' @return An integer token count.
+    count_tokens = function(params) {
+      estimate_prompt_tokens(params$messages, params$system)
     }
   )
 )

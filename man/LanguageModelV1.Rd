@@ -31,6 +31,7 @@ Uses \code{do_} prefix for internal methods to prevent direct usage by end-users
 \item \href{#method-LanguageModelV1-do_stream}{\code{LanguageModelV1$do_stream()}}
 \item \href{#method-LanguageModelV1-format_tool_result}{\code{LanguageModelV1$format_tool_result()}}
 \item \href{#method-LanguageModelV1-get_history_format}{\code{LanguageModelV1$get_history_format()}}
+\item \href{#method-LanguageModelV1-count_tokens}{\code{LanguageModelV1$count_tokens()}}
 \item \href{#method-LanguageModelV1-clone}{\code{LanguageModelV1$clone()}}
 }
 }
@@ -194,6 +195,28 @@ Get the message history format used by this model.
 
 \subsection{Returns}{
 A character string such as \code{"openai"} or \code{"anthropic"}.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LanguageModelV1-count_tokens"></a>}}
+\if{latex}{\out{\hypertarget{method-LanguageModelV1-count_tokens}{}}}
+\subsection{Method \code{count_tokens()}}{
+Count the input tokens a request would use. The default is a
+local heuristic estimate; providers with a native token-counting
+endpoint (e.g. Anthropic) override this for an exact count.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LanguageModelV1$count_tokens(params)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{params}}{A list of call options (\code{messages}, \code{system}, ...).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An integer token count.
 }
 }
 \if{html}{\out{<hr>}}
