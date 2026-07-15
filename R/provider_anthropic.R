@@ -305,7 +305,7 @@ AnthropicLanguageModel <- R6::R6Class(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
         "system", "top_p", "stop_sequences", "context_management",
         "response_format", "response_format_name", "reasoning_effort",
-        "tool_choice", "parallel_tool_calls", "system_cache_prefix",
+        "tool_choice", "parallel_tool_calls", "system_cache_prefix", "cached_content",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )

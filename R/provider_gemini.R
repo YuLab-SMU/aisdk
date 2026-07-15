@@ -22,6 +22,41 @@ reasoning_effort_to_gemini_budget <- function(effort) {
 }
 
 #' @keywords internal
+# Format an aisdk tool list into Gemini's `tools` body shape (a list of
+# {functionDeclarations:[...]} plus any pass-through special tools like
+# google_search). Shared by generation and cache creation so the two never
+# drift. Returns an empty list when there are no tools.
+gemini_format_tools <- function(tools) {
+  if (is.null(tools) || length(tools) == 0) {
+    return(list())
+  }
+  function_declarations <- list()
+  other_tools <- list()
+  for (t in tools) {
+    if (inherits(t, "Tool")) {
+      api_fmt <- t$to_api_format("openai") # OpenAI shape is JSON-Schema compliant
+      function_declarations <- c(function_declarations, list(list(
+        name = api_fmt$`function`$name,
+        description = api_fmt$`function`$description,
+        parameters = api_fmt$`function`$parameters
+      )))
+    } else if (is.list(t) && !is.null(names(t))) {
+      other_tools <- c(other_tools, list(t))
+    } else {
+      function_declarations <- c(function_declarations, list(t))
+    }
+  }
+  body_tools <- list()
+  if (length(function_declarations) > 0) {
+    body_tools <- c(body_tools, list(list(functionDeclarations = function_declarations)))
+  }
+  if (length(other_tools) > 0) {
+    body_tools <- c(body_tools, other_tools)
+  }
+  body_tools
+}
+
+#' @keywords internal
 gemini_endpoint_urls <- function(config, model_id, endpoint) {
     bases <- normalize_base_urls(config$base_urls %||% config$base_url)
     bases <- vapply(bases, function(base) {
@@ -211,6 +246,108 @@ GeminiLanguageModel <- R6::R6Class(
             private$config
         },
 
+        #' @description Create an explicit context cache (Gemini CachedContent).
+        #'   The cached system prompt / tools / contents are referenced later via
+        #'   `generate_text(..., cached_content = <cache>)`, so repeated large
+        #'   prefixes are billed once. Gemini requires a minimum cached token
+        #'   count (~2048 for 2.5, ~4096 for 3.x); smaller content is rejected.
+        #' @param system Optional system prompt to cache.
+        #' @param contents Optional messages (aisdk format) to cache.
+        #' @param tools Optional list of Tool objects to cache.
+        #' @param ttl Time-to-live as a duration string (e.g. "300s"). Ignored
+        #'   when `expire_time` is given.
+        #' @param expire_time Optional RFC-3339 absolute expiry (overrides `ttl`).
+        #' @param display_name Optional human-readable label.
+        #' @return An `aisdk_gemini_cache` handle.
+        create_cache = function(system = NULL, contents = NULL, tools = NULL,
+                                ttl = "300s", expire_time = NULL, display_name = NULL) {
+            body <- list(model = paste0("models/", self$model_id))
+            if (!is.null(expire_time)) {
+                body$expireTime <- expire_time
+            } else if (!is.null(ttl)) {
+                body$ttl <- ttl
+            }
+            if (!is.null(display_name)) body$displayName <- display_name
+
+            msgs <- list()
+            if (!is.null(system)) {
+                msgs <- c(msgs, list(list(role = "system", content = system)))
+            }
+            if (!is.null(contents)) msgs <- c(msgs, contents)
+            if (length(msgs) > 0) {
+                formatted <- private$format_messages(msgs)
+                if (!is.null(formatted$system_instruction)) {
+                    body$systemInstruction <- formatted$system_instruction
+                }
+                if (length(formatted$contents %||% list()) > 0) {
+                    body$contents <- formatted$contents
+                }
+            }
+            tool_block <- gemini_format_tools(tools)
+            if (length(tool_block) > 0) body$tools <- tool_block
+
+            resp <- request_json_from_api(
+                gemini_cache_endpoint_url(private$config),
+                private$get_headers(), method = "POST", body = body
+            )
+            gemini_cache_from_response(resp, self$model_id)
+        },
+
+        #' @description List this project's context caches.
+        #' @return A list of `aisdk_gemini_cache` handles.
+        list_caches = function() {
+            resp <- request_json_from_api(
+                gemini_cache_endpoint_url(private$config), private$get_headers(),
+                method = "GET"
+            )
+            lapply(resp$cachedContents %||% list(), gemini_cache_from_response,
+                   model_id = self$model_id)
+        },
+
+        #' @description Fetch one context cache by name.
+        #' @param cache A cache handle or `"cachedContents/..."` name.
+        #' @return An `aisdk_gemini_cache` handle.
+        get_cache = function(cache) {
+            resp <- request_json_from_api(
+                gemini_cache_endpoint_url(private$config, gemini_cache_name(cache)),
+                private$get_headers(), method = "GET"
+            )
+            gemini_cache_from_response(resp, self$model_id)
+        },
+
+        #' @description Update a cache's expiry (only expiration is mutable).
+        #' @param cache A cache handle or name.
+        #' @param ttl New TTL duration string (e.g. "600s").
+        #' @param expire_time Optional absolute RFC-3339 expiry (overrides `ttl`).
+        #' @return The updated `aisdk_gemini_cache` handle.
+        update_cache = function(cache, ttl = NULL, expire_time = NULL) {
+            body <- list()
+            mask <- if (!is.null(expire_time)) {
+                body$expireTime <- expire_time
+                "expireTime"
+            } else {
+                body$ttl <- ttl
+                "ttl"
+            }
+            url <- paste0(
+                gemini_cache_endpoint_url(private$config, gemini_cache_name(cache)),
+                "&updateMask=", mask
+            )
+            resp <- request_json_from_api(url, private$get_headers(), method = "PATCH", body = body)
+            gemini_cache_from_response(resp, self$model_id)
+        },
+
+        #' @description Delete a context cache.
+        #' @param cache A cache handle or name.
+        #' @return Invisibly `TRUE`.
+        delete_cache = function(cache) {
+            request_json_from_api(
+                gemini_cache_endpoint_url(private$config, gemini_cache_name(cache)),
+                private$get_headers(), method = "DELETE"
+            )
+            invisible(TRUE)
+        },
+
         #' @description Build the request payload for generation
         #' @param params A list of call options.
         #' @param stream Whether to build for streaming
@@ -236,38 +373,9 @@ GeminiLanguageModel <- R6::R6Class(
             }
 
             # Tools
-            if (!is.null(params$tools) && length(params$tools) > 0) {
-                function_declarations <- list()
-                other_tools <- list()
-
-                for (t in params$tools) {
-                    if (inherits(t, "Tool")) {
-                        # Get openai format as it's JSON Schema compliant
-                        api_fmt <- t$to_api_format("openai")
-                        function_declarations <- c(function_declarations, list(list(
-                            name = api_fmt$`function`$name,
-                            description = api_fmt$`function`$description,
-                            parameters = api_fmt$`function`$parameters
-                        )))
-                    } else if (is.list(t) && !is.null(names(t))) {
-                        # Pass through special tool objects like list(google_search = list())
-                        other_tools <- c(other_tools, list(t))
-                    } else {
-                        function_declarations <- c(function_declarations, list(t))
-                    }
-                }
-
-                body_tools <- list()
-                if (length(function_declarations) > 0) {
-                    body_tools <- c(body_tools, list(list(functionDeclarations = function_declarations)))
-                }
-                if (length(other_tools) > 0) {
-                    body_tools <- c(body_tools, other_tools)
-                }
-
-                if (length(body_tools) > 0) {
-                    body$tools <- body_tools
-                }
+            body_tools <- gemini_format_tools(params$tools)
+            if (length(body_tools) > 0) {
+                body$tools <- body_tools
             }
 
             # Portable tool_choice -> Gemini toolConfig.functionCallingConfig.
@@ -276,6 +384,18 @@ GeminiLanguageModel <- R6::R6Class(
             tc <- normalize_tool_choice(params$tool_choice, "gemini")
             if (!is.null(tc)) {
                 body$toolConfig <- tc
+            }
+
+            # Explicit context cache: reference a CachedContent by name. Gemini
+            # rejects a request that ALSO sets systemInstruction / tools /
+            # toolConfig alongside a cache (those must live inside the cache), so
+            # strip them when a cache is referenced.
+            cache_ref <- gemini_cache_name(list_get_exact(params, "cached_content"))
+            if (!is.null(cache_ref)) {
+                body$cachedContent <- cache_ref
+                body$systemInstruction <- NULL
+                body$tools <- NULL
+                body$toolConfig <- NULL
             }
 
             # Remove NULLs

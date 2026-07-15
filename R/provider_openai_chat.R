@@ -147,7 +147,7 @@ OpenAILanguageModel <- R6::R6Class(
       handled_params <- c(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_completion_tokens",
-        "tools", "tool_choice", "stream", "model", "system_cache_prefix",
+        "tools", "tool_choice", "stream", "model", "system_cache_prefix", "cached_content",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )

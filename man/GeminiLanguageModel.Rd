@@ -15,6 +15,11 @@ Language model implementation for Gemini's generateContent API.
 \itemize{
 \item \href{#method-GeminiLanguageModel-new}{\code{GeminiLanguageModel$new()}}
 \item \href{#method-GeminiLanguageModel-get_config}{\code{GeminiLanguageModel$get_config()}}
+\item \href{#method-GeminiLanguageModel-create_cache}{\code{GeminiLanguageModel$create_cache()}}
+\item \href{#method-GeminiLanguageModel-list_caches}{\code{GeminiLanguageModel$list_caches()}}
+\item \href{#method-GeminiLanguageModel-get_cache}{\code{GeminiLanguageModel$get_cache()}}
+\item \href{#method-GeminiLanguageModel-update_cache}{\code{GeminiLanguageModel$update_cache()}}
+\item \href{#method-GeminiLanguageModel-delete_cache}{\code{GeminiLanguageModel$delete_cache()}}
 \item \href{#method-GeminiLanguageModel-build_payload_internal}{\code{GeminiLanguageModel$build_payload_internal()}}
 \item \href{#method-GeminiLanguageModel-do_generate}{\code{GeminiLanguageModel$do_generate()}}
 \item \href{#method-GeminiLanguageModel-do_stream}{\code{GeminiLanguageModel$do_stream()}}
@@ -63,6 +68,125 @@ Get the configuration list.
 
 \subsection{Returns}{
 A list with provider configuration.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiLanguageModel-create_cache"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiLanguageModel-create_cache}{}}}
+\subsection{Method \code{create_cache()}}{
+Create an explicit context cache (Gemini CachedContent).
+The cached system prompt / tools / contents are referenced later via
+\verb{generate_text(..., cached_content = <cache>)}, so repeated large
+prefixes are billed once. Gemini requires a minimum cached token
+count (~2048 for 2.5, ~4096 for 3.x); smaller content is rejected.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiLanguageModel$create_cache(
+  system = NULL,
+  contents = NULL,
+  tools = NULL,
+  ttl = "300s",
+  expire_time = NULL,
+  display_name = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{system}}{Optional system prompt to cache.}
+
+\item{\code{contents}}{Optional messages (aisdk format) to cache.}
+
+\item{\code{tools}}{Optional list of Tool objects to cache.}
+
+\item{\code{ttl}}{Time-to-live as a duration string (e.g. "300s"). Ignored
+when \code{expire_time} is given.}
+
+\item{\code{expire_time}}{Optional RFC-3339 absolute expiry (overrides \code{ttl}).}
+
+\item{\code{display_name}}{Optional human-readable label.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An \code{aisdk_gemini_cache} handle.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiLanguageModel-list_caches"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiLanguageModel-list_caches}{}}}
+\subsection{Method \code{list_caches()}}{
+List this project's context caches.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiLanguageModel$list_caches()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of \code{aisdk_gemini_cache} handles.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiLanguageModel-get_cache"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiLanguageModel-get_cache}{}}}
+\subsection{Method \code{get_cache()}}{
+Fetch one context cache by name.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiLanguageModel$get_cache(cache)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cache}}{A cache handle or \code{"cachedContents/..."} name.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An \code{aisdk_gemini_cache} handle.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiLanguageModel-update_cache"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiLanguageModel-update_cache}{}}}
+\subsection{Method \code{update_cache()}}{
+Update a cache's expiry (only expiration is mutable).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiLanguageModel$update_cache(cache, ttl = NULL, expire_time = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cache}}{A cache handle or name.}
+
+\item{\code{ttl}}{New TTL duration string (e.g. "600s").}
+
+\item{\code{expire_time}}{Optional absolute RFC-3339 expiry (overrides \code{ttl}).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The updated \code{aisdk_gemini_cache} handle.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-GeminiLanguageModel-delete_cache"></a>}}
+\if{latex}{\out{\hypertarget{method-GeminiLanguageModel-delete_cache}{}}}
+\subsection{Method \code{delete_cache()}}{
+Delete a context cache.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{GeminiLanguageModel$delete_cache(cache)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cache}}{A cache handle or name.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly \code{TRUE}.
 }
 }
 \if{html}{\out{<hr>}}
