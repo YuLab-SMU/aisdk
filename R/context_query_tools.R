@@ -190,6 +190,32 @@ create_context_query_tools <- function(session = NULL) {
       }
     ),
     tool(
+      name = "memory_write",
+      description = paste(
+        "Save a note to persistent session memory under a key, to recall later via",
+        "context_search / context_get. Use it as a scratchpad for facts, decisions,",
+        "or progress you want to keep across many tool calls without holding them in",
+        "the context window. Writing to an existing key overwrites it."
+      ),
+      parameters = z_object(
+        key = z_string("Short identifier for the note (e.g. 'db_schema', 'todo')"),
+        value = z_string("The note content to persist"),
+        .required = c("key", "value")
+      ),
+      execute = function(args) {
+        if (is.null(session)) {
+          return("Error: memory_write requires a session; none is attached.")
+        }
+        key <- trimws(args$key %||% "")
+        if (!nzchar(key)) {
+          return("Error: `key` must be a non-empty string.")
+        }
+        session$set_memory(key, args$value %||% "")
+        sprintf("Saved note to memory under key '%s' (%d chars). Recall it later via context_search/context_get.",
+                key, nchar(args$value %||% ""))
+      }
+    ),
+    tool(
       name = "object_peek",
       description = paste(
         "Peek at a live R object through semantic inspection adapters.",

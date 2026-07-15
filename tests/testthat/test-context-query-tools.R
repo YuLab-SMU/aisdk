@@ -34,8 +34,38 @@ test_that("create_context_query_tools exposes session-bound tools", {
   tools <- create_context_query_tools(session)
   tool_names <- vapply(tools, function(tool_obj) tool_obj$name, character(1))
 
-  expect_equal(tool_names, c("context_search", "context_get", "object_peek", "sub_session_query"))
+  expect_equal(tool_names, c("context_search", "context_get", "memory_write", "object_peek", "sub_session_query"))
   result <- tools[[which(tool_names == "context_search")]]$run(list(query = "demo"), envir = session$get_envir())
   expect_true(length(result) >= 1)
   expect_true(any(vapply(result, function(handle) identical(handle$id, "object:demo"), logical(1))))
+})
+
+# --- Y2: agent-callable memory_write (structured note-taking) -----------------
+
+test_that("memory_write persists a note that round-trips through the read side", {
+  source(test_path("helper-mock.R"))
+  session <- create_chat_session(model = MockModel$new())
+  tools <- create_context_query_tools(session = session)
+  memory_write <- Filter(function(t) t$name == "memory_write", tools)[[1]]
+  expect_false(is.null(memory_write))
+
+  out <- memory_write$run(list(key = "db_schema", value = "users(id, name, email)"))
+  expect_match(out, "Saved note")
+  # Persisted in session memory...
+  expect_equal(session$get_memory("db_schema"), "users(id, name, email)")
+  expect_true("db_schema" %in% session$list_memory())
+  # ...and surfaced through the existing memory context-handle read path.
+  handles <- aisdk:::build_memory_context_handles(session)
+  expect_true(any(vapply(handles, function(h) identical(h$kind, "memory"), logical(1))))
+})
+
+test_that("memory_write guards empty keys and a missing session", {
+  source(test_path("helper-mock.R"))
+  session <- create_chat_session(model = MockModel$new())
+  mw <- Filter(function(t) t$name == "memory_write", create_context_query_tools(session = session))[[1]]
+  expect_match(mw$run(list(key = "", value = "x")), "non-empty")
+
+  mw_nosess <- Filter(function(t) t$name == "memory_write",
+                      create_context_query_tools(session = NULL))[[1]]
+  expect_match(mw_nosess$run(list(key = "k", value = "v")), "requires a session")
 })
