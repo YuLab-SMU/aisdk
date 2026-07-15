@@ -74,6 +74,9 @@ fix_json <- function(json_str) {
 #' the initial parse fails.
 #'
 #' @param text A JSON string.
+#' @param simplify Passed to `jsonlite::fromJSON` as `simplifyVector`. Default
+#'   `TRUE`. Use `FALSE` for a structure-preserving parse (arrays stay lists,
+#'   so arrays of objects don't collapse to data.frames).
 #' @return A parsed R object (list, vector, etc.) or NULL if parsing fails
 #'   even after repair.
 #' @export

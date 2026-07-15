@@ -53,3 +53,30 @@ test_that("Telemetry$calculate_cost uses the model from the result when not give
                              raw_response = list(model = "who-knows"))
   expect_null(tel$calculate_cost(res2))
 })
+
+# --- Z1: OpenAI subset-style cached-token accounting -------------------------
+
+test_that("estimate_cost prices OpenAI cached_tokens as a discounted subset", {
+  withr::local_options(aisdk.model_pricing = list(
+    "gpt-4o" = list(input = 2.5, output = 10, cache_read = 1.25)
+  ))
+  # 1M prompt, 800k of it cached: 200k fresh at 2.5 + 800k cached at 1.25.
+  cost <- estimate_cost(
+    list(prompt_tokens = 1e6, completion_tokens = 0, cached_tokens = 8e5), "gpt-4o"
+  )
+  expect_equal(cost, 0.2 * 2.5 + 0.8 * 1.25)
+  # Cheaper than no caching (which pays full input rate on all 1M).
+  no_cache <- estimate_cost(list(prompt_tokens = 1e6, completion_tokens = 0), "gpt-4o")
+  expect_true(cost < no_cache)
+})
+
+test_that("openai_usage_with_cache surfaces nested cached_tokens", {
+  u <- aisdk:::openai_usage_with_cache(list(
+    prompt_tokens = 100, completion_tokens = 20,
+    prompt_tokens_details = list(cached_tokens = 80)
+  ))
+  expect_equal(u$cached_tokens, 80)
+  # No cache details -> field absent.
+  u2 <- aisdk:::openai_usage_with_cache(list(prompt_tokens = 100, completion_tokens = 20))
+  expect_null(u2$cached_tokens)
+})

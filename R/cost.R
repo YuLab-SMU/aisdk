@@ -118,7 +118,17 @@ estimate_cost <- function(usage, model_id) {
   input_rate <- pricing$input
   cache_read_rate <- pricing$cache_read %||% (input_rate * 0.1)
   cache_write_rate <- pricing$cache_write %||% (input_rate * 1.25)
-  per_m(usage$prompt_tokens, input_rate) +
+
+  # Two provider accounting models for cached input:
+  #  - OpenAI: `cached_tokens` is a SUBSET of prompt_tokens, so price the fresh
+  #    remainder at the input rate and the cached part at the discounted rate.
+  #  - Anthropic: cache_read/creation tokens are SEPARATE from prompt_tokens.
+  prompt_tokens <- usage$prompt_tokens %||% 0
+  cached_subset <- usage$cached_tokens %||% 0
+  fresh_input <- max(0, prompt_tokens - cached_subset)
+
+  per_m(fresh_input, input_rate) +
+    per_m(cached_subset, cache_read_rate) +
     per_m(usage$completion_tokens, pricing$output) +
     per_m(usage$cache_read_input_tokens, cache_read_rate) +
     per_m(usage$cache_creation_input_tokens, cache_write_rate)

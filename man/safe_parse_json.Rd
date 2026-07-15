@@ -8,6 +8,10 @@ safe_parse_json(text, simplify = TRUE)
 }
 \arguments{
 \item{text}{A JSON string.}
+
+\item{simplify}{Passed to \code{jsonlite::fromJSON} as \code{simplifyVector}. Default
+\code{TRUE}. Use \code{FALSE} for a structure-preserving parse (arrays stay lists,
+so arrays of objects don't collapse to data.frames).}
 }
 \value{
 A parsed R object (list, vector, etc.) or NULL if parsing fails

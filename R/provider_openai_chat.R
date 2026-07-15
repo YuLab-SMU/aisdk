@@ -1,3 +1,20 @@
+#' @keywords internal
+# Surface OpenAI's cached prompt tokens (nested under
+# usage.prompt_tokens_details.cached_tokens) as a top-level `cached_tokens`
+# field, so caching effectiveness is observable and estimate_cost() can price
+# the cached portion at the discounted rate. cached_tokens is a SUBSET of
+# prompt_tokens (OpenAI accounting).
+openai_usage_with_cache <- function(usage) {
+  if (is.null(usage)) {
+    return(NULL)
+  }
+  cached <- usage$prompt_tokens_details$cached_tokens
+  if (!is.null(cached)) {
+    usage$cached_tokens <- cached
+  }
+  usage
+}
+
 #' @title OpenAI Language Model Class
 #' @description
 #' Language model implementation for OpenAI's chat completions API.
@@ -252,7 +269,7 @@ OpenAILanguageModel <- R6::R6Class(
 
       GenerateResult$new(
         text = choice$message$content %||% "",
-        usage = response$usage,
+        usage = openai_usage_with_cache(response$usage),
         finish_reason = choice$finish_reason,
         raw_response = response,
         tool_calls = tool_calls
