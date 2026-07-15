@@ -239,6 +239,14 @@ GeminiLanguageModel <- R6::R6Class(
                 }
             }
 
+            # Portable tool_choice -> Gemini toolConfig.functionCallingConfig.
+            # (Gemini has no generic passthrough, so this is the only path by
+            # which a unified tool_choice reaches the Gemini body.)
+            tc <- normalize_tool_choice(params$tool_choice, "gemini")
+            if (!is.null(tc)) {
+                body$toolConfig <- tc
+            }
+
             # Remove NULLs
             body <- body[!sapply(body, is.null)]
 

@@ -161,3 +161,112 @@ block_to_base64 <- function(block) {
 
   rlang::abort(paste0("Cannot convert image source kind `", block$source$kind, "` to base64."))
 }
+
+#' Normalize a portable `tool_choice` into a provider-specific shape
+#'
+#' A unified `tool_choice` (Vercel-AI-SDK style) that behaves the same across
+#' providers. Each wire API spells this differently — OpenAI uses a top-level
+#' `tool_choice` string/object, Anthropic a `{type: ...}` object, Gemini a
+#' `toolConfig.functionCallingConfig.mode` — so hand-written provider-native
+#' values do not port. This maps the unified forms to the target's shape and
+#' passes anything it does not recognize through unchanged (so existing code
+#' that already writes a provider-native value keeps working).
+#'
+#' Unified forms:
+#' \itemize{
+#'   \item `"auto"` — the model decides (provider default)
+#'   \item `"required"` / `"any"` — force the model to call some tool
+#'   \item `"none"` — forbid tool calls
+#'   \item `list(type = "tool", name = "X")` — force a specific tool
+#'     (also accepts `toolName =` or a bare `list(tool = "X")`)
+#' }
+#'
+#' @param choice The unified value (or a provider-native value to pass through).
+#' @param target One of "openai_chat", "openai_responses", "anthropic", "gemini".
+#' @param parallel Optional logical: when `FALSE`, request that the model not
+#'   emit parallel tool calls. Only Anthropic carries this inside `tool_choice`
+#'   (`disable_parallel_tool_use`); OpenAI uses a separate top-level
+#'   `parallel_tool_calls` and Gemini has no equivalent.
+#' @return The provider-shaped value to place at the provider's tool-choice
+#'   slot, or `NULL` when there is nothing to set.
+#' @keywords internal
+normalize_tool_choice <- function(choice, target, parallel = NULL) {
+  target <- match.arg(target, c("openai_chat", "openai_responses", "anthropic", "gemini"))
+  no_parallel <- isFALSE(parallel)
+
+  # Anthropic is the only target that expresses "no parallel tool calls" inside
+  # tool_choice, so `parallel = FALSE` alone (no explicit choice) still needs a
+  # carrier there — default it to auto.
+  if (is.null(choice)) {
+    if (identical(target, "anthropic") && no_parallel) {
+      return(list(type = "auto", disable_parallel_tool_use = TRUE))
+    }
+    return(NULL)
+  }
+
+  # Parse the unified value into (mode, tool_name). A value we do not recognize
+  # is assumed to already be provider-native and returned unchanged.
+  mode <- NULL
+  tool_name <- NULL
+  if (is.character(choice) && length(choice) == 1) {
+    key <- tolower(trimws(choice))
+    if (key %in% c("auto", "none")) {
+      mode <- key
+    } else if (key %in% c("required", "any")) {
+      mode <- "required"
+    }
+  } else if (is.list(choice)) {
+    ctype <- tolower(as.character(choice$type %||% ""))
+    if (identical(ctype, "tool") || !is.null(choice$toolName) ||
+        (!is.null(choice$tool) && is.null(choice$type))) {
+      mode <- "tool"
+      tool_name <- choice$name %||% choice$toolName %||% choice$tool
+    }
+  }
+
+  if (is.null(mode)) {
+    return(choice) # already provider-native (or unrecognized): pass through
+  }
+
+  switch(target,
+    openai_chat = {
+      if (mode == "tool") {
+        list(type = "function", `function` = list(name = tool_name))
+      } else if (mode == "required") {
+        "required"
+      } else {
+        mode
+      }
+    },
+    openai_responses = {
+      if (mode == "tool") {
+        list(type = "function", name = tool_name)
+      } else if (mode == "required") {
+        "required"
+      } else {
+        mode
+      }
+    },
+    anthropic = {
+      tc <- switch(mode,
+        auto = list(type = "auto"),
+        none = list(type = "none"),
+        required = list(type = "any"),
+        tool = list(type = "tool", name = tool_name)
+      )
+      if (no_parallel && mode != "none") {
+        tc$disable_parallel_tool_use <- TRUE
+      }
+      tc
+    },
+    gemini = {
+      fcc <- switch(mode,
+        auto = list(mode = "AUTO"),
+        none = list(mode = "NONE"),
+        required = list(mode = "ANY"),
+        tool = list(mode = "ANY", allowedFunctionNames = list(tool_name))
+      )
+      list(functionCallingConfig = fcc)
+    }
+  )
+}

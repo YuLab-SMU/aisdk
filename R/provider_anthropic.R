@@ -266,12 +266,21 @@ AnthropicLanguageModel <- R6::R6Class(
         }
       }
 
-      # Pass through extra params (thinking, tool_choice, ...). Sampling params
-      # never appear here: they are in handled_params.
+      # Portable tool_choice: map the unified value to Anthropic's object shape.
+      # `parallel_tool_calls = FALSE` is carried here as disable_parallel_tool_use
+      # (Anthropic has no top-level parallel flag — passed through it would 400).
+      tc <- normalize_tool_choice(params$tool_choice, "anthropic", params$parallel_tool_calls)
+      if (!is.null(tc)) {
+        body$tool_choice <- tc
+      }
+
+      # Pass through extra params (thinking, ...). Sampling params and the
+      # tool-choice knobs handled above never appear here (see handled_params).
       handled_params <- c(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
         "system", "top_p", "stop_sequences", "context_management",
         "response_format", "response_format_name", "reasoning_effort",
+        "tool_choice", "parallel_tool_calls",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )

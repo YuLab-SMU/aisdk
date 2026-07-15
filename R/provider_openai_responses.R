@@ -389,6 +389,13 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         })
       }
 
+      # Portable tool_choice: map the unified value to the Responses shape
+      # (native values pass through unchanged).
+      tc <- normalize_tool_choice(params$tool_choice, "openai_responses")
+      if (!is.null(tc)) {
+        body$tool_choice <- tc
+      }
+
       # Reasoning controls: support flat (reasoning_effort, reasoning_summary)
       # and nested (reasoning = list(...)) forms, plus the `include` field for
       # stateless reasoning continuity (e.g. "reasoning.encrypted_content").
@@ -414,7 +421,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
       handled_params <- c(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_output_tokens", "max_answer_tokens",
-        "tools", "stream", "model",
+        "tools", "tool_choice", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "thinking", "thinking_budget", "include",
         "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",

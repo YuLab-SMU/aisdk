@@ -147,7 +147,7 @@ OpenAILanguageModel <- R6::R6Class(
       handled_params <- c(
         "messages", "temperature", "top_p", "presence_penalty", "frequency_penalty",
         "max_tokens", "max_completion_tokens",
-        "tools", "stream", "model",
+        "tools", "tool_choice", "stream", "model",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
@@ -170,6 +170,13 @@ OpenAILanguageModel <- R6::R6Class(
       body <- private$add_chat_token_limit(body, params, is_reasoning)
       if (!is.null(params$tools) && length(params$tools) > 0) {
         body$tools <- private$format_chat_tools(params$tools)
+      }
+      # Portable tool_choice: map the unified value to OpenAI's shape (native
+      # values pass through unchanged). parallel_tool_calls is OpenAI-native and
+      # flows through the extra-params merge as-is.
+      tc <- normalize_tool_choice(params$tool_choice, "openai_chat")
+      if (!is.null(tc)) {
+        body$tool_choice <- tc
       }
       body <- private$merge_chat_extra_params(body, params)
       # Added after the extra-params merge so a caller-supplied stream_options
