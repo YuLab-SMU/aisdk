@@ -408,6 +408,118 @@ expect_run_within <- function(result, max_tokens = NULL, max_steps = NULL,
   invisible(observed)
 }
 
+#' @title Define an Evaluation Task
+#' @description
+#' A single eval task: an input prompt plus a `check` that grades the run. The
+#' check receives the `generate_text()` result and returns `TRUE`/`FALSE` (or
+#' uses the `expect_*` assertions, whose failure is caught as a fail).
+#' @param name A short task name.
+#' @param prompt The input prompt.
+#' @param check A function `function(result)` returning TRUE on success.
+#' @param system Optional per-task system prompt.
+#' @param ... Extra arguments passed to `generate_text()` for this task
+#'   (e.g. `tools`, `max_steps`).
+#' @return An `aisdk_eval_task` list.
+#' @export
+eval_task <- function(name, prompt, check, system = NULL, ...) {
+  if (!is.function(check)) {
+    rlang::abort("`check` must be a function(result) returning TRUE/FALSE.")
+  }
+  structure(
+    list(name = name, prompt = prompt, check = check, system = system, args = list(...)),
+    class = "aisdk_eval_task"
+  )
+}
+
+#' @keywords internal
+eval_model_id <- function(model) {
+  if (is.character(model)) {
+    return(model)
+  }
+  if (inherits(model, "LanguageModelV1")) {
+    return(paste0(model$provider %||% "", ":", model$model_id %||% ""))
+  }
+  ""
+}
+
+#' @title Run an Evaluation Suite
+#' @description
+#' Run a bank of [eval_task()]s against a model, grade each with its `check`,
+#' and aggregate the results — pass rate plus the token and cost regression
+#' signals the runtime already captures. This is the harness the `expect_*`
+#' assertions plug into for regression testing across many cases.
+#' @param tasks A list of [eval_task()]s.
+#' @param model A model object or "provider:model" string used for every task.
+#' @param registry Optional ProviderRegistry.
+#' @param ... Extra arguments passed to every `generate_text()` call.
+#' @return An `aisdk_eval_suite_result`: a list with `tasks` (per-task
+#'   name/passed/total_tokens/cost_usd/steps), `pass_rate`, `n`, `passed`,
+#'   `total_tokens`, and `total_cost`.
+#' @export
+run_eval_suite <- function(tasks, model = NULL, registry = NULL, ...) {
+  if (!is.list(tasks) || length(tasks) == 0) {
+    rlang::abort("`tasks` must be a non-empty list of eval_task() objects.")
+  }
+  resolved <- resolve_model(model, registry, type = "language")
+  model_id <- eval_model_id(resolved)
+  extra <- list(...)
+
+  rows <- lapply(seq_along(tasks), function(i) {
+    task <- tasks[[i]]
+    name <- task$name %||% paste0("task_", i)
+    call_args <- c(
+      list(model = resolved, prompt = task$prompt, system = task$system, registry = registry),
+      task$args %||% list(), extra
+    )
+    result <- tryCatch(do.call(generate_text, call_args), error = function(e) e)
+    if (inherits(result, "error")) {
+      return(list(name = name, passed = FALSE, error = conditionMessage(result),
+                  total_tokens = NA_real_, cost_usd = NA_real_, steps = NA_real_))
+    }
+    passed <- isTRUE(tryCatch(task$check(result), error = function(e) FALSE))
+    list(
+      name = name,
+      passed = passed,
+      error = NA_character_,
+      total_tokens = result$usage$total_tokens %||% NA_real_,
+      cost_usd = estimate_cost(result$usage, model_id),
+      steps = result$steps %||% NA_real_
+    )
+  })
+
+  passed_vec <- vapply(rows, function(r) isTRUE(r$passed), logical(1))
+  total_tokens <- sum(vapply(rows, function(r) r$total_tokens %||% NA_real_, numeric(1)), na.rm = TRUE)
+  costs <- vapply(rows, function(r) r$cost_usd %||% NA_real_, numeric(1))
+  structure(
+    list(
+      tasks = rows,
+      n = length(rows),
+      passed = sum(passed_vec),
+      pass_rate = mean(passed_vec),
+      total_tokens = total_tokens,
+      total_cost = if (all(is.na(costs))) NA_real_ else sum(costs, na.rm = TRUE)
+    ),
+    class = "aisdk_eval_suite_result"
+  )
+}
+
+#' @title Print an Eval Suite Result
+#' @param x An `aisdk_eval_suite_result`.
+#' @param ... Ignored.
+#' @export
+print.aisdk_eval_suite_result <- function(x, ...) {
+  cat(sprintf("=== Eval suite: %d/%d passed (%.0f%%) ===\n", x$passed, x$n, 100 * x$pass_rate))
+  for (r in x$tasks) {
+    mark <- if (isTRUE(r$passed)) "PASS" else "FAIL"
+    cat(sprintf("  [%s] %s", mark, r$name))
+    if (!is.na(r$total_tokens)) cat(sprintf("  (%g tok)", r$total_tokens))
+    if (!is.null(r$cost_usd) && !is.na(r$cost_usd)) cat(sprintf("  $%.4f", r$cost_usd))
+    cat("\n")
+  }
+  if (!is.na(x$total_cost)) cat(sprintf("Total: %g tokens, $%.4f\n", x$total_tokens, x$total_cost))
+  invisible(x)
+}
+
 # Null-coalescing operator
 if (!exists("%||%", mode = "function")) {
   `%||%` <- function(x, y) if (is.null(x)) y else x
