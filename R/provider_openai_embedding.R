@@ -18,9 +18,14 @@ OpenAIEmbeddingModel <- R6::R6Class(
     },
 
     #' @description Generate embeddings for a value.
-    #' @param value A character string or vector to embed.
+    #' @param value A character string or vector to embed. A vector is embedded
+    #'   in a single batched request.
+    #' @param ... Provider options merged into the request body, e.g.
+    #'   `dimensions` (Matryoshka output-dimension truncation, text-embedding-3
+    #'   only), `encoding_format`, or `user`.
     #' @return A list with embeddings and usage.
-    do_embed = function(value) {
+    do_embed = function(value, ...) {
+      opts <- list(...)
       url <- api_endpoint_urls(private$config, "/embeddings")
       headers <- list(
         `Content-Type` = "application/json",
@@ -31,6 +36,16 @@ OpenAIEmbeddingModel <- R6::R6Class(
         model = self$model_id,
         input = value
       )
+
+      # dimensions must be an integer for the OpenAI embeddings API (jsonlite
+      # would otherwise emit 256.0, which the endpoint rejects).
+      if (!is.null(opts$dimensions)) {
+        opts$dimensions <- as.integer(opts$dimensions)
+      }
+      opts <- opts[!vapply(opts, is.null, logical(1))]
+      if (length(opts) > 0) {
+        body <- utils::modifyList(body, opts)
+      }
 
       response <- post_to_api(
         url,

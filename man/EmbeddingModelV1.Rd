@@ -50,13 +50,15 @@ Initialize the embedding model.
 \subsection{Method \code{do_embed()}}{
 Generate embeddings for a value. Abstract method.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{EmbeddingModelV1$do_embed(value)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{EmbeddingModelV1$do_embed(value, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{value}}{A character string or vector to embed.}
+
+\item{\code{...}}{Provider-specific options (e.g. \code{dimensions}, \code{encoding_format}).}
 }
 \if{html}{\out{</div>}}
 }

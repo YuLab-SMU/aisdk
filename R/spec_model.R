@@ -242,8 +242,9 @@ EmbeddingModelV1 <- R6::R6Class(
 
     #' @description Generate embeddings for a value. Abstract method.
     #' @param value A character string or vector to embed.
+    #' @param ... Provider-specific options (e.g. `dimensions`, `encoding_format`).
     #' @return A provider-specific embedding result.
-    do_embed = function(value) {
+    do_embed = function(value, ...) {
       rlang::abort("EmbeddingModelV1$do_embed() must be implemented by subclass.")
     }
   )

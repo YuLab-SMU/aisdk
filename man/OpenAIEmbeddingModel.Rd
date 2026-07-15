@@ -43,13 +43,18 @@ Initialize the OpenAI embedding model.
 \subsection{Method \code{do_embed()}}{
 Generate embeddings for a value.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{OpenAIEmbeddingModel$do_embed(value)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{OpenAIEmbeddingModel$do_embed(value, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{value}}{A character string or vector to embed.}
+\item{\code{value}}{A character string or vector to embed. A vector is embedded
+in a single batched request.}
+
+\item{\code{...}}{Provider options merged into the request body, e.g.
+\code{dimensions} (Matryoshka output-dimension truncation, text-embedding-3
+only), \code{encoding_format}, or \code{user}.}
 }
 \if{html}{\out{</div>}}
 }

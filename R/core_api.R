@@ -1000,7 +1000,12 @@ stream_text <- function(model = NULL,
 #' Generate embeddings for text using an embedding model.
 #'
 #' @param model Either an EmbeddingModelV1 object, or a string ID like "openai:text-embedding-3-small".
-#' @param value A character string or vector to embed.
+#' @param value A character string or vector to embed. A vector is sent as one
+#'   batched request rather than one call per item.
+#' @param ... Provider-specific options passed to the model. For OpenAI this
+#'   includes `dimensions` (truncate the output vector to fewer dimensions —
+#'   text-embedding-3 models only — for cheaper storage / faster search),
+#'   `encoding_format`, and `user`.
 #' @param registry Optional ProviderRegistry to use.
 #' @return A list with embeddings and usage information.
 #' @export
@@ -1010,11 +1015,15 @@ stream_text <- function(model = NULL,
 #'   model <- create_openai()$embedding_model("text-embedding-3-small")
 #'   result <- create_embeddings(model, "Hello, world!")
 #'   print(length(result$embeddings[[1]]))
+#'
+#'   # Truncated 256-dim vectors for a batch of inputs.
+#'   small <- create_embeddings(model, c("apple", "orange"), dimensions = 256)
+#'   print(length(small$embeddings[[1]]))
 #' }
 #' }
-create_embeddings <- function(model, value, registry = NULL) {
+create_embeddings <- function(model, value, ..., registry = NULL) {
   model <- resolve_model(model, registry, type = "embedding")
-  model$do_embed(value)
+  model$do_embed(value, ...)
 }
 
 #' @keywords internal

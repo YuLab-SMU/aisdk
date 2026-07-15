@@ -4,12 +4,18 @@
 \alias{create_embeddings}
 \title{Create Embeddings}
 \usage{
-create_embeddings(model, value, registry = NULL)
+create_embeddings(model, value, ..., registry = NULL)
 }
 \arguments{
 \item{model}{Either an EmbeddingModelV1 object, or a string ID like "openai:text-embedding-3-small".}
 
-\item{value}{A character string or vector to embed.}
+\item{value}{A character string or vector to embed. A vector is sent as one
+batched request rather than one call per item.}
+
+\item{...}{Provider-specific options passed to the model. For OpenAI this
+includes \code{dimensions} (truncate the output vector to fewer dimensions —
+text-embedding-3 models only — for cheaper storage / faster search),
+\code{encoding_format}, and \code{user}.}
 
 \item{registry}{Optional ProviderRegistry to use.}
 }
@@ -25,6 +31,10 @@ if (interactive()) {
   model <- create_openai()$embedding_model("text-embedding-3-small")
   result <- create_embeddings(model, "Hello, world!")
   print(length(result$embeddings[[1]]))
+
+  # Truncated 256-dim vectors for a batch of inputs.
+  small <- create_embeddings(model, c("apple", "orange"), dimensions = 256)
+  print(length(small$embeddings[[1]]))
 }
 }
 }
