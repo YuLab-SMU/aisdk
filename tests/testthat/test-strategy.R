@@ -114,3 +114,53 @@ test_that("object_schema_problem detects the common failure modes", {
   expect_match(aisdk:::object_schema_problem(list(name = "x"), schema), "missing required")
   expect_null(aisdk:::object_schema_problem(list(name = "x", age = 1), schema))
 })
+
+# --- Z8: stream_object — incremental partial-object parsing -------------------
+
+ChunkedMock <- R6::R6Class("ChunkedMock",
+  inherit = LanguageModelV1,
+  public = list(
+    provider = "mock", model_id = "mock-model", chunks = NULL,
+    initialize = function(chunks) self$chunks <- chunks,
+    do_generate = function(params) {
+      list(text = paste(self$chunks, collapse = ""), finish_reason = "stop", usage = list(total_tokens = 5))
+    },
+    do_stream = function(params, callback) {
+      for (ch in self$chunks) callback(ch, FALSE)
+      callback(NULL, TRUE)
+      list(text = paste(self$chunks, collapse = ""), finish_reason = "stop",
+           usage = list(total_tokens = 5), messages_added = list())
+    },
+    get_history_format = function() "openai"
+  )
+)
+
+test_that("stream_object parses progressively more complete partial objects", {
+  schema <- z_object(name = z_string("n"), age = z_number("a"))
+  model <- ChunkedMock$new(list('{"name":', '"Bob"', ',"age":', "42}"))
+  partials <- list()
+  res <- stream_object(model = model, prompt = "who", schema = schema,
+                       on_partial = function(o, done) {
+                         partials[[length(partials) + 1L]] <<- list(obj = o, done = done)
+                       })
+
+  # Final object is complete and correct.
+  expect_equal(res$object$name, "Bob")
+  expect_equal(res$object$age, 42)
+  # Callbacks fired per chunk, the last with done = TRUE.
+  expect_gt(length(partials), 1)
+  expect_true(partials[[length(partials)]]$done)
+  # A partial object carrying `name` was seen before `age` completed.
+  expect_true(any(vapply(partials, function(p) !is.null(p$obj$name), logical(1))))
+})
+
+test_that("stream_object tolerates a partial that isn't yet valid JSON", {
+  schema <- z_object(items = z_array(z_string()))
+  # First chunk is an unclosed object; fix_json should still yield something.
+  model <- ChunkedMock$new(list('{"items":["a"', ',"b"]}'))
+  expect_silent(
+    res <- stream_object(model = model, prompt = "list", schema = schema,
+                         on_partial = function(o, done) invisible(NULL))
+  )
+  expect_equal(res$object$items, list("a", "b"))
+})

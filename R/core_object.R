@@ -167,6 +167,88 @@ object_schema_problem <- function(object, schema) {
   NULL
 }
 
+#' @keywords internal
+# Strip leading/trailing markdown code fences from (possibly partial) JSON.
+strip_json_fences <- function(text) {
+  text <- sub("^\\s*```(json)?\\s*", "", text)
+  text <- sub("\\s*```\\s*$", "", text)
+  trimws(text)
+}
+
+#' @title Stream a Structured Object
+#' @description
+#' Stream a JSON object from the model and parse the growing text into a
+#' best-effort PARTIAL object after each chunk (the "streaming structured
+#' output" pattern) — so a UI can render fields as they arrive rather than
+#' waiting for the whole response. Uses the JSON repair machinery to close the
+#' partial JSON on each step.
+#'
+#' @param model A model (id or object).
+#' @param prompt The input prompt.
+#' @param schema A `z_schema` describing the desired object.
+#' @param schema_name Name for the schema in the instruction.
+#' @param on_partial Optional `function(object, done)` called after each chunk
+#'   with the current best-effort parsed object (may be incomplete) and a
+#'   `done` flag on the final call.
+#' @param system Optional system prompt.
+#' @param temperature Sampling temperature (default 0.3).
+#' @param max_tokens Optional max output tokens.
+#' @param registry Optional ProviderRegistry.
+#' @param ... Passed to `stream_text()`.
+#' @return A `GenerateObjectResult` with the final parsed `object`.
+#' @export
+stream_object <- function(model = NULL, prompt, schema, schema_name = "result",
+                          on_partial = NULL, system = NULL, temperature = 0.3,
+                          max_tokens = NULL, registry = NULL, ...) {
+  model <- resolve_model(model, registry, type = "language")
+  strategy <- ObjectStrategy$new(schema, schema_name)
+  combined_system <- if (is.null(system)) {
+    strategy$get_instruction()
+  } else {
+    paste0(system, "\n\n", strategy$get_instruction())
+  }
+
+  accumulated <- ""
+  last_partial <- NULL
+  result <- stream_text(
+    model = model,
+    prompt = prompt,
+    system = combined_system,
+    temperature = temperature,
+    max_tokens = max_tokens,
+    registry = registry,
+    callback = function(chunk, done) {
+      if (!is.null(chunk) && is.character(chunk)) {
+        accumulated <<- paste0(accumulated, chunk)
+      }
+      # Best-effort parse of the JSON accumulated so far: repair (close open
+      # strings/brackets) then parse structure-preserving.
+      partial <- tryCatch(
+        safe_parse_json(fix_json(strip_json_fences(accumulated)), simplify = FALSE),
+        error = function(e) NULL
+      )
+      if (!is.null(partial)) {
+        last_partial <<- partial
+      }
+      if (is.function(on_partial)) {
+        tryCatch(on_partial(last_partial, done = isTRUE(done)), error = function(e) NULL)
+      }
+    },
+    ...
+  )
+
+  final <- strategy$validate(result$text, is_final = TRUE)
+  structure(
+    list(
+      object = final %||% last_partial,
+      usage = result$usage,
+      raw_text = result$text,
+      finish_reason = result$finish_reason
+    ),
+    class = "GenerateObjectResult"
+  )
+}
+
 #' @title Print GenerateObjectResult
 #' @param x A GenerateObjectResult object.
 #' @param ... Additional arguments (ignored).
