@@ -991,6 +991,57 @@ create_embeddings <- function(model, value, registry = NULL) {
   model$do_embed(value)
 }
 
+#' @keywords internal
+cosine_similarity <- function(a, b) {
+  a <- as.numeric(a)
+  b <- as.numeric(b)
+  denom <- sqrt(sum(a * a)) * sqrt(sum(b * b))
+  if (!is.finite(denom) || denom == 0) {
+    return(0)
+  }
+  sum(a * b) / denom
+}
+
+#' @title Semantic Search over Documents
+#' @description
+#' Rank a set of documents by semantic similarity to a query using an embedding
+#' model — a self-contained retrieval primitive for RAG and just-in-time
+#' context. Embeds the query and documents (one batched call) and returns the
+#' top matches by cosine similarity.
+#'
+#' @param query The query string.
+#' @param documents A character vector of documents to rank.
+#' @param model An embedding model (id or object), e.g.
+#'   "openai:text-embedding-3-small".
+#' @param top_k Number of top documents to return (default 5).
+#' @param registry Optional ProviderRegistry.
+#' @return A data frame with `document`, `score` (cosine similarity), and
+#'   `index` (position in `documents`), ordered by descending score.
+#' @export
+semantic_search <- function(query, documents, model, top_k = 5L, registry = NULL) {
+  if (length(documents) == 0) {
+    return(data.frame(document = character(0), score = numeric(0), index = integer(0),
+                      stringsAsFactors = FALSE))
+  }
+  if (!is.character(query) || length(query) != 1L || !nzchar(query)) {
+    rlang::abort("`query` must be a single non-empty string.")
+  }
+  embeddings <- create_embeddings(model, c(query, documents), registry = registry)$embeddings
+  if (length(embeddings) != length(documents) + 1L) {
+    rlang::abort("Embedding model returned an unexpected number of vectors.")
+  }
+  query_vec <- embeddings[[1]]
+  scores <- vapply(embeddings[-1], function(v) cosine_similarity(query_vec, v), numeric(1))
+  ord <- order(scores, decreasing = TRUE)
+  keep <- utils::head(ord, min(as.integer(top_k), length(documents)))
+  data.frame(
+    document = documents[keep],
+    score = scores[keep],
+    index = keep,
+    stringsAsFactors = FALSE
+  )
+}
+
 # --- Internal Helper Functions ---
 
 #' @keywords internal
