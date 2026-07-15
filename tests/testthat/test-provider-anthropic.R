@@ -397,6 +397,46 @@ test_that("agent runtime rebuilds Anthropic tool_use blocks from a streamed resu
   expect_equal(assistant$content[[1]]$name, "get_weather")
 })
 
+# --- AD1: streamed extended-thinking signature is replayed before tool_use ----
+# Anthropic rejects the next turn unless the signed thinking block that preceded
+# a tool_use is passed back ("a final assistant message must start with a
+# thinking block"). Non-streaming keeps it via raw_response$content; the stream
+# drops content on message_stop, so it is rebuilt from the captured signature.
+
+test_that("streamed Anthropic thinking block + signature leads the tool_use turn", {
+  model <- safe_create_provider(create_anthropic, api_key = "FAKE")$language_model("claude-sonnet-4")
+  tcs <- list(list(id = "c1", name = "get_weather", arguments = list(city = "SF")))
+  res <- list(text = "", tool_calls = tcs, reasoning = "Let me check the weather.",
+              reasoning_signature = "SIGxyz", raw_response = list(type = "message_stop"))
+  content <- aisdk:::agent_runtime_append_provider_messages(list(), model, res, list())$messages[[1]]$content
+  expect_equal(content[[1]]$type, "thinking")            # must START with thinking
+  expect_equal(content[[1]]$thinking, "Let me check the weather.")
+  expect_equal(content[[1]]$signature, "SIGxyz")
+  expect_equal(content[[2]]$type, "tool_use")            # then the tool_use
+  expect_equal(content[[2]]$id, "c1")
+})
+
+test_that("streamed thinking without a signature is omitted (an unsigned block 400s)", {
+  model <- safe_create_provider(create_anthropic, api_key = "FAKE")$language_model("claude-sonnet-4")
+  tcs <- list(list(id = "c1", name = "get_weather", arguments = list(city = "SF")))
+  res <- list(text = "", tool_calls = tcs, reasoning = "unsigned thoughts",
+              reasoning_signature = NULL, raw_response = list(type = "message_stop"))
+  content <- aisdk:::agent_runtime_append_provider_messages(list(), model, res, list())$messages[[1]]$content
+  expect_equal(content[[1]]$type, "tool_use")            # no invalid thinking block
+})
+
+test_that("streamed redacted_thinking is replayed before tool_use", {
+  model <- safe_create_provider(create_anthropic, api_key = "FAKE")$language_model("claude-sonnet-4")
+  tcs <- list(list(id = "c1", name = "get_weather", arguments = list(city = "SF")))
+  res <- list(text = "", tool_calls = tcs,
+              redacted_thinking = list(list(type = "redacted_thinking", data = "BLOB")),
+              raw_response = list(type = "message_stop"))
+  content <- aisdk:::agent_runtime_append_provider_messages(list(), model, res, list())$messages[[1]]$content
+  expect_equal(content[[1]]$type, "redacted_thinking")
+  expect_equal(content[[1]]$data, "BLOB")
+  expect_equal(content[[2]]$type, "tool_use")
+})
+
 # --- U3: server-side context editing (tool-result clearing) passthrough -------
 
 test_that("Anthropic per-call context_management reaches the body and sets the beta", {

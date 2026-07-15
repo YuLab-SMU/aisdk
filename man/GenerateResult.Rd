@@ -38,6 +38,11 @@ which can be used for multi-turn conversations without sending full history.
 
 \item{\code{reasoning}}{Optional chain-of-thought or reasoning content.}
 
+\item{\code{reasoning_signature}}{Cryptographic signature for an Anthropic
+extended-thinking block. Anthropic requires the signed thinking block to
+be replayed on the assistant turn that emitted a \code{tool_use}, so this is
+captured from the stream and used to rebuild that block.}
+
 \item{\code{response_id}}{Server-side response ID for Responses-style APIs.}
 }
 \if{html}{\out{</div>}}
@@ -66,6 +71,7 @@ Initialize a GenerateResult object.
   steps = NULL,
   all_tool_calls = NULL,
   reasoning = NULL,
+  reasoning_signature = NULL,
   response_id = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -90,6 +96,8 @@ Initialize a GenerateResult object.
 \item{\code{all_tool_calls}}{All tool calls across steps.}
 
 \item{\code{reasoning}}{Chain-of-thought content.}
+
+\item{\code{reasoning_signature}}{Signature for an Anthropic thinking block.}
 
 \item{\code{response_id}}{Server-side response ID for Responses-style APIs.}
 }

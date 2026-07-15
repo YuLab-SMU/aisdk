@@ -69,6 +69,28 @@ SSEAggregator <- R6::R6Class(
             }
         },
 
+        #' @description Capture an Anthropic thinking-block signature (from a
+        #'   `signature_delta`). The signed block must be replayed verbatim on the
+        #'   tool-use turn or Anthropic rejects the next request.
+        #' @param signature The signature string (may arrive in parts).
+        on_reasoning_signature = function(signature) {
+            if (!is.null(signature) && nzchar(signature)) {
+                private$reasoning_signature <- paste0(private$reasoning_signature %||% "", signature)
+            }
+        },
+
+        #' @description Capture a redacted-thinking block whole (it has encrypted
+        #'   `data` and no signature) so it can be replayed on the tool-use turn.
+        #' @param data The opaque redacted-thinking payload.
+        on_redacted_thinking = function(data) {
+            if (!is.null(data)) {
+                private$redacted_thinking <- c(
+                    private$redacted_thinking,
+                    list(list(type = "redacted_thinking", data = data))
+                )
+            }
+        },
+
         #' @description Signal content block stop (closes reasoning if open).
         on_block_stop = function() {
             if (private$is_reasoning) {
@@ -220,20 +242,27 @@ SSEAggregator <- R6::R6Class(
         build_result = function() {
             final_tool_calls <- private$finalize_tool_calls()
 
-            GenerateResult$new(
+            res <- GenerateResult$new(
                 text = private$full_text,
                 usage = private$full_usage,
                 finish_reason = private$finish_reason,
                 raw_response = private$last_response,
                 tool_calls = final_tool_calls,
-                reasoning = private$full_reasoning
+                reasoning = private$full_reasoning,
+                reasoning_signature = private$reasoning_signature
             )
+            if (length(private$redacted_thinking) > 0) {
+                res$redacted_thinking <- private$redacted_thinking
+            }
+            res
         }
     ),
     private = list(
         callback = NULL,
         full_text = "",
         full_reasoning = "",
+        reasoning_signature = NULL,
+        redacted_thinking = list(),
         is_reasoning = FALSE,
         inline_thinking_buffer = "",
         inline_thinking_active = FALSE,
@@ -558,6 +587,8 @@ map_anthropic_chunk <- function(event_type, event_data, agg) {
                 agg$on_text_delta(delta$text)
             } else if (delta$type == "thinking_delta" && !is.null(delta$thinking)) {
                 agg$on_reasoning_delta(delta$thinking)
+            } else if (delta$type == "signature_delta" && !is.null(delta$signature)) {
+                agg$on_reasoning_signature(delta$signature)
             } else if (delta$type == "input_json_delta" && !is.null(delta$partial_json)) {
                 idx <- if (is.null(event_data$index)) 0 else event_data$index
                 agg$on_tool_input_delta(idx, delta$partial_json)
@@ -572,6 +603,8 @@ map_anthropic_chunk <- function(event_type, event_data, agg) {
                 agg$on_tool_start(idx, cb$id, cb$name, cb$input)
             } else if (cb$type == "thinking") {
                 agg$on_reasoning_start()
+            } else if (cb$type == "redacted_thinking") {
+                agg$on_redacted_thinking(cb$data)
             }
             # "text" block start — no action needed
         }

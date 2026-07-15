@@ -38,6 +38,11 @@ GenerateResult <- R6::R6Class(
     all_tool_calls = NULL,
     #' @field reasoning Optional chain-of-thought or reasoning content.
     reasoning = NULL,
+    #' @field reasoning_signature Cryptographic signature for an Anthropic
+    #'   extended-thinking block. Anthropic requires the signed thinking block to
+    #'   be replayed on the assistant turn that emitted a `tool_use`, so this is
+    #'   captured from the stream and used to rebuild that block.
+    reasoning_signature = NULL,
     #' @field response_id Server-side response ID for Responses-style APIs.
     response_id = NULL,
 
@@ -51,11 +56,13 @@ GenerateResult <- R6::R6Class(
     #' @param steps Number of ReAct steps taken.
     #' @param all_tool_calls All tool calls across steps.
     #' @param reasoning Chain-of-thought content.
+    #' @param reasoning_signature Signature for an Anthropic thinking block.
     #' @param response_id Server-side response ID for Responses-style APIs.
     initialize = function(text = NULL, usage = NULL, finish_reason = NULL,
                           warnings = NULL, raw_response = NULL, tool_calls = NULL,
                           steps = NULL, all_tool_calls = NULL,
-                          reasoning = NULL, response_id = NULL) {
+                          reasoning = NULL, reasoning_signature = NULL,
+                          response_id = NULL) {
       self$text <- text
       self$usage <- usage
       self$finish_reason <- finish_reason
@@ -65,6 +72,7 @@ GenerateResult <- R6::R6Class(
       self$steps <- steps
       self$all_tool_calls <- all_tool_calls
       self$reasoning <- reasoning
+      self$reasoning_signature <- reasoning_signature
       self$response_id <- response_id
     },
 

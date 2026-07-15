@@ -20,6 +20,8 @@ Handles two tool call formats:
 \item \href{#method-SSEAggregator-on_text_delta}{\code{SSEAggregator$on_text_delta()}}
 \item \href{#method-SSEAggregator-on_reasoning_delta}{\code{SSEAggregator$on_reasoning_delta()}}
 \item \href{#method-SSEAggregator-on_reasoning_start}{\code{SSEAggregator$on_reasoning_start()}}
+\item \href{#method-SSEAggregator-on_reasoning_signature}{\code{SSEAggregator$on_reasoning_signature()}}
+\item \href{#method-SSEAggregator-on_redacted_thinking}{\code{SSEAggregator$on_redacted_thinking()}}
 \item \href{#method-SSEAggregator-on_block_stop}{\code{SSEAggregator$on_block_stop()}}
 \item \href{#method-SSEAggregator-on_tool_call_delta}{\code{SSEAggregator$on_tool_call_delta()}}
 \item \href{#method-SSEAggregator-on_tool_start}{\code{SSEAggregator$on_tool_start()}}
@@ -92,6 +94,43 @@ Signal the start of a reasoning block (Anthropic thinking).
 \if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$on_reasoning_start()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SSEAggregator-on_reasoning_signature"></a>}}
+\if{latex}{\out{\hypertarget{method-SSEAggregator-on_reasoning_signature}{}}}
+\subsection{Method \code{on_reasoning_signature()}}{
+Capture an Anthropic thinking-block signature (from a
+\code{signature_delta}). The signed block must be replayed verbatim on the
+tool-use turn or Anthropic rejects the next request.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$on_reasoning_signature(signature)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{signature}}{The signature string (may arrive in parts).}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-SSEAggregator-on_redacted_thinking"></a>}}
+\if{latex}{\out{\hypertarget{method-SSEAggregator-on_redacted_thinking}{}}}
+\subsection{Method \code{on_redacted_thinking()}}{
+Capture a redacted-thinking block whole (it has encrypted
+\code{data} and no signature) so it can be replayed on the tool-use turn.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{SSEAggregator$on_redacted_thinking(data)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{data}}{The opaque redacted-thinking payload.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-SSEAggregator-on_block_stop"></a>}}

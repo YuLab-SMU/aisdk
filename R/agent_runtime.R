@@ -698,7 +698,22 @@ agent_runtime_append_provider_messages <- function(messages,
           }
         )))
       }
-      assistant_message$content <- blocks
+      # Anthropic requires the signed thinking block (and any redacted-thinking
+      # blocks) to lead the assistant turn that emitted tool_use, or the next
+      # request 400s ("a final assistant message must start with a thinking
+      # block"). The stream drops content on message_stop, so rebuild them from
+      # the aggregated reasoning + signature — the non-streaming path already
+      # keeps them via raw_response$content. A thinking block is only valid WITH
+      # its signature, so it is omitted when none was captured.
+      reasoning_blocks <- result$redacted_thinking %||% list()
+      if (!is.null(result$reasoning_signature) && nzchar(result$reasoning %||% "")) {
+        reasoning_blocks <- c(reasoning_blocks, list(list(
+          type = "thinking",
+          thinking = result$reasoning,
+          signature = result$reasoning_signature
+        )))
+      }
+      assistant_message$content <- c(reasoning_blocks, blocks)
     }
   } else if (identical(history_format, "gemini")) {
     # Gemini's format_messages rebuilds functionCall parts from
