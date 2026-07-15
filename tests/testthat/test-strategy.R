@@ -115,6 +115,74 @@ test_that("object_schema_problem detects the common failure modes", {
   expect_null(aisdk:::object_schema_problem(list(name = "x", age = 1), schema))
 })
 
+# --- AI1: generate_object mode = "tool" (function-calling structured output) ---
+
+# A tool-call response shaped like a provider's do_generate output.
+mock_tool_call <- function(args, name = "result") {
+  list(text = "", finish_reason = "tool_calls", usage = list(total_tokens = 5),
+       tool_calls = list(list(id = "c1", name = name, arguments = args)))
+}
+
+test_that("mode='tool' forces the schema tool and reads the object from its arguments", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  model <- MockModel$new(list(mock_tool_call(list(name = "Bob", age = 42))))
+  res <- generate_object(model = model, prompt = "who", schema = schema, mode = "tool")
+
+  expect_true(res$valid)
+  expect_equal(res$attempts, 1)
+  expect_equal(res$object$name, "Bob")
+  expect_equal(res$object$age, 42)
+  # The forced tool_choice (AB1) was sent, and the schema name is the tool name.
+  expect_equal(model$last_params$tool_choice, list(type = "tool", name = "result"))
+})
+
+test_that("mode='tool' makes exactly ONE model call per attempt (no agent loop)", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"))
+  calls <- 0L
+  responder <- function(params) { calls <<- calls + 1L; mock_tool_call(list(name = "Al")) }
+  model <- MockModel$new(rep(list(responder), 5))
+  generate_object(model = model, prompt = "who", schema = schema, mode = "tool")
+  expect_equal(calls, 1L)   # not the 5 the executing agent loop would make
+})
+
+test_that("mode='tool' parses JSON-string arguments and coerces to schema types", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  # Real providers return arguments as a JSON string; a stringified number coerces.
+  s <- generate_object(model = MockModel$new(list(mock_tool_call('{"name":"Jo","age":7}'))),
+                       prompt = "who", schema = schema, mode = "tool")
+  expect_equal(s$object$age, 7)
+  c <- generate_object(model = MockModel$new(list(mock_tool_call(list(name = "Al", age = "30")))),
+                       prompt = "who", schema = schema, mode = "tool")
+  expect_identical(c$object$age, 30)
+  expect_true(is.numeric(c$object$age))
+})
+
+test_that("mode='tool' reasks on a schema problem then recovers", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  model <- MockModel$new(list(
+    mock_tool_call(list(name = "Bob")),            # missing age
+    mock_tool_call(list(name = "Bob", age = 42))   # corrected
+  ))
+  res <- generate_object(model = model, prompt = "who", schema = schema,
+                         mode = "tool", max_retries = 1)
+  expect_true(res$valid)
+  expect_equal(res$attempts, 2)
+  expect_equal(res$object$age, 42)
+})
+
+test_that("mode='tool' reports invalid without retries", {
+  source(test_path("helper-mock.R"))
+  schema <- z_object(name = z_string("name"), age = z_number("age"))
+  res <- generate_object(model = MockModel$new(list(mock_tool_call(list(name = "X")))),
+                         prompt = "who", schema = schema, mode = "tool", max_retries = 0)
+  expect_false(res$valid)
+  expect_equal(res$attempts, 1)
+})
+
 # --- Z8: stream_object — incremental partial-object parsing -------------------
 
 ChunkedMock <- R6::R6Class("ChunkedMock",

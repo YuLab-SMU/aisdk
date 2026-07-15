@@ -16,8 +16,11 @@
 #' @param system Optional system prompt.
 #' @param temperature Sampling temperature (0-2). Default 0.3 (lower for structured output).
 #' @param max_tokens Maximum tokens to generate.
-#' @param mode Output mode: "json" (prompt-based) or "tool" (function calling).
-#'   Currently, only "json" mode is implemented.
+#' @param mode Output mode: "json" (the model is prompted to emit JSON, which is
+#'   parsed from its text) or "tool" (the schema is exposed as a single forced
+#'   tool call and the object is read from the call's arguments — often more
+#'   reliable on models with native function calling). Both validate the result
+#'   against the schema and reask on failure.
 #' @param max_retries Number of times to re-ask the model when its output is
 #'   unparseable or missing required schema fields (default 1). The reask
 #'   includes the specific validation error. The returned result carries
@@ -69,6 +72,14 @@ generate_object <- function(model = NULL,
 
   # Resolve model from string ID if needed
   model <- resolve_model(model, registry, type = "language")
+
+  if (identical(mode, "tool")) {
+    return(generate_object_via_tool(
+      model = model, prompt = prompt, schema = schema, schema_name = schema_name,
+      system = system, temperature = temperature, max_tokens = max_tokens,
+      max_retries = max_retries, ...
+    ))
+  }
 
   # Initialize strategy
   strategy <- ObjectStrategy$new(schema, schema_name)
@@ -142,6 +153,104 @@ generate_object <- function(model = NULL,
     ),
     class = "GenerateObjectResult"
   )
+}
+
+#' @keywords internal
+# Tool-mode structured output: expose the schema as one forced tool call and
+# read the object out of the call's arguments. On models with native function
+# calling this is more reliable than parsing JSON out of free text, and it reuses
+# the same schema-validation + reask loop as the json path.
+generate_object_via_tool <- function(model, prompt, schema, schema_name, system,
+                                      temperature, max_tokens, max_retries, ...) {
+  schema_tool <- tool(
+    name = schema_name,
+    description = paste0(
+      "Record the structured `", schema_name,
+      "` result by calling this function with every field filled in."
+    ),
+    parameters = schema,
+    execute = function(...) NULL # never executed: we read the call's arguments
+  )
+  extra <- list(...)
+
+  attempt <- 0L
+  reask <- NULL
+  result <- NULL
+  parsed_object <- NULL
+  problem <- NULL
+
+  # Structured output wants exactly ONE model call per attempt whose forced tool
+  # call carries the object. Going through generate_text() would run the agent
+  # loop — execute the tool and call the model again — so call the model directly
+  # and read the tool arguments off the raw result. The reask loop mirrors json
+  # mode: on a schema problem, ask the model to call the tool again.
+  repeat {
+    attempt <- attempt + 1L
+    turn_prompt <- if (is.null(reask)) prompt else paste0(prompt, "\n\n", reask)
+
+    messages <- list()
+    if (!is.null(system)) {
+      messages <- c(messages, list(list(role = "system", content = system)))
+    }
+    messages <- c(messages, list(list(role = "user", content = turn_prompt)))
+
+    params <- c(
+      list(
+        messages = messages,
+        tools = list(schema_tool),
+        tool_choice = list(type = "tool", name = schema_name),
+        temperature = temperature,
+        max_tokens = max_tokens
+      ),
+      extra
+    )
+
+    result <- model$do_generate(params)
+    parsed_object <- extract_tool_call_object(result, schema_name, schema)
+    problem <- object_schema_problem(parsed_object, schema)
+
+    if (is.null(problem) || attempt > max_retries) {
+      break
+    }
+    reask <- paste0(
+      "Your previous `", schema_name, "` call was not valid: ", problem,
+      ". Call the `", schema_name, "` tool again with corrected arguments."
+    )
+  }
+
+  structure(
+    list(
+      object = parsed_object,
+      usage = result$usage,
+      raw_text = result$text %||% "",
+      finish_reason = result$finish_reason,
+      valid = is.null(problem),
+      attempts = attempt
+    ),
+    class = "GenerateObjectResult"
+  )
+}
+
+#' @keywords internal
+# Pull the structured object out of a forced tool call. Real providers return the
+# arguments as a JSON string; mocks may return a list. Coerce toward the schema
+# so a stringified number/boolean is accepted the same way tool-argument
+# validation would (see coerce_schema_value).
+extract_tool_call_object <- function(result, schema_name, schema) {
+  calls <- result$tool_calls %||% result$all_tool_calls %||% list()
+  for (call in calls) {
+    if (identical(call$name, schema_name)) {
+      args <- call$arguments
+      if (is.character(args)) {
+        args <- tryCatch(safe_parse_json(args, simplify = FALSE), error = function(e) NULL)
+      }
+      if (is.null(args)) {
+        return(NULL)
+      }
+      return(tryCatch(coerce_schema_value(args, schema), error = function(e) args))
+    }
+  }
+  NULL
 }
 
 #' @keywords internal

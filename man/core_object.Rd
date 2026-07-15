@@ -34,8 +34,11 @@ generate_object(
 
 \item{max_tokens}{Maximum tokens to generate.}
 
-\item{mode}{Output mode: "json" (prompt-based) or "tool" (function calling).
-Currently, only "json" mode is implemented.}
+\item{mode}{Output mode: "json" (the model is prompted to emit JSON, which is
+parsed from its text) or "tool" (the schema is exposed as a single forced
+tool call and the object is read from the call's arguments — often more
+reliable on models with native function calling). Both validate the result
+against the schema and reask on failure.}
 
 \item{max_retries}{Number of times to re-ask the model when its output is
 unparseable or missing required schema fields (default 1). The reask
