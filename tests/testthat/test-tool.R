@@ -300,6 +300,81 @@ test_that("execute_tool_calls returns validation errors without running tool bod
   expect_match(results[[1]]$result, "invalid arguments for tool 'r_eval'", fixed = TRUE)
 })
 
+# === AE1: argument coercion + global validation switch ===
+
+test_that("validate_tool_arguments coerces stringified scalars to schema types", {
+  t <- tool(
+    name = "t", description = "d",
+    parameters = z_object(count = z_integer("c"), ratio = z_number("r"),
+                          flag = z_boolean("f"), zip = z_string("z")),
+    execute = function(count, ratio, flag, zip) NULL,
+    meta = list(validate_arguments = TRUE)
+  )
+  v <- validate_tool_arguments(t, list(count = "42", ratio = "3.14", flag = "true", zip = 90210))
+  expect_true(v$valid)
+  expect_identical(v$arguments$count, 42L)         # "42"  -> integer
+  expect_identical(v$arguments$ratio, 3.14)        # "3.14"-> number
+  expect_identical(v$arguments$flag, TRUE)         # "true"-> boolean
+  expect_identical(v$arguments$zip, "90210")       # number-> string
+})
+
+test_that("coercion is conservative: genuinely wrong values still error", {
+  t <- tool(
+    name = "t", description = "d",
+    parameters = z_object(count = z_integer("c")),
+    execute = function(count) NULL, meta = list(validate_arguments = TRUE)
+  )
+  v <- validate_tool_arguments(t, list(count = "not-a-number"))
+  expect_false(v$valid)
+  expect_match(v$errors[[1]], "must be a single integer")
+  # An out-of-int-range value is left untouched (no as.integer(NA) crash).
+  expect_false(validate_tool_arguments(t, list(count = "99999999999"))$valid)
+})
+
+test_that("coercion recurses into arrays and nested objects", {
+  t <- tool(
+    name = "t", description = "d",
+    parameters = z_object(nums = z_array(z_integer("n")),
+                          obj = z_object(k = z_number("k"))),
+    execute = function(nums, obj) NULL, meta = list(validate_arguments = TRUE)
+  )
+  v <- validate_tool_arguments(t, list(nums = list("1", "2", "3"), obj = list(k = "9.5")))
+  expect_true(v$valid)
+  expect_equal(unlist(v$arguments$nums), c(1L, 2L, 3L))
+  expect_identical(v$arguments$obj$k, 9.5)
+})
+
+test_that("tool_argument_validation_enabled honors a global switch with per-tool override", {
+  no_meta <- tool("a", "d", z_object(n = z_integer("n")), function(n) n)
+  expect_false(tool_argument_validation_enabled(no_meta))     # default off
+  withr::with_options(list(aisdk.validate_tool_arguments = TRUE), {
+    expect_true(tool_argument_validation_enabled(no_meta))     # global on
+    opted_out <- tool("b", "d", z_object(n = z_integer("n")), function(n) n,
+                      meta = list(validate_arguments = FALSE))
+    expect_false(tool_argument_validation_enabled(opted_out))  # per-tool wins
+  })
+  # A per-tool opt-in works even when the global default is off.
+  opted_in <- tool("c", "d", z_object(n = z_integer("n")), function(n) n,
+                   meta = list(validate_arguments = TRUE))
+  expect_true(tool_argument_validation_enabled(opted_in))
+})
+
+test_that("global switch drives coercion through execute_tool_calls end-to-end", {
+  seen <- NULL
+  t <- tool(
+    name = "adder", description = "d",
+    parameters = z_object(x = z_integer("x")),
+    execute = function(x) { seen <<- x; x * 2 }
+  )
+  withr::with_options(list(aisdk.validate_tool_arguments = TRUE), {
+    results <- execute_tool_calls(
+      list(list(id = "1", name = "adder", arguments = list(x = "21"))), list(t)
+    )
+  })
+  expect_false(isTRUE(results[[1]]$is_error))
+  expect_identical(seen, 21L)                        # tool received a coerced integer
+})
+
 # === Tests for find_tool ===
 
 test_that("find_tool finds tool by name", {

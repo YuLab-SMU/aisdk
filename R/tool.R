@@ -778,8 +778,16 @@ tool_result_indicates_error <- function(result, raw_result = result) {
 }
 
 #' @keywords internal
+# Argument validation is off by default (loose args preserved). A tool can opt in
+# or out explicitly via meta$validate_arguments; when it says nothing, the global
+# options(aisdk.validate_tool_arguments=) default applies — so validation can be
+# switched on for every tool at once instead of tool by tool.
 tool_argument_validation_enabled <- function(tool_obj) {
-  isTRUE(tool_obj$meta$validate_arguments)
+  per_tool <- tool_obj$meta$validate_arguments
+  if (!is.null(per_tool)) {
+    return(isTRUE(per_tool)) # explicit per-tool setting wins in both directions
+  }
+  isTRUE(getOption("aisdk.validate_tool_arguments", FALSE))
 }
 
 #' @keywords internal
@@ -921,6 +929,90 @@ validate_object_arguments <- function(args, schema, path = "") {
 }
 
 #' @keywords internal
+# Conservatively coerce parsed tool arguments toward their schema types before
+# validation. Models very often emit a number or boolean as a JSON string
+# ({"count":"42"}); an unambiguous, lossless conversion ("42" -> 42, "true" ->
+# TRUE) should just work rather than costing a reask round-trip. Anything that
+# does not convert cleanly is left untouched for the validator to report.
+coerce_schema_value <- function(value, schema) {
+  if (is.null(value) || inherits(schema, "z_any")) {
+    return(value)
+  }
+
+  if (inherits(schema, "z_object") || inherits(schema, "z_any_object")) {
+    if (is.list(value)) {
+      return(coerce_object_arguments(value, schema))
+    }
+    return(value)
+  }
+
+  if (inherits(schema, "z_array")) {
+    if (!is.null(schema$items) && inherits(schema$items, "z_schema") &&
+        (is.list(value) || is.atomic(value)) && length(value) > 0) {
+      coerced <- lapply(seq_along(value), function(i) {
+        coerce_schema_value(value[[i]], schema$items)
+      })
+      if (!is.null(names(value))) names(coerced) <- names(value)
+      return(coerced)
+    }
+    return(value)
+  }
+
+  # Scalars: only ever touch a single value, never NA.
+  if (length(value) != 1 || (is.atomic(value) && is.na(value))) {
+    return(value)
+  }
+
+  if (inherits(schema, "z_integer")) {
+    if (is.character(value) && grepl("^\\s*-?[0-9]+\\s*$", value)) {
+      num <- suppressWarnings(as.numeric(trimws(value)))
+      if (!is.na(num) && abs(num) <= .Machine$integer.max) return(as.integer(num))
+    } else if (is.numeric(value) && abs(value) <= .Machine$integer.max &&
+               value == as.integer(value)) {
+      return(as.integer(value))
+    }
+    return(value)
+  }
+  if (inherits(schema, "z_number")) {
+    if (is.character(value)) {
+      num <- suppressWarnings(as.numeric(trimws(value)))
+      if (!is.na(num)) return(num)
+    }
+    return(value)
+  }
+  if (inherits(schema, "z_boolean")) {
+    if (is.character(value)) {
+      lv <- tolower(trimws(value))
+      if (lv %in% c("true", "false")) return(lv == "true")
+    }
+    return(value)
+  }
+  if (inherits(schema, "z_string") || inherits(schema, "z_enum")) {
+    # A number/boolean where a string is expected (e.g. a zip code or id sent as
+    # a number) — stringify. Enum membership is left to the validator.
+    if (is.numeric(value) || is.logical(value)) {
+      return(as.character(value))
+    }
+    return(value)
+  }
+  value
+}
+
+#' @keywords internal
+coerce_object_arguments <- function(args, schema) {
+  if (!is.list(args)) {
+    return(args)
+  }
+  props <- schema$properties %||% list()
+  arg_names <- names(args) %||% character(0)
+  for (name in intersect(names(props), arg_names)) {
+    idx <- which(arg_names == name)[[1]]
+    args[[idx]] <- coerce_schema_value(args[[idx]], props[[name]])
+  }
+  args
+}
+
+#' @keywords internal
 validate_tool_arguments <- function(tool_obj, args) {
   parsed <- parse_tool_arguments(args, tool_name = tool_obj$name)
 
@@ -928,10 +1020,13 @@ validate_tool_arguments <- function(tool_obj, args) {
     return(list(valid = TRUE, arguments = parsed, errors = character(0)))
   }
 
-  errors <- validate_schema_value(parsed, tool_obj$parameters, "")
+  # Coerce first, then validate: a stringified number/boolean becomes the right
+  # type and passes; a genuinely wrong value stays as-is and still errors.
+  coerced <- coerce_schema_value(parsed, tool_obj$parameters)
+  errors <- validate_schema_value(coerced, tool_obj$parameters, "")
   list(
     valid = length(errors) == 0,
-    arguments = parsed,
+    arguments = coerced,
     errors = errors
   )
 }
