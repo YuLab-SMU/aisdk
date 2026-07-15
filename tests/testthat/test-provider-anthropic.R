@@ -318,6 +318,55 @@ test_that("Anthropic thinking forces temperature 1.0 and passes through in both 
   }
 })
 
+test_that("reasoning_effort maps to an Anthropic thinking budget (portable reasoning)", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-4-20250514")
+  priv <- model$.__enclos_env__$private
+
+  expected <- list(low = 2048L, medium = 8192L, high = 16384L)
+  for (effort in names(expected)) {
+    params <- list(messages = list(list(role = "user", content = "hi")),
+                   reasoning_effort = effort)
+    for (stream in c(FALSE, TRUE)) {
+      body <- priv$build_messages_body(params, stream = stream)
+      expect_equal(body$thinking$type, "enabled")
+      expect_equal(body$thinking$budget_tokens, expected[[effort]])
+      expect_equal(body$temperature, 1.0)      # thinking forces temperature 1
+      expect_null(body$reasoning_effort)         # raw param never leaks into the body
+    }
+  }
+})
+
+test_that("reasoning_effort defers to an explicit thinking block and ignores junk values", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  model <- provider$language_model("claude-sonnet-4-20250514")
+  priv <- model$.__enclos_env__$private
+  msgs <- list(list(role = "user", content = "hi"))
+
+  # An explicit thinking block wins over reasoning_effort.
+  won <- priv$build_messages_body(list(
+    messages = msgs, reasoning_effort = "high",
+    thinking = list(type = "enabled", budget_tokens = 999)
+  ), stream = FALSE)
+  expect_equal(won$thinking$budget_tokens, 999)
+
+  # An unrecognized effort adds no thinking block (and still doesn't leak).
+  none <- priv$build_messages_body(list(messages = msgs, reasoning_effort = "turbo"),
+                                   stream = FALSE)
+  expect_null(none$thinking)
+  expect_null(none$reasoning_effort)
+
+  # Overridable via options().
+  withr::with_options(
+    list(aisdk.anthropic_reasoning_budgets = list(low = 100L, medium = 200L, high = 300L)),
+    {
+      b <- priv$build_messages_body(list(messages = msgs, reasoning_effort = "medium"),
+                                    stream = FALSE)
+      expect_equal(b$thinking$budget_tokens, 200L)
+    }
+  )
+})
+
 test_that("Anthropic streaming usage reports prompt tokens from message_start", {
   agg <- SSEAggregator$new(function(text, done) invisible())
   aisdk:::map_anthropic_chunk(

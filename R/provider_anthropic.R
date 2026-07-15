@@ -27,6 +27,20 @@ anthropic_usage_with_cache <- function(usage) {
   out
 }
 
+#' @keywords internal
+# Map a unified reasoning_effort (low/medium/high) to an Anthropic extended-
+# thinking token budget. Defaults are indicative and overridable via
+# options(aisdk.anthropic_reasoning_budgets = list(low=, medium=, high=)).
+reasoning_effort_to_anthropic_budget <- function(effort) {
+  effort <- tolower(trimws(as.character(effort %||% "")[[1]]))
+  defaults <- list(low = 2048L, medium = 8192L, high = 16384L)
+  budgets <- getOption("aisdk.anthropic_reasoning_budgets", defaults)
+  if (!is.list(budgets)) budgets <- defaults
+  budgets <- utils::modifyList(defaults, budgets)
+  val <- budgets[[effort]]
+  if (is.null(val)) NULL else as.integer(val)
+}
+
 #' @title Anthropic Language Model Class
 #' @description
 #' Language model implementation for Anthropic's Messages API.
@@ -174,6 +188,19 @@ AnthropicLanguageModel <- R6::R6Class(
       }
       body$messages <- formatted$messages
 
+      # Portable reasoning control: a unified `reasoning_effort` (low/medium/
+      # high) maps to an Anthropic extended-thinking budget when the caller did
+      # not pass an explicit `thinking` block. This makes reasoning_effort work
+      # the same as on the OpenAI Responses API.
+      reasoning_effort <- list_get_exact(params, "reasoning_effort")
+      if (!is.null(reasoning_effort) && is.null(params$thinking)) {
+        budget <- reasoning_effort_to_anthropic_budget(reasoning_effort)
+        if (!is.null(budget)) {
+          params$thinking <- list(type = "enabled", budget_tokens = budget)
+          body$thinking <- params$thinking
+        }
+      }
+
       # Thinking models require temperature = 1.0. Thinking is enabled via the
       # explicit param or by a "-think" model name (for proxies).
       is_thinking <- !is.null(params$thinking) || grepl("-think", self$model_id, fixed = TRUE)
@@ -244,7 +271,7 @@ AnthropicLanguageModel <- R6::R6Class(
       handled_params <- c(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
         "system", "top_p", "stop_sequences", "context_management",
-        "response_format", "response_format_name",
+        "response_format", "response_format_name", "reasoning_effort",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )
