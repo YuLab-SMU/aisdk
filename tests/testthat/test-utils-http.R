@@ -644,3 +644,83 @@ test_that("resolve_retry_after_ms handles seconds, ms, HTTP-date, garbage, and c
   withr::local_options(aisdk.max_retry_after_ms = 5000)
   expect_equal(f("100", NULL, fallback_ms = 1000), 5000)
 })
+
+# --- AC1: idempotency key on retried POSTs -----------------------------------
+
+test_that("generate_idempotency_key is unique and doesn't perturb the RNG stream", {
+  set.seed(42); before <- runif(1)
+  k1 <- aisdk:::generate_idempotency_key()
+  k2 <- aisdk:::generate_idempotency_key()
+  set.seed(42); after <- runif(1)
+  expect_identical(before, after)     # a package must not consume the user's RNG
+  expect_false(identical(k1, k2))
+  expect_match(k1, "^aisdk-")
+})
+
+test_that("apply_idempotency_key adds, respects existing, and is configurable", {
+  h <- aisdk:::apply_idempotency_key(list(`Content-Type` = "application/json"))
+  expect_false(is.null(h[["Idempotency-Key"]]))
+
+  # A caller/provider-supplied key wins (case-insensitive), with no duplicate.
+  h2 <- aisdk:::apply_idempotency_key(list(`idempotency-key` = "mine"))
+  expect_equal(h2[["idempotency-key"]], "mine")
+  expect_null(h2[["Idempotency-Key"]])
+
+  withr::with_options(list(aisdk.idempotency_key = FALSE), {
+    expect_null(aisdk:::apply_idempotency_key(list(a = 1))[["Idempotency-Key"]])
+  })
+  withr::with_options(list(aisdk.idempotency_header = "X-Idem"), {
+    expect_false(is.null(aisdk:::apply_idempotency_key(list(a = 1))[["X-Idem"]]))
+  })
+})
+
+test_that("post_to_api sends ONE stable idempotency key across retries", {
+  keys <- character()
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = function(req) {
+      keys <<- c(keys, req$headers[["Idempotency-Key"]] %||% NA_character_)
+      if (length(keys) == 1L) {
+        return(httr2::response(
+          status_code = 503L, url = req$url, method = req$method %||% "POST",
+          body = charToRaw('{"error":"transient"}')
+        ))
+      }
+      httr2::response(status_code = 200L, url = req$url,
+                      method = req$method %||% "POST", body = charToRaw('{"ok":true}'))
+    },
+    .package = "aisdk"
+  )
+  result <- suppressMessages(aisdk:::post_to_api(
+    url = "https://api.test/v1/chat/completions", headers = list(),
+    body = list(model = "mock"), max_retries = 2, initial_delay_ms = 0
+  ))
+  expect_true(isTRUE(result$ok))
+  expect_length(keys, 2)               # one 503 then a 200
+  expect_false(anyNA(keys))            # both attempts carried a key
+  expect_equal(keys[[1]], keys[[2]])   # the SAME key — this is the whole point
+})
+
+test_that("failover candidates share one idempotency key", {
+  rm(list = ls(envir = aisdk:::.aisdk_api_route_state), envir = aisdk:::.aisdk_api_route_state)
+  withr::defer(rm(list = ls(envir = aisdk:::.aisdk_api_route_state),
+                  envir = aisdk:::.aisdk_api_route_state))
+  keys <- character()
+  testthat::local_mocked_bindings(
+    should_skip_internet_check = function() TRUE,
+    perform_request = function(req) {
+      keys <<- c(keys, req$headers[["Idempotency-Key"]] %||% NA_character_)
+      if (grepl("primary", req$url, fixed = TRUE)) stop(simpleError("Could not resolve host"))
+      httr2::response(status_code = 200L, url = req$url,
+                      method = req$method %||% "POST", body = charToRaw('{"ok":true}'))
+    },
+    .package = "aisdk"
+  )
+  result <- suppressMessages(aisdk:::post_to_api(
+    url = c("https://primary.test/v1/x", "https://backup.test/v1/x"),
+    headers = list(), body = list(model = "mock"), max_retries = 0, initial_delay_ms = 0
+  ))
+  expect_true(isTRUE(result$ok))
+  expect_length(keys, 2)
+  expect_equal(keys[[1]], keys[[2]])   # same key across primary + backup
+})

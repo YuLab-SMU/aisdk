@@ -530,6 +530,43 @@ abort_retry_api_error <- function(url, error) {
   )
 }
 
+# Generate a unique idempotency key for one logical request. Uses tempfile()'s
+# internal counter for the random component so it does NOT perturb the global
+# RNG stream (a package must not consume the user's set.seed() sequence), plus a
+# millisecond timestamp and the process id for cross-process/time uniqueness.
+#' @keywords internal
+generate_idempotency_key <- function() {
+  token <- basename(tempfile(pattern = ""))
+  stamp <- sprintf("%.0f", as.numeric(Sys.time()) * 1000)
+  sprintf("aisdk-%s-%d-%s", stamp, Sys.getpid(), token)
+}
+
+# Attach an Idempotency-Key header so aisdk's automatic retries (and failover)
+# of a POST are safe against duplicate side effects / double billing when a
+# request actually succeeded server-side but its response was lost. Providers
+# that honor idempotency keys (e.g. OpenAI) dedupe on it; where unsupported the
+# extra header is ignored. The key is generated ONCE per logical request and the
+# same list is reused across every retry, so all attempts carry one key.
+#
+# Idempotent by design: a caller/provider-supplied key (case-insensitive) is
+# respected, and re-applying to headers that already carry one is a no-op — so
+# post_to_api and post_to_api_failover can both call it without double-keying.
+# Disable with options(aisdk.idempotency_key = FALSE); rename the header with
+# options(aisdk.idempotency_header = "...").
+#' @keywords internal
+apply_idempotency_key <- function(headers) {
+  if (!isTRUE(getOption("aisdk.idempotency_key", TRUE))) {
+    return(headers)
+  }
+  header_name <- getOption("aisdk.idempotency_header", "Idempotency-Key")
+  existing <- names(headers)
+  if (length(existing) > 0 && any(tolower(existing) == tolower(header_name))) {
+    return(headers) # respect a caller/provider-supplied key
+  }
+  headers[[header_name]] <- generate_idempotency_key()
+  headers
+}
+
 #' @title Post to API with Retry
 #' @description
 #' Makes a POST request to an API endpoint with automatic retry on failure.
@@ -573,6 +610,9 @@ post_to_api <- function(url, headers, body,
   if (length(urls) == 0) {
     rlang::abort("`url` must contain at least one non-empty API endpoint URL.")
   }
+  # One idempotency key for this logical request, fixed before the retry loop so
+  # every retry (and, below, every failover candidate) carries the same key.
+  headers <- apply_idempotency_key(headers)
   if (length(urls) > 1) {
     return(post_to_api_failover(
       urls = urls,
@@ -698,6 +738,10 @@ post_to_api_failover <- function(urls, headers, body,
                                  idle_timeout_seconds = NULL) {
   urls <- order_api_url_candidates(urls)
   last_error <- NULL
+
+  # Fix one idempotency key across all failover candidates (post_to_api sees it
+  # as already present and won't mint a per-candidate key).
+  headers <- apply_idempotency_key(headers)
 
   for (candidate in urls) {
     result <- tryCatch(
