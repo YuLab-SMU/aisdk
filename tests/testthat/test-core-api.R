@@ -763,3 +763,41 @@ test_that("generate_text_fallback errors with a dedicated class when all models 
 test_that("generate_text_fallback requires at least one model", {
   expect_error(generate_text_fallback("hi", models = list()), "at least one model")
 })
+
+# --- Z5: generate_batch (bulk generation with per-item error isolation) -------
+
+test_that("generate_batch runs every prompt in order", {
+  model <- MockModel$new(list(
+    list(text = "A", finish_reason = "stop", usage = list(total_tokens = 5)),
+    list(text = "B", finish_reason = "stop", usage = list(total_tokens = 6)),
+    list(text = "C", finish_reason = "stop", usage = list(total_tokens = 7))
+  ))
+  res <- generate_batch(c("p1", "p2", "p3"), model = model, concurrency = 1)
+  expect_length(res, 3)
+  expect_equal(vapply(res, function(r) r$text, character(1)), c("A", "B", "C"))
+})
+
+test_that("generate_batch isolates a failing prompt without aborting the batch", {
+  model <- MockModel$new(list(
+    list(text = "ok1", finish_reason = "stop"),
+    function(p) stop("boom"),
+    list(text = "ok3", finish_reason = "stop")
+  ))
+  res <- generate_batch(list("a", "b", "c"), model = model, concurrency = 1)
+  expect_equal(res[[1]]$text, "ok1")
+  expect_s3_class(res[[2]], "error")
+  expect_equal(res[[3]]$text, "ok3")
+})
+
+test_that("generate_batch handles an empty batch and composes with cost", {
+  expect_length(generate_batch(character(0), model = MockModel$new()), 0)
+
+  withr::local_options(aisdk.model_pricing = list("mock-model" = list(input = 1, output = 2)))
+  model <- MockModel$new(list(
+    list(text = "A", finish_reason = "stop", usage = list(prompt_tokens = 1e6, completion_tokens = 0)),
+    list(text = "B", finish_reason = "stop", usage = list(prompt_tokens = 1e6, completion_tokens = 0))
+  ))
+  res <- generate_batch(c("p1", "p2"), model = model, concurrency = 1)
+  total <- sum(vapply(res, function(r) estimate_cost(r$usage, "mock:mock-model"), numeric(1)))
+  expect_equal(total, 2) # 2 prompts x 1M input x $1
+})

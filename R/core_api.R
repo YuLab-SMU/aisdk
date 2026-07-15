@@ -700,6 +700,47 @@ is_fallback_worthy_error <- function(e) {
     isTRUE(tryCatch(is_network_error_condition(e), error = function(x) FALSE))
 }
 
+#' @title Generate Text over a Batch of Prompts
+#' @description
+#' Run `generate_text()` for each prompt in a batch, concurrently where the
+#' platform supports it, with per-item error isolation — one failing prompt
+#' does not abort the batch. Useful for bulk work over a dataset (e.g.
+#' classify/summarize each row) and pairs with [estimate_cost()] for totals.
+#'
+#' @param prompts A character vector or list of prompts.
+#' @param model A model (id or object) used for every prompt.
+#' @param concurrency Max worker processes (default 4). Effective on
+#'   Unix/macOS via `parallel::mclapply`; Windows and `concurrency = 1` run
+#'   sequentially.
+#' @param registry Optional ProviderRegistry.
+#' @param ... Passed to every `generate_text()` call.
+#' @return A list the same length and order as `prompts`; each element is a
+#'   `GenerateResult`, or the error condition for a prompt that failed.
+#' @export
+generate_batch <- function(prompts, model = NULL, concurrency = 4L, registry = NULL, ...) {
+  if (length(prompts) == 0) {
+    return(list())
+  }
+  prompts <- if (is.list(prompts)) prompts else as.list(prompts)
+  resolved <- resolve_model(model, registry, type = "language")
+  run_one <- function(p) {
+    tryCatch(
+      generate_text(model = resolved, prompt = p, registry = registry, ...),
+      error = function(e) e
+    )
+  }
+  workers <- suppressWarnings(as.integer(concurrency))
+  if (is.na(workers) || workers < 1L) workers <- 1L
+  use_parallel <- workers > 1L && length(prompts) > 1L &&
+    .Platform$OS.type != "windows" &&
+    requireNamespace("parallel", quietly = TRUE)
+  if (use_parallel) {
+    parallel::mclapply(prompts, run_one, mc.cores = min(workers, length(prompts)))
+  } else {
+    lapply(prompts, run_one)
+  }
+}
+
 #' @title Generate Text with Model Fallback
 #' @description
 #' Try `generate_text()` with each model in turn, falling over to the next when
