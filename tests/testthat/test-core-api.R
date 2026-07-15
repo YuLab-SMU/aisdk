@@ -731,3 +731,35 @@ test_that("get_default_registry returns singleton", {
 
   expect_identical(reg1, reg2)
 })
+
+# --- Z4: generate_text_fallback (model fallback chain) -----------------------
+
+test_that("generate_text_fallback falls over to the next model on an API error", {
+  primary <- MockModel$new(list(function(p) rlang::abort("rate limited", class = "aisdk_api_error")))
+  secondary <- MockModel$new(list(list(text = "from secondary", finish_reason = "stop",
+                                       usage = list(total_tokens = 5))))
+  fired <- FALSE
+  res <- generate_text_fallback("hi", models = list(primary, secondary),
+                                on_fallback = function(f, n, e) fired <<- TRUE)
+  expect_equal(res$text, "from secondary")
+  expect_true(fired)
+})
+
+test_that("generate_text_fallback surfaces a non-API error immediately", {
+  primary <- MockModel$new(list(function(p) stop("bug in tool")))
+  secondary <- MockModel$new(list(list(text = "unreached", finish_reason = "stop")))
+  # A plain R error would recur on every model, so it is raised, not masked.
+  expect_error(generate_text_fallback("hi", models = list(primary, secondary)), "bug in tool")
+})
+
+test_that("generate_text_fallback errors with a dedicated class when all models fail", {
+  models <- list(
+    MockModel$new(list(function(p) rlang::abort("down1", class = "aisdk_api_error"))),
+    MockModel$new(list(function(p) rlang::abort("down2", class = "aisdk_api_error")))
+  )
+  expect_error(generate_text_fallback("hi", models = models), class = "aisdk_all_models_failed")
+})
+
+test_that("generate_text_fallback requires at least one model", {
+  expect_error(generate_text_fallback("hi", models = list()), "at least one model")
+})

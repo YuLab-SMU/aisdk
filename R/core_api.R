@@ -690,6 +690,65 @@ generate_text <- function(model = NULL,
   result
 }
 
+#' @keywords internal
+# An error worth failing over to another model: a provider/API error or a
+# network condition (outage, rate limit, auth, server, timeout). A plain R
+# error from user tool/code is NOT — it would fail identically on every model.
+is_fallback_worthy_error <- function(e) {
+  inherits(e, "aisdk_api_error") ||
+    inherits(e, c("aisdk_stream_error", "aisdk_stream_start_error", "aisdk_stream_partial_error")) ||
+    isTRUE(tryCatch(is_network_error_condition(e), error = function(x) FALSE))
+}
+
+#' @title Generate Text with Model Fallback
+#' @description
+#' Try `generate_text()` with each model in turn, falling over to the next when
+#' a model fails with a provider/API or network error (rate limit, outage,
+#' auth, server, timeout) — the resilience pattern used by production agent
+#' harnesses. A non-API error (e.g. a bug in a tool) is raised immediately, not
+#' masked by a fallback.
+#'
+#' @param prompt The prompt (character or messages list).
+#' @param models A non-empty list/vector of models (ids or objects) tried in order.
+#' @param ... Passed to every `generate_text()` call (system, tools, etc.).
+#' @param on_fallback Optional `function(failed_model, next_model, error)` called
+#'   before each fallover, e.g. to log it.
+#' @return The first successful `GenerateResult`. Errors with class
+#'   `aisdk_all_models_failed` if every model fails.
+#' @export
+generate_text_fallback <- function(prompt, models, ..., on_fallback = NULL) {
+  if (length(models) == 0) {
+    rlang::abort("`models` must contain at least one model.")
+  }
+  last_error <- NULL
+  for (i in seq_along(models)) {
+    m <- models[[i]]
+    result <- tryCatch(
+      generate_text(model = m, prompt = prompt, ...),
+      error = function(e) e
+    )
+    if (!inherits(result, "error")) {
+      return(result)
+    }
+    last_error <- result
+    # A non-API/non-network error would recur on every model — surface it now.
+    if (!is_fallback_worthy_error(result)) {
+      stop(result)
+    }
+    if (i < length(models) && is.function(on_fallback)) {
+      tryCatch(on_fallback(m, models[[i + 1L]], result), error = function(e) NULL)
+    }
+  }
+  rlang::abort(
+    c(
+      sprintf("All %d model(s) failed to generate.", length(models)),
+      "x" = conditionMessage(last_error %||% simpleError("unknown error"))
+    ),
+    class = c("aisdk_all_models_failed", "aisdk_error"),
+    parent = last_error
+  )
+}
+
 #' @title Stream Text
 #' @description
 #' Generate text using a language model with streaming output.
