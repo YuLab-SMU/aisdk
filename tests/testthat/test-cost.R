@@ -80,3 +80,47 @@ test_that("openai_usage_with_cache surfaces nested cached_tokens", {
   u2 <- aisdk:::openai_usage_with_cache(list(prompt_tokens = 100, completion_tokens = 20))
   expect_null(u2$cached_tokens)
 })
+
+# --- AO1: estimate_prompt_cost (pre-flight cost) -----------------------------
+
+test_that("estimate_prompt_cost prices counted input tokens before sending", {
+  source(test_path("helper-mock.R"))
+  withr::local_options(aisdk.model_pricing = NULL)
+  set_model_pricing("mock:mock-model", input = 1.0, output = 3.0) # $/1M tokens
+
+  e <- estimate_prompt_cost(MockModel$new(), prompt = "price this prompt please and count")
+  expect_s3_class(e, "aisdk_cost_estimate")
+  expect_gt(e$input_tokens, 0)
+  expect_equal(e$projected_output_tokens, 0L)
+  # input-only cost = input_tokens / 1e6 * input_rate
+  expect_equal(e$cost_usd, e$input_tokens / 1e6 * 1.0)
+})
+
+test_that("estimate_prompt_cost adds a projected output at the output rate", {
+  source(test_path("helper-mock.R"))
+  withr::local_options(aisdk.model_pricing = NULL)
+  set_model_pricing("mock:mock-model", input = 1.0, output = 3.0)
+
+  e <- estimate_prompt_cost(MockModel$new(), prompt = "hi", max_output_tokens = 1000)
+  expect_equal(e$projected_output_tokens, 1000L)
+  expect_equal(e$cost_usd, e$input_tokens / 1e6 * 1.0 + 1000 / 1e6 * 3.0)
+})
+
+test_that("estimate_prompt_cost returns NA cost when pricing is unknown", {
+  source(test_path("helper-mock.R"))
+  withr::local_options(aisdk.model_pricing = NULL)
+  m <- MockModel$new()
+  m$model_id <- "definitely-unpriced-model"
+  e <- estimate_prompt_cost(m, prompt = "hi")
+  expect_true(is.na(e$cost_usd))
+  expect_gt(e$input_tokens, 0)          # tokens are still counted
+})
+
+test_that("estimate_prompt_cost print method is human-readable", {
+  source(test_path("helper-mock.R"))
+  withr::local_options(aisdk.model_pricing = NULL)
+  set_model_pricing("mock:mock-model", input = 1.0, output = 3.0)
+  e <- estimate_prompt_cost(MockModel$new(), prompt = "hi", max_output_tokens = 500)
+  expect_output(print(e), "aisdk cost estimate")
+  expect_output(print(e), "estimated cost")
+})

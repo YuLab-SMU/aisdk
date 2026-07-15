@@ -133,3 +133,69 @@ estimate_cost <- function(usage, model_id) {
     per_m(usage$cache_read_input_tokens, cache_read_rate) +
     per_m(usage$cache_creation_input_tokens, cache_write_rate)
 }
+
+#' Estimate the USD cost of a request BEFORE sending it
+#'
+#' A pre-flight budget check: counts the input tokens a prompt would use (exact
+#' where the provider supports it — see [count_tokens()] — otherwise estimated)
+#' and prices them, optionally adding a projected output. Unlike [estimate_cost()]
+#' which needs a completed response, this runs before the call so you can decide
+#' whether to send it (e.g. cap per-request spend, or skip an over-budget batch).
+#'
+#' @param model Either a LanguageModelV1 object or a string id like
+#'   "openai:gpt-4o".
+#' @param prompt A character prompt. Ignored when `messages` is supplied.
+#' @param system Optional system prompt included in the count.
+#' @param messages Optional pre-built message list (overrides `prompt`).
+#' @param tools Optional list of Tool objects included in the count.
+#' @param max_output_tokens Projected output tokens to price alongside the input
+#'   (default 0, i.e. input-only). Set it to your `max_tokens` for a worst case.
+#' @param registry Optional ProviderRegistry to use.
+#' @param ... Additional model options passed to [count_tokens()].
+#' @return An `aisdk_cost_estimate`: a list with `model_id`, `input_tokens`,
+#'   `projected_output_tokens`, and `cost_usd` (`NA` when pricing is unknown).
+#' @seealso [count_tokens()], [estimate_cost()], [set_model_pricing()]
+#' @export
+estimate_prompt_cost <- function(model = NULL, prompt = NULL, system = NULL,
+                                 messages = NULL, tools = NULL,
+                                 max_output_tokens = 0, registry = NULL, ...) {
+  model <- resolve_model(model, registry, type = "language")
+  input_tokens <- count_tokens(
+    model = model, prompt = prompt, system = system,
+    messages = messages, tools = tools, ...
+  )
+  output_tokens <- suppressWarnings(as.numeric(max_output_tokens %||% 0))
+  if (is.na(output_tokens) || output_tokens < 0) output_tokens <- 0
+  model_id <- generation_model_id(model)
+  cost <- estimate_cost(
+    list(prompt_tokens = input_tokens, completion_tokens = output_tokens),
+    model_id
+  )
+  structure(
+    list(
+      model_id = model_id,
+      input_tokens = as.integer(input_tokens),
+      projected_output_tokens = as.integer(output_tokens),
+      cost_usd = cost
+    ),
+    class = "aisdk_cost_estimate"
+  )
+}
+
+#' @title Print an aisdk cost estimate
+#' @param x An `aisdk_cost_estimate`.
+#' @param ... Ignored.
+#' @export
+print.aisdk_cost_estimate <- function(x, ...) {
+  cost <- if (is.null(x$cost_usd) || is.na(x$cost_usd)) {
+    "unknown (no pricing for this model)"
+  } else {
+    sprintf("$%.6f", x$cost_usd)
+  }
+  cat("<aisdk cost estimate>\n")
+  cat("  model:            ", x$model_id, "\n", sep = "")
+  cat("  input tokens:     ", x$input_tokens, "\n", sep = "")
+  cat("  projected output: ", x$projected_output_tokens, "\n", sep = "")
+  cat("  estimated cost:   ", cost, "\n", sep = "")
+  invisible(x)
+}
