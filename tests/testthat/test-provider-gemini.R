@@ -545,3 +545,42 @@ test_that("agent runtime attaches tool_calls for a Gemini assistant turn", {
   expect_equal(assistant$tool_calls[[1]]$name, "get_weather")
   expect_null(assistant$content) # pure tool-call turn: no empty text part
 })
+
+# --- AK1: reasoning_effort -> Gemini thinkingConfig.thinkingBudget -----------
+# Completes portable reasoning across providers: OpenAI Responses handles
+# reasoning_effort natively and Anthropic maps it to a thinking budget (AA1);
+# Gemini previously dropped it silently.
+
+test_that("reasoning_effort maps to a Gemini thinking budget in generationConfig", {
+  model <- create_gemini(api_key = "FAKE")$language_model("gemini-2.5-flash")
+  msgs <- list(list(role = "user", content = "hi"))
+  gc <- function(p) model$build_payload_internal(p, stream = FALSE)$body$generationConfig
+
+  expected <- list(low = 2048L, medium = 8192L, high = 16384L)
+  for (eff in names(expected)) {
+    cfg <- gc(list(messages = msgs, reasoning_effort = eff))
+    expect_equal(cfg$thinkingConfig$thinkingBudget, expected[[eff]])
+  }
+  # No effort / unrecognized effort -> no thinkingConfig; raw param never leaks.
+  expect_null(gc(list(messages = msgs))$thinkingConfig)
+  expect_null(gc(list(messages = msgs, reasoning_effort = "turbo"))$thinkingConfig)
+  body <- model$build_payload_internal(list(messages = msgs, reasoning_effort = "high"),
+                                       stream = FALSE)$body
+  expect_null(body$reasoning_effort)
+})
+
+test_that("an explicit thinking_config wins and budgets are option-overridable", {
+  model <- create_gemini(api_key = "FAKE")$language_model("gemini-2.5-flash")
+  msgs <- list(list(role = "user", content = "hi"))
+  gc <- function(p) model$build_payload_internal(p, stream = FALSE)$body$generationConfig
+
+  won <- gc(list(messages = msgs, reasoning_effort = "high",
+                 thinking_config = list(thinkingBudget = 999, includeThoughts = TRUE)))
+  expect_equal(won$thinkingConfig$thinkingBudget, 999)
+  expect_true(won$thinkingConfig$includeThoughts)
+
+  withr::with_options(
+    list(aisdk.gemini_reasoning_budgets = list(low = 100L, medium = 200L, high = 300L)),
+    expect_equal(gc(list(messages = msgs, reasoning_effort = "medium"))$thinkingConfig$thinkingBudget, 200L)
+  )
+})

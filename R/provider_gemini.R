@@ -6,6 +6,22 @@
 NULL
 
 #' @keywords internal
+# Map a unified reasoning_effort (low/medium/high) to a Gemini 2.5 thinking
+# budget (thinkingConfig.thinkingBudget, in tokens). Mirrors the Anthropic
+# mapping (see reasoning_effort_to_anthropic_budget) so a single reasoning_effort
+# behaves the same across providers. Overridable via
+# options(aisdk.gemini_reasoning_budgets = list(low=, medium=, high=)).
+reasoning_effort_to_gemini_budget <- function(effort) {
+  effort <- tolower(trimws(as.character(effort %||% "")[[1]]))
+  defaults <- list(low = 2048L, medium = 8192L, high = 16384L)
+  budgets <- getOption("aisdk.gemini_reasoning_budgets", defaults)
+  if (!is.list(budgets)) budgets <- defaults
+  budgets <- utils::modifyList(defaults, budgets)
+  val <- budgets[[effort]]
+  if (is.null(val)) NULL else as.integer(val)
+}
+
+#' @keywords internal
 gemini_endpoint_urls <- function(config, model_id, endpoint) {
     bases <- normalize_base_urls(config$base_urls %||% config$base_url)
     bases <- vapply(bases, function(base) {
@@ -159,6 +175,21 @@ GeminiLanguageModel <- R6::R6Class(
             if (!is.null(params$stop_sequences)) config$stopSequences <- params$stop_sequences
             if (!is.null(params$response_modalities)) config$responseModalities <- params$response_modalities
             if (!is.null(params$image_config)) config$imageConfig <- params$image_config
+
+            # Portable reasoning control: a unified reasoning_effort maps to a
+            # Gemini 2.5 thinking budget, matching how it drives OpenAI Responses
+            # and Anthropic. An explicit thinking_config wins; an unrecognized
+            # effort adds nothing.
+            explicit_thinking <- params$thinking_config %||% params$thinkingConfig
+            if (!is.null(explicit_thinking)) {
+                config$thinkingConfig <- explicit_thinking
+            } else if (!is.null(list_get_exact(params, "reasoning_effort"))) {
+                budget <- reasoning_effort_to_gemini_budget(list_get_exact(params, "reasoning_effort"))
+                if (!is.null(budget)) {
+                    config$thinkingConfig <- list(thinkingBudget = budget)
+                }
+            }
+
             if (length(config) == 0) {
                 return(NULL)
             }
