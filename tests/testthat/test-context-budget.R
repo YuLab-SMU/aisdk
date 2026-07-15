@@ -939,3 +939,26 @@ test_that("summarize_message_span falls back to deterministic when the LLM error
   out <- aisdk:::summarize_message_span(msgs)
   expect_match(out, "earlier message") # deterministic fallback
 })
+
+# --- Layer 1: assemble_session_messages surfaces the stable system prefix ----
+
+test_that("assemble_session_messages returns the base system prompt as the cache prefix", {
+  source(test_path("helper-mock.R"))
+  session <- create_chat_session(model = MockModel$new())
+  session$set_context_management_mode("adaptive")
+  for (i in 1:3) session$append_message("user", paste("message number", i))
+
+  sys <- "YOU ARE A HELPFUL ASSISTANT. THIS IS THE STABLE BASE SYSTEM PROMPT."
+  res <- aisdk:::assemble_session_messages(session, messages = session$get_history(),
+                                           system = sys, persist = FALSE)
+
+  # The stable prefix is exactly the base system prompt, and the assembled system
+  # always begins with it (so a provider can split on it safely).
+  expect_equal(res$system_cache_prefix, sys)
+  expect_true(startsWith(res$system, res$system_cache_prefix))
+
+  # No base prompt -> nothing to cache.
+  res2 <- aisdk:::assemble_session_messages(session, messages = session$get_history(),
+                                            system = NULL, persist = FALSE)
+  expect_null(res2$system_cache_prefix)
+})

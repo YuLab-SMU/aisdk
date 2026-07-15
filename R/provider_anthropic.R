@@ -186,6 +186,31 @@ AnthropicLanguageModel <- R6::R6Class(
       if (!is.null(formatted$system)) {
         body$system <- formatted$system
       }
+
+      # System prefix caching. The runtime assembles the system prompt as a
+      # stable base + volatile per-turn context fused into one string; marking
+      # the whole thing for caching never hits because the tail changes every
+      # turn. When caching is on and a stable prefix was flagged
+      # (`system_cache_prefix`, set by assemble_session_messages), split the
+      # system so ONLY the stable prefix carries a cache_control breakpoint and
+      # the volatile suffix stays outside the cache boundary. Left untouched when
+      # the system is already structured (an explicit whole-system cache_control).
+      cache_prefix <- list_get_exact(params, "system_cache_prefix")
+      if (isTRUE(private$config$enable_caching) &&
+          is.character(cache_prefix) && length(cache_prefix) == 1L && nzchar(cache_prefix) &&
+          is.character(body$system) && length(body$system) == 1L && nzchar(body$system) &&
+          startsWith(body$system, cache_prefix) &&
+          nchar(cache_prefix) >= getOption("aisdk.anthropic_cache_min_chars", 1024L)) {
+        volatile <- substr(body$system, nchar(cache_prefix) + 1L, nchar(body$system))
+        blocks <- list(list(
+          type = "text", text = cache_prefix, cache_control = list(type = "ephemeral")
+        ))
+        if (nzchar(volatile)) {
+          blocks <- c(blocks, list(list(type = "text", text = volatile)))
+        }
+        body$system <- blocks
+      }
+
       body$messages <- formatted$messages
 
       # Portable reasoning control: a unified `reasoning_effort` (low/medium/
@@ -280,7 +305,7 @@ AnthropicLanguageModel <- R6::R6Class(
         "messages", "temperature", "max_tokens", "tools", "stream", "model",
         "system", "top_p", "stop_sequences", "context_management",
         "response_format", "response_format_name", "reasoning_effort",
-        "tool_choice", "parallel_tool_calls",
+        "tool_choice", "parallel_tool_calls", "system_cache_prefix",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"
       )

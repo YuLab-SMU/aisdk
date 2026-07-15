@@ -461,7 +461,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "tool_choice", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "thinking", "thinking_budget", "include",
-        "response_format", "response_format_name",
+        "response_format", "response_format_name", "system_cache_prefix",
         "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"

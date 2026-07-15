@@ -575,3 +575,75 @@ test_that("Anthropic leaves the body untouched when no response_format is given"
   )
   expect_null(body$output_config)
 })
+
+# --- Layer 1: system prefix caching (stable base cached, volatile tail not) --
+# The runtime fuses a stable base system prompt + volatile per-turn context into
+# one string; caching the whole thing never hits. When caching is on and a
+# stable prefix is flagged (system_cache_prefix), only the prefix is cached.
+
+test_that("Anthropic splits the system into a cached prefix + uncached volatile tail", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  provider$enable_caching(TRUE)
+  priv <- provider$language_model("claude-sonnet-4")$.__enclos_env__$private
+
+  stable <- paste(rep("STABLE BASE PROMPT. ", 120), collapse = "") # > 1024 chars
+  volatile <- "VOLATILE PER-TURN CONTEXT"
+  full <- paste(stable, volatile, sep = "\n\n")
+
+  for (stream in c(FALSE, TRUE)) {
+    sys <- priv$build_messages_body(
+      list(messages = list(list(role = "system", content = full),
+                           list(role = "user", content = "hi")),
+           system_cache_prefix = stable),
+      stream = stream
+    )$system
+    expect_true(is.list(sys) && length(sys) == 2)
+    expect_equal(sys[[1]]$text, stable)
+    expect_equal(sys[[1]]$cache_control, list(type = "ephemeral"))
+    expect_true(grepl("VOLATILE", sys[[2]]$text))
+    expect_null(sys[[2]]$cache_control)   # the volatile tail stays outside the cache
+  }
+})
+
+test_that("system prefix caching is a no-op without caching, prefix, match, or length", {
+  stable <- paste(rep("STABLE BASE PROMPT. ", 120), collapse = "")
+  full <- paste(stable, "VOLATILE", sep = "\n\n")
+  msgs <- list(list(role = "system", content = full), list(role = "user", content = "hi"))
+  sys_of <- function(provider, params) {
+    provider$language_model("claude-sonnet-4")$.__enclos_env__$private$build_messages_body(params, FALSE)$system
+  }
+
+  # caching OFF -> plain string
+  off <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  expect_type(sys_of(off, list(messages = msgs, system_cache_prefix = stable)), "character")
+
+  on <- safe_create_provider(create_anthropic, api_key = "FAKE"); on$enable_caching(TRUE)
+  # no prefix flagged
+  expect_type(sys_of(on, list(messages = msgs)), "character")
+  # prefix is not actually a prefix of the system
+  wrong <- paste(rep("WRONG PREFIX PAD. ", 120), collapse = "")
+  expect_type(sys_of(on, list(messages = msgs, system_cache_prefix = wrong)), "character")
+  # prefix below the min-chars threshold
+  short <- list(list(role = "system", content = "short\n\nvol"), list(role = "user", content = "hi"))
+  expect_type(sys_of(on, list(messages = short, system_cache_prefix = "short")), "character")
+})
+
+test_that("a whole stable system (no volatile tail) becomes one cached block; no leak", {
+  provider <- safe_create_provider(create_anthropic, api_key = "FAKE")
+  provider$enable_caching(TRUE)
+  priv <- provider$language_model("claude-sonnet-4")$.__enclos_env__$private
+  stable <- paste(rep("STABLE BASE PROMPT. ", 120), collapse = "")
+
+  sys <- priv$build_messages_body(
+    list(messages = list(list(role = "system", content = stable),
+                         list(role = "user", content = "hi")),
+         system_cache_prefix = stable), stream = FALSE)$system
+  expect_true(is.list(sys) && length(sys) == 1)
+  expect_equal(sys[[1]]$cache_control, list(type = "ephemeral"))
+
+  # system_cache_prefix is consumed, never sent on the wire.
+  body <- priv$build_messages_body(
+    list(messages = list(list(role = "user", content = "hi")), system_cache_prefix = "x"),
+    stream = FALSE)
+  expect_null(body$system_cache_prefix)
+})

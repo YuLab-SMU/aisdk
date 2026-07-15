@@ -2841,6 +2841,17 @@ assemble_session_messages <- function(session,
   }
   assembled_system <- if (length(system_parts) > 0) paste(system_parts, collapse = "\n\n") else NULL
 
+  # The base system prompt is the STABLE prefix; the summary/structured blocks
+  # appended after it are per-turn VOLATILE. Surface the stable prefix so a
+  # provider with prefix caching (Anthropic) can cache it without the volatile
+  # tail busting the cache. NULL when there is no distinct stable prefix.
+  stable_prefix <- if (!is.null(system) && nzchar(system)) system else NULL
+  if (!is.null(stable_prefix) &&
+      !is.null(assembled_system) &&
+      !startsWith(assembled_system, stable_prefix)) {
+    stable_prefix <- NULL # something reordered the parts; don't risk a bad split
+  }
+
   if (isTRUE(persist)) {
     session$set_context_state(state)
   }
@@ -2848,6 +2859,7 @@ assemble_session_messages <- function(session,
   list(
     messages = assembled_messages,
     system = assembled_system,
+    system_cache_prefix = stable_prefix,
     metrics = metrics,
     state = state
   )

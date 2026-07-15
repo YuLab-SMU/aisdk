@@ -169,6 +169,7 @@ ChatSession <- R6::R6Class(
             model = model,
             prompt = prompt_payload$messages,
             system = prompt_payload$system,
+            system_cache_prefix = prompt_payload$system_cache_prefix,
             tools = private$prepare_tools(),
             max_steps = private$.max_steps,
             session = self,
@@ -224,6 +225,7 @@ ChatSession <- R6::R6Class(
             prompt = prompt_payload$messages,
             callback = callback,
             system = prompt_payload$system,
+            system_cache_prefix = prompt_payload$system_cache_prefix,
             registry = private$.registry,
             tools = private$prepare_tools(),
             max_steps = private$.max_steps,
@@ -1015,6 +1017,9 @@ ChatSession <- R6::R6Class(
         return(list(
           messages = private$.history,
           system = combined_system,
+          # With context management off the whole system prompt is stable, so
+          # it is entirely cacheable (no volatile tail appended).
+          system_cache_prefix = if (!is.null(combined_system) && nzchar(combined_system)) combined_system else NULL,
           metrics = metrics,
           state = state
         ))
