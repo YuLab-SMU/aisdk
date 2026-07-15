@@ -127,6 +127,7 @@ ChatSession <- R6::R6Class(
         total_prompt_tokens = 0,
         total_completion_tokens = 0,
         total_tokens = 0,
+        total_cost_usd = 0,
         messages_sent = 0,
         tool_calls_made = 0
       )
@@ -1090,6 +1091,14 @@ ChatSession <- R6::R6Class(
           (result$usage$completion_tokens %||% 0)
         private$.stats$total_tokens <- private$.stats$total_tokens +
           (result$usage$total_tokens %||% 0)
+        # Accumulate estimated cost when this session's model has known pricing
+        # (cache-aware via estimate_cost). Unknown models contribute nothing.
+        # Use get_model_id() since .model_id is NULL when a model OBJECT was
+        # passed (the id is then derived from the object).
+        cost <- estimate_cost(result$usage, self$get_model_id() %||% "")
+        if (!is.na(cost)) {
+          private$.stats$total_cost_usd <- (private$.stats$total_cost_usd %||% 0) + cost
+        }
       }
 
       if (!is.null(result$all_tool_calls)) {

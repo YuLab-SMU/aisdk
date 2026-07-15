@@ -346,3 +346,29 @@ test_that("switch_model clears the previous model's runtime overrides", {
   expect_null(session$get_model_options()$context_window)
   expect_null(session$get_model_options()$max_output_tokens)
 })
+
+# --- Z2: session-level automatic cost tracking -------------------------------
+
+test_that("session stats accumulate estimated cost across turns", {
+  withr::local_options(aisdk.model_pricing = list("mock-model" = list(input = 1, output = 2)))
+  session <- create_chat_session(model = MockModel$new(list(
+    list(text = "a", finish_reason = "stop",
+         usage = list(prompt_tokens = 1e6, completion_tokens = 1e6, total_tokens = 2e6)),
+    list(text = "b", finish_reason = "stop",
+         usage = list(prompt_tokens = 1e6, completion_tokens = 0, total_tokens = 1e6))
+  )))
+  session$send("q1")
+  session$send("q2")
+  # (1*1 + 1*2) + (1*1) = 4
+  expect_equal(session$stats()$total_cost_usd, 4)
+  expect_equal(session$stats()$total_tokens, 3e6)
+})
+
+test_that("session cost stays zero for a model with unknown pricing", {
+  withr::local_options(aisdk.model_pricing = list())
+  session <- create_chat_session(model = MockModel$new(list(
+    list(text = "a", finish_reason = "stop", usage = list(prompt_tokens = 100, completion_tokens = 50))
+  )))
+  session$send("q")
+  expect_equal(session$stats()$total_cost_usd, 0)
+})
