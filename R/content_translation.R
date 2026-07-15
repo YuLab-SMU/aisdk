@@ -53,6 +53,17 @@ translate_blocks_openai_chat <- function(blocks) {
       return(list(type = "text", text = block$text))
     }
 
+    if (identical(block$type, "input_file")) {
+      # Chat Completions uses a `file` part with an inline data URI + filename.
+      return(list(
+        type = "file",
+        file = list(
+          filename = block$filename %||% "document",
+          file_data = block_to_url(block)
+        )
+      ))
+    }
+
     image_payload <- list(
       type = "image_url",
       image_url = list(url = block_to_url(block))
@@ -69,6 +80,15 @@ translate_blocks_openai_responses <- function(blocks) {
   lapply(blocks, function(block) {
     if (identical(block$type, "input_text")) {
       return(list(type = "input_text", text = block$text))
+    }
+
+    if (identical(block$type, "input_file")) {
+      # Responses uses a flat input_file part with an inline data URI + filename.
+      return(list(
+        type = "input_file",
+        filename = block$filename %||% "document",
+        file_data = block_to_url(block)
+      ))
     }
 
     image_payload <- list(
@@ -115,9 +135,13 @@ translate_blocks_anthropic <- function(blocks) {
       return(list(type = "text", text = block$text))
     }
 
+    # Documents and images share Anthropic's source shape; only the block type
+    # differs ("document" vs "image").
+    block_type <- if (identical(block$type, "input_file")) "document" else "image"
+
     if (identical(block$source$kind, "url")) {
       return(list(
-        type = "image",
+        type = block_type,
         source = list(
           type = "url",
           url = block$value
@@ -126,7 +150,7 @@ translate_blocks_anthropic <- function(blocks) {
     }
 
     list(
-      type = "image",
+      type = block_type,
       source = list(
         type = "base64",
         media_type = block$media_type,

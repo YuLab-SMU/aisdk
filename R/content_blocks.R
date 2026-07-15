@@ -54,6 +54,92 @@ input_image <- function(x, media_type = "auto", detail = "auto") {
   block
 }
 
+#' @title Create Input File Block
+#' @description
+#' Create a provider-neutral document/file block (typically a PDF) for
+#' multimodal message content. Supports local files, remote URLs, and data URIs,
+#' mirroring [input_image()]. Providers that accept document input (Anthropic,
+#' OpenAI, Gemini) receive it in their native shape; a local file is base64
+#' encoded.
+#' @param x File source as a local file path, remote URL, or data URI.
+#' @param media_type MIME type of the file. If `NULL` or `"auto"`, inferred from
+#'   the source (defaults to `application/pdf`).
+#' @param filename Optional filename hint (some providers require one). Inferred
+#'   from a local path when omitted.
+#' @return A list representing an input file block.
+#' @export
+input_file <- function(x, media_type = "auto", filename = NULL) {
+  if (!is.character(x) || length(x) != 1 || is.na(x) || !nzchar(x)) {
+    rlang::abort("`x` must be a single non-empty character string.")
+  }
+
+  source_kind <- detect_image_source_kind(x)
+  resolved_media_type <- resolve_file_media_type(x, media_type)
+
+  block <- list(
+    type = "input_file",
+    source = list(kind = source_kind),
+    value = x,
+    media_type = resolved_media_type,
+    filename = resolve_file_name(x, filename, resolved_media_type)
+  )
+
+  block
+}
+
+#' @keywords internal
+resolve_file_media_type <- function(x, media_type = "auto") {
+  if (!is.null(media_type) && !identical(media_type, "auto")) {
+    return(media_type)
+  }
+
+  if (grepl("^data:", x, ignore.case = TRUE)) {
+    matched <- sub("^data:([^;]+);.*$", "\\1", x, perl = TRUE)
+    if (!identical(matched, x) && nzchar(matched)) {
+      return(matched)
+    }
+  }
+
+  ext <- tolower(tools::file_ext(x))
+  switch(ext,
+    "pdf" = "application/pdf",
+    "txt" = "text/plain",
+    "md" = "text/markdown",
+    "csv" = "text/csv",
+    "json" = "application/json",
+    "html" = "text/html",
+    "htm" = "text/html",
+    "xml" = "text/xml",
+    "application/pdf"
+  )
+}
+
+#' @keywords internal
+resolve_file_name <- function(x, filename = NULL, media_type = NULL) {
+  if (!is.null(filename) && nzchar(filename)) {
+    return(filename)
+  }
+  # A local path or URL carries a usable basename; a data URI does not, so fall
+  # back to a generic name with an extension matching the media type.
+  if (!grepl("^data:", x, ignore.case = TRUE)) {
+    base <- basename(x)
+    if (nzchar(base) && grepl("\\.", base)) {
+      return(base)
+    }
+  }
+  ext <- switch(media_type %||% "application/pdf",
+    "application/pdf" = "pdf",
+    "text/plain" = "txt",
+    "text/markdown" = "md",
+    "text/csv" = "csv",
+    "application/json" = "json",
+    "text/html" = "html",
+    "text/xml" = "xml",
+    "pdf"
+  )
+  paste0("document.", ext)
+}
+
 #' @keywords internal
 detect_image_source_kind <- function(x) {
   if (grepl("^https?://", x, ignore.case = TRUE)) {
@@ -108,7 +194,7 @@ is_content_block <- function(x) {
 
 #' @keywords internal
 supported_content_block_type <- function(type) {
-  type %in% c("input_text", "input_image", "text", "image_url")
+  type %in% c("input_text", "input_image", "input_file", "text", "image_url")
 }
 
 #' @keywords internal
@@ -136,6 +222,22 @@ coerce_legacy_content_block <- function(block) {
     }
     if (identical(block$type, "input_image") && is.null(block$media_type) && !is.null(block$value)) {
       block$media_type <- resolve_image_media_type(block$value, "auto")
+    }
+    return(block)
+  }
+
+  if (identical(block$type, "input_file")) {
+    if (is.null(block$value) || !nzchar(block$value %||% "")) {
+      block$value <- block$url %||% block$path %||% block$data_uri %||% NULL
+    }
+    if (is.null(block$source$kind)) {
+      block$source <- list(kind = block$source %||% detect_image_source_kind(block$value %||% ""))
+    }
+    if (is.null(block$media_type) && !is.null(block$value)) {
+      block$media_type <- resolve_file_media_type(block$value, "auto")
+    }
+    if (is.null(block$filename) && !is.null(block$value)) {
+      block$filename <- resolve_file_name(block$value, NULL, block$media_type)
     }
     return(block)
   }
@@ -224,6 +326,19 @@ validate_content_blocks <- function(blocks) {
       }
       if (!is.character(block$media_type) || length(block$media_type) != 1 || !nzchar(block$media_type)) {
         rlang::abort("`input_image` blocks must contain a non-empty `media_type`.")
+      }
+    } else if (identical(block$type, "input_file")) {
+      if (!is.list(block$source) || !is.character(block$source$kind) || length(block$source$kind) != 1) {
+        rlang::abort("`input_file` blocks must contain `source$kind`.")
+      }
+      if (!block$source$kind %in% c("file", "url", "data_uri")) {
+        rlang::abort("`input_file` source kind must be one of: file, url, data_uri.")
+      }
+      if (!is.character(block$value) || length(block$value) != 1 || is.na(block$value) || !nzchar(block$value)) {
+        rlang::abort("`input_file` blocks must contain a non-empty `value`.")
+      }
+      if (!is.character(block$media_type) || length(block$media_type) != 1 || !nzchar(block$media_type)) {
+        rlang::abort("`input_file` blocks must contain a non-empty `media_type`.")
       }
     } else {
       rlang::abort(paste0("Unsupported normalized content block type: ", block$type))
