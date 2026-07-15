@@ -21,6 +21,7 @@ stream_text(
   hooks = NULL,
   registry = NULL,
   renderer = NULL,
+  on_event = NULL,
   .stream_event_callback = NULL,
   ...
 )
@@ -69,7 +70,17 @@ terminal backend (\code{\link[=create_stream_renderer]{create_stream_renderer()}
 object (e.g. from a web UI, \code{\link[=create_capture_renderer]{create_capture_renderer()}}, or
 \code{\link[=create_null_renderer]{create_null_renderer()}}) to render agent output elsewhere.}
 
-\item{.stream_event_callback}{Internal callback for typed stream events.}
+\item{on_event}{Optional \verb{function(event)} receiving the typed event stream
+instead of the plain \code{callback} — useful to render reasoning, tool calls,
+and answer text distinctly. Each \code{event} is a list with \code{type}, \code{text},
+\code{done}, \code{step}, and a \code{reason}. Types: \code{"thinking_text"} (provider
+reasoning), \code{"text_delta"} (streamed answer text), \code{"intermediate_text"}
+(text before a tool call / protocol correction), \code{"final_text"} (the final
+answer), and \code{"done"}. When \code{on_event} is supplied the plain \code{callback} does
+not fire — read answer text from \code{"text_delta"} events instead.}
+
+\item{.stream_event_callback}{Internal callback for typed stream events.
+Superseded by \code{on_event} when both are given.}
 
 \item{...}{Additional arguments passed to the model.}
 }

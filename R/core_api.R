@@ -841,7 +841,16 @@ generate_text_fallback <- function(prompt, models, ..., on_fallback = NULL) {
 #'   terminal backend ([create_stream_renderer()]); pass any Renderer-conforming
 #'   object (e.g. from a web UI, [create_capture_renderer()], or
 #'   [create_null_renderer()]) to render agent output elsewhere.
+#' @param on_event Optional `function(event)` receiving the typed event stream
+#'   instead of the plain `callback` — useful to render reasoning, tool calls,
+#'   and answer text distinctly. Each `event` is a list with `type`, `text`,
+#'   `done`, `step`, and a `reason`. Types: `"thinking_text"` (provider
+#'   reasoning), `"text_delta"` (streamed answer text), `"intermediate_text"`
+#'   (text before a tool call / protocol correction), `"final_text"` (the final
+#'   answer), and `"done"`. When `on_event` is supplied the plain `callback` does
+#'   not fire — read answer text from `"text_delta"` events instead.
 #' @param .stream_event_callback Internal callback for typed stream events.
+#'   Superseded by `on_event` when both are given.
 #' @param ... Additional arguments passed to the model.
 #' @return A GenerateResult object (accumulated from the stream).
 #' @export
@@ -870,8 +879,18 @@ stream_text <- function(model = NULL,
                         hooks = NULL,
                         registry = NULL,
                         renderer = NULL,
+                        on_event = NULL,
                         .stream_event_callback = NULL,
                         ...) {
+  # Public typed-event stream: on_event supersedes the internal hook. Pure
+  # plumbing onto the existing .stream_event_callback path — no change to the
+  # streaming logic itself.
+  if (!is.null(on_event)) {
+    if (!is.function(on_event)) {
+      rlang::abort("`on_event` must be a function of one argument (the event list).")
+    }
+    .stream_event_callback <- on_event
+  }
   requested_model_id <- if (is.character(model) && length(model) == 1) model else NULL
   effective_model_id <- requested_model_id %||% if (is.null(model) && is.null(session)) get_model() else NULL
   default_call_options <- if (is.null(session)) {

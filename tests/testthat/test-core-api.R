@@ -887,3 +887,47 @@ test_that("Anthropic count_tokens falls back to the estimate when the endpoint i
   n <- count_tokens(m, prompt = "estimate this when offline")
   expect_gt(n, 0)
 })
+
+# --- AP1: public typed streaming events via on_event -------------------------
+
+test_that("stream_text on_event delivers typed events with text and a done flag", {
+  source(test_path("helper-mock.R"))
+  events <- list()
+  m <- MockModel$new(list(list(text = "Hello world", finish_reason = "stop",
+                               usage = list(total_tokens = 5))))
+  res <- stream_text(model = m, prompt = "hi",
+                     on_event = function(e) events[[length(events) + 1L]] <<- e)
+
+  expect_gt(length(events), 0)
+  # Every event has the documented shape.
+  for (e in events) {
+    expect_true(is.list(e))
+    expect_true(is.character(e$type))
+    expect_true(is.logical(e$done))
+  }
+  types <- vapply(events, function(e) e$type, character(1))
+  expect_true("text_delta" %in% types)              # streamed answer text
+  expect_true(any(vapply(events, function(e) isTRUE(e$done), logical(1))))
+  # Answer text is reconstructable from text_delta events.
+  streamed <- paste0(vapply(events[types == "text_delta"],
+                            function(e) e$text %||% "", character(1)), collapse = "")
+  expect_match(streamed, "Hello world", fixed = TRUE)
+  expect_equal(res$text, "Hello world")
+})
+
+test_that("stream_text plain callback is unchanged when on_event is not supplied", {
+  source(test_path("helper-mock.R"))
+  chunks <- character()
+  m <- MockModel$new(list(list(text = "abc", finish_reason = "stop", usage = list(total_tokens = 3))))
+  stream_text(model = m, prompt = "hi",
+              callback = function(t, done) if (nzchar(t)) chunks <<- c(chunks, t))
+  expect_equal(paste(chunks, collapse = ""), "abc")
+})
+
+test_that("stream_text rejects a non-function on_event", {
+  source(test_path("helper-mock.R"))
+  expect_error(
+    stream_text(model = MockModel$new(), prompt = "x", on_event = "not a function"),
+    "must be a function"
+  )
+})
