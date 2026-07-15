@@ -910,3 +910,32 @@ test_that("adjust_compacted_count_for_tool_pairs never orphans a tool result", {
   )
   expect_equal(aisdk:::adjust_compacted_count_for_tool_pairs(msgs2, 2), 1)
 })
+
+# --- Z3: opt-in LLM recall-first compaction summary --------------------------
+
+test_that("summarize_message_span uses deterministic truncation by default", {
+  msgs <- lapply(1:12, function(i) {
+    list(role = if (i %% 2) "user" else "assistant", content = paste("message", i))
+  })
+  out <- aisdk:::summarize_message_span(msgs)
+  expect_match(out, "earlier message")  # deterministic path marker
+})
+
+test_that("summarize_message_span uses the configured compaction model when set", {
+  source(test_path("helper-mock.R"))
+  msgs <- lapply(1:12, function(i) list(role = "user", content = paste("m", i)))
+  withr::local_options(aisdk.compaction_model = MockModel$new(list(
+    list(text = "SUMMARY: chose Postgres; migration bug still open.", finish_reason = "stop")
+  )))
+  out <- aisdk:::summarize_message_span(msgs)
+  expect_match(out, "SUMMARY: chose Postgres")
+  expect_match(out, "Compacted 12 earlier message")
+})
+
+test_that("summarize_message_span falls back to deterministic when the LLM errors", {
+  source(test_path("helper-mock.R"))
+  msgs <- lapply(1:12, function(i) list(role = "user", content = paste("m", i)))
+  withr::local_options(aisdk.compaction_model = MockModel$new(list(function(p) stop("model down"))))
+  out <- aisdk:::summarize_message_span(msgs)
+  expect_match(out, "earlier message") # deterministic fallback
+})

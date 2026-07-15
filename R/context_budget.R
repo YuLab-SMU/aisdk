@@ -790,6 +790,41 @@ context_symbol_inspection_hint <- function(object_name, object = NULL, kind = NU
 }
 
 #' @keywords internal
+#' @keywords internal
+# Recall-first LLM summary of a compacted span: an opt-in upgrade over the
+# deterministic head/tail truncation below. Returns NULL on any failure so the
+# caller falls back. Enabled by setting a model on
+# options(aisdk.compaction_model = ...).
+llm_compaction_summary <- function(messages, model, max_preview_chars = 500L) {
+  transcript <- paste(
+    vapply(messages, function(m) {
+      sprintf("[%s] %s", m$role %||% "?", message_preview_text(m, max_chars = max_preview_chars))
+    }, character(1)),
+    collapse = "\n"
+  )
+  prompt <- paste0(
+    "Summarize the conversation span below into a compact, high-fidelity note ",
+    "that a future agent can continue from with minimal loss. PRESERVE: ",
+    "architectural and design decisions, unresolved bugs / open questions, key ",
+    "facts and constraints, and approaches already tried. DISCARD: redundant ",
+    "tool output, restated context, and pleasantries. Be terse.\n\n",
+    "--- conversation span ---\n", transcript
+  )
+  result <- generate_text(
+    model = model,
+    prompt = prompt,
+    system = "You compress an agent's conversation history, maximizing recall of load-bearing details over brevity.",
+    temperature = 0.2,
+    max_steps = 1L
+  )
+  summary <- trimws(result$text %||% "")
+  if (!nzchar(summary)) {
+    return(NULL)
+  }
+  paste0("Compacted ", length(messages), " earlier message(s):\n", summary)
+}
+
+#' @keywords internal
 summarize_message_span <- function(messages,
                                    max_messages = 8L,
                                    max_chars_per_message = 160L,
@@ -797,6 +832,19 @@ summarize_message_span <- function(messages,
   messages <- messages %||% list()
   if (length(messages) == 0) {
     return("")
+  }
+
+  # Opt-in recall-first LLM summary. Default (no model configured) keeps the
+  # deterministic truncation below, so behavior is unchanged unless enabled.
+  compaction_model <- getOption("aisdk.compaction_model")
+  if (!is.null(compaction_model)) {
+    llm_summary <- tryCatch(
+      llm_compaction_summary(messages, compaction_model),
+      error = function(e) NULL
+    )
+    if (!is.null(llm_summary)) {
+      return(llm_summary)
+    }
   }
 
   selected <- if (length(messages) <= max_messages) {
