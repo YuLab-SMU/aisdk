@@ -51,6 +51,40 @@ api_endpoint_urls <- function(config, path) {
   paste0(normalize_base_urls(bases), path)
 }
 
+#' @keywords internal
+# Resolve a retry delay (ms) from Retry-After headers, robustly:
+#  - `retry-after-ms` (OpenAI) or a numeric `retry-after` (seconds) are used;
+#  - an HTTP-date `retry-after` (RFC 7231, e.g. "Wed, 21 Oct 2025 07:28:00 GMT")
+#    is parsed to a delta, instead of as.numeric() -> NA -> Sys.sleep(NA), which
+#    used to throw an uncaught error and MASK the 429;
+#  - an unparseable/negative value falls back to the caller's backoff delay;
+#  - the result is capped (default 60s, options(aisdk.max_retry_after_ms=)) so a
+#    misbehaving server can't pin the session on Sys.sleep() for minutes.
+resolve_retry_after_ms <- function(retry_after, retry_after_ms, fallback_ms,
+                                   cap_ms = getOption("aisdk.max_retry_after_ms", 60000)) {
+  ms <- NA_real_
+  if (!is.null(retry_after_ms)) {
+    ms <- suppressWarnings(as.numeric(retry_after_ms))
+  } else if (!is.null(retry_after)) {
+    n <- suppressWarnings(as.numeric(retry_after))
+    if (!is.na(n)) {
+      ms <- n * 1000
+    } else {
+      when <- suppressWarnings(tryCatch(
+        as.POSIXct(retry_after, format = "%a, %d %b %Y %H:%M:%S", tz = "GMT"),
+        error = function(e) NA
+      ))
+      if (!is.na(when)) {
+        ms <- max(0, as.numeric(difftime(when, Sys.time(), units = "secs")) * 1000)
+      }
+    }
+  }
+  if (is.na(ms) || ms < 0) {
+    ms <- fallback_ms
+  }
+  min(ms, cap_ms)
+}
+
 # Tracks which URLs we've already warned about so a single false-negative
 # from curl::has_internet() doesn't spam the console on every retry.
 .aisdk_preflight_warned <- new.env(parent = emptyenv())
@@ -624,17 +658,15 @@ post_to_api <- function(url, headers, body,
             abort_http_api_error(status = status, url = url, error_body = error_body)
           }
 
-          # Get retry delay from headers if available
-          retry_after <- httr2::resp_header(resp, "retry-after")
-          retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
+          # Get retry delay from headers if available (robust: HTTP-date safe,
+          # capped, falls back to the exponential delay).
+          delay_ms <- resolve_retry_after_ms(
+            httr2::resp_header(resp, "retry-after"),
+            httr2::resp_header(resp, "retry-after-ms"),
+            fallback_ms = delay_ms
+          )
 
-          if (!is.null(retry_after_ms)) {
-            delay_ms <- as.numeric(retry_after_ms)
-          } else if (!is.null(retry_after)) {
-            delay_ms <- as.numeric(retry_after) * 1000
-          }
-
-          message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+          message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
           Sys.sleep(delay_ms / 1000)
           delay_ms <- delay_ms * backoff_factor
         }
@@ -813,16 +845,13 @@ post_multipart_to_api <- function(url, headers, body,
           abort_http_api_error(status = status, url = url, error_body = error_body)
         }
 
-        retry_after <- httr2::resp_header(resp, "retry-after")
-        retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
+        delay_ms <- resolve_retry_after_ms(
+          httr2::resp_header(resp, "retry-after"),
+          httr2::resp_header(resp, "retry-after-ms"),
+          fallback_ms = delay_ms
+        )
 
-        if (!is.null(retry_after_ms)) {
-          delay_ms <- as.numeric(retry_after_ms)
-        } else if (!is.null(retry_after)) {
-          delay_ms <- as.numeric(retry_after) * 1000
-        }
-
-        message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+        message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
         Sys.sleep(delay_ms / 1000)
         delay_ms <- delay_ms * backoff_factor
       },
@@ -992,14 +1021,12 @@ request_json_from_api <- function(url, headers, method = "GET", body = NULL,
           abort_http_api_error(status = status, url = url, error_body = error_body)
         }
 
-        retry_after <- httr2::resp_header(resp, "retry-after")
-        retry_after_ms <- httr2::resp_header(resp, "retry-after-ms")
-        if (!is.null(retry_after_ms)) {
-          delay_ms <- as.numeric(retry_after_ms)
-        } else if (!is.null(retry_after)) {
-          delay_ms <- as.numeric(retry_after) * 1000
-        }
-        message(sprintf("Retrying in %d ms (attempt %d/%d)...", delay_ms, attempt, max_retries + 1))
+        delay_ms <- resolve_retry_after_ms(
+          httr2::resp_header(resp, "retry-after"),
+          httr2::resp_header(resp, "retry-after-ms"),
+          fallback_ms = delay_ms
+        )
+        message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
         Sys.sleep(delay_ms / 1000)
         delay_ms <- delay_ms * backoff_factor
       },

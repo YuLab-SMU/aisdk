@@ -622,3 +622,25 @@ test_that("preflight_internet honors AISDK_SKIP_INTERNET_CHECK=1", {
     expect_true(result)
   })
 })
+
+# --- Z7: robust, capped Retry-After parsing ----------------------------------
+
+test_that("resolve_retry_after_ms handles seconds, ms, HTTP-date, garbage, and caps", {
+  f <- aisdk:::resolve_retry_after_ms
+  expect_equal(f("2", NULL, fallback_ms = 1000), 2000)
+  expect_equal(f(NULL, "500", fallback_ms = 1000), 500)
+  # HTTP-date form must not become NA (which caused Sys.sleep(NA) to mask the 429).
+  future <- format(Sys.time() + 30, "%a, %d %b %Y %H:%M:%S", tz = "GMT")
+  d <- f(future, NULL, fallback_ms = 1000)
+  expect_false(is.na(d))
+  expect_true(d > 20000 && d <= 60000)
+  # Unparseable -> the caller's backoff delay.
+  expect_equal(f("soon", NULL, fallback_ms = 1234), 1234)
+  # A hostile huge value is capped.
+  expect_equal(f("999999", NULL, fallback_ms = 1000), 60000)
+  # No headers -> fallback.
+  expect_equal(f(NULL, NULL, fallback_ms = 2000), 2000)
+  # Configurable cap.
+  withr::local_options(aisdk.max_retry_after_ms = 5000)
+  expect_equal(f("100", NULL, fallback_ms = 1000), 5000)
+})
