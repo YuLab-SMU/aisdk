@@ -584,13 +584,42 @@ stream_response_close <- function(resp) {
 }
 
 abort_http_api_error <- function(status, url, error_body) {
+  # Extract the provider's structured error fields so the message is readable and
+  # the condition is programmatically inspectable (tryCatch on $error_code etc.),
+  # instead of dumping a raw JSON blob. Handles the OpenAI {error:{message,type,
+  # param,code}}, Anthropic {error:{type,message}}, and Gemini {error:{code,
+  # message,status}} shapes.
+  payload <- safe_parse_api_error_body(error_body)
+  err <- if (is.list(payload)) (payload$error %||% payload) else list()
+  as_scalar_chr <- function(x) if (is.character(x) && length(x) == 1 && nzchar(x)) x else NULL
+  emsg <- as_scalar_chr(err$message) %||% as_scalar_chr(payload$message)
+  etype <- as_scalar_chr(err$type) %||% as_scalar_chr(err$status) # Gemini uses `status`
+  ecode <- if (!is.null(err$code) && length(err$code) == 1) err$code else NULL
+  eparam <- as_scalar_chr(err$param)
+
+  header <- paste0("API request failed with status ", status)
+  if (!is.null(etype)) {
+    header <- paste0(header, " (", etype, ")")
+  }
+  detail <- emsg %||% error_body
+  if (!is.null(eparam)) {
+    detail <- paste0(detail, " [param: ", eparam, "]")
+  }
+
+  fields <- list(
+    status = status, error_type = etype, error_code = ecode,
+    error_param = eparam, error_body = error_body
+  )
+  fields <- fields[!vapply(fields, is.null, logical(1))]
+
   rlang::abort(
     c(
-      paste0("API request failed with status ", status),
+      header,
       "i" = paste0("URL: ", url),
-      "x" = error_body
+      "x" = detail
     ),
-    class = http_error_classes(status, error_body)
+    class = http_error_classes(status, error_body),
+    !!!fields
   )
 }
 

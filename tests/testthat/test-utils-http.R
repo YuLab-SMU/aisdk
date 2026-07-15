@@ -842,3 +842,55 @@ test_that("apply_backoff_jitter is tunable and disablable, and ignores bad delay
   expect_true(is.na(aisdk:::apply_backoff_jitter(NA_real_)))
   expect_equal(aisdk:::apply_backoff_jitter(0), 0)
 })
+
+# --- AM1: structured API error surfacing -------------------------------------
+
+test_that("abort_http_api_error surfaces OpenAI error fields and a clean message", {
+  e <- tryCatch(
+    aisdk:::abort_http_api_error(
+      400, "https://x.test",
+      '{"error":{"message":"Unknown parameter: response_format","type":"invalid_request_error","param":"response_format","code":"unknown_parameter"}}'
+    ),
+    error = function(e) e
+  )
+  msg <- conditionMessage(e)
+  expect_match(msg, "status 400 (invalid_request_error)", fixed = TRUE)
+  expect_match(msg, "Unknown parameter: response_format", fixed = TRUE)
+  expect_match(msg, "[param: response_format]", fixed = TRUE)
+  # Programmatically inspectable condition fields.
+  expect_equal(e$status, 400)
+  expect_equal(e$error_type, "invalid_request_error")
+  expect_equal(e$error_code, "unknown_parameter")
+  expect_equal(e$error_param, "response_format")
+  expect_equal(e$error_body, '{"error":{"message":"Unknown parameter: response_format","type":"invalid_request_error","param":"response_format","code":"unknown_parameter"}}')
+  # Classification still works.
+  expect_s3_class(e, "aisdk_api_compatibility_error")
+})
+
+test_that("abort_http_api_error handles Anthropic and Gemini error shapes", {
+  a <- tryCatch(
+    aisdk:::abort_http_api_error(401, "https://x.test",
+      '{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}'),
+    error = function(e) e
+  )
+  expect_equal(a$error_type, "authentication_error")
+  expect_null(a$error_code)                       # Anthropic has no code
+  expect_match(conditionMessage(a), "invalid x-api-key", fixed = TRUE)
+
+  g <- tryCatch(
+    aisdk:::abort_http_api_error(429, "https://x.test",
+      '{"error":{"code":429,"message":"Resource exhausted","status":"RESOURCE_EXHAUSTED"}}'),
+    error = function(e) e
+  )
+  expect_equal(g$error_type, "RESOURCE_EXHAUSTED")  # Gemini's `status` maps to type
+  expect_equal(g$error_code, 429)
+})
+
+test_that("abort_http_api_error falls back gracefully on a non-JSON body", {
+  e <- tryCatch(aisdk:::abort_http_api_error(500, "https://x.test", "upstream timeout"),
+                error = function(e) e)
+  expect_match(conditionMessage(e), "status 500", fixed = TRUE)
+  expect_match(conditionMessage(e), "upstream timeout", fixed = TRUE)
+  expect_equal(e$error_body, "upstream timeout")
+  expect_null(e$error_type)
+})
