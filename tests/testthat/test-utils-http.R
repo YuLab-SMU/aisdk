@@ -810,3 +810,35 @@ test_that("a response without rate-limit headers does not erase the last snapsho
   suppressMessages(aisdk:::post_to_api("https://gemini.test/x", list(), list(m = "x"), max_retries = 0))
   expect_equal(rate_limit_status()$remaining_tokens, 500)
 })
+
+# --- AL1: exponential backoff jitter -----------------------------------------
+
+test_that("apply_backoff_jitter spreads delays additively without undershooting", {
+  vals <- numeric(40)
+  for (i in seq_along(vals)) { vals[i] <- aisdk:::apply_backoff_jitter(1000); Sys.sleep(0.001) }
+  # Additive jitter: never below the base (so a Retry-After minimum is respected)
+  # and never above base*(1+frac); default frac = 0.5.
+  expect_true(all(vals >= 1000))
+  expect_true(all(vals <= 1500))
+  # It actually varies (would be pointless otherwise).
+  expect_gt(length(unique(round(vals))), 5)
+})
+
+test_that("apply_backoff_jitter does not perturb the caller's RNG stream", {
+  set.seed(99); a <- runif(3)
+  invisible(replicate(10, aisdk:::apply_backoff_jitter(2000)))
+  set.seed(99); b <- runif(3)
+  expect_identical(a, b)
+})
+
+test_that("apply_backoff_jitter is tunable and disablable, and ignores bad delays", {
+  withr::with_options(list(aisdk.retry_jitter = 0), {
+    expect_equal(aisdk:::apply_backoff_jitter(1000), 1000)
+  })
+  withr::with_options(list(aisdk.retry_jitter = 0.25), {
+    v <- replicate(20, { d <- aisdk:::apply_backoff_jitter(1000); Sys.sleep(2e-4); d })
+    expect_true(all(v >= 1000 & v <= 1250))
+  })
+  expect_true(is.na(aisdk:::apply_backoff_jitter(NA_real_)))
+  expect_equal(aisdk:::apply_backoff_jitter(0), 0)
+})

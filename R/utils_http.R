@@ -85,6 +85,36 @@ resolve_retry_after_ms <- function(retry_after, retry_after_ms, fallback_ms,
   min(ms, cap_ms)
 }
 
+# A value in [0, 1) that varies per call and per process, WITHOUT touching the
+# caller's RNG stream (a package must not consume the user's set.seed()
+# sequence). Sub-microsecond wall-clock entropy gives per-call variation; the
+# process-id offset de-synchronizes forked workers that retry at the same
+# instant (the generate_batch case). Not cryptographic — just enough to spread
+# retries; jitter does not need uniform randomness.
+#' @keywords internal
+jitter_unit <- function() {
+  micros <- (as.numeric(Sys.time()) * 1e6) %% 1000 / 1000 # sub-ms fraction
+  pid_off <- (Sys.getpid() %% 1000) / 1000
+  (micros + pid_off) %% 1
+}
+
+# Spread out a retry delay so concurrent requests that back off together (e.g.
+# generate_batch workers all hitting one 429) don't retry in lockstep and
+# re-trigger the limit — the canonical "exponential backoff AND jitter". Jitter
+# is ADDITIVE (delay .. delay*(1+frac)) so it never sleeps less than a
+# server-specified Retry-After. Disable/tune with options(aisdk.retry_jitter=).
+#' @keywords internal
+apply_backoff_jitter <- function(delay_ms) {
+  if (is.null(delay_ms) || !is.finite(delay_ms) || delay_ms <= 0) {
+    return(delay_ms)
+  }
+  frac <- getOption("aisdk.retry_jitter", 0.5)
+  if (!is.numeric(frac) || length(frac) != 1 || is.na(frac) || frac <= 0) {
+    return(delay_ms)
+  }
+  delay_ms * (1 + jitter_unit() * min(frac, 1))
+}
+
 # Tracks which URLs we've already warned about so a single false-negative
 # from curl::has_internet() doesn't spam the console on every retry.
 .aisdk_preflight_warned <- new.env(parent = emptyenv())
@@ -767,7 +797,7 @@ post_to_api <- function(url, headers, body,
           )
 
           message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
-          Sys.sleep(delay_ms / 1000)
+          Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
           delay_ms <- delay_ms * backoff_factor
         }
       },
@@ -779,7 +809,7 @@ post_to_api <- function(url, headers, body,
           abort_retry_api_error(url = url, error = e)
         }
         message(sprintf("Network error, retrying in %d ms...", delay_ms))
-        Sys.sleep(delay_ms / 1000)
+        Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
         delay_ms <- delay_ms * backoff_factor
       }
     )
@@ -957,7 +987,7 @@ post_multipart_to_api <- function(url, headers, body,
         )
 
         message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
-        Sys.sleep(delay_ms / 1000)
+        Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
         delay_ms <- delay_ms * backoff_factor
       },
       error = function(e) {
@@ -968,7 +998,7 @@ post_multipart_to_api <- function(url, headers, body,
           abort_retry_api_error(url = url, error = e)
         }
         message(sprintf("Network error, retrying in %d ms...", delay_ms))
-        Sys.sleep(delay_ms / 1000)
+        Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
         delay_ms <- delay_ms * backoff_factor
       }
     )
@@ -1133,7 +1163,7 @@ request_json_from_api <- function(url, headers, method = "GET", body = NULL,
           fallback_ms = delay_ms
         )
         message(sprintf("Retrying in %d ms (attempt %d/%d)...", as.integer(delay_ms), attempt, max_retries + 1))
-        Sys.sleep(delay_ms / 1000)
+        Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
         delay_ms <- delay_ms * backoff_factor
       },
       error = function(e) {
@@ -1144,7 +1174,7 @@ request_json_from_api <- function(url, headers, method = "GET", body = NULL,
           abort_retry_api_error(url = url, error = e)
         }
         message(sprintf("Network error, retrying in %d ms...", delay_ms))
-        Sys.sleep(delay_ms / 1000)
+        Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
         delay_ms <- delay_ms * backoff_factor
       }
     )
@@ -1393,7 +1423,7 @@ stream_from_api <- function(url, headers, body, callback,
 
     if (retryable_start_failure && attempt <= max_retries) {
       message(sprintf("Network error, retrying stream in %d ms...", delay_ms))
-      Sys.sleep(delay_ms / 1000)
+      Sys.sleep(apply_backoff_jitter(delay_ms) / 1000)
       delay_ms <- delay_ms * backoff_factor
       next
     }
