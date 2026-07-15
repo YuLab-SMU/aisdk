@@ -396,6 +396,44 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         body$tool_choice <- tc
       }
 
+      # Native structured output. The Responses API takes it under `text.format`
+      # (a different shape from Chat Completions' top-level `response_format`), so
+      # a z_schema response_format used to leak through the passthrough as an
+      # unknown top-level field. Convert a z_schema to a json_schema format for
+      # strict constrained decoding; when the endpoint can't do it
+      # (disable_json_schema) fall back to json_object with the schema injected
+      # into the instructions.
+      if (!is.null(params$response_format)) {
+        fmt <- params$response_format
+        text_format <- NULL
+        if (inherits(fmt, "z_schema")) {
+          if (!isTRUE(private$config$disable_json_schema)) {
+            text_format <- list(
+              type = "json_schema",
+              name = params$response_format_name %||% "output_schema",
+              strict = TRUE,
+              schema = schema_to_list(fmt)
+            )
+          } else {
+            instruction <- paste(
+              "Return your output strictly as a JSON object adhering to this schema:\n",
+              schema_to_json(fmt)
+            )
+            body$instructions <- if (is.null(body$instructions) || !nzchar(body$instructions)) {
+              instruction
+            } else {
+              paste(body$instructions, "\n\n", instruction)
+            }
+            text_format <- list(type = "json_object")
+          }
+        } else if (is.character(fmt) && fmt %in% c("json_object", "text")) {
+          text_format <- list(type = fmt)
+        }
+        if (!is.null(text_format)) {
+          body$text <- utils::modifyList(body$text %||% list(), list(format = text_format))
+        }
+      }
+
       # Reasoning controls: support flat (reasoning_effort, reasoning_summary)
       # and nested (reasoning = list(...)) forms, plus the `include` field for
       # stateless reasoning continuity (e.g. "reasoning.encrypted_content").
@@ -423,6 +461,7 @@ OpenAIResponsesLanguageModel <- R6::R6Class(
         "max_tokens", "max_output_tokens", "max_answer_tokens",
         "tools", "tool_choice", "stream", "model",
         "reasoning", "reasoning_effort", "reasoning_summary", "thinking", "thinking_budget", "include",
+        "response_format", "response_format_name",
         "conversation",
         "timeout_seconds", "total_timeout_seconds", "first_byte_timeout_seconds",
         "connect_timeout_seconds", "idle_timeout_seconds"

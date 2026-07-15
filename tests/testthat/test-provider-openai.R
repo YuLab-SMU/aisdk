@@ -2056,3 +2056,51 @@ test_that("image Responses path respects state mode", {
   swallow(model_stateless$do_generate_image_via_responses(list(prompt = "again")))
   expect_null(cap_sl[[length(cap_sl)]]$previous_response_id)
 })
+
+# --- AN1: OpenAI Responses native structured output (text.format) ------------
+
+test_that("Responses converts a z_schema response_format to a json_schema text.format", {
+  m <- create_openai(api_key = "FAKE")$responses_model("gpt-5")
+  priv <- m$.__enclos_env__$private
+  schema <- z_object(name = z_string("n"), age = z_integer("a"))
+
+  body <- priv$build_responses_body(
+    list(messages = list(list(role = "user", content = "who")),
+         response_format = schema, response_format_name = "person"),
+    stream = FALSE
+  )
+  expect_equal(body$text$format$type, "json_schema")
+  expect_equal(body$text$format$name, "person")
+  expect_true(body$text$format$strict)
+  expect_false(is.null(body$text$format$schema$properties))
+  # It must NOT leak as a top-level response_format (the Responses API rejects that).
+  expect_null(body$response_format)
+})
+
+test_that("Responses accepts json_object / text string shorthands", {
+  priv <- create_openai(api_key = "FAKE")$responses_model("gpt-5")$.__enclos_env__$private
+  msgs <- list(list(role = "user", content = "hi"))
+  expect_equal(priv$build_responses_body(list(messages = msgs, response_format = "json_object"),
+                                         stream = FALSE)$text$format$type, "json_object")
+  expect_equal(priv$build_responses_body(list(messages = msgs, response_format = "text"),
+                                         stream = FALSE)$text$format$type, "text")
+  # No response_format -> no text block.
+  expect_null(priv$build_responses_body(list(messages = msgs), stream = FALSE)$text)
+})
+
+test_that("Responses falls back to json_object + injected schema when json_schema is disabled", {
+  m <- create_openai(api_key = "FAKE")$responses_model("gpt-5")
+  priv <- m$.__enclos_env__$private
+  priv$config$disable_json_schema <- TRUE
+  schema <- z_object(name = z_string("n"))
+
+  body <- priv$build_responses_body(
+    list(messages = list(list(role = "system", content = "Be terse"),
+                         list(role = "user", content = "who")),
+         response_format = schema),
+    stream = FALSE
+  )
+  expect_equal(body$text$format$type, "json_object")
+  expect_match(body$instructions, "JSON object adhering")
+  expect_match(body$instructions, "Be terse")   # original system instruction kept
+})
