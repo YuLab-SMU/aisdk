@@ -1,5 +1,14 @@
 # aisdk 1.5.0
 
+* New `use_codex_subscription()` and `use_claude_subscription()` connect aisdk
+  to a locally running Codex/Claude OAuth proxy (e.g. `openai-oauth` or
+  `claude-auth-proxy`) so requests can bill against your existing subscription
+  instead of API credits. aisdk never reads or stores subscription tokens — it
+  only talks to the compatible endpoint you run yourself, for personal use.
+  `subscription_proxy_status()` and `detect_subscription_proxies()` help verify
+  and discover a running proxy. See the README for the terms-of-service caveats
+  (notably Anthropic's Feb 2026 restriction on Claude OAuth tokens).
+
 * The interactive model setup flow is much simpler and mostly automatic.
   The guided setup now only asks for the base URL (Enter keeps the
   default), the API key, the model, and where to save. For custom
