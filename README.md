@@ -346,6 +346,58 @@ model_providers:
 default_model: internal:my-model
 ```
 
+### Use your Codex or Claude subscription (personal use)
+
+If you already pay for **Codex** (ChatGPT Plus/Pro) or **Claude Code** (Pro/Max),
+you can route aisdk through a **locally running OAuth proxy** so requests bill
+against that subscription instead of API credits. aisdk never reads, stores, or
+refreshes any subscription token and never impersonates an official client — it
+only talks to a standard OpenAI/Anthropic-compatible endpoint that the proxy
+exposes on localhost. You install and run the proxy yourself.
+
+```r
+# Codex — start a proxy first, e.g. `npx openai-oauth`
+use_codex_subscription()                 # registers provider "codex"
+subscription_proxy_status("codex")       # verify it is up and authenticated
+generate_text(model = "codex:gpt-5.4-codex", prompt = "Hello")
+
+# Claude — start a proxy first, e.g. the `claude-auth-proxy` binary
+use_claude_subscription()                # registers provider "claude"
+generate_text(model = "claude:claude-sonnet-4-6", prompt = "Hello")
+```
+
+`detect_subscription_proxies()` probes the common localhost ports and reports
+which proxies are running. Override the endpoint with `base_url =` / `port =` or
+the `AISDK_CODEX_PROXY_URL` / `AISDK_CLAUDE_PROXY_URL` environment variables.
+
+Because a proxy is just a custom endpoint, you can also declare it in
+`aisdk.yaml` without any R code:
+
+```yaml
+model_providers:
+  codex:
+    type: custom
+    base_url: http://127.0.0.1:10531/v1
+    wire_api: chat_completions
+    supports_native_tools: true
+  claude:
+    type: custom
+    base_url: http://127.0.0.1:3000/v1
+    wire_api: anthropic
+    supports_native_tools: true
+
+default_model: codex:gpt-5.4-codex
+```
+
+> **Terms of service — personal use only.** Subscription OAuth is licensed for
+> individual, interactive use. Do **not** pool tokens, serve other users, or run
+> a hosted/multi-user backend on a subscription. As of **February 2026**,
+> Anthropic explicitly prohibits using Claude Free/Pro/Max OAuth tokens in any
+> tool other than Claude Code and Claude.ai (including via the Agent SDK) and
+> enforces this technically; OpenAI likewise directs automation to API keys.
+> These helpers are for your own scripts on your own machine. For anything that
+> serves other people, use a Console/Platform **API key** instead.
+
 ## Companion packages
 
 The package family keeps the core runtime small and moves optional surfaces to
